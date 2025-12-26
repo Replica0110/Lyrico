@@ -1,6 +1,7 @@
 package com.lonx.lyrico.viewmodel
 
 import android.net.Uri
+import android.os.Parcelable
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,13 +22,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class SongInfo(
     val filePath: String,
     val fileName: String,
-    val tagData: AudioTagData?,
-    val coverUri: Uri?
-)
+    val tagData: AudioTagData?
+): Parcelable
 
 data class SongListUiState(
     val isLoading: Boolean = false,

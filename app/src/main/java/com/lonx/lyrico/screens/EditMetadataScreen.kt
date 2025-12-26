@@ -25,25 +25,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.lonx.lyrico.data.SongDataHolder
 import com.lonx.lyrico.ui.theme.*
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
-import com.lonx.lyrics.model.SongSearchResult
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import android.app.Activity
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
+import com.lonx.lyrico.data.model.LyricsSearchResult
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.generated.destinations.SearchResultsDestination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import com.ramcosta.composedestinations.result.ResultRecipient
+import com.ramcosta.composedestinations.result.onResult
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Destination<RootGraph>(route = "edit_metadata_screen")
 fun EditMetadataScreen(
-    searchResult: SongSearchResult?,
-    selectedLyrics: String?,
-    onBackClick: () -> Unit,
-    onSearchClick: (String) -> Unit,
-    onSearchResult: () -> Unit,
-    onLyricsResult: () -> Unit,
-    viewModel: EditMetadataViewModel = koinViewModel()
+    navigator: DestinationsNavigator,
+    songFilePath: String,
+    onLyricsResult: ResultRecipient<SearchResultsDestination, LyricsSearchResult>
 ) {
+    val viewModel: EditMetadataViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val originalTagData = uiState.originalTagData
     val editingTagData = uiState.editingTagData
@@ -61,6 +68,9 @@ fun EditMetadataScreen(
         }
     }
 
+    onLyricsResult.onResult { result ->
+        viewModel.updateMetadataFromSearchResult(result)
+    }
     LaunchedEffect(uiState.permissionRequest) {
         uiState.permissionRequest?.let { intentSender ->
             requestPermissionLauncher.launch(
@@ -69,25 +79,11 @@ fun EditMetadataScreen(
             viewModel.clearPermissionRequest()
         }
     }
-
-    LaunchedEffect(Unit) {
-        SongDataHolder.selectedSongInfo?.let {
-            viewModel.loadSongInfo(it)
-        }
+    LaunchedEffect(songFilePath) {
+        viewModel.loadSongInfo(songFilePath)
     }
 
-    LaunchedEffect(searchResult, selectedLyrics) {
-        if (searchResult != null && selectedLyrics != null) {
-            // Both are available, use the new method to prevent overwriting lyrics
-            viewModel.onSelectSearchResultWithLyrics(searchResult, selectedLyrics)
-            onSearchResult()
-            onLyricsResult()
-        } else if (searchResult != null) {
-            // Fallback for when only searchResult is available
-            viewModel.onSelectSearchResult(searchResult)
-            onSearchResult()
-        }
-    }
+
 
     LaunchedEffect(uiState.saveSuccess) {
         when (uiState.saveSuccess) {
@@ -97,11 +93,13 @@ fun EditMetadataScreen(
 //                    onSaveSuccess()
                 }
             }
+
             false -> {
                 scope.launch {
                     snackbarHostState.showSnackbar("保存失败")
                 }
             }
+
             null -> {
                 // Do nothing
             }
@@ -118,7 +116,9 @@ fun EditMetadataScreen(
             TopAppBar(
                 title = { Text("元数据编辑") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        navigator.popBackStack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
@@ -127,14 +127,13 @@ fun EditMetadataScreen(
                         val keyword = if (editingTagData?.title?.isNotEmpty() == true) {
                             if (editingTagData.artist.isNullOrEmpty()) {
                                 editingTagData.title!!
-                            }
-                            else {
+                            } else {
                                 "${editingTagData.title} ${editingTagData.artist}"
                             }
                         } else {
                             uiState.songInfo?.fileName ?: ""
                         }
-                        onSearchClick(keyword)
+                        navigator.navigate(SearchResultsDestination(keyword))
                     }) {
                         Icon(Icons.Default.Search, contentDescription = "搜索")
                     }
@@ -165,7 +164,7 @@ fun EditMetadataScreen(
                 .verticalScroll(scrollState)
         ) {
             AsyncImage(
-                model = uiState.coverUri,
+                model = uiState.filePath?.toUri(),
                 contentDescription = uiState.songInfo?.tagData?.title ?: "歌曲封面",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
@@ -261,7 +260,12 @@ private fun MetadataInputGroup(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (icon != null) {
-                Icon(icon, contentDescription = null, tint = Gray400, modifier = Modifier.size(18.dp))
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = Gray400,
+                    modifier = Modifier.size(18.dp)
+                )
             }
             Text(
                 text = label.uppercase(),
@@ -271,15 +275,17 @@ private fun MetadataInputGroup(
                 letterSpacing = 0.5.sp
             )
             if (isModified) {
-                Text(
-                    text = "已修改",
-                    color = Amber600,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
+                Box(
                     modifier = Modifier
                         .background(Amber100, RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                ){
+                    Text(
+                        text = "已修改",
+                        color = Amber600,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
             // 添加操作按钮
             actionButtons()

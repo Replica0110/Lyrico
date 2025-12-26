@@ -1,8 +1,9 @@
 package com.lonx.audiotag.model
 
-import java.util.Arrays
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import java.util.ArrayList
-
+@Parcelize
 data class AudioTagData(
     val title: String? = null,
     val artist: String? = null,
@@ -20,14 +21,15 @@ data class AudioTagData(
     val rawProperties: Map<String, Array<String>>? = null,
 
     val pictures: List<AudioPicture> = ArrayList()
-)
+): Parcelable
 
+@Parcelize
 data class AudioPicture(
     val data: ByteArray,
     val mimeType: String = "image/jpeg",
     val description: String = "",
     val pictureType: String = "Front Cover"
-) {
+): Parcelable {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is AudioPicture) return false

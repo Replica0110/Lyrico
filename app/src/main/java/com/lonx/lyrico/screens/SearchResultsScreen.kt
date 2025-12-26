@@ -1,5 +1,6 @@
 package com.lonx.lyrico.screens
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,18 +25,25 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lonx.lyrico.data.model.LyricsSearchResult
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrics.model.SongSearchResult
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import com.ramcosta.composedestinations.result.ResultBackNavigator
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Destination<RootGraph>(route = "search_results")
 fun SearchResultsScreen(
     keyword: String?,
-    onBackClick: () -> Unit,
-    onResultSelect: (song: SongSearchResult, lyrics: String?) -> Unit,
-    viewModel: SearchViewModel = koinViewModel()
+//    navigator: DestinationsNavigator,
+    resultNavigator: ResultBackNavigator<LyricsSearchResult>
+//    onResultSelect: (song: SongSearchResult, lyrics: String?) -> Unit
 ) {
+    val viewModel: SearchViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -60,7 +68,7 @@ fun SearchResultsScreen(
                     .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBackClick) {
+                IconButton(onClick = { resultNavigator.navigateBack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
 
@@ -77,12 +85,18 @@ fun SearchResultsScreen(
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.5f
+                        )
                     ),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium,
                     leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
                     },
                     trailingIcon = if (uiState.searchKeyword.isNotEmpty()) {
                         {
@@ -183,8 +197,16 @@ fun SearchResultsScreen(
                                 onPreviewClick = { viewModel.fetchLyricsForPreview(result) },
                                 onApplyClick = {
                                     viewModel.fetchLyricsDirectly(result) { lyrics ->
+                                        Log.d("Lyrics", "Lyrics: $lyrics")
                                         if (lyrics != null) {
-                                            onResultSelect(result, lyrics)
+                                            resultNavigator.navigateBack(
+                                                LyricsSearchResult(
+                                                    title = result.title,
+                                                    artist = result.artist,
+                                                    album = result.album,
+                                                    lyrics = lyrics
+                                                )
+                                            )
                                         }
                                     }
                                 }
@@ -254,7 +276,18 @@ fun SearchResultsScreen(
 
                 Button(
                     onClick = {
-                        onResultSelect(uiState.previewingSong!!, uiState.lyricsPreviewContent)
+                        val song = uiState.previewingSong
+                        val lyrics = uiState.lyricsPreviewContent
+                        if (song != null && lyrics != null) {
+                            resultNavigator.navigateBack(
+                                LyricsSearchResult(
+                                    title = song.title,
+                                    artist = song.artist,
+                                    album = song.album,
+                                    lyrics = lyrics
+                                )
+                            )
+                        }
                         viewModel.clearPreview()
                     },
                     modifier = Modifier.fillMaxWidth(),

@@ -31,6 +31,6 @@ val appModule = module {
     viewModel { SongListViewModel(get(), get()) }
     viewModel { SettingsViewModel(get()) }
     viewModel { SearchViewModel(get(), get()) }
-    viewModel { EditMetadataViewModel(get(), get(), get(), androidContext()) }
+    viewModel { EditMetadataViewModel(get(), androidContext()) }
 }
 

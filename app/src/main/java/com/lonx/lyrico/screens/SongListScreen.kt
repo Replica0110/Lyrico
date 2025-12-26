@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -36,16 +37,21 @@ import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.generated.destinations.EditMetadataScreenDestination
+import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Destination<RootGraph>(start = true, route = "song_list")
 fun SongListScreen(
-    showSearch: MutableState<Boolean>,
-    onSongClick: (SongInfo) -> Unit,
-    onSettingsClick: () -> Unit,
-    viewModel: SongListViewModel = koinViewModel()
+    navigator: DestinationsNavigator
 ) {
+    val showSearch = remember { mutableStateOf(false) }
+    val viewModel: SongListViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val sortInfo by viewModel.sortInfo.collectAsState()
@@ -82,7 +88,9 @@ fun SongListScreen(
                                 }
                             )
                         }
-                        IconButton(onClick = onSettingsClick) {
+                        IconButton(onClick = {
+                            navigator.navigate(SettingsDestination())
+                        }) {
                             Icon(Icons.Filled.Settings, contentDescription = "Settings")
                         }
                     }
@@ -102,7 +110,7 @@ fun SongListScreen(
                             onValueChange = { viewModel.onSearchQueryChanged(it) },
                             placeholder = { Text("Search by title, artist, album...") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(12.dp),
                             singleLine = true,
                             leadingIcon = {
                                 Icon(Icons.Default.Search, contentDescription = "Search", tint = Gray400)
@@ -132,30 +140,7 @@ fun SongListScreen(
                 ) { song ->
                     SongListItem(
                         song = song,
-                        onSongClick = {
-                            // Convert SongEntity to SongInfo
-                            val songInfo = SongInfo(
-                                filePath = song.filePath,
-                                fileName = song.fileName,
-                                tagData = song.let { entity ->
-                                    AudioTagData(
-                                        title = entity.title,
-                                        artist = entity.artist,
-                                        album = entity.album,
-                                        genre = entity.genre,
-                                        date = entity.date,
-                                        lyrics = entity.lyrics,
-                                        durationMilliseconds = entity.durationMilliseconds,
-                                        bitrate = entity.bitrate,
-                                        sampleRate = entity.sampleRate,
-                                        channels = entity.channels,
-                                        rawProperties = emptyMap()
-                                    )
-                                },
-                                coverUri = song.filePath.toUri()
-                            )
-                            onSongClick(songInfo)
-                        }
+                        navigator = navigator
                     )
                     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
@@ -191,12 +176,16 @@ fun SongListScreen(
 @Composable
 fun SongListItem(
     song: SongEntity,
-    onSongClick: () -> Unit
+    navigator: DestinationsNavigator
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onSongClick)
+            .clickable(onClick = {
+                navigator.navigate(EditMetadataScreenDestination(
+                    songFilePath = song.filePath
+                ))
+            })
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
 

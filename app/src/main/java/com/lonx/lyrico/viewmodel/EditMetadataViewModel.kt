@@ -7,16 +7,14 @@ import android.net.Uri
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
+import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
 import com.lonx.lyrics.model.LyricsResult
-import com.lonx.lyrics.model.SongSearchResult
-import com.lonx.lyrics.model.Source
-import com.lonx.lyrics.source.kg.KgSource
-import com.lonx.lyrics.source.qm.QmSource
 import com.lonx.lyrico.data.repository.SongRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,14 +31,13 @@ data class EditMetadataUiState(
     val editingTagData: AudioTagData? = null,
     val currentLyrics: LyricsResult? = null,
     val coverUri: Uri? = null,
+    val filePath: String? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean? = null,
     val permissionRequest: IntentSender? = null
 )
 
 class EditMetadataViewModel(
-    private val kgSource: KgSource,
-    private val qmSource: QmSource,
     private val songRepository: SongRepository,
     private val applicationContext: Context
 ) : ViewModel() {
@@ -49,17 +46,33 @@ class EditMetadataViewModel(
     private val _uiState = MutableStateFlow(EditMetadataUiState())
     val uiState: StateFlow<EditMetadataUiState> = _uiState.asStateFlow()
 
-    fun loadSongInfo(songInfo: SongInfo) {
-        _uiState.update {
-            it.copy(
-                songInfo = songInfo,
-                originalTagData = songInfo.tagData,
-                editingTagData = songInfo.tagData,
-                coverUri = songInfo.coverUri
-            )
+    private var currentSongPath: String? = null
+
+    fun loadSongInfo(filePath: String) {
+        if (filePath == currentSongPath) {
+            return
+        }
+        currentSongPath = filePath
+        viewModelScope.launch {
+            try {
+                val audioTagData = withContext(Dispatchers.IO) {
+                    readAudioTagDataFromFile(filePath)
+                }
+
+
+                _uiState.update {
+                    it.copy(
+                        songInfo = SongInfo(filePath = filePath, tagData = audioTagData, fileName = ""),
+                        originalTagData = audioTagData,
+                        editingTagData = audioTagData,
+                        filePath = filePath
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "读取音频元数据失败", e)
+            }
         }
     }
-
     private fun isUriPath(path: String): Boolean {
         return try {
             val uri = path.toUri()
@@ -73,75 +86,26 @@ class EditMetadataViewModel(
         _uiState.update { it.copy(editingTagData = audioTagData) }
     }
 
-    fun onSelectSearchResultWithLyrics(result: SongSearchResult, formattedLyrics: String) {
-        _uiState.update {
-            it.copy(
-                editingTagData = it.editingTagData?.copy(
-                    title = result.title,
-                    artist = result.artist,
-                    album = result.album,
-                    lyrics = formattedLyrics // Use the pre-formatted lyrics
-                ) ?: AudioTagData(
-                    title = result.title,
-                    artist = result.artist,
-                    album = result.album,
-                    lyrics = formattedLyrics
+    fun updateMetadataFromSearchResult(result: com.lonx.lyrico.data.model.LyricsSearchResult) {
+        _uiState.update { currentState ->
+            val currentData = currentState.editingTagData ?: AudioTagData()
+            currentState.copy(
+                editingTagData = currentData.copy(
+                    title = result.title?.takeIf { it.isNotBlank() } ?: currentData.title,
+                    artist = result.artist?.takeIf { it.isNotBlank() } ?: currentData.artist,
+                    album = result.album?.takeIf { it.isNotBlank() } ?: currentData.album,
+                    lyrics = result.lyrics?.takeIf { it.isNotBlank() } ?: currentData.lyrics
                 )
             )
         }
-        // Do not call fetchLyrics, as the lyrics are already provided and formatted.
     }
 
-    fun onSelectSearchResult(result: SongSearchResult) {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    editingTagData = it.editingTagData?.copy(
-                        title = result.title,
-                        artist = result.artist,
-                        album = result.album
-                    ) ?: AudioTagData(
-                        title = result.title,
-                        artist = result.artist,
-                        album = result.album
-                    )
-                )
-            }
-            fetchLyrics(result)
-        }
-    }
-
-    private fun fetchLyrics(song: SongSearchResult) {
-        viewModelScope.launch {
-            try {
-                val lyricsResult = when (song.source) {
-                    Source.KG -> kgSource.getLyrics(song)
-                    Source.QM -> qmSource.getLyrics(song)
-                    else -> null
-                }
-                _uiState.update { it.copy(currentLyrics = lyricsResult) }
-
-                lyricsResult?.original?.let { krcLines ->
-                    val lyricsString = krcLines.joinToString("\n") { line ->
-                        line.words.joinToString(" ") { it.text }
-                    }
-                    _uiState.update {
-                        it.copy(
-                            editingTagData = it.editingTagData?.copy(lyrics = lyricsString)
-                                ?: AudioTagData(lyrics = lyricsString)
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(currentLyrics = null) }
-            }
-        }
-    }
 
     fun clearSaveStatus() {
         _uiState.update { it.copy(saveSuccess = null) }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     fun onPermissionResult(granted: Boolean) {
         clearPermissionRequest()
         if (granted) {
@@ -157,6 +121,7 @@ class EditMetadataViewModel(
         _uiState.update { it.copy(permissionRequest = null) }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     fun saveMetadata() {
         val songInfo = _uiState.value.songInfo ?: return
         val audioTagData = _uiState.value.editingTagData ?: return
@@ -202,15 +167,15 @@ class EditMetadataViewModel(
         }
     }
 
+
+    @RequiresApi(Build.VERSION_CODES.Q)
     private suspend fun writeMetadataToFile(filePath: String, audioTagData: AudioTagData): Boolean {
         return try {
-            val pfd: ParcelFileDescriptor? = if (isUriPath(filePath)) {
+            (if (isUriPath(filePath)) {
                 applicationContext.contentResolver.openFileDescriptor(filePath.toUri(), "rw")
             } else {
                 ParcelFileDescriptor.open(File(filePath), ParcelFileDescriptor.MODE_READ_WRITE)
-            }
-
-            pfd?.use { pfdDescriptor ->
+            })?.use { pfdDescriptor ->
                 val updates = mutableMapOf<String, String>()
                 audioTagData.title?.let { updates["TITLE"] = it }
                 audioTagData.artist?.let { updates["ARTIST"] = it }
@@ -234,4 +199,22 @@ class EditMetadataViewModel(
             false
         }
     }
+    private suspend fun readAudioTagDataFromFile(filePath: String): AudioTagData {
+        return withContext(Dispatchers.IO) {
+            try {
+                (if (isUriPath(filePath)) {
+                    applicationContext.contentResolver.openFileDescriptor(filePath.toUri(), "r")
+                } else {
+                    ParcelFileDescriptor.open(File(filePath), ParcelFileDescriptor.MODE_READ_ONLY)
+                })?.use { descriptor ->
+                    // 调用 AudioTagReader.read 解析元数据
+                    AudioTagReader.read(descriptor, true)
+                } ?: AudioTagData()  // 若打开失败返回空元数据
+            } catch (e: Exception) {
+                Log.e(TAG, "读取音频元数据失败: $filePath", e)
+                AudioTagData()
+            }
+        }
+    }
+
 }

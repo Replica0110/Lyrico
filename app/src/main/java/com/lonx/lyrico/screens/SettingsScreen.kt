@@ -27,14 +27,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.data.model.LyricDisplayMode
 import com.lonx.lyrico.viewmodel.SettingsViewModel
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Destination<RootGraph>(route = "settings")
 fun SettingsScreen(
-    onBackClick: () -> Unit,
-    viewModel: SettingsViewModel = koinViewModel()
+    navigator: DestinationsNavigator
 ) {
+    val viewModel: SettingsViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val lyricDisplayMode = uiState.lyricDisplayMode
 
@@ -43,7 +47,9 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("设置") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        navigator.popBackStack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }

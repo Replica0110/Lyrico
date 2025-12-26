@@ -60,8 +60,7 @@ open class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             LyricoTheme {
-                LyricoApp(
-                )
+                LyricoApp()
             }
         }
     }

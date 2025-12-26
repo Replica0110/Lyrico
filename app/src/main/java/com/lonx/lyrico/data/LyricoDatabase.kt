@@ -22,7 +22,7 @@ abstract class LyricoDatabase : RoomDatabase() {
                     LyricoDatabase::class.java,
                     "lyrico_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(false)
                     .build().also { INSTANCE = it }
             }
         }

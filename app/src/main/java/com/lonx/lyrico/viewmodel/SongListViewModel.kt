@@ -31,7 +31,8 @@ data class SongInfo(
 
 data class SongListUiState(
     val isLoading: Boolean = false,
-    val lastScanTime: Long = 0
+    val lastScanTime: Long = 0,
+    val loadingMessage: String? = null
 )
 
 @OptIn(FlowPreview::class)
@@ -128,15 +129,22 @@ class SongListViewModel(
         viewModelScope.launch(Dispatchers.Default) {
             try {
                 Log.d(TAG, "开始后台扫描文件 (forceFullScan=$forceFullScan)")
-                _uiState.update { it.copy(isLoading = true) }
+                _uiState.update { it.copy(isLoading = true, loadingMessage = "正在准备扫描...") }
 
                 if (forceFullScan) {
                     musicScanner.clearCache()
                 }
 
-                // The parameter to scanMusicFiles is now ignored, but we pass an empty list for compatibility.
-                val songFiles = musicScanner.scanMusicFiles(emptyList())
-                Log.d(TAG, "扫描发现 ${songFiles.size} 个音乐文件")
+                val songFiles = mutableListOf<com.lonx.lyrico.data.model.SongFile>()
+                musicScanner.scanMusicFiles(emptyList())
+                    .collect { songFile ->
+                        songFiles.add(songFile)
+                        _uiState.update { it.copy(loadingMessage = "正在扫描: ${songFile.fileName}") }
+                    }
+
+                Log.d(TAG, "扫描发现 ${songFiles.size} 个音乐文件，正在存入数据库...")
+                _uiState.update { it.copy(loadingMessage = "正在将 ${songFiles.size} 首歌曲存入数据库...") }
+
 
                 withContext(Dispatchers.IO) {
                     songRepository.scanAndSaveSongs(songFiles, forceFullScan = forceFullScan)
@@ -145,14 +153,15 @@ class SongListViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        lastScanTime = System.currentTimeMillis()
+                        lastScanTime = System.currentTimeMillis(),
+                        loadingMessage = null
                     )
                 }
                 Log.d(TAG, "后台扫描完成")
 
             } catch (e: Exception) {
                 Log.e(TAG, "后台扫描失败", e)
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(isLoading = false, loadingMessage = "扫描失败: ${e.message}") }
             }
         }
     }

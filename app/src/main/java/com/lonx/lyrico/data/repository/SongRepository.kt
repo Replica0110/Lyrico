@@ -52,7 +52,7 @@ class SongRepository(
         forceUpdate: Boolean = false
     ): SongEntity? = withContext(Dispatchers.IO) {
         try {
-            val fileLastModified = getFileLastModified(songFile.filePath)
+            val fileLastModified = songFile.lastModified
 
             if (!forceUpdate) {
                 val existingSong = songDao.getSongByPath(songFile.filePath)
@@ -62,7 +62,7 @@ class SongRepository(
             }
 
             Log.d(TAG, "读取歌曲元数据: ${songFile.fileName}")
-            
+
             val audioData = context.contentResolver.openFileDescriptor(
                 songFile.filePath.toUri(), "r"
             )?.use { pfd ->
@@ -163,25 +163,6 @@ class SongRepository(
         Log.d(TAG, "所有歌曲数据已清空")
     }
 
-    private fun getFileLastModified(filePath: String): Long {
-        return try {
-            context.contentResolver.query(
-                filePath.toUri(),
-                arrayOf("last_modified"),
-                null,
-                null,
-                null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    cursor.getLong(0)
-                } else {
-                    0L
-                }
-            } ?: 0L
-        } catch (e: Exception) {
-            Log.w(TAG, "无法获取文件修改时间: $filePath", e)
-            0L
-        }
-    }
+
 }
 

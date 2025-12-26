@@ -7,7 +7,9 @@ import android.provider.MediaStore
 import android.util.Log
 import com.lonx.lyrico.data.model.SongFile
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 
 /**
  * 音乐文件扫描器 - 使用 MediaStore API 进行高效扫描
@@ -17,65 +19,65 @@ class MusicScanner(private val context: Context) {
     private val TAG = "MusicScanner"
 
     /**
-     * Scans for all music files on the device using MediaStore.
+     * Scans for all music files on the device using MediaStore and emits them as a Flow.
      * The folderUris parameter is ignored as MediaStore scans all indexed media.
      */
-    suspend fun scanMusicFiles(folderUris: List<String>): List<SongFile> =
-        withContext(Dispatchers.IO) {
-            val songFiles = mutableListOf<SongFile>()
-
-            // MediaStore is the single source of truth for media, so we ignore folderUris
-            if (folderUris.isEmpty()) {
-                Log.d(TAG, "No folders configured to scan, but MediaStore will scan all media.")
-            }
-
-            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-            } else {
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-            }
-
-            val projection = arrayOf(
-                MediaStore.Audio.Media._ID,
-                MediaStore.Audio.Media.DISPLAY_NAME,
-            )
-
-            // Get only music files
-            val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
-
-            Log.d(TAG, "Querying MediaStore for audio files...")
-
-            try {
-                context.contentResolver.query(
-                    collection,
-                    projection,
-                    selection,
-                    null,
-                    "${MediaStore.Audio.Media.DATE_ADDED} DESC"
-                )?.use { cursor ->
-                    val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-                    val nameColumn =
-                        cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
-
-                    while (cursor.moveToNext()) {
-                        val id = cursor.getLong(idColumn)
-                        val name = cursor.getString(nameColumn)
-                        val contentUri = ContentUris.withAppendedId(
-                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                            id
-                        )
-
-                        songFiles.add(SongFile(contentUri.toString(), name))
-                    }
-                    Log.d(TAG, "MediaStore scan found ${songFiles.size} music files.")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to query MediaStore", e)
-                // Return empty list or handle error as appropriate
-            }
-
-            songFiles
+    fun scanMusicFiles(folderUris: List<String>): Flow<SongFile> = flow {
+        // MediaStore is the single source of truth for media, so we ignore folderUris
+        if (folderUris.isEmpty()) {
+            Log.d(TAG, "No folders configured to scan, but MediaStore will scan all media.")
         }
+
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        }
+
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.DATE_MODIFIED
+        )
+
+        // Get only music files
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+
+        Log.d(TAG, "Querying MediaStore for audio files...")
+
+        try {
+            context.contentResolver.query(
+                collection,
+                projection,
+                selection,
+                null,
+                "${MediaStore.Audio.Media.DATE_ADDED} DESC"
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val nameColumn =
+                    cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+                val dateModifiedColumn =
+                    cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idColumn)
+                    val name = cursor.getString(nameColumn)
+                    // MediaStore.Audio.Media.DATE_MODIFIED is in seconds, convert to milliseconds
+                    val lastModified = cursor.getLong(dateModifiedColumn) * 1000L
+                    Log.d(TAG, "最后修改时间: $lastModified")
+                    val contentUri = ContentUris.withAppendedId(
+                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        id
+                    )
+                    emit(SongFile(contentUri.toString(), name, lastModified))
+                }
+                Log.d(TAG, "MediaStore scan finished.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to query MediaStore", e)
+            // Error is logged, flow will just complete.
+        }
+    }.flowOn(Dispatchers.IO)
 
     /**
      * Caching is no longer needed with MediaStore, but we keep the methods for API compatibility.

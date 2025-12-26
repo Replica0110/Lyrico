@@ -31,6 +31,9 @@ open class MainActivity : ComponentActivity() {
 
             XXPermissions.with(this)
                 // 申请多个权限
+//                .permission(PermissionLists.getWriteExternalStoragePermission())
+//                .permission(PermissionLists.getReadExternalStoragePermission())
+//                .permission(PermissionLists.getManageExternalStoragePermission())
                 .permission(PermissionLists.getReadMediaAudioPermission())
 
                 .request(object : OnPermissionCallback {

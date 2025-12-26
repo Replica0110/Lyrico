@@ -20,10 +20,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
+import coil.compose.AsyncImage
 import com.lonx.lyrico.data.SongDataHolder
 import com.lonx.lyrico.ui.theme.*
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
@@ -144,7 +147,14 @@ fun EditMetadataScreen(
                 .imePadding()
                 .verticalScroll(scrollState)
         ) {
-            CoverArtSection(uiState.coverBitmap)
+            AsyncImage(
+                model = uiState.coverUri,
+                contentDescription = uiState.songInfo?.tagData?.title ?: "歌曲封面",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                placeholder = rememberVectorPainter(Icons.Default.MusicNote),
+                error = rememberVectorPainter(Icons.Default.MusicNote)
+            )
 
             Column(
                 modifier = Modifier.padding(12.dp),
@@ -216,56 +226,6 @@ fun EditMetadataScreen(
     }
 }
 
-@Composable
-private fun CoverArtSection(coverBitmap: android.graphics.Bitmap?) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                    colors = listOf(Gray100, Gray50)
-                )
-            )
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(192.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Gray200)
-                .border(1.dp, Gray200, RoundedCornerShape(12.dp))
-        ) {
-            if (coverBitmap != null) {
-                Image(
-                    bitmap = coverBitmap.asImageBitmap(),
-                    contentDescription = "歌曲封面",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        Icons.Default.MusicNote,
-                        contentDescription = "暂无封面",
-                        tint = Gray400,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        "暂无封面",
-                        color = Gray400,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun MetadataInputGroup(

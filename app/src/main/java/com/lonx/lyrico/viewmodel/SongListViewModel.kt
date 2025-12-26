@@ -1,6 +1,6 @@
 package com.lonx.lyrico.viewmodel
 
-import android.graphics.Bitmap
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,7 +9,6 @@ import com.lonx.lyrico.data.model.SongEntity
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.MusicScanner
 import java.text.Collator
-import java.util.Comparator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +26,7 @@ data class SongInfo(
     val filePath: String,
     val fileName: String,
     val tagData: AudioTagData?,
-    val coverBitmap: Bitmap?
+    val coverUri: Uri?
 )
 
 data class SongListUiState(

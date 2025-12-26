@@ -1,7 +1,7 @@
 package com.lonx.lyrico.viewmodel
 
 import android.content.Context
-import android.graphics.Bitmap
+import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.net.toUri
@@ -29,7 +29,7 @@ data class EditMetadataUiState(
     val originalTagData: AudioTagData? = null,
     val editingTagData: AudioTagData? = null,
     val currentLyrics: LyricsResult? = null,
-    val coverBitmap: Bitmap? = null,
+    val coverUri: Uri? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean? = null
 )
@@ -51,7 +51,7 @@ class EditMetadataViewModel(
                 songInfo = songInfo,
                 originalTagData = songInfo.tagData,
                 editingTagData = songInfo.tagData,
-                coverBitmap = songInfo.coverBitmap
+                coverUri = songInfo.coverUri
             )
         }
     }

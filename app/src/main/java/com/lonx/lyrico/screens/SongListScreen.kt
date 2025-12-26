@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.SongEntity
@@ -163,7 +162,7 @@ fun SongListScreen(
                                         rawProperties = emptyMap()
                                     )
                                 },
-                                coverBitmap = null // Set to null, the next screen will load it via Coil
+                                coverUri = song.filePath.toUri()
                             )
                             onSongClick(songInfo)
                         }

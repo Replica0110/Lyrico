@@ -34,7 +34,7 @@ fun LocalSearchScreen(
     val viewModel: LocalSearchViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val groupedSongs by viewModel.groupedSongs.collectAsState()
-    
+
     // 初始化搜索关键词
     LaunchedEffect(keyword) {
         if (keyword != null && keyword != uiState.searchQuery) {
@@ -43,65 +43,57 @@ fun LocalSearchScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("搜索") },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { 
-                            viewModel.onSearchQueryChanged("") 
-                        }) {
-                            Icon(Icons.Default.Clear, contentDescription = "清除")
-                        }
-                    }
-                }
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
-            // Search Bar
-            TextField(
-                value = uiState.searchQuery,
-                onValueChange = { viewModel.onSearchQueryChanged(it) },
-                placeholder = { Text("搜索标题、歌手、专辑...", fontSize = 14.sp) },
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(50.dp),
-                shape = CircleShape,
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                        alpha = 0.5f
-                    )
-                ),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { 
-                    if (uiState.searchQuery.isNotBlank()) {
-                        viewModel.search()
-                    }
-                })
-            )
+                    .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { navigator.navigateUp() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
 
-
-
+                TextField(
+                    value = uiState.searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    placeholder = { Text("搜索标题、歌手、专辑...", fontSize = 14.sp) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .height(50.dp),
+                    shape = CircleShape,
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.5f
+                        )
+                    ),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        if (uiState.searchQuery.isNotBlank()) {
+                            viewModel.search()
+                        }
+                    })
+                )
+            }
             // Results
             if (uiState.isSearching) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -118,7 +110,10 @@ fun LocalSearchScreen(
                             ) {
                                 Text(
                                     text = category.category,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    modifier = Modifier.padding(
+                                        horizontal = 16.dp,
+                                        vertical = 8.dp
+                                    ),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -126,7 +121,10 @@ fun LocalSearchScreen(
                         }
                         items(items = category.songs, key = { it.filePath }) { song ->
                             SongListItem(song = song, navigator = navigator)
-                            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
                         }
                     }
                 }

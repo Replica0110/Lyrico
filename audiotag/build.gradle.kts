@@ -39,7 +39,10 @@ android {
 }
 
 dependencies {
-    implementation(libs.taglib)
+    implementation(libs.taglib) {
+        exclude(group = "org.jetbrains.kotlin")
+        exclude(group = "com.squareup.okio")
+    }
     implementation(libs.androidx.core.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

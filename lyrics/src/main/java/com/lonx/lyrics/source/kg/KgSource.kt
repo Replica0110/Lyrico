@@ -116,7 +116,7 @@ class KgSource {
                 SongSearchResult(
                     id = item.id ?: "",
                     title = item.songName,
-                    artist = item.singers.joinToString("、") { it.name },
+                    artist = item.singers.joinToString("/") { it.name },
                     album = item.albumName ?: "",
                     duration = (item.duration * 1000).toLong(),
                     source = Source.KG,

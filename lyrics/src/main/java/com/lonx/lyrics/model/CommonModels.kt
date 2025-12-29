@@ -17,9 +17,10 @@ data class SongSearchResult(
     val mid: String? = null
 ) : Parcelable
 
+@Parcelize
 data class LyricsData(
     val original: String?,      // 原始内容 (LRC/KRC 解密后)
     val translated: String? = null,
     val type: String = "lrc",    // lrc, krc
     val romanization: String? = null
-)
+) : Parcelable

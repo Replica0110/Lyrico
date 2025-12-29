@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -32,6 +31,8 @@ import org.koin.androidx.compose.koinViewModel
 import android.app.Activity
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.core.net.toUri
 import com.lonx.lyrico.data.model.LyricsSearchResult
 import com.ramcosta.composedestinations.annotation.Destination
@@ -339,7 +340,7 @@ private fun MetadataInputGroup(
                 }
                 IconButton(onClick = onRevert, modifier = Modifier.size(24.dp)) {
                     Icon(
-                        imageVector = Icons.Default.Undo,
+                        imageVector = Icons.AutoMirrored.Filled.Undo,
                         contentDescription = "撤销修改",
                         tint = Gray400
                     )

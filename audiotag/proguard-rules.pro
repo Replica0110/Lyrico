@@ -19,3 +19,11 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep data models used for API communication.
+# These are data classes and are Parcelable.
+-keep class com.lonx.audiotag.model.** { *; }
+
+# Keep public API entry points.
+-keep class com.lonx.audiotag.rw.AudioTagReader { *; }
+-keep class com.lonx.audiotag.rw.AudioTagWriter { *; }

@@ -62,7 +62,7 @@ fun LocalSearchScreen(
                 TextField(
                     value = uiState.searchQuery,
                     onValueChange = { viewModel.onSearchQueryChanged(it) },
-                    placeholder = { Text("搜索标题、歌手、专辑...", fontSize = 14.sp) },
+                    placeholder = { Text("搜索标题/歌手/专辑...", fontSize = 14.sp) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)

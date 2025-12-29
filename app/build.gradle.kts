@@ -15,7 +15,8 @@ android {
     defaultConfig {
         applicationId = "com.lonx.lyrico"
         minSdk = 28
-        targetSdk = 36
+        //noinspection ExpiredTargetSdkVersion
+        targetSdk = 28
         versionCode = 1
         versionName = "1.0"
 

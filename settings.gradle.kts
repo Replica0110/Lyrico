@@ -23,6 +23,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Lyrico"
-include(":app")
-include(":lyrics")
-include(":audiotag")
+include(":lyrico-app")
+include(":lyrico-lyrics")
+include(":lyrico-audiotag")

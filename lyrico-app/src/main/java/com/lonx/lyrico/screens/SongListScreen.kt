@@ -281,18 +281,18 @@ private fun SortMenu(
         onDismissRequest = onDismissRequest
     ) {
         val sorts = listOf(
-            SortInfo(SortBy.DATE_MODIFIED, SortOrder.DESC),
-            SortInfo(SortBy.DATE_MODIFIED, SortOrder.ASC),
             SortInfo(SortBy.TITLE, SortOrder.ASC),
             SortInfo(SortBy.TITLE, SortOrder.DESC),
+            SortInfo(SortBy.DATE_MODIFIED, SortOrder.ASC),
+            SortInfo(SortBy.DATE_MODIFIED, SortOrder.DESC),
             SortInfo(SortBy.ARTIST, SortOrder.ASC),
             SortInfo(SortBy.ARTIST, SortOrder.DESC)
         )
 
         sorts.forEach { sortInfo ->
             val text = when (sortInfo.sortBy) {
-                SortBy.DATE_MODIFIED -> "修改时间"
                 SortBy.TITLE -> "歌曲名"
+                SortBy.DATE_MODIFIED -> "修改时间"
                 SortBy.ARTIST -> "歌手"
             } + if (sortInfo.order == SortOrder.ASC) " (升序)" else " (降序)"
 

@@ -168,7 +168,7 @@ class EditMetadataViewModel(
                     }
                 }
             } else { // Fallback for file:// or direct paths
-                val file = File(fileUri.path)
+                val file = File(fileUri.path?: "")
                 if (file.exists()) {
                     return file.lastModified()
                 }

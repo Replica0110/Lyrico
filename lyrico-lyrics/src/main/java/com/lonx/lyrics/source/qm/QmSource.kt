@@ -89,7 +89,8 @@ class QmSource {
                     artist = singerList.joinToString(separator),
                     album = album,
                     duration = (item["interval"]?.jsonPrimitive?.int ?: 0) * 1000L,
-                    source = Source.QM
+                    source = Source.QM,
+                    date = item["time_public"]?.jsonPrimitive?.content ?: "",
                 )
             } ?: emptyList()
 

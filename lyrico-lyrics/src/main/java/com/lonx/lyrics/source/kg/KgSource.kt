@@ -112,7 +112,7 @@ class KgSource {
                 Log.e("KgSource", "Search failed: ${response.errorCode}")
                 return@withContext emptyList()
             }
-
+            Log.d("KgSource", "Search result: ${response.data?.lists}")
             return@withContext response.data?.lists?.map { item ->
                 SongSearchResult(
                     id = item.id ?: "",
@@ -121,7 +121,8 @@ class KgSource {
                     album = item.albumName ?: "",
                     duration = (item.duration * 1000).toLong(),
                     source = Source.KG,
-                    hash = item.fileHash
+                    hash = item.fileHash,
+                    date = item.publishDate ?:""
                 )
             } ?: emptyList()
         } catch (e: Exception) {

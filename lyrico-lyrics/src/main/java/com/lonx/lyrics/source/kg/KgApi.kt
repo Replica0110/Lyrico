@@ -42,7 +42,8 @@ data class KgSongItem(
     @SerialName("SongName") val songName: String,
     @SerialName("Singers") val singers: List<Singer>,
     @SerialName("AlbumName") val albumName: String? = null,
-    @SerialName("Duration") val duration: Int
+    @SerialName("Duration") val duration: Int,
+    @SerialName("PublishDate") val publishDate: String? = null,
 ) : Parcelable
 
 

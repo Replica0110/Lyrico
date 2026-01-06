@@ -50,6 +50,9 @@ android {
 dependencies {
     implementation(libs.compose.destinations.core)
     ksp(libs.compose.destinations.ksp)
+    implementation("io.github.moriafly:salt-ui-android:2.9.0-alpha02")
+    implementation("dev.chrisbanes.haze:haze:1.7.1")
+    implementation("dev.chrisbanes.haze:haze-materials:1.7.1")
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
     implementation(libs.androidx.core.ktx)

@@ -10,7 +10,8 @@ import androidx.room.PrimaryKey
  * @param title 歌曲标题
  * @param artist 艺术家
  * @param album 专辑
- * @param genre 类型
+ * @param genre 流派
+ * @param trackerNumber 音轨号
  * @param date 日期
  * @param lyrics 歌词
  * @param durationMilliseconds 时长（毫秒）
@@ -30,6 +31,7 @@ data class SongEntity(
     val artist: String? = null,
     val album: String? = null,
     val genre: String? = null,
+    val trackerNumber: String? = null,
     val date: String? = null,
     val lyrics: String? = null,
     val durationMilliseconds: Int = 0,
@@ -52,6 +54,7 @@ data class SongEntity(
         if (artist != other.artist) return false
         if (album != other.album) return false
         if (genre != other.genre) return false
+        if (trackerNumber != other.trackerNumber) return false
         if (date != other.date) return false
         if (lyrics != other.lyrics) return false
         if (durationMilliseconds != other.durationMilliseconds) return false
@@ -71,6 +74,7 @@ data class SongEntity(
         result = 31 * result + (artist?.hashCode() ?: 0)
         result = 31 * result + (album?.hashCode() ?: 0)
         result = 31 * result + (genre?.hashCode() ?: 0)
+        result = 31 * result + (trackerNumber?.hashCode() ?: 0)
         result = 31 * result + (date?.hashCode() ?: 0)
         result = 31 * result + (lyrics?.hashCode() ?: 0)
         result = 31 * result + durationMilliseconds.hashCode()

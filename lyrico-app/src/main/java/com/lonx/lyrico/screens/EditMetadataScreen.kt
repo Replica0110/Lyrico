@@ -296,17 +296,17 @@ fun EditMetadataScreen(
 
                     MetadataInputGroup(
                         label = "音轨",
-                        value = editingTagData?.channels.toString(),
+                        value = editingTagData?.trackerNumber ?: "",
                         onValueChange = {
                             viewModel.onUpdateEditingTagData(
-                                editingTagData!!.copy(channels = it.toIntOrNull() ?: 0)
+                                editingTagData!!.copy(trackerNumber = it)
                             )
                         },
-                        isModified = editingTagData?.channels != originalTagData?.channels,
+                        isModified = editingTagData?.trackerNumber != originalTagData?.trackerNumber,
                         onRevert = {
                             viewModel.onUpdateEditingTagData(
                                 editingTagData!!.copy(
-                                    channels = originalTagData?.channels ?: 0
+                                    trackerNumber = originalTagData?.trackerNumber ?: ""
                                 )
                             )
                         },

@@ -10,7 +10,7 @@ data class AudioTagData(
     val album: String? = null,
     val genre: String? = null,
     val date: String? = null,
-
+    val trackerNumber: String? = null,
     val lyrics: String? = null,
 
     val durationMilliseconds: Int = 0,

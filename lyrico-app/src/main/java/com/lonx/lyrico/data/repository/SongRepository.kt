@@ -112,6 +112,7 @@ class SongRepository(
                 artist = audioData.artist,
                 album = audioData.album,
                 genre = audioData.genre,
+                trackerNumber = audioData.trackerNumber,
                 date = audioData.date,
                 lyrics = audioData.lyrics,
                 durationMilliseconds = audioData.durationMilliseconds,
@@ -166,6 +167,7 @@ class SongRepository(
                     artist = audioTagData.artist ?: existingSong.artist,
                     album = audioTagData.album ?: existingSong.album,
                     genre = audioTagData.genre ?: existingSong.genre,
+                    trackerNumber = audioTagData.trackerNumber ?: existingSong.trackerNumber,
                     date = audioTagData.date ?: existingSong.date,
                     lyrics = audioTagData.lyrics ?: existingSong.lyrics,
                     rawProperties = audioTagData.rawProperties.toString(),
@@ -205,6 +207,7 @@ class SongRepository(
                 audioTagData.album?.let { updates["ALBUM"] = it }
                 audioTagData.genre?.let { updates["GENRE"] = it }
                 audioTagData.date?.let { updates["DATE"] = it }
+                audioTagData.trackerNumber?.let { updates["TRACKNUMBER"] = it }
 
                 com.lonx.audiotag.rw.AudioTagWriter.writeTags(pfdDescriptor, updates)
 

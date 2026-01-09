@@ -47,7 +47,7 @@ open class MainActivity : ComponentActivity() {
                         // Trigger a scan after permission is granted, with a small delay
                         lifecycleScope.launch {
                             delay(500) // Delay to allow MediaStore to update
-                            songListViewModel.refreshSongs(forceFullScan = true)
+                            songListViewModel.refreshSongs()
                         }
                     }
 

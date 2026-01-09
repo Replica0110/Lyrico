@@ -1,6 +1,7 @@
 [versions]
 agp = "8.13.2"
 core = "2.3.0"
+haze = "1.7.1"
 kotlin = "2.2.21"
 ksp = "2.3.3"
 coreKtx = "1.17.0"
@@ -18,6 +19,7 @@ materialIconsExtended = "1.7.8"
 okhttp = "5.3.2"
 retrofit = "3.0.0"
 retrofit2KotlinxSerializationConverter = "1.0.0"
+saltui = "2.9.0-alpha02"
 taglib = "1.0.5"
 datastorePreferences = "1.2.0"
 room = "2.8.4"
@@ -30,6 +32,8 @@ androidx-compose-material-icons-extended = { module = "androidx.compose.material
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 compose-destinations-core = { module = "io.github.raamcosta.compose-destinations:core", version.ref = "core" }
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -44,6 +48,7 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-destinations-ksp = { module = "io.github.raamcosta.compose-destinations:ksp", version.ref = "core" }
+salt-ui-android = { module = "io.github.moriafly:salt-ui-android", version.ref = "saltui" }
 xxpermissions = { module = "com.github.getActivity:XXPermissions", version.ref = "xxpermissions" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }

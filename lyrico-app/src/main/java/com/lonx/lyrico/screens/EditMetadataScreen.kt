@@ -43,9 +43,14 @@ import com.ramcosta.composedestinations.generated.destinations.SearchResultsDest
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.result.ResultRecipient
 import com.ramcosta.composedestinations.result.onResult
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
+import dev.chrisbanes.haze.rememberHazeState
 
 @RequiresApi(Build.VERSION_CODES.Q)
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 @Destination<RootGraph>(route = "edit_metadata")
 fun EditMetadataScreen(
@@ -60,7 +65,7 @@ fun EditMetadataScreen(
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
+    val hazeState = rememberHazeState()
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
@@ -119,50 +124,58 @@ fun EditMetadataScreen(
             .background(SaltTheme.colors.background),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            val titleText = if (uiState.songInfo?.tagData?.title != null) {
-                "${uiState.songInfo!!.tagData!!.title}"
-            } else {
-                uiState.songInfo?.fileName ?: "编辑元数据"
-            }
-            TopBar(
-                text = titleText,
-                navigationIcon = {
-                    IconButton(onClick = {
-                        navigator.popBackStack()
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        val keyword = if (editingTagData?.title?.isNotEmpty() == true) {
-                            if (editingTagData.artist.isNullOrEmpty()) {
-                                editingTagData.title!!
-                            } else {
-                                "${editingTagData.title} ${editingTagData.artist}"
-                            }
-                        } else {
-                            uiState.songInfo?.fileName ?: ""
-                        }
-                        navigator.navigate(SearchResultsDestination(keyword))
-                    }) {
-                        Icon(Icons.Default.Search, contentDescription = "搜索")
-                    }
-                    IconButton(
-                        onClick = { viewModel.saveMetadata() },
-                        enabled = !uiState.isSaving
-                    ) {
-                        if (uiState.isSaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.Save, contentDescription = "保存")
-                        }
-                    }
+            Column(
+                modifier = Modifier.hazeEffect(
+                    state = hazeState,
+                    style = HazeMaterials.thin(containerColor = SaltTheme.colors.background)
+                )
+            ) {
+                val titleText = if (uiState.songInfo?.tagData?.title != null) {
+                    "${uiState.songInfo!!.tagData!!.title}"
+                } else {
+                    uiState.songInfo?.fileName ?: "编辑元数据"
                 }
-            )
+                TopBar(
+                    backgroundColor = Color.Transparent,
+                    text = titleText,
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            navigator.popBackStack()
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            val keyword = if (editingTagData?.title?.isNotEmpty() == true) {
+                                if (editingTagData.artist.isNullOrEmpty()) {
+                                    editingTagData.title!!
+                                } else {
+                                    "${editingTagData.title} ${editingTagData.artist}"
+                                }
+                            } else {
+                                uiState.songInfo?.fileName ?: ""
+                            }
+                            navigator.navigate(SearchResultsDestination(keyword))
+                        }) {
+                            Icon(Icons.Default.Search, contentDescription = "搜索")
+                        }
+                        IconButton(
+                            onClick = { viewModel.saveMetadata() },
+                            enabled = !uiState.isSaving
+                        ) {
+                            if (uiState.isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.Save, contentDescription = "保存")
+                            }
+                        }
+                    }
+                )
+            }
         }
     ) { paddingValues ->
         Box(modifier = Modifier
@@ -172,7 +185,8 @@ fun EditMetadataScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(top = paddingValues.calculateTopPadding(), bottom = paddingValues.calculateBottomPadding())
+                    .hazeSource(hazeState)
                     .imePadding()
                     .verticalScroll(scrollState)
             ) {

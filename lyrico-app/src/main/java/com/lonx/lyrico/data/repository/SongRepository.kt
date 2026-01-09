@@ -8,20 +8,22 @@ import androidx.core.net.toUri
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.model.SearchFilter
 import com.lonx.lyrico.data.model.SongEntity
 import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.utils.MusicScanner
 import com.lonx.lyrico.utils.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
  * 歌曲数据存储库 - 处理数据库和文件系统交互
+ *
+ * The single source of truth for song data. It is responsible for synchronizing the
+ * local database with the music files on the device.
  */
 class SongRepository(
     private val database: LyricoDatabase,
@@ -33,66 +35,62 @@ class SongRepository(
     private companion object {
         const val TAG = "SongRepository"
     }
-    suspend fun incrementalScan() = withContext(Dispatchers.Default) {
-        val lastScanTime = settingsManager.getLastScanTime()
-        val changedFiles = musicScanner.scanMusicFiles(emptyList())
-            .filter { it.lastModified > lastScanTime } // 只处理修改时间更新的文件
-            .toList()
 
-        if (changedFiles.isNotEmpty()) {
-            withContext(Dispatchers.IO) {
-                changedFiles.forEach { songFile ->
-                    readAndSaveSongMetadata(songFile, forceUpdate = true)
-                }
+    /**
+     * Performs a full synchronization between the device's MediaStore and the local database.
+     * This is the primary method for all scanning operations, including incremental updates and full scans.
+     * It efficiently handles additions, deletions, and modifications.
+     */
+    suspend fun synchronizeWithDevice() = withContext(Dispatchers.Default) {
+        Log.d(TAG, "开始同步数据库与设备文件...")
+
+        // Step 1: Get the current list of music files from the device (the "source of truth").
+        val deviceSongFiles = musicScanner.scanMusicFiles().toList()
+        val deviceSongFileMap = deviceSongFiles.associateBy { it.filePath }
+
+        // Step 2: Get the current list of songs from our local database.
+        val dbSongs = songDao.getAllSongs().first()
+        val dbSongMap = dbSongs.associateBy { it.filePath }
+
+        // Step 3: Identify and delete songs that are in the database but no longer on the device.
+        val deletedPaths = dbSongMap.keys - deviceSongFileMap.keys
+        if (deletedPaths.isNotEmpty()) {
+            Log.d(TAG, "发现 ${deletedPaths.size} 首已删除歌曲，正在从数据库移除...")
+            songDao.deleteByFilePaths(deletedPaths.toList())
+        }
+
+        // Step 4: Identify new songs to add or existing songs to update.
+        val songsToProcess = mutableListOf<SongFile>()
+        deviceSongFiles.forEach { deviceSongFile ->
+            val dbSong = dbSongMap[deviceSongFile.filePath]
+            // Process if the song is new or if its modification date has changed.
+            if (dbSong == null || dbSong.fileLastModified != deviceSongFile.lastModified) {
+                songsToProcess.add(deviceSongFile)
             }
-            settingsManager.saveLastScanTime(System.currentTimeMillis())
         }
-    }
 
-    fun searchSongs(query: String, filter: SearchFilter): Flow<List<SongEntity>> {
-        return when (filter) {
-            SearchFilter.TITLE -> songDao.searchSongsByTitle(query)
-            SearchFilter.ARTIST -> songDao.searchSongsByArtist(query)
-            SearchFilter.ALBUM -> songDao.searchSongsByAlbum(query)
+        if (songsToProcess.isNotEmpty()) {
+            Log.d(TAG, "发现 ${songsToProcess.size} 首新增或更新的歌曲，正在处理...")
+            songsToProcess.forEach { songFile ->
+                readAndSaveSongMetadata(songFile, forceUpdate = true)
+            }
         }
-    }
 
-    fun searchSongsByAll(query: String): Flow<List<SongEntity>> {
-        return songDao.searchSongsByAll(query)
-    }
-
-    /**
-     * Get all songs as a flow.
-     */
-    fun getAllSongs(): Flow<List<SongEntity>> {
-        return songDao.getAllSongs()
+        settingsManager.saveLastScanTime(System.currentTimeMillis())
+        Log.d(TAG, "数据库同步完成。")
     }
 
     /**
-     * 获取指定歌曲的详细信息（Flow）
+     * Reads metadata from a SongFile and saves it to the database.
      */
-    fun getSongFlow(filePath: String): Flow<SongEntity?> = songDao.getSongByPathFlow(filePath)
-
-    /**
-     * 获取指定歌曲的详细信息
-     */
-    suspend fun getSong(filePath: String): SongEntity? = withContext(Dispatchers.IO) {
-        songDao.getSongByPath(filePath)
-    }
-
-    /**
-     * 从文件读取元数据并保存到数据库
-     */
-    suspend fun readAndSaveSongMetadata(
+    private suspend fun readAndSaveSongMetadata(
         songFile: SongFile,
         forceUpdate: Boolean = false
     ): SongEntity? = withContext(Dispatchers.IO) {
         try {
-            val fileLastModified = songFile.lastModified
-
             if (!forceUpdate) {
                 val existingSong = songDao.getSongByPath(songFile.filePath)
-                if (existingSong != null && existingSong.fileLastModified == fileLastModified) {
+                if (existingSong != null && existingSong.fileLastModified == songFile.lastModified) {
                     return@withContext existingSong
                 }
             }
@@ -120,7 +118,7 @@ class SongRepository(
                 sampleRate = audioData.sampleRate,
                 channels = audioData.channels,
                 rawProperties = audioData.rawProperties.toString(),
-                fileLastModified = fileLastModified,
+                fileLastModified = songFile.lastModified,
                 dbUpdateTime = System.currentTimeMillis()
             )
 
@@ -134,26 +132,14 @@ class SongRepository(
         }
     }
 
-    suspend fun scanAndSaveSongs(
-        songFiles: List<SongFile>,
-        forceFullScan: Boolean = false
-    ): List<SongEntity> = withContext(Dispatchers.IO) {
-        val results = mutableListOf<SongEntity>()
-        
-        for (songFile in songFiles) {
-            val entity = readAndSaveSongMetadata(songFile, forceUpdate = forceFullScan)
-            if (entity != null) {
-                results.add(entity)
-            }
-        }
+    // --- Public API for UI and ViewModels ---
 
-        val existingPaths = songFiles.map { it.filePath }
-        if (existingPaths.isNotEmpty()) {
-            songDao.deleteNotIn(existingPaths)
-        }
+    fun getAllSongs(): Flow<List<SongEntity>> {
+        return songDao.getAllSongs()
+    }
 
-        Log.d(TAG, "扫描完成: ${results.size}/${songFiles.size} 歌曲")
-        return@withContext results
+    fun searchSongsByAll(query: String): Flow<List<SongEntity>> {
+        return songDao.searchSongsByAll(query)
     }
 
     suspend fun updateSongMetadata(audioTagData: AudioTagData, filePath: String, lastModified: Long): Boolean =
@@ -184,14 +170,6 @@ class SongRepository(
             }
         }
 
-    private fun isUriPath(path: String): Boolean {
-        return try {
-            val uri = path.toUri()
-            uri.scheme != null && (uri.scheme == "content" || uri.scheme == "file")
-        } catch (e: Exception) {
-            false
-        }
-    }
 
     @RequiresApi(Build.VERSION_CODES.Q)
     suspend fun writeAudioTagData(filePath: String, audioTagData: AudioTagData): Boolean {
@@ -242,16 +220,6 @@ class SongRepository(
         }
     }
 
-
-    suspend fun deleteSong(filePath: String) = withContext(Dispatchers.IO) {
-        try {
-            songDao.deleteByFilePath(filePath)
-            Log.d(TAG, "歌曲已删除: $filePath")
-        } catch (e: Exception) {
-            Log.e(TAG, "删除歌曲失败: $filePath", e)
-        }
-    }
-
     suspend fun getSongsCount(): Int = withContext(Dispatchers.IO) {
         songDao.getSongsCount()
     }
@@ -261,6 +229,13 @@ class SongRepository(
         Log.d(TAG, "所有歌曲数据已清空")
     }
 
-
+    private fun isUriPath(path: String): Boolean {
+        return try {
+            val uri = path.toUri()
+            uri.scheme != null && (uri.scheme == "content" || uri.scheme == "file")
+        } catch (e: Exception) {
+            false
+        }
+    }
 }
 

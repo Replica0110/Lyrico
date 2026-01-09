@@ -19,14 +19,9 @@ class MusicScanner(private val context: Context) {
     private val TAG = "MusicScanner"
 
     /**
-     * Scans for all music files on the device using MediaStore and emits them as a Flow.
-     * The folderUris parameter is ignored as MediaStore scans all indexed media.
+     * 使用MediaStore扫描设备上的所有音乐文件，并将其以Flow形式发送
      */
-    fun scanMusicFiles(folderUris: List<String>): Flow<SongFile> = flow {
-        // MediaStore is the single source of truth for media, so we ignore folderUris
-        if (folderUris.isEmpty()) {
-            Log.d(TAG, "No folders configured to scan, but MediaStore will scan all media.")
-        }
+    fun scanMusicFiles(): Flow<SongFile> = flow {
 
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -64,7 +59,7 @@ class MusicScanner(private val context: Context) {
                     val name = cursor.getString(nameColumn)
                     // MediaStore.Audio.Media.DATE_MODIFIED is in seconds, convert to milliseconds
                     val lastModified = cursor.getLong(dateModifiedColumn) * 1000L
-                    Log.d(TAG, "最后修改时间: $lastModified")
+//                    Log.d(TAG, "最后修改时间: $lastModified")
                     val contentUri = ContentUris.withAppendedId(
                         MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                         id
@@ -79,10 +74,4 @@ class MusicScanner(private val context: Context) {
         }
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Caching is no longer needed with MediaStore, but we keep the methods for API compatibility.
-     */
-    fun clearCache() {
-        Log.d(TAG, "clearCache() called, but no longer necessary with MediaStore.")
-    }
 }

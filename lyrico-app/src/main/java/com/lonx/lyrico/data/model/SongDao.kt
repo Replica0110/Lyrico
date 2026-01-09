@@ -53,6 +53,18 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE filePath = :filePath LIMIT 1")
     fun getSongByPathFlow(filePath: String): Flow<SongEntity?>
 
+    /**
+     * 获取所有歌曲的文件路径
+     */
+    @Query("SELECT filePath FROM songs")
+    suspend fun getAllFilePaths(): List<String>
+
+    /**
+     * 按文件路径批量删除歌曲
+     */
+    @Query("DELETE FROM songs WHERE filePath IN (:paths)")
+    suspend fun deleteByFilePaths(paths: List<String>)
+
     @Query("SELECT * FROM songs WHERE title LIKE '%' || :query || '%'")
     fun searchSongsByTitle(query: String): Flow<List<SongEntity>>
 

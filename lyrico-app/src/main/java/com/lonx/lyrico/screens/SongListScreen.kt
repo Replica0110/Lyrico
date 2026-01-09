@@ -11,6 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +73,7 @@ fun SongListScreen(
     val songs by viewModel.songs.collectAsState()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
 
+    val pullToRefreshState = rememberPullToRefreshState()
     // 创建 Haze 状态
     val hazeState = rememberHazeState()
 
@@ -85,7 +89,7 @@ fun SongListScreen(
                 TopBar(
                     backgroundColor = Color.Transparent,
                     text = "歌曲(${songs.size}首)",
-                    navigationIcon =  {
+                    navigationIcon = {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings",
@@ -173,49 +177,45 @@ fun SongListScreen(
                 .background(SaltTheme.colors.background)
         ) {
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .hazeSource(state = hazeState),
-                contentPadding = PaddingValues(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding()
-                )
-            ) {
-                items(
-                    items = songs,
-                    key = { song -> song.filePath }
-                ) { song ->
-                    SongListItem(
-                        song = song,
-                        navigator = navigator,
-                        modifier = Modifier.animateItem()
+            PullToRefreshBox(
+                modifier = Modifier.fillMaxSize(),
+                isRefreshing = uiState.isLoading,
+                state = pullToRefreshState,
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = paddingValues.calculateTopPadding()),
+                        isRefreshing = uiState.isLoading,
+                        state = pullToRefreshState,
+                        color = SaltTheme.colors.highlight,
+                        containerColor = SaltTheme.colors.background
                     )
-                    ItemDivider()
+                },
+                onRefresh = {
+                    viewModel.refreshSongs()
                 }
-            }
-
-            // Loading Overlay
-            if (uiState.isLoading) {
-                Column(
+            ) {
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        // 遮罩层背景，覆盖在列表之上
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
-                        // 拦截点击事件
-                        .clickable(enabled = false, onClick = {}),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = uiState.loadingMessage ?: "正在扫描...",
-                        color = SaltTheme.colors.text,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
-                        modifier = Modifier.padding(horizontal = 32.dp)
+                        .hazeSource(state = hazeState),
+                    contentPadding = PaddingValues(
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = paddingValues.calculateBottomPadding()
                     )
+                ) {
+                    items(
+                        items = songs,
+                        key = { song -> song.filePath }
+                    ) { song ->
+                        SongListItem(
+                            song = song,
+                            navigator = navigator,
+                            modifier = Modifier.animateItem()
+                        )
+                        ItemDivider()
+                    }
                 }
             }
         }

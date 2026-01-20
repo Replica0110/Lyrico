@@ -1,9 +1,8 @@
 package com.lonx.lyrico.data.repository
 
 import android.content.Context
-import android.os.Build
+import android.provider.OpenableColumns
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
@@ -214,17 +213,22 @@ class SongRepository(
 
     suspend fun readAudioTagData(filePath: String): AudioTagData {
         return withContext(Dispatchers.IO) {
+            val fileName = getFileName(filePath)
             try {
                 (if (isUriPath(filePath)) {
                     context.contentResolver.openFileDescriptor(filePath.toUri(), "r")
                 } else {
                     android.os.ParcelFileDescriptor.open(File(filePath), android.os.ParcelFileDescriptor.MODE_READ_ONLY)
                 })?.use { descriptor ->
-                    AudioTagReader.read(descriptor, true)
-                } ?: AudioTagData()
+                    val data = AudioTagReader.read(descriptor, true)
+                    // 使用 copy 将文件名注入到返回的对象中
+                    data.copy(fileName = fileName)
+
+                } ?: AudioTagData(fileName = fileName) // 打开失败时，至少返回文件名
             } catch (e: Exception) {
                 Log.e(TAG, "读取音频元数据失败: $filePath", e)
-                AudioTagData()
+                // 发生异常时，返回一个空的 Data 对象，但带上文件名
+                AudioTagData(fileName = fileName)
             }
         }
     }
@@ -253,6 +257,39 @@ class SongRepository(
             connection.readTimeout = 8000
             connection.inputStream.use { it.readBytes() }
         }
+
+    fun getFileName(filePath: String): String {
+        // Content URI (例如 content://media/external/...)
+        if (filePath.startsWith("content://")) {
+            try {
+                val uri = filePath.toUri()
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(OpenableColumns.DISPLAY_NAME), // 只查询显示名称
+                    null, null, null
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex != -1) {
+                            val displayName = cursor.getString(nameIndex)
+                            if (!displayName.isNullOrBlank()) {
+                                return displayName
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "从 URI 获取文件名失败: $filePath", e)
+            }
+        }
+
+        // 普通文件路径，或者上面的查询失败了，使用 File API 回退
+        return try {
+            File(filePath).name
+        } catch (e: Exception) {
+            filePath.substringAfterLast("/")
+        }
+    }
 
 }
 

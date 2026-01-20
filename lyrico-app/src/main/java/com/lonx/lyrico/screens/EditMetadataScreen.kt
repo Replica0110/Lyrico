@@ -121,7 +121,7 @@ fun EditMetadataScreen(
                 val titleText = if (uiState.songInfo?.tagData?.title != null) {
                     "${uiState.songInfo!!.tagData!!.title}"
                 } else {
-                    uiState.songInfo?.fileName ?: "编辑元数据"
+                    uiState.songInfo?.tagData?.fileName ?: "编辑元数据"
                 }
                 TopBar(
                     backgroundColor = Color.Transparent,
@@ -142,7 +142,7 @@ fun EditMetadataScreen(
                                     "${editingTagData.title} ${editingTagData.artist}"
                                 }
                             } else {
-                                uiState.songInfo?.fileName ?: ""
+                                uiState.songInfo?.tagData?.fileName ?: ""
                             }
                             navigator.navigate(SearchResultsDestination(keyword))
                         }) {

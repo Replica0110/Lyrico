@@ -1,8 +1,6 @@
 package com.lonx.lyrico.viewmodel
 
 import android.content.Context
-import android.content.IntentSender
-import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
@@ -31,7 +29,6 @@ data class EditMetadataUiState(
      * 编辑态封面（只要不为 null，就代表用户替换过封面）
      */
     val coverUri: Any? = null,
-    val filePath: String? = null,
 
     val isSaving: Boolean = false,
     val saveSuccess: Boolean? = null,
@@ -64,11 +61,9 @@ class EditMetadataViewModel(
                     state.copy(
                         songInfo = SongInfo(
                             filePath = filePath,
-                            tagData = audioTagData,
-                            fileName = filePath.substringAfterLast("/")
+                            tagData = audioTagData
                         ),
                         originalTagData = audioTagData,
-                        filePath = filePath,
 
                         // 初始化 editingTagData 只有未编辑时才设置
                         editingTagData = if (state.isEditing) state.editingTagData else audioTagData,
@@ -87,7 +82,6 @@ class EditMetadataViewModel(
             }
         }
     }
-
 
 
     fun onUpdateEditingTagData(audioTagData: AudioTagData) {

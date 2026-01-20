@@ -31,7 +31,6 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class SongInfo(
     val filePath: String,
-    val fileName: String,
     val tagData: AudioTagData?
 ): Parcelable
 

@@ -28,7 +28,6 @@ import coil3.compose.AsyncImage
 import coil3.toUri
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.SongEntity
-import com.lonx.lyrico.ui.components.bar.TopBar
 import com.lonx.lyrico.ui.theme.Gray200
 import com.lonx.lyrico.ui.theme.Gray400
 import com.lonx.lyrico.utils.coil.CoverRequest
@@ -50,16 +49,10 @@ import com.ramcosta.composedestinations.generated.destinations.EditMetadataDesti
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
-import dev.chrisbanes.haze.rememberHazeState
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(
-    ExperimentalMaterial3Api::class, UnstableSaltUiApi::class,
-    ExperimentalHazeMaterialsApi::class
+    ExperimentalMaterial3Api::class, UnstableSaltUiApi::class
 )
 @Composable
 @Destination<RootGraph>(start = true, route = "song_list")
@@ -72,157 +65,139 @@ fun SongListScreen(
     val songs by viewModel.songs.collectAsState()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
-    // 创建 Haze 状态
-    val hazeState = rememberHazeState()
+
 
     Scaffold(
-        modifier = Modifier.background(SaltTheme.colors.background),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SaltTheme.colors.background),
         topBar = {
-            Column(
-                modifier = Modifier.hazeEffect(
-                    state = hazeState,
-                    style = HazeMaterials.thin(containerColor = SaltTheme.colors.background)
-                )
-            ) {
-                TopBar(
-                    backgroundColor = Color.Transparent,
-                    text = "歌曲(${songs.size}首)",
-                    navigationIcon = {
+            CenterAlignedTopAppBar(
+                colors = TopAppBarColors(
+                    containerColor = SaltTheme.colors.background,
+                    scrolledContainerColor = SaltTheme.colors.background,
+                    navigationIconContentColor = SaltTheme.colors.text,
+                    titleContentColor = SaltTheme.colors.text,
+                    actionIconContentColor = SaltTheme.colors.text,
+                    subtitleContentColor = SaltTheme.colors.subText
+                ),
+                title = {
+                    Text(
+                        text = "歌曲(${songs.size}首)",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_settings_24dp),
+                        contentDescription = "Settings",
+                        tint = SaltTheme.colors.text,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .noRippleClickable(role = Role.Button) {
+                                navigator.navigate(SettingsDestination())
+                            }
+                            .padding(12.dp)
+                    )
+                },
+                actions = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_search_24dp),
+                        contentDescription = "Search",
+                        tint = SaltTheme.colors.text,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .noRippleClickable(role = Role.Button) {
+                                navigator.navigate(LocalSearchDestination())
+                            }
+                            .padding(12.dp)
+                    )
+                    Box(modifier = Modifier.wrapContentSize()) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_settings_24dp),
-                            contentDescription = "Settings",
+                            painter = painterResource(R.drawable.ic_sort_24dp),
+                            contentDescription = "Sort",
                             tint = SaltTheme.colors.text,
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(36.dp)
                                 .noRippleClickable(role = Role.Button) {
-                                    navigator.navigate(SettingsDestination())
+                                    sortOrderDropdownExpanded = true
                                 }
-                                .padding(12.dp)
+                                .padding(8.dp)
                         )
-                    },
-                    actions = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_search_24dp),
-                            contentDescription = "Search",
-                            tint = SaltTheme.colors.text,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .noRippleClickable(role = Role.Button) {
-                                    navigator.navigate(
-                                        LocalSearchDestination()
-                                    )
-                                }
-                                .padding(12.dp)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .wrapContentSize()
+
+                        PopupMenu(
+                            expanded = sortOrderDropdownExpanded,
+                            onDismissRequest = { sortOrderDropdownExpanded = false }
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_sort_24dp),
-                                contentDescription = "Sort",
-                                tint = SaltTheme.colors.text,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .noRippleClickable(role = Role.Button) {
-                                        sortOrderDropdownExpanded = true
-                                    }
-                                    .padding(8.dp)
+                            val sortTypes = listOf(
+                                SortBy.TITLE, SortBy.ARTIST, SortBy.DATE_MODIFIED, SortBy.DATE_ADDED
                             )
 
-                            PopupMenu(
-                                expanded = sortOrderDropdownExpanded,
-                                onDismissRequest = {
-                                    sortOrderDropdownExpanded = false
-                                }
-                            ) {
-                                val sortTypes = listOf(
-                                    SortBy.TITLE,
-                                    SortBy.ARTIST,
-                                    SortBy.DATE_MODIFIED,
-                                    SortBy.DATE_ADDED
-                                )
-
-                                sortTypes.forEach { type ->
-                                    val isSelected = sortInfo.sortBy == type
-
-                                    PopupMenuItem(
-                                        text = type.displayName,
-                                        selected = isSelected,
-                                        iconPainter = if (isSelected) {
-                                            if (sortInfo.order == SortOrder.ASC) {
-                                                painterResource(R.drawable.ic_arrow_down_24dp) // 升序图标
-                                            } else {
-                                                painterResource(R.drawable.ic_arrow_up_24dp)   // 降序图标
-                                            }
+                            sortTypes.forEach { type ->
+                                val isSelected = sortInfo.sortBy == type
+                                PopupMenuItem(
+                                    text = type.displayName,
+                                    selected = isSelected,
+                                    iconPainter = if (isSelected) {
+                                        if (sortInfo.order == SortOrder.ASC) {
+                                            painterResource(R.drawable.ic_arrow_down_24dp)
                                         } else {
-                                            null // 未选中时不显示图标
-                                        },
-                                        iconPaddingValues = PaddingValues(2.dp),
-                                        onClick = {
-                                            val newOrder = if (isSelected) {
-                                                if (sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC
-                                            } else {
-                                                SortOrder.ASC
-                                            }
-
-                                            viewModel.onSortChange(SortInfo(type, newOrder))
+                                            painterResource(R.drawable.ic_arrow_up_24dp)
                                         }
-                                    )
-                                }
+                                    } else null,
+                                    iconPaddingValues = PaddingValues(2.dp),
+                                    onClick = {
+                                        val newOrder = if (isSelected) {
+                                            if (sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC
+                                        } else {
+                                            SortOrder.ASC
+                                        }
+                                        viewModel.onSortChange(SortInfo(type, newOrder))
+                                    }
+                                )
                             }
                         }
                     }
-                )
+                },
+            )
 
-            }
         }
     ) { paddingValues ->
-        Box(
+        PullToRefreshBox(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SaltTheme.colors.background)
+                .padding(paddingValues),
+            isRefreshing = uiState.isLoading,
+            state = pullToRefreshState,
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    isRefreshing = uiState.isLoading,
+                    state = pullToRefreshState,
+                    color = SaltTheme.colors.highlight,
+                    containerColor = SaltTheme.colors.background
+                )
+            },
+            onRefresh = {
+                viewModel.refreshSongs()
+            }
         ) {
-
-            PullToRefreshBox(
+            LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                isRefreshing = uiState.isLoading,
-                state = pullToRefreshState,
-                indicator = {
-                    PullToRefreshDefaults.Indicator(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = paddingValues.calculateTopPadding()),
-                        isRefreshing = uiState.isLoading,
-                        state = pullToRefreshState,
-                        color = SaltTheme.colors.highlight,
-                        containerColor = SaltTheme.colors.background
-                    )
-                },
-                onRefresh = {
-                    viewModel.refreshSongs()
-                }
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .hazeSource(state = hazeState),
-                    contentPadding = PaddingValues(
-                        top = paddingValues.calculateTopPadding(),
-                        bottom = paddingValues.calculateBottomPadding()
+                items(
+                    items = songs,
+                    key = { song -> song.filePath }
+                ) { song ->
+                    SongListItem(
+                        song = song,
+                        navigator = navigator,
+                        modifier = Modifier.animateItem()
                     )
-                ) {
-                    items(
-                        items = songs,
-                        key = { song -> song.filePath }
-                    ) { song ->
-                        SongListItem(
-                            song = song,
-                            navigator = navigator,
-                            modifier = Modifier.animateItem()
-                        )
-                        ItemDivider()
-                    }
+                    ItemDivider()
                 }
             }
         }

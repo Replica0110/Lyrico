@@ -5,42 +5,42 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-// 关键：导入 Haze 相关库
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
-
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.toChar
 import com.lonx.lyrico.viewmodel.SettingsViewModel
+import com.moriafly.salt.ui.Icon
 import com.moriafly.salt.ui.ItemCheck
 import com.moriafly.salt.ui.ItemDropdown
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.RoundedColumn
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.moriafly.salt.ui.icons.ArrowBack
+import com.moriafly.salt.ui.icons.SaltIcons
+import com.moriafly.salt.ui.rememberScrollState
+import com.moriafly.salt.ui.verticalScroll
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
-import com.lonx.lyrico.data.model.ArtistSeparator
-import com.lonx.lyrico.data.model.toChar
-import com.moriafly.salt.ui.rememberScrollState
-import com.moriafly.salt.ui.verticalScroll
-import com.lonx.lyrico.ui.components.bar.TopBar
-import com.moriafly.salt.ui.SaltTheme
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 
 @OptIn(
-    ExperimentalMaterial3Api::class, UnstableSaltUiApi::class,
-    ExperimentalHazeMaterialsApi::class
+    ExperimentalMaterial3Api::class, UnstableSaltUiApi::class
 )
 @Composable
 @Destination<RootGraph>(route = "settings")
@@ -53,16 +53,34 @@ fun SettingsScreen(
     val artistSeparator = uiState.separator
     val romaEnabled = uiState.romaEnabled
     val scrollState = rememberScrollState()
-    val hazeState = rememberHazeState()
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().background(SaltTheme.colors.background),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SaltTheme.colors.background),
         topBar = {
-            TopBar(
-                text = "设置",
-                onBack = { navigator.popBackStack() },
-                backgroundColor = Color.Transparent,
-                modifier = Modifier.hazeEffect(state = hazeState, style = HazeMaterials.thin(containerColor = SaltTheme.colors.background))
+            CenterAlignedTopAppBar(
+                colors = TopAppBarColors(
+                    containerColor = SaltTheme.colors.background,
+                    scrolledContainerColor = SaltTheme.colors.background,
+                    navigationIconContentColor = SaltTheme.colors.text,
+                    titleContentColor = SaltTheme.colors.text,
+                    actionIconContentColor = SaltTheme.colors.text,
+                    subtitleContentColor = SaltTheme.colors.subText
+                ),
+                title = {
+                    Text(
+                        text = "设置",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navigator.popBackStack() }) {
+                        Icon(imageVector = SaltIcons.ArrowBack, contentDescription = null)
+                    }
+                },
             )
         }
     ) { paddingValues ->
@@ -70,10 +88,9 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SaltTheme.colors.background)
-                .hazeSource(state = hazeState)
+                .padding(paddingValues)
                 .verticalScroll(scrollState)
         ) {
-            Spacer(modifier = Modifier.height(paddingValues.calculateTopPadding()))
 
             ItemOuterTitle("歌词")
             RoundedColumn {

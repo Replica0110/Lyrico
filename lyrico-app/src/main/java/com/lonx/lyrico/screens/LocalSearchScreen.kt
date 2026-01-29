@@ -91,28 +91,23 @@ fun LocalSearchScreen(
             }
         },
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SaltTheme.colors.background)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            )
-            {
-                // Results
-                if (uiState.isSearching) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(items = uiState.songs, key = { it.filePath }) { song ->
-                            SongListItem(song = song, navigator = navigator)
-                            ItemDivider()
-                        }
+                .padding(paddingValues)
+        )
+        {
+            // Results
+            if (uiState.isSearching) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(items = uiState.songs, key = { it.filePath }) { song ->
+                        SongListItem(song = song, navigator = navigator)
+                        ItemDivider()
                     }
                 }
             }

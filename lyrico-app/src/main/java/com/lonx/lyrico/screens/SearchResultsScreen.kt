@@ -67,7 +67,9 @@ fun SearchResultsScreen(
     }
 
     Scaffold(
-        modifier = Modifier.background(SaltTheme.colors.background),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SaltTheme.colors.background),
         topBar = {
             Row(
                 modifier = Modifier
@@ -101,135 +103,131 @@ fun SearchResultsScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SaltTheme.colors.background)
-        ){
-            Column(
+                .padding(paddingValues)
+        )
+        {
+            LazyRow(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            )
-            {
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp, top = 4.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(uiState.availableSources) { source ->
-                        val isSelected = source == uiState.selectedSearchSource
-                        FilterChip(
-                            colors = FilterChipDefaults.filterChipColors(
-                                containerColor = SaltTheme.colors.subBackground,
-                                selectedContainerColor = SaltTheme.colors.highlight.copy(alpha = 0.1f), // 适配主题色
-                                labelColor = SaltTheme.colors.text,
-                                selectedLabelColor = SaltTheme.colors.highlight
-                            ),
-                            selected = isSelected,
-                            onClick = { viewModel.switchSource(source) },
-                            label = {
-                                Text(
-                                    source.name,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp, top = 4.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(uiState.availableSources) { source ->
+                    val isSelected = source == uiState.selectedSearchSource
+                    FilterChip(
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = SaltTheme.colors.subBackground,
+                            selectedContainerColor = SaltTheme.colors.highlight.copy(alpha = 0.1f), // 适配主题色
+                            labelColor = SaltTheme.colors.text,
+                            selectedLabelColor = SaltTheme.colors.highlight
+                        ),
+                        selected = isSelected,
+                        onClick = { viewModel.switchSource(source) },
+                        label = {
+                            Text(
+                                source.name,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        leadingIcon = {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = SaltIcons.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = SaltTheme.colors.highlight
                                 )
-                            },
-                            leadingIcon = {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = SaltIcons.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = SaltTheme.colors.highlight
-                                    )
-                                }
-                            },
-                            border = null
+                            }
+                        },
+                        border = null
+                    )
+                }
+            }
+
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            )
+
+            // 3. 结果列表
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (uiState.isSearching) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = SaltTheme.colors.highlight
                         )
                     }
-                }
-
-                HorizontalDivider(
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                )
-
-                // 3. 结果列表
-                Box(modifier = Modifier.fillMaxSize()) {
-                    if (uiState.isSearching) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp),
-                                color = SaltTheme.colors.highlight
-                            )
-                        }
-                    } else if (uiState.searchError != null) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = uiState.searchError!!,
-                                color = MaterialTheme.colorScheme.error,
-                                fontSize = 14.sp
-                            )
-                        }
-                    } else if (uiState.searchResults.isEmpty()) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_searchoff_24dp),
-                                contentDescription = "No results",
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("未找到相关结果", color = MaterialTheme.colorScheme.outline)
-                        }
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(bottom = 16.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(uiState.searchResults) { result ->
-                                SearchResultItem(
-                                    song = result,
-                                    onPreviewClick = {
-                                        viewModel.fetchLyricsForPreview(result)
-                                    },
-                                    onApplyClick = {
-                                        viewModel.fetchLyricsDirectly(result) { lyrics ->
-                                            if (lyrics != null) {
-                                                resultNavigator.navigateBack(
-                                                    LyricsSearchResult(
-                                                        title = result.title,
-                                                        artist = result.artist,
-                                                        album = result.album,
-                                                        lyrics = lyrics,
-                                                        date = result.date,
-                                                        trackerNumber = result.trackerNumber,
-                                                        picUrl = result.picUrl
-                                                    )
+                } else if (uiState.searchError != null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.searchError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 14.sp
+                        )
+                    }
+                } else if (uiState.searchResults.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_searchoff_24dp),
+                            contentDescription = "No results",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("未找到相关结果", color = MaterialTheme.colorScheme.outline)
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(uiState.searchResults) { result ->
+                            SearchResultItem(
+                                song = result,
+                                onPreviewClick = {
+                                    viewModel.fetchLyricsForPreview(result)
+                                },
+                                onApplyClick = {
+                                    viewModel.fetchLyricsDirectly(result) { lyrics ->
+                                        if (lyrics != null) {
+                                            resultNavigator.navigateBack(
+                                                LyricsSearchResult(
+                                                    title = result.title,
+                                                    artist = result.artist,
+                                                    album = result.album,
+                                                    lyrics = lyrics,
+                                                    date = result.date,
+                                                    trackerNumber = result.trackerNumber,
+                                                    picUrl = result.picUrl
                                                 )
-                                            }
+                                            )
                                         }
                                     }
-                                )
+                                }
+                            )
 
-                            }
                         }
                     }
                 }
             }
         }
+
     }
 
     if (uiState.previewingSong != null) {
@@ -245,7 +243,11 @@ fun SearchResultsScreen(
                     .padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(uiState.previewingSong!!.title, style = MaterialTheme.typography.titleMedium, color = SaltTheme.colors.text)
+                Text(
+                    uiState.previewingSong!!.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SaltTheme.colors.text
+                )
                 Text(
                     uiState.previewingSong!!.artist,
                     style = MaterialTheme.typography.bodyMedium,

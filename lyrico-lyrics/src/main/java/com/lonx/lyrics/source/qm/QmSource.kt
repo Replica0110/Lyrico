@@ -52,13 +52,13 @@ class QmSource: SearchSource {
         "nettype" to "NETWORK_WIFI"
     )
 
-    override suspend fun search(keyword: String, page: Int,separator: String): List<SongSearchResult> = withContext(Dispatchers.IO) {
+    override suspend fun search(keyword: String, page: Int,separator: String, pageSize: Int): List<SongSearchResult> = withContext(Dispatchers.IO) {
         val param = buildJsonObject {
             put("search_id", Random.nextLong(10000000000000000L, 90000000000000000L).toString())
             put("remoteplace", "search.android.keyboard")
             put("query", keyword)
             put("search_type", 0) // 0: Song
-            put("num_per_page", 20)
+            put("num_per_page", pageSize)
             put("page_num", page)
             put("highlight", 0)
             put("nqc_flag", 0)

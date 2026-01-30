@@ -96,11 +96,11 @@ class KgSource: SearchSource {
 
 
 
-    override suspend fun search(keyword: String, page: Int, separator: String): List<SongSearchResult> = withContext(Dispatchers.IO) {
+    override suspend fun search(keyword: String, page: Int, separator: String, pageSize: Int): List<SongSearchResult> = withContext(Dispatchers.IO) {
         val params = mapOf(
             "keyword" to keyword,
             "page" to page.toString(),
-            "pagesize" to "20"
+            "pagesize" to pageSize.toString()
         )
 
         try {

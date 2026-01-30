@@ -194,7 +194,7 @@ class NeSource: SearchSource {
         }
     }
 
-    override suspend fun search(keyword: String, page: Int, separator: String): List<SongSearchResult> = withContext(
+    override suspend fun search(keyword: String, page: Int, separator: String, pageSize: Int): List<SongSearchResult> = withContext(
         Dispatchers.IO) {
         ensureInit()
 
@@ -202,7 +202,7 @@ class NeSource: SearchSource {
         val offset = (page - 1) * 20
 
         val params = buildJsonObject {
-            put("limit", "20")
+            put("limit", pageSize.toString())
             put("offset", offset.toString())
             put("keyword", keyword)
             put("scene", "NORMAL")

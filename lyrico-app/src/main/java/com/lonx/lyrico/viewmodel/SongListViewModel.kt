@@ -11,8 +11,10 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.SongEntity
 import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.utils.LyricsUtils
 import com.lonx.lyrico.utils.MusicContentObserver
 import com.lonx.lyrico.utils.SettingsManager
+import com.lonx.lyrics.model.SearchSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -23,11 +25,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
+import java.io.File
+import kotlin.math.abs
 
 @Parcelize
 data class SongInfo(
@@ -39,13 +42,18 @@ data class SongListUiState(
     val isLoading: Boolean = false,
     val lastScanTime: Long = 0,
     val selectedSongs: SongEntity? = null,
-    val loadingMessage: String? = null
+    val isBatchMatching: Boolean = false,
+    val batchProgress: Pair<Int, Int>? = null, // (当前第几首, 总共几首)
+    val successCount: Int = 0,
+    val failureCount: Int = 0,
+    val loadingMessage: String = ""
 )
 
 @OptIn(FlowPreview::class)
 class SongListViewModel(
     private val songRepository: SongRepository,
     private val settingsManager: SettingsManager,
+    private val sources: List<SearchSource>,
     application: Application
 ) : ViewModel() {
 
@@ -98,9 +106,108 @@ class SongListViewModel(
             scanRequest
                 .debounce(2000L) // 2秒防抖
                 .collect {
+                    if (_uiState.value.isBatchMatching) {
+                        Log.d(TAG, "正在批量匹配中，忽略自动同步请求")
+                        return@collect
+                    }
                     Log.d(TAG, "防抖后触发自动同步")
                     triggerSync(isAuto = true)
                 }
+        }
+    }
+
+    /**
+     * 批量匹配歌曲，初步实现，待完善匹配逻辑和数据库同步逻辑
+     *
+     */
+    fun batchMatchLyrics() {
+        val selectedPaths = _selectedSongPaths.value
+        if (selectedPaths.isEmpty()) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBatchMatching = true, loadingMessage = "准备匹配...") }
+
+            val songsToMatch = _allSongs.value.filter { it.filePath in selectedPaths }
+
+            // 记录哪些文件确实修改成功了
+            val successFiles = mutableListOf<String>()
+
+            songsToMatch.forEachIndexed { index, song ->
+                _uiState.update { it.copy(batchProgress = (index + 1) to songsToMatch.size) }
+
+                val isSuccess = matchSong(song)
+
+                if (isSuccess) {
+                    successFiles.add(song.filePath)
+                    _uiState.update { it.copy(successCount = it.successCount + 1) }
+                } else {
+                    _uiState.update { it.copy(failureCount = it.failureCount + 1) }
+                }
+                delay(600) // 频率限制
+            }
+
+            if (successFiles.isNotEmpty()) {
+                _uiState.update { it.copy(loadingMessage = "正在同步数据库...") }
+
+                songRepository.synchronizeWithDevice()
+
+            }
+
+            _uiState.update { it.copy(isBatchMatching = false, loadingMessage = "全部匹配完成") }
+            delay(3000)
+            exitSelectionMode()
+        }
+    }
+    /**
+     * 匹配单个歌曲，初步实现，待完善匹配逻辑和数据库同步逻辑
+     *
+     */
+    private suspend fun matchSong(song: SongEntity): Boolean {
+        val artistClean = song.artist?.let { if (it.contains("未知", ignoreCase = true)) "" else it } ?: ""
+        val query = "${song.title} $artistClean".trim()
+        // TODO: 目前使用搜索源的默认排序方式，如果在第一个源匹配到内容就不再搜索其他源，待完善
+        for (source in sources) {
+            try {
+                val results = source.search(query, pageSize = 3)
+                if (results.isEmpty()) continue
+                val bestMatch = results.minByOrNull { abs(it.duration - song.durationMilliseconds) } ?: results.first()
+                val lyricsResult = source.getLyrics(bestMatch)
+
+                val tagData = AudioTagData(
+                    title = song.title?.takeIf { !it.contains("未知", true) } ?: bestMatch.title,
+                    artist = song.artist?.takeIf { !it.contains("未知", true) } ?: bestMatch.artist,
+                    album = song.album?.takeIf { !it.contains("未知", true) } ?: bestMatch.album,
+                    lyrics = lyricsResult?.let { LyricsUtils.formatLrcResult(it) },
+                    picUrl = bestMatch.picUrl,
+                    date = bestMatch.date,
+                    trackerNumber = bestMatch.trackerNumber
+                )
+
+                // 记录旧时间戳
+                val oldTime = song.fileLastModified
+
+                // 写入物理文件
+                val ok = songRepository.writeAudioTagData(song.filePath, tagData)
+
+                if (ok) {
+                    // 立即恢复时间戳，确保 synchronizeWithDevice 时
+                    restoreFileTimestamp(song.filePath, oldTime)
+                    return true
+                }
+            } catch (e: Exception) {
+                Log.e("BatchMatch", "File write failed: ${song.title}", e)
+            }
+        }
+        return false
+    }
+    private fun restoreFileTimestamp(path: String, timestamp: Long) {
+        try {
+            val file = File(path)
+            if (file.exists()) {
+                file.setLastModified(timestamp)
+            }
+        } catch (e: Exception) {
+            Log.e("BatchMatch", "恢复时间戳失败", e)
         }
     }
     fun enterSelectionMode(firstPath: String? = null) {
@@ -182,7 +289,7 @@ class SongListViewModel(
             }
             // Add a small delay to prevent the loading indicator from disappearing too quickly
             delay(500L)
-            _uiState.update { it.copy(isLoading = false) }
+            _uiState.update { it.copy(isLoading = false, loadingMessage = "") }
         }
     }
 

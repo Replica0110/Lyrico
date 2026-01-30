@@ -136,7 +136,7 @@ fun SongListScreen(
                         TextButton(
                             enabled = selectedPaths.isNotEmpty(),
                             onClick= {
-                            // TODO: 匹配标签
+                                viewModel.batchMatchLyrics()
                             }
                         ) {
                             Text(text = "匹配标签", color = if (selectedPaths.isNotEmpty()) SaltTheme.colors.highlight else SaltTheme.colors.subText)

@@ -47,11 +47,21 @@ object QrcParser {
                 val words = ArrayList<LyricsWord>()
                 val wordMatcher = WORD_PATTERN.matcher(lineContent)
 
+                val wordList = mutableListOf<Pair<Long, String>>() // Pair<start, text>
                 while (wordMatcher.find()) {
                     val wordText = wordMatcher.group(1) ?: ""
                     val wordStart = wordMatcher.group(2)!!.toLong()
-                    val wordDuration = wordMatcher.group(3)!!.toLong()
-                    words.add(LyricsWord(wordStart, wordStart + wordDuration, wordText))
+                    wordList.add(wordStart to wordText)
+                }
+
+                for (i in wordList.indices) {
+                    val (wordStart, wordText) = wordList[i]
+                    val wordEnd = if (i < wordList.size - 1) {
+                        wordList[i + 1].first
+                    } else {
+                        lineEnd
+                    }
+                    words.add(LyricsWord(start = wordStart, end = wordEnd, text = wordText))
                 }
 
                 if (words.isEmpty()) {

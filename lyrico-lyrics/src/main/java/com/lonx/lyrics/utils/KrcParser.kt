@@ -51,22 +51,26 @@ object KrcParser {
 
                 val words = ArrayList<LyricsWord>()
 
-                // 使用更健壮的正则在 lineContent 中查找所有单词
                 val wordMatcher = WORD_PATTERN.matcher(lineContent)
 
+                val wordOffsets = mutableListOf<Pair<Long, String>>() // 用于计算每个字 start
                 while (wordMatcher.find()) {
-                    // KRC 的时间是相对行开始的时间
                     val wordStartOffset = wordMatcher.group(1)!!.toLong()
-                    val wordDuration = wordMatcher.group(2)!!.toLong()
-                    // group(3) 是预留字段通常为0，忽略
                     val wordText = wordMatcher.group(4) ?: ""
-
-                    words.add(LyricsWord(
-                        start = lineStart + wordStartOffset,
-                        end = lineStart + wordStartOffset + wordDuration,
-                        text = wordText // 这里会保留空格，例如 "But "
-                    ))
+                    wordOffsets.add(wordStartOffset to wordText)
                 }
+
+                for (i in wordOffsets.indices) {
+                    val (offset, text) = wordOffsets[i]
+                    val wordStart = lineStart + offset
+                    val wordEnd = if (i < wordOffsets.size - 1) {
+                        lineStart + wordOffsets[i + 1].first
+                    } else {
+                        lineEnd
+                    }
+                    words.add(LyricsWord(start = wordStart, end = wordEnd, text = text))
+                }
+
 
                 // 容错：如果该行没有 KRC 标签（普通 LRC 行），则整行当做一个字
                 if (words.isEmpty() && lineContent.isNotEmpty()) {

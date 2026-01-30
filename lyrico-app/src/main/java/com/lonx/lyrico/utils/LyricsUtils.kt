@@ -21,18 +21,21 @@ object LyricsUtils {
         val translatedLines = result.translated
         val translatedMap = translatedLines?.associateBy { it.start } ?: emptyMap()
 
-        originalLines.forEach { originalLine ->
-            val formattedOriginalLine = originalLine.words.joinToString("") { word ->
-                "[${formatTimestamp(word.start)}]${word.text}"
+        originalLines.forEach { line ->
+            line.words.forEachIndexed { index, word ->
+                if (index == line.words.lastIndex) {
+                    builder.append("[${formatTimestamp(word.start)}]${word.text}[${formatTimestamp(word.end)}]")
+                } else {
+                    builder.append("[${formatTimestamp(word.start)}]${word.text}")
+                }
             }
-            builder.append(formattedOriginalLine)
             builder.append("\n")
 
-            val matchedTranslation = findMatchingTranslatedLine(originalLine, translatedMap)
+            val matchedTranslation = findMatchingTranslatedLine(line, translatedMap)
             if (romaEnabled) {
                 val romanizationLines = result.romanization
                 val romanizationMap = romanizationLines?.associateBy { it.start } ?: emptyMap()
-                val matchedRomanization = findMatchingTranslatedLine(originalLine, romanizationMap)
+                val matchedRomanization = findMatchingTranslatedLine(line, romanizationMap)
                 if (matchedRomanization != null) {
                     val formattedRomanizationLine = "[${formatTimestamp(matchedRomanization.start)}]${
                         matchedRomanization.words.joinToString(" ") { it.text }

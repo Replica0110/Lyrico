@@ -2,8 +2,8 @@ package com.lonx.lyrico.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.utils.LyricsUtils
-import com.lonx.lyrico.utils.SettingsManager
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
@@ -40,7 +40,7 @@ data class SearchUiState(
 
 class SearchViewModel(
     private val sources: List<SearchSource>,
-    private val settingsManager: SettingsManager
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -165,7 +165,7 @@ class SearchViewModel(
         source: Source
     ): List<SongSearchResult> {
         val sourceImpl = findSource(source) ?: return emptyList()
-        val separator = settingsManager.getSeparator().first()
+        val separator = settingsRepository.separator.first()
         return sourceImpl.search(keyword = keyword, page = 1, separator = separator, pageSize = 20)
     }
 
@@ -252,7 +252,7 @@ class SearchViewModel(
         val sourceImpl = findSource(song.source) ?: return null
         val lyricsResult = sourceImpl.getLyrics(song) ?: return null
 
-        val romaEnabled = settingsManager.getRomaEnabled().first()
+        val romaEnabled = settingsRepository.romaEnabled.first()
         return LyricsUtils.formatLrcResult(
             result = lyricsResult,
             romaEnabled = romaEnabled

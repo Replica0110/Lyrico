@@ -41,7 +41,7 @@ class LocalSearchViewModel(private val songRepository: SongRepository) : ViewMod
             _uiState.update { it.copy(isSearching = true) }
 
             // 调用仓库搜索
-            songRepository.searchSongsByAll(query).collect { results ->
+            songRepository.searchSongs(query).collect { results ->
                 _uiState.update {
                     it.copy(
                         songs = results,

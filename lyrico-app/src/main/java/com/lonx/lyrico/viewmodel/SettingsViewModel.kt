@@ -3,7 +3,7 @@ package com.lonx.lyrico.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.ArtistSeparator
-import com.lonx.lyrico.utils.SettingsManager
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.LyricDisplayMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +20,7 @@ data class SettingsUiState(
 )
 
 class SettingsViewModel(
-    private val settingsManager: SettingsManager
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -29,9 +29,9 @@ class SettingsViewModel(
     init {
         viewModelScope.launch {
             combine(
-                settingsManager.getLyricDisplayMode(),
-                settingsManager.getRomaEnabled(),
-                settingsManager.getSeparator()
+                settingsRepository.lyricDisplayMode,
+                settingsRepository.romaEnabled,
+                settingsRepository.separator
             ) { lyricDisplayMode, romaEnabled, separator ->
                 SettingsUiState(
                     lyricDisplayMode = lyricDisplayMode,
@@ -47,7 +47,7 @@ class SettingsViewModel(
 
     fun setLyricDisplayMode(mode: LyricDisplayMode) {
         viewModelScope.launch {
-            settingsManager.saveLyricDisplayMode(mode)
+            settingsRepository.saveLyricDisplayMode(mode)
             _uiState.update {
                 it.copy(lyricDisplayMode = mode)
             }
@@ -55,7 +55,7 @@ class SettingsViewModel(
     }
     fun setRomaEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsManager.saveRomaEnabled(enabled)
+            settingsRepository.saveRomaEnabled(enabled)
             _uiState.update {
                 it.copy(romaEnabled = enabled)
             }
@@ -63,7 +63,7 @@ class SettingsViewModel(
     }
     fun setSeparator(separator: ArtistSeparator) {
         viewModelScope.launch {
-            settingsManager.saveSeparator(separator.toText())
+            settingsRepository.saveSeparator(separator.toText())
             _uiState.update {
                 it.copy(separator = separator)
             }

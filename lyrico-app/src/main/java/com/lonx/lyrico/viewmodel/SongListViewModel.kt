@@ -10,10 +10,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.SongEntity
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.LyricsUtils
 import com.lonx.lyrico.utils.MusicContentObserver
-import com.lonx.lyrico.utils.SettingsManager
 import com.lonx.lyrics.model.SearchSource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -52,7 +52,7 @@ data class SongListUiState(
 @OptIn(FlowPreview::class)
 class SongListViewModel(
     private val songRepository: SongRepository,
-    private val settingsManager: SettingsManager,
+    private val settingsRepository: SettingsRepository,
     private val sources: List<SearchSource>,
     application: Application
 ) : ViewModel() {
@@ -90,7 +90,7 @@ class SongListViewModel(
         Log.d(TAG, "SongListViewModel 初始化")
 
         viewModelScope.launch {
-            settingsManager.getSortInfo().collect { savedSortInfo ->
+            settingsRepository.sortInfo.collect { savedSortInfo ->
                 _sortInfo.value = savedSortInfo
             }
         }
@@ -264,7 +264,7 @@ class SongListViewModel(
     fun onSortChange(newSortInfo: SortInfo) {
         _sortInfo.value = newSortInfo
         viewModelScope.launch {
-            settingsManager.saveSortInfo(newSortInfo)
+            settingsRepository.saveSortInfo(newSortInfo)
         }
     }
 

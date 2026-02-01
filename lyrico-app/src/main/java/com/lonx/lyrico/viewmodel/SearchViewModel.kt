@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.utils.LyricsUtils
 import com.lonx.lyrico.utils.SettingsManager
-import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
@@ -15,6 +14,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
+
+/**
+ * 歌词相关 UI 状态
+ * 代表“当前选中的歌曲及其歌词加载状态”
+ */
+data class LyricsUiState(
+    val song: SongSearchResult? = null,
+    val content: String? = null,
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
+
 
 data class SearchUiState(
     val searchKeyword: String = "",
@@ -23,11 +35,7 @@ data class SearchUiState(
     val availableSources: List<Source> = listOf(Source.KG, Source.QM, Source.NE),
     val isSearching: Boolean = false,
     val searchError: String? = null,
-    // 歌词预览相关
-    val previewingSong: SongSearchResult? = null,
-    val lyricsPreviewContent: String? = null,
-    val isPreviewLoading: Boolean = false,
-    val lyricsPreviewError: String? = null,
+    val lyricsState: LyricsUiState = LyricsUiState()
 )
 
 class SearchViewModel(
@@ -38,100 +46,233 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    // 缓存搜索结果：Keyword -> (Source -> Results)
+    /**
+     * 搜索结果缓存：
+     * Keyword -> (Source -> Results)
+     */
     private val searchResultCache =
         mutableMapOf<String, MutableMap<Source, List<SongSearchResult>>>()
 
-    // 用于管理当前的搜索任务和歌词任务，防止并发冲突
+    /**
+     * 当前搜索协程任务
+     */
     private var searchJob: Job? = null
-    private var lyricsJob: Job? = null
 
     /**
-     * 当输入框文字改变时调用
-     * 注意：这里只更新状态，不直接触发网络搜索（避免打字时频繁请求）
+     * 当前歌词加载协程任务
+     */
+    private var lyricsJob: Job? = null
+
+    // -------------------------------------------------------------------------
+    // 搜索相关
+    // -------------------------------------------------------------------------
+
+    /**
+     * 当搜索框关键字发生变化时调用
+     * 仅更新状态，不触发实际搜索（避免频繁网络请求）
      */
     fun onKeywordChanged(keyword: String) {
         _uiState.update { it.copy(searchKeyword = keyword) }
     }
 
     /**
-     * 切换搜索源
-     * 如果当前有关键词，会尝试从缓存读取或重新发起搜索
+     * 当用户选择新的搜索源时调用
+     * 如果存在关键词，会优先尝试从缓存加载结果
      */
-    fun switchSource(source: Source) {
-        val currentKeyword = _uiState.value.searchKeyword
+    fun onSearchSourceSelected(source: Source) {
+        val keyword = uiState.value.searchKeyword
 
-        // 更新选中的源
         _uiState.update { it.copy(selectedSearchSource = source) }
 
-        if (currentKeyword.isBlank()) {
-            _uiState.update { it.copy(searchResults = emptyList()) }
+        if (keyword.isBlank()) {
+            clearSearchResults()
             return
         }
 
-        val cachedResults = getCachedResults(currentKeyword, source)
-        if (cachedResults != null) {
-            // 命中缓存，直接显示
-            _uiState.update { it.copy(searchResults = cachedResults, searchError = null) }
-        } else {
-            // 未命中缓存，发起搜索
-            search()
+        getCachedResults(keyword, source)
+            ?.let { cached ->
+                _uiState.update {
+                    it.copy(searchResults = cached, searchError = null)
+                }
+            }
+            ?: performSearch()
+    }
+
+    /**
+     * 触发搜索操作
+     *
+     * @param keywordOverride 可选关键字：
+     * - null：使用当前状态中的 keyword
+     * - 非 null：更新 keyword 并执行搜索
+     */
+    fun performSearch(keywordOverride: String? = null) {
+        val keyword = keywordOverride ?: uiState.value.searchKeyword
+
+        if (keyword.isBlank()) {
+            clearSearchResults()
+            return
+        }
+
+        searchJob?.cancel()
+
+        searchJob = viewModelScope.launch {
+            executeSearch(keyword, keywordOverride != null)
         }
     }
 
     /**
-     * 执行搜索
-     * @param keywordToSearch 可选参数，如果传入则更新状态并搜索，否则使用当前状态的关键词
+     * 实际执行搜索逻辑
      */
-    fun search(keywordToSearch: String? = null) {
-        val keyword = keywordToSearch ?: _uiState.value.searchKeyword
+    private suspend fun executeSearch(
+        keyword: String,
+        shouldUpdateKeyword: Boolean
+    ) {
+        _uiState.update { it.copy(isSearching = true, searchError = null) }
 
-        if (keyword.isBlank()) {
-            _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
-            return
+        try {
+            if (shouldUpdateKeyword) {
+                _uiState.update { it.copy(searchKeyword = keyword) }
+            }
+
+            val source = uiState.value.selectedSearchSource
+            val results = searchFromSource(keyword, source)
+
+            cacheSearchResults(keyword, source, results)
+
+            _uiState.update {
+                it.copy(
+                    searchResults = results,
+                    isSearching = false
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(
+                    searchError = "搜索失败: ${e.message}",
+                    isSearching = false
+                )
+            }
         }
+    }
 
-        // 取消上一次搜索
-        searchJob?.cancel()
+    /**
+     * 从指定搜索源执行搜索
+     */
+    private suspend fun searchFromSource(
+        keyword: String,
+        source: Source
+    ): List<SongSearchResult> {
+        val sourceImpl = findSource(source) ?: return emptyList()
+        val separator = settingsManager.getSeparator().first()
+        return sourceImpl.search(keyword = keyword, page = 1, separator = separator, pageSize = 20)
+    }
 
-        searchJob = viewModelScope.launch {
-            _uiState.update { it.copy(isSearching = true, searchError = null) }
+    /**
+     * 清空搜索结果
+     */
+    private fun clearSearchResults() {
+        _uiState.update {
+            it.copy(
+                searchResults = emptyList(),
+                isSearching = false,
+                searchError = null
+            )
+        }
+    }
+
+    /**
+     * 加载指定歌曲的歌词
+     * 同一时间只允许一个歌词加载任务
+     */
+    fun loadLyrics(song: SongSearchResult) {
+        lyricsJob?.cancel()
+
+        lyricsJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    lyricsState = LyricsUiState(
+                        song = song,
+                        isLoading = true
+                    )
+                )
+            }
 
             try {
-                if (keywordToSearch != null) {
-                    _uiState.update { it.copy(searchKeyword = keyword) }
-                }
-
-                val currentSource = _uiState.value.selectedSearchSource
-
-
-                val sourceImpl = sources.firstOrNull { it.sourceType == currentSource }
-
-                val separator = settingsManager.getSeparator().first()
-                val results = sourceImpl?.search(keyword, separator = separator) ?: emptyList()
-
-                // 写入缓存
-                cacheSearchResults(keyword, currentSource, results)
-
-                // 更新 UI
-                _uiState.update { it.copy(searchResults = results, isSearching = false) }
-
-            } catch (e: Exception) {
-                // 如果是协程被取消（cancel），不应该视为错误显示给用户
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                val lyrics = loadFormattedLyrics(song)
 
                 _uiState.update {
                     it.copy(
-                        searchError = "搜索失败: ${e.message}",
-                        isSearching = false
+                        lyricsState = it.lyricsState.copy(
+                            content = lyrics ?: "暂无歌词",
+                            isLoading = false
+                        )
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        lyricsState = it.lyricsState.copy(
+                            error = "加载失败: ${e.message}",
+                            isLoading = false
+                        )
                     )
                 }
             }
         }
     }
 
+    /**
+     * 直接获取歌词 (用于列表页"应用"按钮)
+     */
+    suspend fun fetchLyrics(song: SongSearchResult): String? {
+        return loadFormattedLyrics(song)
+    }
 
-    // --- 缓存逻辑 ---
+    /**
+     * 清除当前歌词状态
+     * 通常用于关闭歌词页或切换歌曲列表时
+     */
+    fun clearLyrics() {
+        lyricsJob?.cancel()
+        _uiState.update {
+            it.copy(lyricsState = LyricsUiState())
+        }
+    }
+
+    /**
+     * 加载并格式化歌词内容
+     */
+    private suspend fun loadFormattedLyrics(
+        song: SongSearchResult
+    ): String? {
+        val sourceImpl = findSource(song.source) ?: return null
+        val lyricsResult = sourceImpl.getLyrics(song) ?: return null
+
+        val romaEnabled = settingsManager.getRomaEnabled().first()
+        return LyricsUtils.formatLrcResult(
+            result = lyricsResult,
+            romaEnabled = romaEnabled
+        )
+    }
+
+    // -------------------------------------------------------------------------
+    // 工具 & 缓存
+    // -------------------------------------------------------------------------
+
+    /**
+     * 根据 Source 类型查找对应的 SearchSource 实现
+     */
+    private fun findSource(source: Source): SearchSource? {
+        return sources.firstOrNull { it.sourceType == source }
+    }
+
+    /**
+     * 缓存搜索结果
+     */
     private fun cacheSearchResults(
         keyword: String,
         source: Source,
@@ -141,82 +282,13 @@ class SearchViewModel(
         keywordCache[source] = results
     }
 
-    private fun getCachedResults(keyword: String, source: Source): List<SongSearchResult>? {
+    /**
+     * 从缓存中读取搜索结果
+     */
+    private fun getCachedResults(
+        keyword: String,
+        source: Source
+    ): List<SongSearchResult>? {
         return searchResultCache[keyword]?.get(source)
-    }
-
-    // --- 歌词预览逻辑 ---
-    /**
-     * 歌词预览
-     */
-    fun fetchLyricsForPreview(song: SongSearchResult) {
-        // 取消上一次的歌词加载（防止用户快速点击不同歌曲）
-        lyricsJob?.cancel()
-
-        lyricsJob = viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    previewingSong = song,
-                    isPreviewLoading = true,
-                    lyricsPreviewContent = null,
-                    lyricsPreviewError = null
-                )
-            }
-
-            try {
-                // --- 通过接口获取对应搜索源 ---
-                val sourceImpl = sources.firstOrNull { it.sourceType == song.source }
-                val lyricsResult: LyricsResult? = sourceImpl?.getLyrics(song)
-
-                val romaEnabled = settingsManager.getRomaEnabled().first()
-                val lyricsText = lyricsResult?.let { LyricsUtils.formatLrcResult(result = it, romaEnabled = romaEnabled) }
-
-                _uiState.update {
-                    it.copy(
-                        lyricsPreviewContent = lyricsText ?: "暂无歌词",
-                        isPreviewLoading = false
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        lyricsPreviewError = "加载失败: ${e.message}",
-                        isPreviewLoading = false
-                    )
-                }
-            }
-        }
-    }
-
-    /**
-     * 直接获取歌词（回调）
-     */
-    fun fetchLyricsDirectly(song: SongSearchResult, onResult: (String?) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val sourceImpl = sources.firstOrNull { it.sourceType == song.source }
-                val lyricsResult: LyricsResult? = sourceImpl?.getLyrics(song)
-
-                val romaEnabled = settingsManager.getRomaEnabled().first()
-                val lyricsText = lyricsResult?.let { LyricsUtils.formatLrcResult(result = it, romaEnabled = romaEnabled) }
-                onResult(lyricsText)
-            } catch (e: Exception) {
-                onResult(null)
-            }
-        }
-    }
-
-    fun clearPreview() {
-        // 关闭预览时也可以取消正在进行的加载任务
-        lyricsJob?.cancel()
-        _uiState.update {
-            it.copy(
-                previewingSong = null,
-                lyricsPreviewContent = null,
-                isPreviewLoading = false,
-                lyricsPreviewError = null
-            )
-        }
     }
 }

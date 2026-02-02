@@ -30,8 +30,24 @@ class KgSource: SearchSource {
         isLenient = true
     }
 
-    private val client = OkHttpClient.Builder().build()
+    private val client = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val original = chain.request()
+            val module = if (original.url.encodedPath.contains("search")) "SearchSong" else "Lyric"
 
+            val requestBuilder = original.newBuilder()
+                .header("User-Agent", "Android14-1070-11070-201-0-$module-wifi")
+                .header("KG-Rec", "1")
+                .header("KG-RC", "1")
+                .header("KG-CLIENTTIMEMS", System.currentTimeMillis().toString())
+                .header("mid", deviceMid)
+
+            chain.proceed(requestBuilder.build())
+        }
+        .build()
+    private val deviceMid by lazy {
+        KgCryptoUtils.md5(System.currentTimeMillis().toString())
+    }
     private val api: KgApi = Retrofit.Builder()
         .baseUrl("http://complexsearch.kugou.com/")
         .client(client)
@@ -52,13 +68,12 @@ class KgSource: SearchSource {
      */
     private suspend fun getDfid(): String {
         dfidMutex.withLock {
-            if (!dfid.isNullOrEmpty()) return dfid!!
+            if (!dfid.isNullOrEmpty() && dfid != "-") return dfid!!
 
-            val mid = KgCryptoUtils.md5(System.currentTimeMillis().toString())
             val params = mutableMapOf(
                 "appid" to "1014",
                 "platid" to "4",
-                "mid" to mid
+                "mid" to deviceMid
             )
 
             // DFID 签名是按 Value 排序
@@ -141,32 +156,27 @@ class KgSource: SearchSource {
         module: String = "Search"
     ): Map<String, String> {
         val currentTime = System.currentTimeMillis()
-        val mid = KgCryptoUtils.md5(currentTime.toString())
         val baseParams = mutableMapOf<String, String>()
 
-
         if (module == "Lyric") {
-            baseParams["appid"] = APPID
-            baseParams["clientver"] = CLIENT_VER
-            // 注意：Python 的 request 方法在 module="Lyric" 时，没有加 clienttime, mid, dfid 等通用参数
-            // 它是直接 **params。
+            baseParams["appid"] = "3116"
+            baseParams["clientver"] = "11070"
         } else {
             baseParams["userid"] = "0"
-            baseParams["appid"] = APPID
+            baseParams["appid"] = "3116"
             baseParams["token"] = ""
             baseParams["clienttime"] = (currentTime / 1000).toString()
             baseParams["iscorrection"] = "1"
             baseParams["uuid"] = "-"
-            baseParams["mid"] = mid
-            // Search 需要 DFID
-            baseParams["dfid"] = getDfid()
-            baseParams["clientver"] = CLIENT_VER
+            baseParams["mid"] = deviceMid
+            baseParams["dfid"] = if (module == "Search") "-" else getDfid()
+            baseParams["clientver"] = "11070"
             baseParams["platform"] = "AndroidFilter"
         }
 
         baseParams.putAll(customParams)
 
-        // 签名逻辑：按 Key 排序拼接
+        // 签名逻辑
         val sortedString = baseParams.toSortedMap()
             .entries.joinToString("") { "${it.key}=${it.value}" }
 

@@ -70,8 +70,8 @@ class SongListViewModel(
     private var musicContentObserver: MusicContentObserver? = null
     private val scanRequest = MutableSharedFlow<Unit>(replay = 0)
     // 存储被选中的歌曲 ID (filePath 是唯一的 key)
-    private val _selectedSongPaths = MutableStateFlow<Set<String>>(emptySet())
-    val selectedSongPaths = _selectedSongPaths.asStateFlow()
+    private val _selectedSongIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedSongIds = _selectedSongIds.asStateFlow()
 
     private val _isSelectionMode = MutableStateFlow(false)
     val isSelectionMode = _isSelectionMode.asStateFlow()
@@ -121,13 +121,13 @@ class SongListViewModel(
      *
      */
     fun batchMatchLyrics() {
-        val selectedPaths = _selectedSongPaths.value
+        val selectedPaths = _selectedSongIds.value
         if (selectedPaths.isEmpty()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isBatchMatching = true, loadingMessage = "准备匹配...") }
 
-            val songsToMatch = _allSongs.value.filter { it.filePath in selectedPaths }
+            val songsToMatch = _allSongs.value.filter { it.mediaId in selectedPaths }
 
             // 记录哪些文件确实修改成功了
             val successFiles = mutableListOf<String>()
@@ -149,7 +149,7 @@ class SongListViewModel(
             if (successFiles.isNotEmpty()) {
                 _uiState.update { it.copy(loadingMessage = "正在同步数据库...") }
 
-                songRepository.synchronizeWithDevice()
+                songRepository.synchronizeWithDevice(false)
 
             }
 
@@ -210,35 +210,30 @@ class SongListViewModel(
             Log.e("BatchMatch", "恢复时间戳失败", e)
         }
     }
-    fun enterSelectionMode(firstPath: String? = null) {
-        _isSelectionMode.value = true
-        firstPath?.let {
-            _selectedSongPaths.value = setOf(it)
-        }
-    }
-    fun toggleSelection(path: String) {
+
+    fun toggleSelection(mediaId: Long) {
         // 如果还没进入多选模式，点击时自动进入
         if (!_isSelectionMode.value) {
             _isSelectionMode.value = true
         }
 
-        val current = _selectedSongPaths.value
-        if (current.contains(path)) {
-            _selectedSongPaths.value = current - path
+        val current = _selectedSongIds.value
+        if (current.contains( mediaId)) {
+            _selectedSongIds.value = current - mediaId
         } else {
-            _selectedSongPaths.value = current + path
+            _selectedSongIds.value = current + mediaId
         }
     }
 
     // 全选
     fun selectAll(songs: List<SongEntity>) {
-        _selectedSongPaths.value = songs.map { it.filePath }.toSet()
+        _selectedSongIds.value = songs.map { it.mediaId }.toSet()
     }
 
     // 退出多选模式
     fun exitSelectionMode() {
         _isSelectionMode.value = false      // 显式关闭模式
-        _selectedSongPaths.value = emptySet() // 清空选择
+        _selectedSongIds.value = emptySet() // 清空选择
     }
     fun selectedSong(song: SongEntity) {
         _uiState.update { it.copy(selectedSongs = song) }
@@ -282,7 +277,7 @@ class SongListViewModel(
             val message = if (isAuto) "检测到文件变化，正在更新..." else "正在扫描歌曲..."
             _uiState.update { it.copy(isLoading = true, loadingMessage = message) }
             try {
-                songRepository.synchronizeWithDevice()
+                songRepository.synchronizeWithDevice(false)
             } catch (e: Exception) {
                 Log.e(TAG, "同步失败", e)
                 _uiState.update { it.copy(isLoading = false, loadingMessage = "同步失败: ${e.message}") }

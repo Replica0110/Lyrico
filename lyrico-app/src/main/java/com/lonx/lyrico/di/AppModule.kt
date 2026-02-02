@@ -23,15 +23,14 @@ import org.koin.dsl.module
 
 val appModule = module {
     // 歌词源
-    single<SearchSource>(named("Kg")) { KgSource() }
     single<SearchSource>(named("Qm")) { QmSource() }
+    single<SearchSource>(named("Kg")) { KgSource() }
     single<SearchSource>(named("Ne")) { NeSource() }
 
-    // getAll 会自动收集所有声明为 SearchSource 类型的实例（哪怕它们有不同的名称）
     single { getAll<SearchSource>() }
     // 工具类
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
-    single { MusicScanner(androidContext()) }
+    single { MusicScanner(androidContext(), get()) }
     
     // 数据库和存储库
     single {
@@ -46,7 +45,7 @@ val appModule = module {
     
     // ViewModels
     viewModel { SongListViewModel(get(), get(), get(), get()) }
-    viewModel { SettingsViewModel(get()) }
+    viewModel { SettingsViewModel(get(),get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), androidContext()) }
     viewModel { LocalSearchViewModel(get()) }

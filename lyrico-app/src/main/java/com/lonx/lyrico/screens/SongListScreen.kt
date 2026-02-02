@@ -35,9 +35,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import coil3.toUri
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.SongEntity
+import com.lonx.lyrico.data.model.getUri
 import com.lonx.lyrico.ui.theme.Gray200
 import com.lonx.lyrico.ui.theme.Gray400
 import com.lonx.lyrico.utils.coil.CoverRequest
@@ -87,7 +87,7 @@ fun SongListScreen(
     val sortInfo by viewModel.sortInfo.collectAsState()
     val songs by viewModel.songs.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState(initial = false)
-    val selectedPaths by viewModel.selectedSongPaths.collectAsState()
+    val selectedPaths by viewModel.selectedSongIds.collectAsState()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -275,26 +275,26 @@ fun SongListScreen(
                 ) {
                     items(
                         items = songs,
-                        key = { song -> song.filePath }
+                        key = { song -> song.mediaId }
                     ) { song ->
                         SongListItem(
                             song = song,
                             navigator = navigator,
                             modifier = Modifier.animateItem(),
                             isSelectionMode = isSelectionMode,
-                            isSelected = selectedPaths.contains(song.filePath),
-                            onToggleSelection = { viewModel.toggleSelection(song.filePath) },
+                            isSelected = selectedPaths.contains(song.mediaId),
+                            onToggleSelection = { viewModel.toggleSelection(song.mediaId) },
                             trailingContent = {
                                 if (!isSelectionMode) {
                                     IconButton(onClick = { viewModel.selectedSong(song) }) {
                                         Icon(painterResource(R.drawable.ic_info_24dp), "Info")
                                     }
                                 } else {
-                                    IconButton(onClick = { viewModel.toggleSelection(song.filePath) }) {
+                                    IconButton(onClick = { viewModel.toggleSelection(song.mediaId) }) {
                                         Icon(
-                                            imageVector = if (selectedPaths.contains(song.filePath)) SaltIcons.Check else SaltIcons.Uncheck,
+                                            imageVector = if (selectedPaths.contains(song.mediaId)) SaltIcons.Check else SaltIcons.Uncheck,
                                             contentDescription = null,
-                                            tint = if (selectedPaths.contains(song.filePath)) SaltTheme.colors.highlight else SaltTheme.colors.text
+                                            tint = if (selectedPaths.contains(song.mediaId)) SaltTheme.colors.highlight else SaltTheme.colors.text
                                         )
                                     }
                                 }
@@ -341,7 +341,6 @@ fun findScrollIndex(
 ): Int {
     if (sectionIndexMap.isEmpty()) return 0
 
-    // 已存在，直接用
     sectionIndexMap[section]?.let { return it }
 
     val keys = sectionIndexMap.keys.sorted()
@@ -366,9 +365,7 @@ fun AlphabetSideBar(
 ) {
     val view = LocalView.current
     var componentHeight by remember { mutableIntStateOf(0) }
-    // 新增：记录当前触摸的 Section，用于显示气泡
     var currentSection by remember { mutableStateOf<String?>(null) }
-    // 记录上一次选中的索引，防止滑动时重复触发回调
     var lastSelectedIndex by remember { mutableIntStateOf(-1) }
 
     // 计算索引的辅助函数
@@ -524,7 +521,7 @@ fun SongListItem(
                     .background(Gray200)
             ) {
                 AsyncImage(
-                    model = CoverRequest(song.filePath.toUri(), song.fileLastModified),
+                    model = CoverRequest(song.getUri, song.fileLastModified),
                     contentDescription = song.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -532,7 +529,6 @@ fun SongListItem(
                     error = painterResource(R.drawable.ic_album_24dp)
                 )
 
-                // 格式角标 (保持但字体缩小)
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -555,12 +551,10 @@ fun SongListItem(
                 }
             }
 
-            // 中间信息列
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp) // 紧凑行间距
             ) {
-                // 第一行: 标题
                 Text(
                     text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
                     fontWeight = FontWeight.Medium, // 稍微降低字重以显得清秀
@@ -570,7 +564,6 @@ fun SongListItem(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // 第二行: 歌手 • 专辑 (合并显示)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // 歌手
                     Text(
@@ -581,8 +574,6 @@ fun SongListItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-
-                    // 分隔符 (如果专辑存在)
                     if (!song.album.isNullOrBlank()) {
                         Text(
                             text = " - ${song.album}",
@@ -661,7 +652,7 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
                 modifier = Modifier.size(100.dp)
             ) {
                 AsyncImage(
-                    model = CoverRequest(song.filePath.toUri(), song.fileLastModified),
+                    model = CoverRequest(song.getUri, song.fileLastModified),
                     contentDescription = "Cover",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -721,6 +712,10 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
         SongDetailItem(
             label = "修改时间",
             value = if (song.fileLastModified > 0) dateFormat.format(Date(song.fileLastModified)) else null
+        )
+        SongDetailItem(
+            label = "文件路径",
+            value = song.filePath
         )
 
 

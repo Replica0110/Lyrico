@@ -6,11 +6,14 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SongDao {
 
+    @Upsert
+    suspend fun upsertAll(songs: List<SongEntity>)
     /**
      * 插入单个歌曲，如果已经存在相同 filePath 的记录，则替换
      *

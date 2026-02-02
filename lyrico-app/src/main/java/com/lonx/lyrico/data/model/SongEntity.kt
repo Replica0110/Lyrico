@@ -1,13 +1,19 @@
 package com.lonx.lyrico.data.model
 
+import android.content.ContentUris
+import android.net.Uri
+import android.provider.MediaStore
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
  * 数据库中存储的歌曲实体
  *
+ * @param id 主键 ID，自动生成
+ * @param folderId 关联的文件夹 ID，用于归类歌曲
  * @param filePath 文件 URI 路径，作为主键（唯一标识）
  * @param fileName 文件名称
  * @param title 歌曲标题
@@ -33,14 +39,27 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "songs",
     indices = [
-        Index(value = ["titleGroupKey", "titleSortKey"]),  // 提升按标题排序查询性能
-        Index(value = ["artistGroupKey", "artistSortKey"]), // 提升按艺术家排序查询性能
-        Index(value = ["fileLastModified"]),              // 提升按修改时间排序性能
-        Index(value = ["fileAdded"])                      // 提升按添加时间排序性能
+        Index(value = ["filePath"], unique = true),
+        Index(value = ["folderId"]),
+        Index(value = ["titleGroupKey", "titleSortKey"]),
+        Index(value = ["artistGroupKey", "artistSortKey"]),
+        Index(value = ["fileLastModified"]),
+        Index(value = ["fileAdded"])
+    ],
+    foreignKeys = [
+        ForeignKey(
+            entity = FolderEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["folderId"],
+            onDelete = ForeignKey.CASCADE
+        )
     ]
 )
 data class SongEntity(
-    @PrimaryKey
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val folderId: Long,
+    val mediaId: Long,
     val filePath: String,
     val fileName: String,
     val title: String? = null,
@@ -120,3 +139,8 @@ data class SongEntity(
         return result
     }
 }
+val SongEntity.getUri: Uri
+    get() = ContentUris.withAppendedId(
+        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+        this.mediaId
+    )

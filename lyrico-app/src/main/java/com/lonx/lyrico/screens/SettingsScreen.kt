@@ -21,6 +21,7 @@ import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.LyricDisplayMode
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.moriafly.salt.ui.Icon
+import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemCheck
 import com.moriafly.salt.ui.ItemDropdown
 import com.moriafly.salt.ui.ItemOuterTitle
@@ -35,6 +36,7 @@ import com.moriafly.salt.ui.rememberScrollState
 import com.moriafly.salt.ui.verticalScroll
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.generated.destinations.FolderManagerDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 
@@ -48,10 +50,14 @@ fun SettingsScreen(
 ) {
     val viewModel: SettingsViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
+
     val lyricDisplayMode = uiState.lyricDisplayMode
     val artistSeparator = uiState.separator
     val romaEnabled = uiState.romaEnabled
     val scrollState = rememberScrollState()
+    val folders = uiState.folders
+    val totalFolders = folders.size
+    val ignoredFolders = folders.count { it.isIgnored }
 
     Scaffold(
         modifier = Modifier
@@ -91,6 +97,16 @@ fun SettingsScreen(
                 .verticalScroll(scrollState)
         ) {
 
+            ItemOuterTitle("扫描设置")
+            RoundedColumn {
+                Item(
+                    onClick = { navigator.navigate(FolderManagerDestination()) },
+                    text = "文件夹管理",
+                    sub = if (totalFolders > 0) {
+                        "已发现 $totalFolders 个文件夹" + if (ignoredFolders > 0) "，已忽略 $ignoredFolders 个" else ""
+                    } else "管理扫描路径"
+                )
+            }
             ItemOuterTitle("歌词")
             RoundedColumn {
                 ItemDropdown(

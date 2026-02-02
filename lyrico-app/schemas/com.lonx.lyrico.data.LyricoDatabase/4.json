@@ -1,0 +1,316 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 4,
+    "identityHash": "61710b4dd0eb9e82f4680b913e0d05c2",
+    "entities": [
+      {
+        "tableName": "songs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `folderId` INTEGER NOT NULL, `mediaId` INTEGER NOT NULL, `filePath` TEXT NOT NULL, `fileName` TEXT NOT NULL, `title` TEXT, `artist` TEXT, `album` TEXT, `genre` TEXT, `trackerNumber` TEXT, `date` TEXT, `lyrics` TEXT, `durationMilliseconds` INTEGER NOT NULL, `bitrate` INTEGER NOT NULL, `sampleRate` INTEGER NOT NULL, `channels` INTEGER NOT NULL, `rawProperties` TEXT, `fileLastModified` INTEGER NOT NULL, `fileAdded` INTEGER NOT NULL DEFAULT 0, `dbUpdateTime` INTEGER NOT NULL, `titleGroupKey` TEXT NOT NULL, `titleSortKey` TEXT NOT NULL, `artistGroupKey` TEXT NOT NULL, `artistSortKey` TEXT NOT NULL, FOREIGN KEY(`folderId`) REFERENCES `folders`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "folderId",
+            "columnName": "folderId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mediaId",
+            "columnName": "mediaId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "filePath",
+            "columnName": "filePath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fileName",
+            "columnName": "fileName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "artist",
+            "columnName": "artist",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "album",
+            "columnName": "album",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "genre",
+            "columnName": "genre",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "trackerNumber",
+            "columnName": "trackerNumber",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lyrics",
+            "columnName": "lyrics",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "durationMilliseconds",
+            "columnName": "durationMilliseconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bitrate",
+            "columnName": "bitrate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sampleRate",
+            "columnName": "sampleRate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "channels",
+            "columnName": "channels",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rawProperties",
+            "columnName": "rawProperties",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fileLastModified",
+            "columnName": "fileLastModified",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fileAdded",
+            "columnName": "fileAdded",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "dbUpdateTime",
+            "columnName": "dbUpdateTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titleGroupKey",
+            "columnName": "titleGroupKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titleSortKey",
+            "columnName": "titleSortKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artistGroupKey",
+            "columnName": "artistGroupKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "artistSortKey",
+            "columnName": "artistSortKey",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_songs_filePath",
+            "unique": true,
+            "columnNames": [
+              "filePath"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_songs_filePath` ON `${TABLE_NAME}` (`filePath`)"
+          },
+          {
+            "name": "index_songs_folderId",
+            "unique": false,
+            "columnNames": [
+              "folderId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_songs_folderId` ON `${TABLE_NAME}` (`folderId`)"
+          },
+          {
+            "name": "index_songs_titleGroupKey_titleSortKey",
+            "unique": false,
+            "columnNames": [
+              "titleGroupKey",
+              "titleSortKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_songs_titleGroupKey_titleSortKey` ON `${TABLE_NAME}` (`titleGroupKey`, `titleSortKey`)"
+          },
+          {
+            "name": "index_songs_artistGroupKey_artistSortKey",
+            "unique": false,
+            "columnNames": [
+              "artistGroupKey",
+              "artistSortKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_songs_artistGroupKey_artistSortKey` ON `${TABLE_NAME}` (`artistGroupKey`, `artistSortKey`)"
+          },
+          {
+            "name": "index_songs_fileLastModified",
+            "unique": false,
+            "columnNames": [
+              "fileLastModified"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_songs_fileLastModified` ON `${TABLE_NAME}` (`fileLastModified`)"
+          },
+          {
+            "name": "index_songs_fileAdded",
+            "unique": false,
+            "columnNames": [
+              "fileAdded"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_songs_fileAdded` ON `${TABLE_NAME}` (`fileAdded`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "folders",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "folderId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "folders",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `path` TEXT NOT NULL, `songCount` INTEGER NOT NULL, `isIgnored` INTEGER NOT NULL, `addedBySaf` INTEGER NOT NULL, `lastScanned` INTEGER NOT NULL, `dbUpdateTime` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "path",
+            "columnName": "path",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "songCount",
+            "columnName": "songCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isIgnored",
+            "columnName": "isIgnored",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedBySaf",
+            "columnName": "addedBySaf",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastScanned",
+            "columnName": "lastScanned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dbUpdateTime",
+            "columnName": "dbUpdateTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_folders_path",
+            "unique": true,
+            "columnNames": [
+              "path"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_folders_path` ON `${TABLE_NAME}` (`path`)"
+          },
+          {
+            "name": "index_folders_isIgnored",
+            "unique": false,
+            "columnNames": [
+              "isIgnored"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_folders_isIgnored` ON `${TABLE_NAME}` (`isIgnored`)"
+          },
+          {
+            "name": "index_folders_songCount",
+            "unique": false,
+            "columnNames": [
+              "songCount"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_folders_songCount` ON `${TABLE_NAME}` (`songCount`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '61710b4dd0eb9e82f4680b913e0d05c2')"
+    ]
+  }
+}

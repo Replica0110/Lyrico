@@ -36,10 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
+import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.SongEntity
 import com.lonx.lyrico.data.model.getUri
-import com.lonx.lyrico.ui.theme.Gray200
-import com.lonx.lyrico.ui.theme.Gray400
+import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.coil.CoverRequest
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SortBy
@@ -518,30 +518,46 @@ fun SongListItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(6.dp))
-                    .background(Gray200)
+                    .background(LyricoColors.coverPlaceholder)
             ) {
                 AsyncImage(
                     model = CoverRequest(song.getUri, song.fileLastModified),
                     contentDescription = song.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    placeholder = painterResource(R.drawable.ic_album_24dp),
-                    error = painterResource(R.drawable.ic_album_24dp)
+                    placeholder = rememberTintedPainter(
+                        painter = painterResource(R.drawable.ic_album_24dp),
+                        tint = LyricoColors.coverPlaceholderIcon
+                    ),
+                    error = rememberTintedPainter(
+                        painter = painterResource(R.drawable.ic_album_24dp),
+                        tint = LyricoColors.coverPlaceholderIcon
+                    )
                 )
 
+                val formatGradientColor = if (SaltTheme.configs.isDarkTheme) {
+                    Color.White.copy(alpha = 0.7f)  // 深色模式改为白底
+                } else {
+                    Color.Black.copy(alpha = 0.7f)  // 浅色模式改为黑底
+                }
+                val formatTextColor = if (SaltTheme.configs.isDarkTheme) {
+                    Color.Black  // 深色模式改为黑字
+                } else {
+                    Color.White  // 浅色模式改为白字
+                }
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
+                                colors = listOf(Color.Transparent, formatGradientColor),
                             )
                         )
                 ) {
                     Text(
                         text = song.fileName.substringAfterLast('.', "").uppercase(),
-                        color = Color.White,
+                        color = formatTextColor,
                         fontSize = 8.sp, // 字体缩小
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
@@ -559,7 +575,7 @@ fun SongListItem(
                     text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
                     fontWeight = FontWeight.Medium, // 稍微降低字重以显得清秀
                     fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = SaltTheme.colors.text,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -568,7 +584,7 @@ fun SongListItem(
                     // 歌手
                     Text(
                         text = song.artist.takeIf { !it.isNullOrBlank() } ?: "未知艺术家",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, // 使用更标准的次级文字颜色
+                        color = SaltTheme.colors.subText,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -577,7 +593,7 @@ fun SongListItem(
                     if (!song.album.isNullOrBlank()) {
                         Text(
                             text = " - ${song.album}",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            color = SaltTheme.colors.subText,
                             fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -598,8 +614,7 @@ fun SongListItem(
                     val seconds = (song.durationMilliseconds % 60000) / 1000
                     Text(
                         text = String.format("%d:%02d", minutes, seconds),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = SaltTheme.colors.subText,
                         fontSize = 12.sp
                     )
                 }
@@ -610,7 +625,7 @@ fun SongListItem(
                     Text(
                         text = "${song.bitrate}kbps",
                         fontSize = 10.sp,
-                        color = Gray400,
+                        color = LyricoColors.secondaryText,
                         fontWeight = FontWeight.Normal
                     )
                 }
@@ -656,8 +671,14 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
                     contentDescription = "Cover",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    placeholder = painterResource(R.drawable.ic_album_24dp),
-                    error = painterResource(R.drawable.ic_album_24dp)
+                    placeholder = rememberTintedPainter(
+                        painter = painterResource(R.drawable.ic_album_24dp),
+                        tint = LyricoColors.coverPlaceholderIcon
+                    ),
+                    error = rememberTintedPainter(
+                        painter = painterResource(R.drawable.ic_album_24dp),
+                        tint = LyricoColors.coverPlaceholderIcon
+                    )
                 )
             }
 
@@ -665,13 +686,13 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = SaltTheme.textStyles.main,
                     fontWeight = FontWeight.Bold,
                     color = SaltTheme.colors.text
                 )
                 Text(
                     text = song.artist.takeIf { !it.isNullOrBlank() } ?: "未知艺术家",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = SaltTheme.textStyles.sub,
                     color = SaltTheme.colors.highlight
                 )
             }

@@ -15,7 +15,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lonx.lyrico.ui.theme.*
+import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
+import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.LyricsSearchResult
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
@@ -352,11 +353,11 @@ fun CoverEditor(
             .aspectRatio(1f)
             .border(
                 width = 1.5.dp,
-                color = if (isModified) Amber300 else Gray200,
+                color = if (isModified) LyricoColors.modifiedBorder else LyricoColors.inputBorder,
                 shape = RoundedCornerShape(12.dp)
             )
             .background(
-                color = if (isModified) Amber50.copy(alpha = 0.3f) else Color.White,
+                color = if (isModified) LyricoColors.modifiedBackground.copy(alpha = 0.5f) else SaltTheme.colors.subBackground,
                 shape = RoundedCornerShape(12.dp)
             )
             .clip(RoundedCornerShape(12.dp))
@@ -367,8 +368,14 @@ fun CoverEditor(
             contentDescription = "封面",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
-            placeholder = painterResource(id = R.drawable.ic_album_24dp),
-            error = painterResource(id = R.drawable.ic_album_24dp)
+            placeholder = rememberTintedPainter(
+                painter = painterResource(id = R.drawable.ic_album_24dp),
+                tint = LyricoColors.coverPlaceholderIcon
+            ),
+            error = rememberTintedPainter(
+                painter = painterResource(id = R.drawable.ic_album_24dp),
+                tint = LyricoColors.coverPlaceholderIcon
+            )
         )
 
         if (isModified) {
@@ -378,7 +385,7 @@ fun CoverEditor(
                     .align(Alignment.TopStart)
                     .padding(8.dp)
                     .background(
-                        color = Amber100.copy(alpha = 0.8f),
+                        color = LyricoColors.modifiedBadgeBackground.copy(alpha = 0.8f),
                         shape = RoundedCornerShape(4.dp)
                     )
                     .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -388,7 +395,7 @@ fun CoverEditor(
                     text = "已修改",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Amber600
+                    color = LyricoColors.modifiedText
                 )
             }
 
@@ -399,7 +406,7 @@ fun CoverEditor(
                     .align(Alignment.TopEnd)
                     .padding(4.dp) // 和角标错开一些
                     .background(
-                        color = Gray50.copy(alpha = 0.7f),
+                        color = SaltTheme.colors.background.copy(alpha = 0.8f),
                         shape = CircleShape
                     )
                     .size(28.dp)
@@ -436,13 +443,13 @@ private fun MetadataInputGroup(
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = Gray400,
+                    tint = SaltTheme.colors.subText,
                     modifier = Modifier.size(18.dp)
                 )
             }
             Text(
                 text = label.uppercase(),
-                color = Gray500,
+                color = SaltTheme.colors.subText,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp,
                 letterSpacing = 0.5.sp
@@ -450,12 +457,12 @@ private fun MetadataInputGroup(
             if (isModified) {
                 Box(
                     modifier = Modifier
-                        .background(Amber100, RoundedCornerShape(4.dp))
+                        .background(LyricoColors.modifiedBadgeBackground, RoundedCornerShape(4.dp))
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = "已修改",
-                        color = Amber600,
+                        color = LyricoColors.modifiedText,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -464,7 +471,7 @@ private fun MetadataInputGroup(
                     Icon(
                         painter = painterResource(R.drawable.ic_undo_24dp),
                         contentDescription = "撤销修改",
-                        tint = Gray400
+                        tint = SaltTheme.colors.subText
                     )
                 }
             }
@@ -478,10 +485,17 @@ private fun MetadataInputGroup(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Blue600,
-                unfocusedBorderColor = if (isModified) Amber300 else Gray200,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = if (isModified) Amber50.copy(alpha = 0.3f) else Color.White,
+                focusedBorderColor = LyricoColors.inputFocusedBorder,
+                unfocusedBorderColor = if (isModified) LyricoColors.modifiedBorder else LyricoColors.inputBorder,
+                focusedContainerColor = SaltTheme.colors.subBackground,
+                unfocusedContainerColor = if (isModified) LyricoColors.modifiedBackground.copy(alpha = 0.3f) else SaltTheme.colors.subBackground,
+                focusedTextColor = SaltTheme.colors.text,
+                unfocusedTextColor = SaltTheme.colors.text,
+                cursorColor = SaltTheme.colors.highlight,
+                focusedPlaceholderColor = SaltTheme.colors.subText,
+                unfocusedPlaceholderColor = SaltTheme.colors.subText,
+                focusedLabelColor = SaltTheme.colors.text,
+                unfocusedLabelColor = SaltTheme.colors.subText
             ),
             singleLine = !isMultiline,
             minLines = if (isMultiline) 20 else 1,

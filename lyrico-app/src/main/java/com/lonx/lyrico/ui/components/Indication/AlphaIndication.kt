@@ -15,17 +15,27 @@ import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
 import kotlinx.coroutines.launch
 
-object AlphaIndication : IndicationNodeFactory {
+/**
+ * Alpha 透明度交互反馈组件
+ *
+ * @param color 反馈颜色，应传入主题感知的颜色（浅色模式用黑色，深色模式用白色）
+ */
+class AlphaIndication(private val color: Color) : IndicationNodeFactory {
     override fun create(
         interactionSource: InteractionSource
-    ): DelegatableNode = AlphaIndicationInstance(interactionSource)
+    ): DelegatableNode = AlphaIndicationInstance(interactionSource, color)
 
-    override fun hashCode(): Int = -1
+    override fun hashCode(): Int = color.hashCode()
 
-    override fun equals(other: Any?) = other === this
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AlphaIndication) return false
+        return color == other.color
+    }
 
     private class AlphaIndicationInstance(
-        private val interactionSource: InteractionSource
+        private val interactionSource: InteractionSource,
+        private val indicationColor: Color
     ) : Modifier.Node(), DrawModifierNode {
 
         private val alphaAnim = Animatable(0f)
@@ -77,7 +87,7 @@ object AlphaIndication : IndicationNodeFactory {
             val currentAlpha = alphaAnim.value
             if (currentAlpha > 0f) {
                 drawRect(
-                    color = Color.Black.copy(alpha = currentAlpha),
+                    color = indicationColor.copy(alpha = currentAlpha),
                     size = size
                 )
             }

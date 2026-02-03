@@ -24,17 +24,27 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.sqrt
 
-object GradientIndication : IndicationNodeFactory {
+/**
+ * 渐变交互反馈组件
+ *
+ * @param color 渐变颜色，应传入主题感知的颜色（浅色模式用黑色，深色模式用白色）
+ */
+class GradientIndication(private val color: Color) : IndicationNodeFactory {
     override fun create(
         interactionSource: InteractionSource
-    ): DelegatableNode = GradientIndicationInstance(interactionSource)
+    ): DelegatableNode = GradientIndicationInstance(interactionSource, color)
 
-    override fun hashCode(): Int = -1
+    override fun hashCode(): Int = color.hashCode()
 
-    override fun equals(other: Any?) = other === this
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GradientIndication) return false
+        return color == other.color
+    }
 
     private class GradientIndicationInstance(
-        private val interactionSource: InteractionSource
+        private val interactionSource: InteractionSource,
+        private val gradientColor: Color
     ) : Modifier.Node(), DrawModifierNode {
 
         private var isHovered = false
@@ -113,7 +123,7 @@ object GradientIndication : IndicationNodeFactory {
 
             // 1. Hover/Focus 状态保持简单的平铺遮罩 (符合一般设计规范)
             if (isHovered || isFocused) {
-                drawRect(color = Color.Black.copy(alpha = 0.05f))
+                drawRect(color = gradientColor.copy(alpha = 0.05f))
             }
 
             // 2. Press 状态绘制渐变阴影
@@ -131,8 +141,8 @@ object GradientIndication : IndicationNodeFactory {
                 if (currentRadius > 0f) {
                     val gradientBrush = Brush.radialGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.15f), // 中心颜色（最深）
-                            Color.Black.copy(alpha = 0.05f), // 中间过渡
+                            gradientColor.copy(alpha = 0.15f), // 中心颜色（最深）
+                            gradientColor.copy(alpha = 0.05f), // 中间过渡
                             Color.Transparent               // 边缘颜色
                         ),
                         center = pressPosition,

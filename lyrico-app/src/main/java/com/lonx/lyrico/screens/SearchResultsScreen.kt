@@ -33,9 +33,10 @@ import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.size.Size
 import com.lonx.lyrico.R
+import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.LyricsSearchResult
 import com.lonx.lyrico.ui.components.bar.SearchBar
-import com.lonx.lyrico.ui.theme.Gray200
+import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.viewmodel.LyricsUiState
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrics.model.SongSearchResult
@@ -166,7 +167,7 @@ fun SearchResultsScreen(
 
             HorizontalDivider(
                 thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                color = SaltTheme.colors.stroke
             )
 
             /**
@@ -194,7 +195,7 @@ fun SearchResultsScreen(
                         ) {
                             Text(
                                 text = uiState.searchError!!,
-                                color = MaterialTheme.colorScheme.error,
+                                color = SaltTheme.colors.highlight,
                                 fontSize = 14.sp
                             )
                         }
@@ -210,12 +211,12 @@ fun SearchResultsScreen(
                                 painter = painterResource(id = R.drawable.ic_searchoff_24dp),
                                 contentDescription = "No results",
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                tint = SaltTheme.colors.subText
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "未找到相关结果",
-                                color = MaterialTheme.colorScheme.outline
+                                color = SaltTheme.colors.subText
                             )
                         }
                     }
@@ -309,9 +310,9 @@ private fun LyricsBottomSheetContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Text(song.title, style = MaterialTheme.typography.titleMedium)
-        Text(song.artist, style = MaterialTheme.typography.bodyMedium)
-        Text(song.album, style = MaterialTheme.typography.bodyMedium)
+        Text(song.title, color = SaltTheme.colors.text, style = SaltTheme.textStyles.main)
+        Text(song.artist, color = SaltTheme.colors.subText, style = SaltTheme.textStyles.sub)
+        Text(song.album, color = SaltTheme.colors.subText, style = SaltTheme.textStyles.sub)
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
@@ -332,7 +333,7 @@ private fun LyricsBottomSheetContent(
                 lyricsState.error != null -> {
                     Text(
                         lyricsState.error,
-                        color = MaterialTheme.colorScheme.error
+                        color = SaltTheme.colors.highlight
                     )
                 }
 
@@ -342,7 +343,8 @@ private fun LyricsBottomSheetContent(
                         modifier = Modifier.verticalScroll(rememberScrollState()),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 13.sp,
-                        lineHeight = 20.sp
+                        lineHeight = 20.sp,
+                        color = SaltTheme.colors.text
                     )
                 }
             }
@@ -359,7 +361,7 @@ private fun LyricsBottomSheetContent(
                 containerColor = SaltTheme.colors.highlight
             )
         ) {
-            Text("使用此歌词", color = Color.White)
+            Text("使用此歌词", color = SaltTheme.colors.onHighlight)
         }
     }
 }
@@ -420,15 +422,21 @@ fun SearchResultItem(
                     modifier = Modifier
                         .size(76.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Gray200)
+                        .background(LyricoColors.coverPlaceholder)
                 ) {
                     AsyncImage(
                         model = song.picUrl,
                         contentDescription = song.title,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
-                        placeholder = painterResource(R.drawable.ic_album_24dp),
-                        error = painterResource(R.drawable.ic_album_24dp)
+                        placeholder = rememberTintedPainter(
+                            painter = painterResource(R.drawable.ic_album_24dp),
+                            tint = LyricoColors.coverPlaceholderIcon
+                        ),
+                        error = rememberTintedPainter(
+                            painter = painterResource(R.drawable.ic_album_24dp),
+                            tint = LyricoColors.coverPlaceholderIcon
+                        )
                     )
                 }
 

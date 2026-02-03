@@ -53,13 +53,13 @@ fun SearchBar(
         singleLine = true,
         textStyle = TextStyle(
             fontSize = 13.sp,
-            color = Color.Black,
+            color = SaltTheme.colors.text,
             fontWeight = FontWeight.Bold
         ),
         cursorBrush = SolidColor(SaltTheme.colors.highlight),
         modifier = modifier
             .height(36.dp)
-            .background(Color.White, CircleShape)
+            .background(SaltTheme.colors.subBackground, CircleShape)
             .clip(CircleShape),
         decorationBox = { innerTextField ->
             Row(
@@ -86,7 +86,7 @@ fun SearchBar(
                         Text(
                             text = placeholder,
                             style = TextStyle(
-                                color = Color.Black,
+                                color = SaltTheme.colors.subText,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             ),

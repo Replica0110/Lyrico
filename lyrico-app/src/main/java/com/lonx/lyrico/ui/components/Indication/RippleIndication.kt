@@ -23,17 +23,27 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.sqrt
 
-object RippleIndication : IndicationNodeFactory {
+/**
+ * 水波纹交互反馈组件
+ *
+ * @param color 波纹颜色，应传入主题感知的颜色（浅色模式用黑色，深色模式用白色）
+ */
+class RippleIndication(private val color: Color) : IndicationNodeFactory {
     override fun create(
         interactionSource: InteractionSource
-    ): DelegatableNode = RippleIndicationInstance(interactionSource)
+    ): DelegatableNode = RippleIndicationInstance(interactionSource, color)
 
-    override fun hashCode(): Int = -1
+    override fun hashCode(): Int = color.hashCode()
 
-    override fun equals(other: Any?) = other === this
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RippleIndication) return false
+        return color == other.color
+    }
 
     private class RippleIndicationInstance(
-        private val interactionSource: InteractionSource
+        private val interactionSource: InteractionSource,
+        private val rippleColor: Color
     ) : Modifier.Node(), DrawModifierNode {
 
         // 状态追踪
@@ -128,7 +138,7 @@ object RippleIndication : IndicationNodeFactory {
 
             // 1. 绘制 Hover 或 Focus 的静态遮罩 (参考原代码逻辑)
             if (isHovered || isFocused) {
-                drawRect(color = Color.Black.copy(alpha = 0.1f), size = size)
+                drawRect(color = rippleColor.copy(alpha = 0.1f), size = size)
             }
 
             // 2. 绘制 Ripple (如果有透明度则绘制)
@@ -144,7 +154,7 @@ object RippleIndication : IndicationNodeFactory {
                 // 使用 clipRect 确保水波纹不超出组件边界
                 clipRect {
                     drawCircle(
-                        color = Color.Black.copy(alpha = rippleAlpha.value),
+                        color = rippleColor.copy(alpha = rippleAlpha.value),
                         radius = currentRadius,
                         center = pressPosition
                     )

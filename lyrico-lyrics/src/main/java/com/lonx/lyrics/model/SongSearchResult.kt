@@ -13,10 +13,9 @@ data class SongSearchResult(
     val album: String,
     val duration: Long, // 毫秒
     val source: Source,
-    val hash: String? = null, // KG 特有
-    val mid: String? = null,
     val date: String = "",
     val trackerNumber: String = "",
     val picUrl: String = "",
+    val extras: Map<String, String> = emptyMap()
 ) : Parcelable
 

@@ -137,8 +137,10 @@ class KgSource: SearchSource {
                     album = item.albumName ?: "",
                     duration = (item.duration * 1000).toLong(),
                     source = Source.KG,
-                    hash = item.fileHash,
                     date = item.publishDate ?:"",
+                    extras = mapOf(
+                        "hash" to item.fileHash
+                    ),
                     picUrl = if (item.picUrl != "") item.picUrl.replace("{size}", "480") else "", // 酷狗默认480*480
                 )
             } ?: emptyList()
@@ -187,14 +189,14 @@ class KgSource: SearchSource {
     }
 
     override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
-        if (song.hash.isNullOrEmpty()) return@withContext null
+        val hash = song.extras["hash"] ?: return@withContext null
 
         try {
             // 搜索歌词
             val searchParams = mapOf(
                 "album_audio_id" to song.id,
                 "duration" to song.duration.toString(),
-                "hash" to song.hash,
+                "hash" to hash,
                 "keyword" to "${song.artist} - ${song.title}",
                 "lrctxt" to "1",
                 "man" to "no"

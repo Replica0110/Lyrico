@@ -88,7 +88,6 @@ class QmSource: SearchSource {
                 }
                 SongSearchResult(
                     id = item.id,
-                    mid = item.mid,
                     title = item.title,
                     artist = singerList.joinToString(separator),
                     album = item.album.name,

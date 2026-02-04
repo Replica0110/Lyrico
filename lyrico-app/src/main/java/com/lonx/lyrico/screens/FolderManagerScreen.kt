@@ -120,8 +120,16 @@ fun FolderManagerScreen(
                     viewModel.deleteFolder(currentFolder)
                     showSheet = false
                 },
-                title = "确认要删除文件夹吗？",
-                content = "文件夹路径: ${currentFolder.path}\n删除后，该文件夹下的歌曲将从库中隐藏",
+                title = "是否移除此文件夹？",
+                content = currentFolder.path,
+                drawContent = {
+                    Column(modifier = Modifier.fillMaxWidth().padding(SaltTheme.dimens.padding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "该操作不会删除本地文件\n文件夹下的歌曲将从音乐库中隐藏，重新扫描后会再次显示",
+                            style = SaltTheme.textStyles.sub
+                        )
+                    }
+                },
                 cancelText = "取消",
                 confirmText = "确定"
             )

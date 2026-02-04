@@ -226,7 +226,11 @@ fun SearchResultsScreen(
                             contentPadding = PaddingValues(bottom = 16.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(uiState.searchResults) { result ->
+                            items(
+                                items = uiState.searchResults,
+                                key = { "${it.source}_${it.id}" },
+                                contentType = { "song_result" }
+                            ) { result ->
                                 SearchResultItem(
                                     song = result,
                                     onPreviewClick = {
@@ -248,7 +252,11 @@ fun SearchResultsScreen(
                                                     )
                                                 )
                                             } else {
-                                                Toast.makeText(context, "获取歌词失败，请重试", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "获取歌词失败，请重试",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                         }
                                     }
@@ -296,6 +304,7 @@ fun SearchResultsScreen(
     }
 
 }
+
 @Composable
 private fun LyricsBottomSheetContent(
     lyricsState: LyricsUiState,

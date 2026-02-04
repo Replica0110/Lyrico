@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +38,6 @@ import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.moriafly.salt.ui.Icon
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemArrowType
-import com.moriafly.salt.ui.ItemOuterTip
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.ItemTip
@@ -47,7 +45,6 @@ import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.dialog.YesDialog
 import com.moriafly.salt.ui.dialog.YesNoDialog
 import com.moriafly.salt.ui.icons.ArrowBack
 import com.moriafly.salt.ui.icons.SaltIcons

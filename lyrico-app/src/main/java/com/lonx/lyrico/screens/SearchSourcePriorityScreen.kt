@@ -121,7 +121,7 @@ fun SearchSourcePriorityScreen(
                 .background(SaltTheme.colors.background)
                 .padding(paddingValues)
         ) {
-            ItemTip(text = "长按拖动以调整搜索源的优先级顺序")
+            ItemTip(text = "长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源")
             Spacer(modifier = Modifier.height(8.dp))
             LazyColumn(
                 state = lazyListState,

@@ -11,6 +11,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -31,11 +32,12 @@ data class LyricsUiState(
 data class SearchUiState(
     val searchKeyword: String = "",
     val searchResults: List<SongSearchResult> = emptyList(),
-    val selectedSearchSource: Source = Source.KG,
-    val availableSources: List<Source> = listOf(Source.KG, Source.QM, Source.NE),
+    val selectedSearchSource: Source? = null,
+    val availableSources: List<Source> = emptyList(),
     val isSearching: Boolean = false,
     val searchError: String? = null,
-    val lyricsState: LyricsUiState = LyricsUiState()
+    val lyricsState: LyricsUiState = LyricsUiState(),
+    val isInitializing: Boolean = true
 )
 
 class SearchViewModel(
@@ -46,23 +48,24 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
     init {
+        // 初始加载配置
         viewModelScope.launch {
-            settingsRepository.settingsFlow.collect { settings ->
-                _uiState.update { state ->
-                    val newSources = settings.searchSourceOrder
+            loadSettings()
+        }
+    }
 
-                    val updatedSelectedSource = if (state.selectedSearchSource !in newSources || state.searchResults.isEmpty()) {
-                        newSources.firstOrNull() ?: state.selectedSearchSource
-                    } else {
-                        state.selectedSearchSource
-                    }
+    private suspend fun loadSettings() {
+        try {
+            val settings = settingsRepository.settingsFlow.first()
+            val sourcesOrder = settings.searchSourceOrder
 
-                    state.copy(
-                        availableSources = newSources,
-                        selectedSearchSource = updatedSelectedSource
-                    )
-                }
-            }
+            _uiState.update { it.copy(
+                availableSources = sourcesOrder,
+                selectedSearchSource = sourcesOrder.firstOrNull(),
+                isInitializing = false
+            ) }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(isInitializing = false, searchError = "加载配置失败") }
         }
     }
     /**
@@ -99,22 +102,14 @@ class SearchViewModel(
      * 如果存在关键词，会优先尝试从缓存加载结果
      */
     fun onSearchSourceSelected(source: Source) {
-        val keyword = uiState.value.searchKeyword
-
         _uiState.update { it.copy(selectedSearchSource = source) }
 
-        if (keyword.isBlank()) {
-            clearSearchResults()
-            return
+        val keyword = _uiState.value.searchKeyword
+        if (keyword.isNotBlank()) {
+            getCachedResults(keyword, source)?.let { cached ->
+                _uiState.update { it.copy(searchResults = cached, searchError = null) }
+            } ?: performSearch()
         }
-
-        getCachedResults(keyword, source)
-            ?.let { cached ->
-                _uiState.update {
-                    it.copy(searchResults = cached, searchError = null)
-                }
-            }
-            ?: performSearch()
     }
 
     /**
@@ -126,16 +121,18 @@ class SearchViewModel(
      */
     fun performSearch(keywordOverride: String? = null) {
         val keyword = keywordOverride ?: uiState.value.searchKeyword
-
-        if (keyword.isBlank()) {
-            clearSearchResults()
-            return
-        }
+        if (keyword.isBlank()) return
 
         searchJob?.cancel()
-
         searchJob = viewModelScope.launch {
-            executeSearch(keyword, keywordOverride != null)
+            if (_uiState.value.isInitializing) {
+                _uiState.filter { !it.isInitializing }.first()
+            }
+
+            // 2. 此时获取的 source 一定是设置里的第一个（或者是用户刚切的）
+            val currentSource = _uiState.value.selectedSearchSource ?: return@launch
+
+            executeSearch(keyword, currentSource, keywordOverride != null)
         }
     }
 
@@ -144,35 +141,24 @@ class SearchViewModel(
      */
     private suspend fun executeSearch(
         keyword: String,
+        source: Source,
         shouldUpdateKeyword: Boolean
     ) {
         _uiState.update { it.copy(isSearching = true, searchError = null) }
-
         try {
             if (shouldUpdateKeyword) {
                 _uiState.update { it.copy(searchKeyword = keyword) }
             }
 
-            val source = uiState.value.selectedSearchSource
             val results = searchFromSource(keyword, source)
-
             cacheSearchResults(keyword, source, results)
 
             _uiState.update {
-                it.copy(
-                    searchResults = results,
-                    isSearching = false
-                )
+                it.copy(searchResults = results, isSearching = false)
             }
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
-            _uiState.update {
-                it.copy(
-                    searchError = "搜索失败: ${e.message}",
-                    isSearching = false
-                )
-            }
+            if (e is CancellationException) throw e
+            _uiState.update { it.copy(searchError = "搜索失败: ${e.message}", isSearching = false) }
         }
     }
 

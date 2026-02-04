@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.LocalOverscrollFactory
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -18,6 +20,8 @@ import com.lonx.lyrico.ui.theme.LyricoTheme
 import com.lonx.lyrico.utils.PermissionUtil
 import androidx.lifecycle.lifecycleScope
 import com.lonx.lyrico.viewmodel.SongListViewModel
+import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.moriafly.salt.ui.gestures.cupertino.CupertinoOverscrollEffectFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -28,6 +32,7 @@ open class MainActivity : ComponentActivity() {
     protected var hasPermission = false
     private val songListViewModel: SongListViewModel by inject()
 
+    @OptIn(UnstableSaltUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 解析启动时的 Intent
@@ -63,7 +68,11 @@ open class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             LyricoTheme {
-                LyricoApp(externalUri = if (hasPermission) externalUri else null)
+                CompositionLocalProvider(
+                    LocalOverscrollFactory provides CupertinoOverscrollEffectFactory()
+                ) {
+                    LyricoApp(externalUri = if (hasPermission) externalUri else null)
+                }
             }
         }
     }

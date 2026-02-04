@@ -3,20 +3,18 @@ package com.lonx.lyrico.screens
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,11 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.FolderEntity
-import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.moriafly.salt.ui.Icon
@@ -43,14 +39,16 @@ import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.ItemTip
 import com.moriafly.salt.ui.RoundedColumn
+import com.moriafly.salt.ui.RoundedColumnType
+import com.moriafly.salt.ui.SaltDimens
 import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.dialog.YesNoDialog
-import com.moriafly.salt.ui.icons.ArrowBack
-import com.moriafly.salt.ui.icons.SaltIcons
+import com.moriafly.salt.ui.ext.safeMainCompat
+import com.moriafly.salt.ui.lazy.LazyColumn
+import com.moriafly.salt.ui.lazy.items
+import com.moriafly.salt.ui.outerPadding
 import com.moriafly.salt.ui.rememberScrollState
-import com.moriafly.salt.ui.verticalScroll
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -62,7 +60,6 @@ import org.koin.androidx.compose.koinViewModel
 fun FolderManagerScreen(
     navigator: DestinationsNavigator
 ) {
-
     val viewModel: SettingsViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val folders = uiState.folders
@@ -78,7 +75,6 @@ fun FolderManagerScreen(
     var showSheet by remember { mutableStateOf(false) }
     val showConfirmDialog = remember { mutableStateOf(false) }
 
-
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -93,73 +89,29 @@ fun FolderManagerScreen(
             )
         }
     }
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(SaltTheme.colors.background),
-        topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarColors(
-                    containerColor = SaltTheme.colors.background,
-                    scrolledContainerColor = SaltTheme.colors.background,
-                    navigationIconContentColor = SaltTheme.colors.text,
-                    titleContentColor = SaltTheme.colors.text,
-                    actionIconContentColor = SaltTheme.colors.text,
-                    subtitleContentColor = SaltTheme.colors.subText
-                ),
-                title = { Text("文件夹管理", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.popBackStack() }) {
-                        Icon(imageVector = SaltIcons.ArrowBack, contentDescription = null)
-                    }
+
+    BasicScreenBox(
+        title = "文件夹管理",
+        onBack = {
+            navigator.popBackStack()
+        },
+        toolbar = {
+            IconButton(
+                onClick = {
+                    folderPickerLauncher.launch(null)
                 },
-                actions = {
-                    IconButton(onClick = {
-                        folderPickerLauncher.launch(null)
-                    }) {
-                        Icon(
-                            painter = rememberTintedPainter(
-                                painterResource(id = R.drawable.ic_addfolder_24dp), tint = SaltTheme.colors.text),
-                            contentDescription = null)
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(SaltTheme.colors.background)
-                .padding(paddingValues)
-                .verticalScroll(scrollState)
-        ) {
-            ItemTip(text = "未启用的文件夹及其子目录中的歌曲将不会显示在库中")
-
-            ItemOuterTitle("已发现的文件夹")
-            RoundedColumn {
-                if (folders.isEmpty()) {
-                    ItemTip(text = "暂无文件夹数据，完成首次扫描后即可管理")
-                } else {
-                    folders.forEach { folder ->
-                        val folderName = folder.path.substringAfterLast("/").ifBlank { folder.path }
-                        val songInfo = "歌曲 ${folder.songCount} 首${if (folder.isIgnored) " (已忽略)" else ""}"
-                        val sourceInfo = if (folder.addedBySaf) "手动添加" else "自动发现"
-
-                        Item(
-                            onClick = {
-                                selectedFolderId = folder.id
-                                showSheet = true
-                            },
-                            iconPainter = if (folder.isIgnored) painterResource(id = R.drawable.ic_invisible_24dp) else painterResource(id = R.drawable.ic_visible_24dp),
-                            text = folderName,
-                            sub = "${folder.path}\n$songInfo · $sourceInfo",
-                            )
-                    }
-                }
+                modifier = Modifier
+                    .size(56.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_addfolder_24dp),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(SaltTheme.dimens.itemIcon)
+                )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
+    ) {
         if (showConfirmDialog.value && currentFolder != null){
             YesNoDialog(
                 onDismissRequest = { showConfirmDialog.value = false },
@@ -182,6 +134,7 @@ fun FolderManagerScreen(
                 confirmText = "确定"
             )
         }
+
         if (showSheet && currentFolder != null) {
             ModalBottomSheet(
                 onDismissRequest = {
@@ -203,6 +156,69 @@ fun FolderManagerScreen(
                 )
             }
         }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            item {
+                // TODO Replace ItemOuterTip when Salt UI 2.9.0-alpha07 released
+                ItemTip(
+                    text = "未启用的文件夹及其子目录中的歌曲将不会显示在库中",
+                    modifier = Modifier
+                        .outerPadding(vertical = false)
+                )
+            }
+
+            item {
+                ItemOuterTitle("已发现的文件夹")
+            }
+
+            item {
+                Spacer(Modifier.height(SaltDimens.RoundedColumnInListEdgePadding))
+            }
+
+            if (folders.isEmpty()) {
+                item {
+                    RoundedColumn(
+                        type = RoundedColumnType.InList
+                    ) {
+                        ItemTip("暂无文件夹数据，完成首次扫描后即可管理")
+                    }
+                }
+            } else {
+                items(folders) { folder ->
+                    val folderName = folder.path.substringAfterLast("/").ifBlank { folder.path }
+                    val songInfo = "歌曲 ${folder.songCount} 首${if (folder.isIgnored) " (已忽略)" else ""}"
+                    val sourceInfo = if (folder.addedBySaf) "手动添加" else "自动发现"
+
+                    RoundedColumn(
+                        type = RoundedColumnType.InList
+                    ) {
+                        Item(
+                            onClick = {
+                                selectedFolderId = folder.id
+                                showSheet = true
+                            },
+                            iconPainter = if (folder.isIgnored)
+                                painterResource(id = R.drawable.ic_invisible_24dp)
+                            else
+                                painterResource(id = R.drawable.ic_visible_24dp),
+                            text = folderName,
+                            sub = "${folder.path}\n$songInfo · $sourceInfo",
+                        )
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(SaltDimens.RoundedColumnInListEdgePadding))
+            }
+
+            item {
+                Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeMainCompat))
+            }
+        }
     }
 }
 @OptIn(UnstableSaltUiApi::class)
@@ -217,7 +233,6 @@ fun FolderActionSheetContent(
             .fillMaxWidth()
             .padding(bottom = 32.dp)
     ) {
-
         // 操作列表
         RoundedColumn {
             ItemTip("路径: ${folder.path}")

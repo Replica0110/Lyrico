@@ -3,6 +3,7 @@ package com.lonx.lyrico.screens
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -42,6 +43,7 @@ import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.RoundedColumnType
 import com.moriafly.salt.ui.SaltDimens
 import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.dialog.YesNoDialog
 import com.moriafly.salt.ui.ext.safeMainCompat

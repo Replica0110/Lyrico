@@ -6,9 +6,10 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.LocalOverscrollFactory
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -24,7 +25,9 @@ import com.lonx.lyrico.ui.theme.LyricoTheme
 import com.lonx.lyrico.utils.PermissionUtil
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.moriafly.salt.ui.ext.edgeToEdge
 import com.moriafly.salt.ui.gestures.cupertino.CupertinoOverscrollEffectFactory
+import com.moriafly.salt.ui.util.WindowUtil
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
@@ -38,6 +41,7 @@ open class MainActivity : ComponentActivity() {
 
     @OptIn(UnstableSaltUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        edgeToEdge()
         super.onCreate(savedInstanceState)
         // 解析启动时的 Intent
         handleIntent(intent)
@@ -69,13 +73,25 @@ open class MainActivity : ComponentActivity() {
                 })
         }
 
-        enableEdgeToEdge()
         setContent {
             val themeMode by settingsRepository.themeMode.collectAsStateWithLifecycle(
                 initialValue = ThemeMode.AUTO
             )
 
             LyricoTheme(themeMode = themeMode) {
+                val isDarkTheme = when (themeMode) {
+                    ThemeMode.AUTO -> isSystemInDarkTheme()
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.DARK -> true
+                }
+
+                SideEffect {
+                    WindowUtil.setStatusBarForegroundColor(
+                        window,
+                        if (isDarkTheme) WindowUtil.BarColor.White else WindowUtil.BarColor.Black
+                    )
+                }
+
                 CompositionLocalProvider(
                     LocalOverscrollFactory provides CupertinoOverscrollEffectFactory()
                 ) {

@@ -2,7 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <permission
+        android:name="com.lonx.lyrico.permission.SEARCH_SOURCE"
+        android:protectionLevel="normal" />
 
+    <uses-permission android:name="com.lonx.lyrico.permission.SEARCH_SOURCE" />
+
+    <queries>
+        <intent>
+            <action android:name="com.lonx.lyrico.plugin.LyricSource" />
+        </intent>
+        <intent>
+            <action android:name="com.lonx.lyrico.plugin.SearchSource" />
+        </intent>
+    </queries>
 
     <application
         android:name=".App"

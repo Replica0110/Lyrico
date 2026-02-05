@@ -81,6 +81,7 @@ dependencies {
     // Project Modules
     implementation(project(":lyrico-audiotag"))
     implementation(project(":lyrico-lyrics"))
+    implementation(project(":lyrico-plugin-api"))
 
     // Compose & UI
     implementation(platform(libs.androidx.compose.bom))

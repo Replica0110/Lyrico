@@ -29,3 +29,4 @@ rootProject.name = "Lyrico"
 include(":lyrico-app")
 include(":lyrico-lyrics")
 include(":lyrico-audiotag")
+include(":lyrico-plugin-api")

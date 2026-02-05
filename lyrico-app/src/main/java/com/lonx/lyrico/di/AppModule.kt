@@ -12,6 +12,8 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.data.repository.SongRepositoryImpl
+import com.lonx.lyrico.plugin.PluginManager
+import com.lonx.lyrico.viewmodel.PluginListViewModel
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.source.kg.KgSource
 import com.lonx.lyrics.source.ne.NeSource
@@ -31,6 +33,7 @@ val appModule = module {
     // 工具类
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
     single { MusicScanner(androidContext()) }
+    single { PluginManager(androidContext()) }
     
     // 数据库和存储库
     single {
@@ -49,5 +52,6 @@ val appModule = module {
     viewModel { SearchViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), androidContext()) }
     viewModel { LocalSearchViewModel(get()) }
+    viewModel { PluginListViewModel(get()) }
 }
 

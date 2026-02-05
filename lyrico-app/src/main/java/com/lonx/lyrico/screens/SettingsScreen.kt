@@ -48,6 +48,7 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AboutDestination
 import com.ramcosta.composedestinations.generated.destinations.FolderManagerDestination
+import com.ramcosta.composedestinations.generated.destinations.PluginListDestination
 import com.ramcosta.composedestinations.generated.destinations.SearchSourcePriorityDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
@@ -214,6 +215,12 @@ fun SettingsScreen(
 
             ItemOuterTitle("其他")
             RoundedColumn {
+                Item(
+                    text = "插件列表",
+                    onClick = {
+                        navigator.navigate(PluginListDestination())
+                    }
+                )
                 Item(
                     text = "关于",
                     onClick = {

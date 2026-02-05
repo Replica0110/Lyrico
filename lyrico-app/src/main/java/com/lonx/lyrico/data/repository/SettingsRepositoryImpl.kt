@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
@@ -31,8 +32,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SEPARATOR = stringPreferencesKey("separator")
         val ROMA_ENABLED = booleanPreferencesKey("roma_enabled")
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
-
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
     // 默认搜索源顺序
@@ -93,6 +94,20 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.SEARCH_PAGE_SIZE] ?: defaultSearchPageSize
         }
 
+    override val themeMode: Flow<ThemeMode>
+        get() = context.settingsDataStore.data.map { preferences ->
+            val modeName = preferences[PreferencesKeys.THEME_MODE]
+            if (modeName.isNullOrBlank()) {
+                ThemeMode.AUTO
+            } else {
+                try {
+                    ThemeMode.valueOf(modeName)
+                } catch (e: IllegalArgumentException) {
+                    ThemeMode.AUTO
+                }
+            }
+        }
+
     override suspend fun getLastScanTime(): Long {
         return context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.LAST_SCAN_TIME] ?: 0L
@@ -141,20 +156,28 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
+    override suspend fun saveThemeMode(mode: ThemeMode) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.THEME_MODE] = mode.name
+        }
+    }
 
     override val settingsFlow: Flow<SettingsSnapshot> = combine(
         lyricDisplayMode,
         romaEnabled,
         separator,
         searchSourceOrder,
-        searchPageSize
-    ) { lyricDisplayMode, romaEnabled, separator, searchSourceOrder, searchPageSize ->
+        searchPageSize,
+        themeMode
+    ) { array ->
+        @Suppress("UNCHECKED_CAST")
         SettingsSnapshot(
-            lyricDisplayMode,
-            romaEnabled,
-            separator,
-            searchSourceOrder,
-            searchPageSize
+            lyricDisplayMode = array[0] as LyricDisplayMode,
+            romaEnabled = array[1] as Boolean,
+            separator = array[2] as String,
+            searchSourceOrder = array[3] as List<Source>,
+            searchPageSize = array[4] as Int,
+            themeMode = array[5] as ThemeMode
         )
     }
 

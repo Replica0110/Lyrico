@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.moriafly.salt.ui.Icon
 import com.moriafly.salt.ui.Item
@@ -111,6 +112,26 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
         ) {
+            ItemOuterTitle("外观")
+            RoundedColumn {
+                ItemDropdown(
+                    text = "主题模式",
+                    value = uiState.themeMode.displayName,
+                    content = {
+                        ThemeMode.entries.forEach { mode ->
+                            ItemCheck(
+                                text = mode.displayName,
+                                state = uiState.themeMode == mode,
+                                onChange = {
+                                    viewModel.setThemeMode(mode)
+                                    state.dismiss()
+                                }
+                            )
+                        }
+                    }
+                )
+            }
+
             ItemOuterTitle("扫描设置")
             RoundedColumn {
                 Item(

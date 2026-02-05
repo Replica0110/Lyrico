@@ -12,13 +12,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.hjq.permissions.OnPermissionCallback
 import com.hjq.permissions.XXPermissions
 import com.hjq.permissions.permission.PermissionLists
 import com.hjq.permissions.permission.base.IPermission
+import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.ui.theme.LyricoTheme
 import com.lonx.lyrico.utils.PermissionUtil
-import androidx.lifecycle.lifecycleScope
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.gestures.cupertino.CupertinoOverscrollEffectFactory
@@ -31,6 +34,7 @@ open class MainActivity : ComponentActivity() {
     @JvmField
     protected var hasPermission = false
     private val songListViewModel: SongListViewModel by inject()
+    private val settingsRepository: SettingsRepository by inject()
 
     @OptIn(UnstableSaltUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,7 +71,11 @@ open class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            LyricoTheme {
+            val themeMode by settingsRepository.themeMode.collectAsStateWithLifecycle(
+                initialValue = ThemeMode.AUTO
+            )
+
+            LyricoTheme(themeMode = themeMode) {
                 CompositionLocalProvider(
                     LocalOverscrollFactory provides CupertinoOverscrollEffectFactory()
                 ) {

@@ -6,6 +6,7 @@ import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.FolderDao
 import com.lonx.lyrico.data.model.FolderEntity
+import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.LyricDisplayMode
 import com.lonx.lyrics.model.Source
@@ -24,7 +25,8 @@ data class SettingsUiState(
     val romaEnabled: Boolean = false,
     val folders: List<FolderEntity> = emptyList(),
     val searchSourceOrder: List<Source> = emptyList(),
-    val searchPageSize: Int = 20
+    val searchPageSize: Int = 20,
+    val themeMode: ThemeMode = ThemeMode.AUTO
 )
 
 class SettingsViewModel(
@@ -45,7 +47,8 @@ class SettingsViewModel(
             separator = settings.separator.toArtistSeparator(),
             folders = folders,
             searchSourceOrder = settings.searchSourceOrder,
-            searchPageSize = settings.searchPageSize
+            searchPageSize = settings.searchPageSize,
+            themeMode = settings.themeMode
         )
     }.stateIn(
         scope = viewModelScope,
@@ -104,6 +107,16 @@ class SettingsViewModel(
             }
         }
     }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            settingsRepository.saveThemeMode(mode)
+            _uiState.update {
+                it.copy(themeMode = mode)
+            }
+        }
+    }
+
     /**
      * 如果用户想手动添加一个还没被扫描到的文件夹并忽略它
      */

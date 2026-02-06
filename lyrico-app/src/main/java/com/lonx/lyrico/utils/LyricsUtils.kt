@@ -15,18 +15,34 @@ object LyricsUtils {
         return String.format("%02d:%02d.%03d", minutes, seconds, ms)
     }
 
-    fun formatLrcResult(result: LyricsResult, romaEnabled: Boolean = false): String {
+    fun formatLrcResult(
+        result: LyricsResult,
+        romaEnabled: Boolean = false,
+        lineByLine: Boolean = false
+    ): String {
         val builder = StringBuilder()
         val originalLines = result.original
         val translatedLines = result.translated
         val translatedMap = translatedLines?.associateBy { it.start } ?: emptyMap()
 
         originalLines.forEach { line ->
-            line.words.forEachIndexed { index, word ->
-                if (index == line.words.lastIndex) {
-                    builder.append("[${formatTimestamp(word.start)}]${word.text}[${formatTimestamp(word.end)}]")
+            if (lineByLine) {
+                // 逐行格式
+                val lineText = line.words.joinToString("") { it.text }
+                val endTime = line.words.lastOrNull()?.end
+                if (endTime != null) {
+                    builder.append("[${formatTimestamp(line.start)}]$lineText[${formatTimestamp(endTime)}]")
                 } else {
-                    builder.append("[${formatTimestamp(word.start)}]${word.text}")
+                    builder.append("[${formatTimestamp(line.start)}]$lineText")
+                }
+            } else {
+                // 逐字格式
+                line.words.forEachIndexed { index, word ->
+                    if (index == line.words.lastIndex) {
+                        builder.append("[${formatTimestamp(word.start)}]${word.text}[${formatTimestamp(word.end)}]")
+                    } else {
+                        builder.append("[${formatTimestamp(word.start)}]${word.text}")
+                    }
                 }
             }
             builder.append("\n")

@@ -175,8 +175,6 @@ fun SettingsScreen(
             RoundedColumn {
                 ItemDropdown(
                     text = "歌词模式",
-                    enabled = false,
-                    sub = "暂未实现具体逻辑",
                     value = if (lyricDisplayMode == LyricDisplayMode.WORD_BY_WORD) {
                         "逐字歌词"
                     } else "逐行歌词",

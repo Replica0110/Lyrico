@@ -44,7 +44,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         get() = context.settingsDataStore.data.map { preferences ->
             LyricDisplayMode.valueOf(
                 preferences[PreferencesKeys.LYRIC_DISPLAY_MODE]
-                    ?: LyricDisplayMode.LINE_BY_LINE.name
+                    ?: LyricDisplayMode.WORD_BY_WORD.name
             )
         }
 

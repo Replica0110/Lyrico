@@ -2,7 +2,6 @@ package com.lonx.lyrics.source.ne
 
 import android.util.Base64
 import android.util.Log
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
@@ -21,7 +20,6 @@ import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import retrofit2.Retrofit
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
@@ -29,27 +27,17 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.random.Random
 
-class NeSource: SearchSource {
+class NeSource(
+    private val api: NeApi,
+    private val json: Json
+): SearchSource {
     override val sourceType = Source.NE
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-        isLenient = true
-        encodeDefaults = true
-    }
+
 
     // Cookie 管理
     private val cookieMap = mutableMapOf<String, String>()
     private val DEVICEID_XOR_KEY = "3go8&$8*3*3h0k(2)2"
 
-    private val client = OkHttpClient.Builder().build()
-
-    private val api: NeApi = Retrofit.Builder()
-        .baseUrl("https://interface.music.163.com/")
-        .client(client)
-        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-        .build()
-        .create(NeApi::class.java)
 
     private val initMutex = Mutex()
     private var isInitialized = false
@@ -134,7 +122,8 @@ class NeSource: SearchSource {
         path: String,
         params: JsonObject,
         encryptPath: String? = null
-    ): String {
+    ): String = withContext(Dispatchers.Default) {
+
         val headerParam = buildJsonObject {
             put("clientSign", clientSign)
             put("osver", OS_VER)
@@ -144,12 +133,9 @@ class NeSource: SearchSource {
             put("requestId", System.currentTimeMillis().toString())
         }
 
-        // The python implementation shows that the header field must be a string.
         val headerParamString = json.encodeToString(headerParam)
-
         val finalParams = params.toMutableMap()
         finalParams["header"] = JsonPrimitive(headerParamString)
-
         if (!finalParams.containsKey("e_r")) {
             finalParams["e_r"] = JsonPrimitive(true)
         }
@@ -157,40 +143,32 @@ class NeSource: SearchSource {
         val mergedParams = JsonObject(finalParams)
         val paramsStr = json.encodeToString(mergedParams)
         val actualEncryptPath = encryptPath ?: path.replace("/eapi/", "/api/")
-        val encryptedBytes = NeCryptoUtils.encryptParams(actualEncryptPath, paramsStr)
 
-        // The request body should be in the format "params=ENCRYPTED_DATA"
+        // 加密
+        val encryptedBytes = NeCryptoUtils.encryptParams(actualEncryptPath, paramsStr)
         val encryptedHexString = encryptedBytes.joinToString("") { "%02x".format(it) }.uppercase()
         val formBody = "params=$encryptedHexString"
         val requestBody = formBody.toRequestBody("application/x-www-form-urlencoded".toMediaType())
 
-
         val headers = mutableMapOf(
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36 Chrome/91.0.4472.164 NeteaseMusicDesktop/$APP_VER",
-            "Referer" to "https://music.163.com/"
+            "Referer" to "https://music.163.com/",
+            "Cookie" to cookieMap.entries.joinToString("; ") { "${it.key}=${it.value}" }
         )
-        val cookieStr = cookieMap.entries.joinToString("; ") { "${it.key}=${it.value}" }
-        headers["Cookie"] = cookieStr
 
         val fullUrl = "https://interface.music.163.com$path"
 
         val responseBody = api.request(fullUrl, headers, requestBody)
-
-        // Read the response body only once to avoid consuming the stream.
         val responseBytes = responseBody.bytes()
 
-        if (responseBytes.isEmpty()) {
-            Log.w("NeSource", "doRequest for $path failed: response body is empty")
-            return ""
-        }
+        if (responseBytes.isEmpty()) return@withContext ""
 
+        // 解密
         try {
-            val decrypted = NeCryptoUtils.aesDecrypt(responseBytes)
-            // Log.d("NeSource", "Decrypted: $decrypted")
-            return decrypted
+            NeCryptoUtils.aesDecrypt(responseBytes)
         } catch (e: Exception) {
-            Log.e("NeSource", "Decrypt failed for $path", e)
-            return ""
+            Log.e("NeSource", "Decrypt failed", e)
+            ""
         }
     }
 

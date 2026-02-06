@@ -2,25 +2,12 @@ package com.lonx.lyrics.source.ne
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.HeaderMap
 import retrofit2.http.POST
 import retrofit2.http.Query
 import retrofit2.http.Url
-
-@Serializable
-data class NeBaseResponse(
-    @SerialName("code") val code: Int = 0,
-    @SerialName("message") val message: String? = null,
-    // data 和 result 字段在不同接口中可能互换，使用 JsonElement 泛型处理或在具体类中定义
-)
-
-@Serializable
-data class NeAnonimousData(
-    @SerialName("userId") val userId: Long
-)
 
 @Serializable
 data class NeSearchResponse(

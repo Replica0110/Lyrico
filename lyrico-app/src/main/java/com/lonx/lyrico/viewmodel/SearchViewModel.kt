@@ -266,9 +266,11 @@ class SearchViewModel(
         val lyricsResult = sourceImpl.getLyrics(song) ?: return null
 
         val romaEnabled = settingsRepository.romaEnabled.first()
+        val lyricDisplayMode = settingsRepository.lyricDisplayMode.first()
         return LyricsUtils.formatLrcResult(
             result = lyricsResult,
-            romaEnabled = romaEnabled
+            romaEnabled = romaEnabled,
+            lineByLine = lyricDisplayMode == com.lonx.lyrico.data.model.LyricDisplayMode.LINE_BY_LINE
         )
     }
 

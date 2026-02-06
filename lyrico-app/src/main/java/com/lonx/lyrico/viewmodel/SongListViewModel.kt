@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -177,10 +178,11 @@ class SongListViewModel(
 
         return try {
             val lyrics = bestMatch.source.getLyrics(bestMatch.result)
+            val lyricDisplayMode = settingsRepository.lyricDisplayMode.first()
             val tagData = AudioTagData(
                 title = song.title?.takeIf { !it.contains("未知", true) } ?: bestMatch.result.title,
                 artist = song.artist?.takeIf { !it.contains("未知", true) } ?: bestMatch.result.artist,
-                lyrics = lyrics?.let { LyricsUtils.formatLrcResult(it) },
+                lyrics = lyrics?.let { LyricsUtils.formatLrcResult(it, lineByLine = lyricDisplayMode == com.lonx.lyrico.data.model.LyricDisplayMode.LINE_BY_LINE) },
                 picUrl = bestMatch.result.picUrl
             )
             val oldTime = song.fileLastModified

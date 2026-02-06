@@ -17,12 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,7 +31,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.viewmodel.SettingsViewModel
@@ -47,8 +41,6 @@ import com.moriafly.salt.ui.JustifiedRow
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.icons.ArrowBack
-import com.moriafly.salt.ui.icons.SaltIcons
 import com.moriafly.salt.ui.innerPadding
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -57,7 +49,7 @@ import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-@OptIn(ExperimentalMaterial3Api::class, UnstableSaltUiApi::class)
+@OptIn(UnstableSaltUiApi::class)
 @Composable
 @Destination<RootGraph>(route = "search_source_priority")
 fun SearchSourcePriorityScreen(
@@ -85,41 +77,12 @@ fun SearchSourcePriorityScreen(
     }
 
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(SaltTheme.colors.background),
-        topBar = {
-            CenterAlignedTopAppBar(
-                colors = TopAppBarColors(
-                    containerColor = SaltTheme.colors.background,
-                    scrolledContainerColor = SaltTheme.colors.background,
-                    navigationIconContentColor = SaltTheme.colors.text,
-                    titleContentColor = SaltTheme.colors.text,
-                    actionIconContentColor = SaltTheme.colors.text,
-                    subtitleContentColor = SaltTheme.colors.subText
-                ),
-                title = {
-                    Text(
-                        text = "搜索源优先级",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.popBackStack() }) {
-                        Icon(imageVector = SaltIcons.ArrowBack, contentDescription = null)
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
+    BasicScreenBox(
+        title = "搜索源优先级",
+        onBack = { navigator.popBackStack() }
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(SaltTheme.colors.background)
-                .padding(paddingValues)
+            modifier = Modifier.fillMaxSize()
         ) {
             ItemTip(text = "长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源")
             Spacer(modifier = Modifier.height(8.dp))

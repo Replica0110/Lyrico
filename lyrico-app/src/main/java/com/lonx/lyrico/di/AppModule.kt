@@ -128,7 +128,7 @@ val appModule = module {
         ).build()
     }
 
-    single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get()) }
+    single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get()) }
     
     // ViewModels
     viewModel { SongListViewModel(get(), get(), get(), get()) }

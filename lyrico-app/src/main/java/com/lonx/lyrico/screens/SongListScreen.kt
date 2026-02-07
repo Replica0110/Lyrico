@@ -349,6 +349,7 @@ fun SongListScreen(
                 failureCount = uiState.failureCount,
                 isMatching = uiState.isBatchMatching,
                 loadingMessage = uiState.loadingMessage,
+                batchTimeMillis = uiState.batchTimeMillis,
                 onAbort = { viewModel.abortBatchMatch() },
                 onClose = { viewModel.closeBatchMatchDialog() }
             )
@@ -364,6 +365,7 @@ fun BatchMatchingDialog(
     failureCount: Int,
     isMatching: Boolean,
     loadingMessage: String,
+    batchTimeMillis: Long,
     onAbort: () -> Unit,
     onClose: () -> Unit
 ) {
@@ -411,6 +413,15 @@ fun BatchMatchingDialog(
                     text = "失败: $failureCount",
                     style = SaltTheme.textStyles.main
                 )
+
+                // 总用时显示（仅当任务完成时显示）
+                if (!isMatching && batchTimeMillis > 0) {
+                    val seconds = batchTimeMillis / 1000.0
+                    Text(
+                        text = "总用时: %.2f 秒".format(seconds),
+                        style = SaltTheme.textStyles.main
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 

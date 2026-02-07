@@ -108,11 +108,13 @@ class SongRepositoryImpl(
 
             val updatedEntities = updates.map { (song, tag) ->
                 song.copy(
-                    title = tag.title,
-                    artist = tag.artist,
-                    lyrics = tag.lyrics,
-                    date = tag.date,
-                    trackerNumber = tag.trackerNumber,
+                    title = tag.title ?: song.title,
+                    artist = tag.artist ?: song.artist,
+                    lyrics = tag.lyrics ?: song.lyrics,
+                    date = tag.date ?: song.date,
+                    trackerNumber = tag.trackerNumber ?: song.trackerNumber,
+                    album = tag.album ?: song.album,
+                    genre = tag.genre ?: song.genre,
                     fileLastModified = File(song.filePath).lastModified() // 获取最新真实时间
                 ).withSortKeysUpdated()
             }

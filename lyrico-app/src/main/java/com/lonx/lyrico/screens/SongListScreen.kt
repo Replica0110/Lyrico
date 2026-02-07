@@ -139,7 +139,7 @@ fun SongListScreen(
                         TextButton(
                             enabled = selectedPaths.isNotEmpty(),
                             onClick = {
-                                viewModel.batchMatch()
+                                viewModel.openBatchMatchConfig()
                             }
                         ) {
                             Text(
@@ -340,7 +340,15 @@ fun SongListScreen(
             }
         }
 
-        // 批量匹配对话框
+        // 批量匹配配置对话框
+        if (uiState.showBatchConfigDialog) {
+            com.lonx.lyrico.ui.dialog.BatchMatchConfigDialog(
+                onDismissRequest = { viewModel.closeBatchMatchConfig() },
+                onConfirm = { config -> viewModel.batchMatch(config) }
+            )
+        }
+
+        // 批量匹配进度对话框
         if (uiState.isBatchMatching || uiState.batchProgress != null) {
             BatchMatchingDialog(
                 currentFile = uiState.currentFile,

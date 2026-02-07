@@ -58,7 +58,8 @@ data class SongListUiState(
     val successCount: Int = 0,
     val failureCount: Int = 0,
     val currentFile: String = "",
-    val loadingMessage: String = ""
+    val loadingMessage: String = "",
+    val batchTimeMillis: Long = 0  // 批量匹配总用时（毫秒）
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -123,6 +124,7 @@ class SongListViewModel(
         if (selectedIds.isEmpty()) return
 
         batchMatchJob = viewModelScope.launch {
+            val startTime = System.currentTimeMillis()
             val songsToMatch = songs.value.filter { it.mediaId in selectedIds }
             val currentOrder = searchSourceOrder.value
             val total = songsToMatch.size
@@ -131,7 +133,8 @@ class SongListViewModel(
                 isBatchMatching = true,
                 successCount = 0,
                 failureCount = 0,
-                batchProgress = 0 to total
+                batchProgress = 0 to total,
+                batchTimeMillis = 0
             ) }
 
             val semaphore = Semaphore(parallelism)
@@ -163,7 +166,8 @@ class SongListViewModel(
                 songRepository.applyBatchMetadata(matchResults)
             }
 
-            _uiState.update { it.copy(isBatchMatching = false, loadingMessage = "匹配完成") }
+            val totalTime = System.currentTimeMillis() - startTime
+            _uiState.update { it.copy(isBatchMatching = false, loadingMessage = "匹配完成", batchTimeMillis = totalTime) }
         }
     }
     private suspend fun matchAndGetTag(song: SongEntity,separator: String, order: List<Source>): AudioTagData? = coroutineScope {
@@ -307,7 +311,8 @@ class SongListViewModel(
             it.copy(
                 batchProgress = null,
                 currentFile = "",
-                loadingMessage = ""
+                loadingMessage = "",
+                batchTimeMillis = 0
             )
         }
         exitSelectionMode()

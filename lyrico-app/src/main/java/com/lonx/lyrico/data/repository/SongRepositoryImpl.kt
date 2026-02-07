@@ -20,8 +20,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
+import java.io.IOException
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
  * 歌曲数据存储库实现类
@@ -30,7 +31,8 @@ class SongRepositoryImpl(
     private val database: LyricoDatabase,
     private val context: Context,
     private val musicScanner: MusicScanner,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val okHttpClient: OkHttpClient
 ) : SongRepository {
 
     private val songDao = database.songDao()
@@ -334,10 +336,15 @@ class SongRepositoryImpl(
     }
     private suspend fun downloadImageBytes(url: String): ByteArray =
         withContext(Dispatchers.IO) {
-            val connection = URL(url).openConnection() as HttpURLConnection
-            connection.connectTimeout = 8000
-            connection.readTimeout = 8000
-            connection.inputStream.use { it.readBytes() }
+            val request = Request.Builder()
+                .url(url)
+                .build()
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("图片下载失败: $url, 响应码: ${response.code}")
+                }
+                response.body?.bytes() ?: throw IOException("图片响应为空: $url")
+            }
         }
 
     override fun resolveDisplayName(filePath: String): String {

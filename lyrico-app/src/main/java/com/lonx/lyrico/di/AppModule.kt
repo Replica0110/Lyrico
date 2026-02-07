@@ -1,18 +1,19 @@
 package com.lonx.lyrico.di
 
+import android.util.Log
 import androidx.room.Room
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.lonx.lyrico.data.LyricoDatabase
+import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
+import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.repository.SongRepositoryImpl
 import com.lonx.lyrico.utils.MusicScanner
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.lonx.lyrico.viewmodel.SongListViewModel
-import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
-import com.lonx.lyrico.data.repository.SongRepository
-import com.lonx.lyrico.data.repository.SongRepositoryImpl
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.source.kg.KgApi
 import com.lonx.lyrics.source.kg.KgSource
@@ -21,7 +22,7 @@ import com.lonx.lyrics.source.ne.NeSource
 import com.lonx.lyrics.source.qm.QmApi
 import com.lonx.lyrics.source.qm.QmSource
 import kotlinx.serialization.json.Json
-import retrofit2.Retrofit
+import okhttp3.Cache
 import okhttp3.ConnectionPool
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -29,6 +30,8 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
+import retrofit2.Retrofit
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 val appModule = module {
@@ -43,11 +46,34 @@ val appModule = module {
     }
     // OkHttpClient
     single {
+        val cacheDir = File(androidContext().cacheDir, "http_cache")
+        val cache = Cache(cacheDir, 15 * 1024 * 1024) // 10MB 缓存
+
         OkHttpClient.Builder()
             .connectionPool(ConnectionPool(20, 5, TimeUnit.MINUTES)) // 高并发连接池
             .connectTimeout(5, TimeUnit.SECONDS)
             .readTimeout(8, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
+            .cache(cache)
+//            .addInterceptor { chain ->
+//                val request = chain.request()
+//                val response = chain.proceed(request)
+//
+//                // 缓存 Debug 输出
+//                val cacheResponse = response.cacheResponse
+//                val networkResponse = response.networkResponse
+//
+//                when {
+//                    cacheResponse != null && networkResponse != null ->
+//                        Log.d("OkHttpCache", "条件请求: ${request.url} (服务器验证: ${if (networkResponse.code == 304) "304 未修改" else networkResponse.code})")
+//                    cacheResponse != null ->
+//                        Log.d("OkHttpCache", "缓存命中: ${request.url}")
+//                    networkResponse != null ->
+//                        Log.d("OkHttpCache", "网络请求: ${request.url} (${response.code})")
+//                }
+//
+//                response
+//            }
             .build()
     }
     single<NeApi> {

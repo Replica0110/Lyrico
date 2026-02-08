@@ -23,6 +23,7 @@ data class SettingsUiState(
     val lyricDisplayMode: LyricDisplayMode = LyricDisplayMode.WORD_BY_WORD,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
+    val ignoreShortAudio: Boolean = false,
     val folders: List<FolderEntity> = emptyList(),
     val searchSourceOrder: List<Source> = emptyList(),
     val searchPageSize: Int = 20,
@@ -48,7 +49,8 @@ class SettingsViewModel(
             folders = folders,
             searchSourceOrder = settings.searchSourceOrder,
             searchPageSize = settings.searchPageSize,
-            themeMode = settings.themeMode
+            themeMode = settings.themeMode,
+            ignoreShortAudio = settings.ignoreShortAudio
         )
     }.stateIn(
         scope = viewModelScope,
@@ -91,6 +93,14 @@ class SettingsViewModel(
         }
     }
 
+    fun setIgnoreShortAudio(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveIgnoreShortAudio(enabled)
+            _uiState.update {
+                it.copy(ignoreShortAudio = enabled)
+            }
+        }
+    }
     fun setSearchSourceOrder(sources: List<Source>) {
         viewModelScope.launch {
             settingsRepository.saveSearchSourceOrder(sources)

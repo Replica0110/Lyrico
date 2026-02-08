@@ -31,6 +31,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SORT_ORDER = stringPreferencesKey("sort_order")
         val SEPARATOR = stringPreferencesKey("separator")
         val ROMA_ENABLED = booleanPreferencesKey("roma_enabled")
+        val IGNORE_SHORT_AUDIO = booleanPreferencesKey("ignore_short_audio")
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
         val THEME_MODE = stringPreferencesKey("theme_mode")
@@ -68,6 +69,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override val romaEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.ROMA_ENABLED] ?: true
+        }
+    override val ignoreShortAudio: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.IGNORE_SHORT_AUDIO] ?: true
         }
 
     override val searchSourceOrder: Flow<List<Source>>
@@ -138,6 +143,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.ROMA_ENABLED] = enabled
         }
     }
+    override suspend fun saveIgnoreShortAudio(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.IGNORE_SHORT_AUDIO] = enabled
+        }
+    }
 
     override suspend fun saveLastScanTime(time: Long) {
         context.settingsDataStore.edit { preferences ->
@@ -168,7 +178,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         separator,
         searchSourceOrder,
         searchPageSize,
-        themeMode
+        themeMode,
+        ignoreShortAudio
     ) { array ->
         @Suppress("UNCHECKED_CAST")
         SettingsSnapshot(
@@ -177,7 +188,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             separator = array[2] as String,
             searchSourceOrder = array[3] as List<Source>,
             searchPageSize = array[4] as Int,
-            themeMode = array[5] as ThemeMode
+            themeMode = array[5] as ThemeMode,
+            ignoreShortAudio = array[6] as Boolean
         )
     }
 

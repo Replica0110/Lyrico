@@ -18,6 +18,7 @@ import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortOrder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -37,6 +38,7 @@ class SongRepositoryImpl(
 
     private val songDao = database.songDao()
     private val folderDao = database.folderDao()
+
     private companion object {
         const val TAG = "SongRepository"
     }
@@ -44,7 +46,8 @@ class SongRepositoryImpl(
     override suspend fun synchronize(fullRescan: Boolean) {
         withContext(Dispatchers.IO) {
             Log.d(TAG, "开始同步数据库与设备文件... (全量扫描: $fullRescan)")
-
+            val ignoreShortAudio = settingsRepository.ignoreShortAudio.first()
+            val minDuration = 60000
             val dbSyncInfos = songDao.getAllSyncInfo()
             val dbSongMap = dbSyncInfos.associateBy({ it.filePath }, { it.fileLastModified })
             val dbPaths = dbSongMap.keys
@@ -54,6 +57,10 @@ class SongRepositoryImpl(
             val folderIdCache = mutableMapOf<String, Long>()
 
             musicScanner.scanMusicFiles().collect { deviceSong ->
+                if (deviceSong.duration <= minDuration && ignoreShortAudio) {
+                    songDao.deleteByFilePaths(listOf(deviceSong.filePath))
+                    return@collect
+                }
                 devicePaths.add(deviceSong.filePath)
 
                 val folderPath = deviceSong.filePath.substringBeforeLast("/").trimEnd('/')
@@ -99,6 +106,7 @@ class SongRepositoryImpl(
             Log.d(TAG, "同步完成。")
         }
     }
+
     /**
      * 专门用于批量匹配后的局部更新，避开全量同步的开销
      */
@@ -130,6 +138,7 @@ class SongRepositoryImpl(
             }
         }
     }
+
     /**
      *  读取并保存歌曲元数据
      */
@@ -190,7 +199,11 @@ class SongRepositoryImpl(
         return songDao.searchSongsByAll(query)
     }
 
-    override suspend fun updateSongMetadata(audioTagData: AudioTagData, filePath: String, lastModified: Long): Boolean =
+    override suspend fun updateSongMetadata(
+        audioTagData: AudioTagData,
+        filePath: String,
+        lastModified: Long
+    ): Boolean =
         withContext(Dispatchers.IO) {
             try {
                 val existingSong = songDao.getSongByPath(filePath)
@@ -224,7 +237,10 @@ class SongRepositoryImpl(
             (if (isUriPath(filePath)) {
                 context.contentResolver.openFileDescriptor(filePath.toUri(), "rw")
             } else {
-                android.os.ParcelFileDescriptor.open(File(filePath), android.os.ParcelFileDescriptor.MODE_READ_WRITE)
+                android.os.ParcelFileDescriptor.open(
+                    File(filePath),
+                    android.os.ParcelFileDescriptor.MODE_READ_WRITE
+                )
             })?.use { pfdDescriptor ->
                 val updates = mutableMapOf<String, String>()
                 audioTagData.title?.let { updates["TITLE"] = it }
@@ -244,7 +260,7 @@ class SongRepositoryImpl(
                     val imageBytes = downloadImageBytes(picUrl)
                     val pictures = AudioPicture(
                         data = imageBytes
-                        )
+                    )
                     AudioTagWriter.writePictures(pfdDescriptor, listOf(pictures))
                 }
 
@@ -263,7 +279,10 @@ class SongRepositoryImpl(
                 (if (isUriPath(filePath)) {
                     context.contentResolver.openFileDescriptor(filePath.toUri(), "r")
                 } else {
-                    android.os.ParcelFileDescriptor.open(File(filePath), android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+                    android.os.ParcelFileDescriptor.open(
+                        File(filePath),
+                        android.os.ParcelFileDescriptor.MODE_READ_ONLY
+                    )
                 })?.use { descriptor ->
                     val data = AudioTagReader.read(descriptor, true)
                     // 使用 copy 将文件名注入到返回的对象中
@@ -297,6 +316,7 @@ class SongRepositoryImpl(
             false
         }
     }
+
     private fun SongEntity.withSortKeysUpdated(): SongEntity {
         val titleText = (title?.takeIf { it.isNotBlank() } ?: fileName)
         val artistText = (artist?.takeIf { it.isNotBlank() } ?: "未知艺术家")
@@ -336,6 +356,7 @@ class SongRepositoryImpl(
             }
         }
     }
+
     private suspend fun downloadImageBytes(url: String): ByteArray =
         withContext(Dispatchers.IO) {
             val request = Request.Builder()

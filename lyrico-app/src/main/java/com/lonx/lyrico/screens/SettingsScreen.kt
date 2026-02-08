@@ -47,6 +47,7 @@ fun SettingsScreen(
     val lyricDisplayMode = uiState.lyricDisplayMode
     val artistSeparator = uiState.separator
     val romaEnabled = uiState.romaEnabled
+    val ignoreShortAudio = uiState.ignoreShortAudio
     val scrollState = rememberScrollState()
     val folders = uiState.folders
     val totalFolders = folders.size
@@ -91,6 +92,13 @@ fun SettingsScreen(
                     sub = if (totalFolders > 0) {
                         "已发现 $totalFolders 个文件夹" + if (ignoredFolders > 0) "，已忽略 $ignoredFolders 个" else ""
                     } else "管理扫描路径"
+                )
+                ItemSwitcher(
+                    text = "不扫描 60 秒以下音频",
+                    state = ignoreShortAudio,
+                    onChange = {
+                        viewModel.setIgnoreShortAudio(!ignoreShortAudio)
+                    }
                 )
             }
 

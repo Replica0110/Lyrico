@@ -1,4 +1,4 @@
-package com.lonx.lyrico.data.model
+package com.lonx.lyrico.data.model.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
+import com.lonx.lyrico.data.model.entity.SongEntity
 import kotlinx.coroutines.flow.Flow
 
 data class SongSyncInfo(
@@ -139,6 +140,16 @@ interface SongDao {
         ORDER BY s.artistSortKey ASC
     """)
     fun getAllSongsOrderByArtistAsc(): Flow<List<SongEntity>>
+
+
+    /**
+     * 按文件夹id获取歌曲
+     */
+    @Query("""
+    SELECT * FROM songs
+    WHERE folderId = :folderId
+    """)
+    fun getSongsByFolderId(folderId: Long): Flow<List<SongEntity>>
 
     /**
      * 按艺术家降序（Z-A）获取所有歌曲

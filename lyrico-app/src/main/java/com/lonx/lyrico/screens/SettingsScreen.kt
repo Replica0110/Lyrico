@@ -29,6 +29,7 @@ import com.moriafly.salt.ui.verticalScroll
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AboutDestination
+import com.ramcosta.composedestinations.generated.destinations.BatchMatchHistoryDestination
 import com.ramcosta.composedestinations.generated.destinations.FolderManagerDestination
 import com.ramcosta.composedestinations.generated.destinations.SearchSourcePriorityDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -192,6 +193,13 @@ fun SettingsScreen(
 
             ItemOuterTitle("其他")
             RoundedColumn {
+                Item(
+                    text = "批量匹配记录",
+                    sub = "查看批量匹配历史日志",
+                    onClick = {
+                        navigator.navigate(BatchMatchHistoryDestination())
+                    }
+                )
                 Item(
                     text = "关于",
                     onClick = {

@@ -4,11 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.ArtistSeparator
-import com.lonx.lyrico.data.model.FolderDao
-import com.lonx.lyrico.data.model.FolderEntity
+import com.lonx.lyrico.data.model.dao.FolderDao
+import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.dao.SongDao
 import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +37,7 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     private val folderDao: FolderDao = database.folderDao()
+    private val songDao: SongDao = database.songDao()
     private val _uiState = MutableStateFlow(SettingsUiState())
 
     val uiState: StateFlow<SettingsUiState> = combine(

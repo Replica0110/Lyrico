@@ -10,7 +10,7 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
 import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.model.SongEntity
+import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.data.utils.SortKeyUtils
 import com.lonx.lyrico.utils.MusicScanner

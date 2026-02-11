@@ -35,8 +35,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
-import com.lonx.lyrico.data.model.SongEntity
-import com.lonx.lyrico.data.model.getUri
+import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.coil.CoverRequest
 import com.lonx.lyrico.viewmodel.SongListViewModel
@@ -60,6 +60,7 @@ import com.moriafly.salt.ui.popup.PopupMenu
 import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.generated.destinations.BatchMatchHistoryDetailDestination
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
@@ -355,10 +356,13 @@ fun SongListScreen(
                 progress = uiState.batchProgress,
                 successCount = uiState.successCount,
                 failureCount = uiState.failureCount,
+                skippedCount = uiState.skippedCount,
                 isMatching = uiState.isBatchMatching,
                 loadingMessage = uiState.loadingMessage,
                 batchTimeMillis = uiState.batchTimeMillis,
                 onAbort = { viewModel.abortBatchMatch() },
+                historyId = uiState.batchHistoryId,
+                navigator = navigator,
                 onClose = { viewModel.closeBatchMatchDialog() }
             )
         }
@@ -370,12 +374,15 @@ fun BatchMatchingDialog(
     currentFile: String,
     progress: Pair<Int, Int>?,
     successCount: Int,
+    skippedCount: Int,
     failureCount: Int,
     isMatching: Boolean,
     loadingMessage: String,
     batchTimeMillis: Long,
     onAbort: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    historyId: Long,
+    navigator: DestinationsNavigator
 ) {
     BasicDialog(
         onDismissRequest = { if (!isMatching) onClose() },
@@ -418,6 +425,10 @@ fun BatchMatchingDialog(
                     style = SaltTheme.textStyles.main
                 )
                 Text(
+                    text = "跳过: $skippedCount",
+                    style = SaltTheme.textStyles.main
+                )
+                Text(
                     text = "失败: $failureCount",
                     style = SaltTheme.textStyles.main
                 )
@@ -440,6 +451,15 @@ fun BatchMatchingDialog(
                     text = if (isMatching) "中止" else "关闭",
                     type = if (isMatching) ButtonType.Sub else ButtonType.Highlight
                 )
+                if (!isMatching){
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = "查看结果", onClick = {
+                            navigator.navigate(BatchMatchHistoryDetailDestination(historyId))
+                        },
+                        type = ButtonType.Highlight
+                    )
+                }
             }
         }
     )

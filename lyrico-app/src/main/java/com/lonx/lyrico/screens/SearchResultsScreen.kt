@@ -144,16 +144,6 @@ fun SearchResultsScreen(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
                         },
-                        leadingIcon = {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = SaltIcons.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = SaltTheme.colors.highlight
-                                )
-                            }
-                        },
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = SaltTheme.colors.subBackground,
                             selectedContainerColor = SaltTheme.colors.highlight.copy(alpha = 0.1f),

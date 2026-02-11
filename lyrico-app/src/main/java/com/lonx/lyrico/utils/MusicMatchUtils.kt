@@ -1,6 +1,6 @@
 package com.lonx.lyrico.utils
 
-import com.lonx.lyrico.data.model.SongEntity
+import com.lonx.lyrico.data.model.entity.SongEntity
 import kotlin.math.abs
 
 object MusicMatchUtils {

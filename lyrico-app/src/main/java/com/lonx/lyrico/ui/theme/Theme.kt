@@ -4,7 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.lonx.lyrico.data.model.ThemeMode
-import com.lonx.lyrico.ui.components.Indication.AlphaIndication
+import com.lonx.lyrico.ui.components.indication.AlphaIndication
 import com.moriafly.salt.ui.SaltConfigs
 import com.moriafly.salt.ui.SaltDynamicColors
 import com.moriafly.salt.ui.SaltTheme

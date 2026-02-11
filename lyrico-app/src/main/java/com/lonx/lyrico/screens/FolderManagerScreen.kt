@@ -30,7 +30,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.FolderEntity
+import com.lonx.lyrico.data.model.entity.FolderEntity
+import com.lonx.lyrico.ui.components.ItemExt
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.moriafly.salt.ui.Icon
@@ -197,7 +198,7 @@ fun FolderManagerScreen(
                     RoundedColumn(
                         type = RoundedColumnType.InList
                     ) {
-                        Item(
+                        ItemExt(
                             onClick = {
                                 selectedFolderId = folder.id
                                 showSheet = true
@@ -208,6 +209,21 @@ fun FolderManagerScreen(
                                 painterResource(id = R.drawable.ic_visible_24dp),
                             text = folderName,
                             sub = "${folder.path}\n$songInfo · $sourceInfo",
+                            iconEnd = {
+                                IconButton(
+                                    onClick = {
+                                        selectedFolderId = folder.id
+                                        showSheet = true
+                                    }
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_info_24dp),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(SaltTheme.dimens.itemIcon)
+                                    )
+                                }
+                            }
                         )
                     }
                 }

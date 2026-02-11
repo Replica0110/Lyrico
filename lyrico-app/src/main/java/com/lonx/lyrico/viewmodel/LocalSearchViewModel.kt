@@ -2,7 +2,7 @@ package com.lonx.lyrico.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.SongEntity
+import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.SongRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*

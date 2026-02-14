@@ -1,6 +1,7 @@
 package com.lonx.lyrico.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.os.Parcelable
@@ -20,10 +21,13 @@ import com.lonx.lyrico.data.model.BatchMatchStatus
 import com.lonx.lyrico.data.model.LyricDisplayMode
 import com.lonx.lyrico.data.model.entity.BatchMatchRecordEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.entity.getUri
+import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.utils.LyricsUtils
 import com.lonx.lyrico.utils.MusicContentObserver
 import com.lonx.lyrico.utils.MusicMatchUtils
 import com.lonx.lyrics.model.SearchSource
+import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -59,7 +63,6 @@ data class SongInfo(
 data class SongListUiState(
     val isLoading: Boolean = false,
     val lastScanTime: Long = 0,
-    val selectedSongs: SongEntity? = null,
     val showBatchConfigDialog: Boolean = false, // Add this
     val isBatchMatching: Boolean = false,
     val batchProgress: Pair<Int, Int>? = null, // (当前第几首, 总共几首)
@@ -71,12 +74,18 @@ data class SongListUiState(
     val batchHistoryId: Long = 0,
     val batchTimeMillis: Long = 0  // 批量匹配总用时（毫秒）
 )
+data class SheetUiState(
+    val menuSong: SongEntity? = null,
+    val detailSong: SongEntity? = null
+)
+
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class SongListViewModel(
     private val songRepository: SongRepository,
     private val settingsRepository: SettingsRepository,
     private val batchMatchHistoryRepository: BatchMatchHistoryRepository,
+    private val playbackRepository: PlaybackRepository,
     private val sources: List<SearchSource>,
     application: Application
 ) : ViewModel() {
@@ -113,6 +122,28 @@ class SongListViewModel(
 
     private val _isSelectionMode = MutableStateFlow(false)
     val isSelectionMode = _isSelectionMode.asStateFlow()
+    private val _sheetState = MutableStateFlow(SheetUiState())
+    val sheetState = _sheetState.asStateFlow()
+
+    fun showMenu(song: SongEntity) {
+        _sheetState.value = SheetUiState(menuSong = song)
+    }
+
+    fun showDetail(song: SongEntity) {
+        _sheetState.update {
+            it.copy(detailSong = song)
+        }
+    }
+
+    fun dismissDetail() {
+        _sheetState.update { it.copy(detailSong = null) }
+    }
+
+    fun dismissAll() {
+        _sheetState.value = SheetUiState()
+    }
+
+
 
     init {
         registerMusicObserver()
@@ -131,6 +162,10 @@ class SongListViewModel(
         }
     }
 
+    fun play(context: Context, song: SongEntity) {
+        val uri = song.getUri
+        playbackRepository.play(context, uri)
+    }
     fun closeBatchMatchConfig() {
         _uiState.update { it.copy(showBatchConfigDialog = false) }
     }
@@ -422,16 +457,6 @@ class SongListViewModel(
     }
 
     /**
-     * 单选某首歌曲（用于详情展示）
-     */
-    fun selectedSong(song: SongEntity) {
-        _uiState.update { it.copy(selectedSongs = song) }
-    }
-
-    fun clearSelectedSong() {
-        _uiState.update { it.copy(selectedSongs = null) }
-    }
-    /**
      * 中止批量匹配
      */
     fun abortBatchMatch() {
@@ -460,7 +485,7 @@ class SongListViewModel(
     }
 
     private data class ScoredSearchResult(
-        val result: com.lonx.lyrics.model.SongSearchResult,
+        val result: SongSearchResult,
         val score: Double,
         val source: SearchSource
     )

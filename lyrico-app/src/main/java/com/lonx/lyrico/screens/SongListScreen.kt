@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -32,11 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
+import com.lonx.lyrico.ui.dialog.BatchMatchConfigDialog
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.coil.CoverRequest
 import com.lonx.lyrico.viewmodel.SongListViewModel
@@ -46,7 +49,11 @@ import com.lonx.lyrico.viewmodel.SortOrder
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonType
 import com.moriafly.salt.ui.Icon
+import com.moriafly.salt.ui.Item
+import com.moriafly.salt.ui.ItemArrowType
 import com.moriafly.salt.ui.ItemDivider
+import com.moriafly.salt.ui.ItemTip
+import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
@@ -93,10 +100,14 @@ fun SongListScreen(
     val selectedPaths by viewModel.selectedSongIds.collectAsState()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
+    val sheetUiState by viewModel.sheetState.collectAsStateWithLifecycle()
 
+    val menuSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val detailSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val sectionIndexMap = remember(songs, sortInfo) {
         val map = mutableMapOf<String, Int>()
         if (sortInfo.sortBy == SortBy.TITLE || sortInfo.sortBy == SortBy.ARTIST) {
@@ -293,7 +304,7 @@ fun SongListScreen(
                         onToggleSelection = { viewModel.toggleSelection(song.mediaId) },
                         trailingContent = {
                             if (!isSelectionMode) {
-                                IconButton(onClick = { viewModel.selectedSong(song) }) {
+                                IconButton(onClick = { viewModel.showMenu(song) }) {
                                     Icon(painterResource(R.drawable.ic_info_24dp), "Info")
                                 }
                             } else {
@@ -329,21 +340,43 @@ fun SongListScreen(
             }
 
         }
-        uiState.selectedSongs?.let { selectedSongs ->
+        sheetUiState.menuSong?.let { song ->
             ModalBottomSheet(
-                onDismissRequest = { viewModel.clearSelectedSong() },
-                sheetState = sheetState,
+                onDismissRequest = { viewModel.dismissAll() },
+                sheetState = menuSheetState,
                 containerColor = SaltTheme.colors.background,
                 tonalElevation = 0.dp,
                 contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
             ) {
-                SongDetailBottomSheetContent(selectedSongs)
+                SongMenuBottomSheetContent(
+                    song = song,
+                    onPlay = {
+                        viewModel.play(context, song)
+                    },
+                    showInfo = {
+                        viewModel.showDetail(song)
+                    }
+                )
+            }
+        }
+        sheetUiState.detailSong?.let { song ->
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.dismissDetail() },
+                sheetState = detailSheetState,
+                dragHandle = null,
+                containerColor = SaltTheme.colors.background,
+                tonalElevation = 0.dp,
+                contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
+            ) {
+                SongDetailBottomSheetContent(song = song)
             }
         }
 
+
+
         // 批量匹配配置对话框
         if (uiState.showBatchConfigDialog) {
-            com.lonx.lyrico.ui.dialog.BatchMatchConfigDialog(
+            BatchMatchConfigDialog(
                 onDismissRequest = { viewModel.closeBatchMatchConfig() },
                 onConfirm = { config -> viewModel.batchMatch(config) }
             )
@@ -451,7 +484,7 @@ fun BatchMatchingDialog(
                     text = if (isMatching) "中止" else "关闭",
                     type = if (isMatching) ButtonType.Sub else ButtonType.Highlight
                 )
-                if (!isMatching){
+                if (!isMatching) {
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         text = "查看结果", onClick = {
@@ -773,6 +806,36 @@ fun SongListItem(
                     trailingContent()
                 }
             }
+        }
+    }
+}
+
+@SuppressLint("DefaultLocale")
+@Composable
+fun SongMenuBottomSheetContent(
+    song: SongEntity,
+    onPlay: () -> Unit = {},
+    showInfo: () -> Unit = {}
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 32.dp)
+    ) {
+        // 操作列表
+        RoundedColumn {
+            ItemTip("${song.title} - ${song.artist}")
+            Item(
+                onClick = { onPlay() },
+                text = "播放音乐",
+                sub = "调用系统播放器播放音频",
+                arrowType = ItemArrowType.None
+            )
+            Item(
+                onClick = { showInfo() },
+                text = "歌曲信息",
+                arrowType = ItemArrowType.None
+            )
         }
     }
 }

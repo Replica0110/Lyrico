@@ -5,6 +5,8 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.repository.BatchMatchHistoryRepository
 import com.lonx.lyrico.data.repository.BatchMatchHistoryRepositoryImpl
+import com.lonx.lyrico.data.repository.PlaybackRepository
+import com.lonx.lyrico.data.repository.PlaybackRepositoryImpl
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
 import com.lonx.lyrico.data.repository.SongRepository
@@ -142,14 +144,15 @@ val appModule = module {
     }
     single { get<LyricoDatabase>().batchMatchHistoryDao() }
 
+    single<PlaybackRepository> { PlaybackRepositoryImpl() }
     single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get()) }
     single<BatchMatchHistoryRepository> { BatchMatchHistoryRepositoryImpl(get()) }
     
     // ViewModels
-    viewModel { SongListViewModel(get(), get(), get(), get(), get()) }
+    viewModel { SongListViewModel(get(), get(), get(),get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
-    viewModel { EditMetadataViewModel(get(), androidContext()) }
+    viewModel { EditMetadataViewModel(get(), get(), get()) }
     viewModel { LocalSearchViewModel(get()) }
     viewModel { BatchMatchHistoryViewModel(get()) }
     viewModel { FolderManagerViewModel(get()) }

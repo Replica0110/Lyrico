@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
  */
 interface SongRepository {
 
+    suspend fun getSongByFilePath(filePath: String): SongEntity?
     /**
      * 同步数据库与设备文件
      *

@@ -43,6 +43,9 @@ class SongRepositoryImpl(
         const val TAG = "SongRepository"
     }
 
+    override suspend fun getSongByFilePath(filePath: String): SongEntity? {
+        return songDao.getSongByPath(filePath)
+    }
     override suspend fun synchronize(fullRescan: Boolean) {
         withContext(Dispatchers.IO) {
             Log.d(TAG, "开始同步数据库与设备文件... (全量扫描: $fullRescan)")

@@ -3,11 +3,13 @@ package com.lonx.lyrico.data.model.entity
 import android.content.ContentUris
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.core.net.toUri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.io.File
 
 /**
  * 数据库中存储的歌曲实体

@@ -23,8 +23,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
@@ -34,6 +36,7 @@ import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.icons.ArrowBack
 import com.moriafly.salt.ui.icons.SaltIcons
+import com.moriafly.salt.ui.icons.Success
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.SearchResultsDestination
@@ -59,7 +62,7 @@ fun EditMetadataScreen(
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
+    val context = LocalContext.current
 
     onLyricsResult.onResult { result ->
         viewModel.updateMetadataFromSearchResult(result)
@@ -101,6 +104,32 @@ fun EditMetadataScreen(
             .fillMaxSize()
             .background(SaltTheme.colors.background),
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            Surface(
+                modifier = Modifier
+                    .padding(12.dp)
+                    .size(48.dp),
+                shape = CircleShape,
+                color = SaltTheme.colors.highlight,
+                tonalElevation = 2.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(
+                        onClick = {viewModel.play(context)},
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            painter = rememberTintedPainter(painterResource(R.drawable.ic_play_24dp), tint = SaltTheme.colors.text),
+                            contentDescription = null,
+                            tint = SaltTheme.colors.text,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        },
         topBar = {
 
             val titleText = if (uiState.songInfo?.tagData?.title != null) {

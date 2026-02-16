@@ -18,7 +18,8 @@ import com.lonx.lyrico.data.model.BatchMatchField
 import com.lonx.lyrico.data.model.BatchMatchHistory
 import com.lonx.lyrico.data.model.BatchMatchMode
 import com.lonx.lyrico.data.model.BatchMatchStatus
-import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.LyricFormat
+import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.entity.BatchMatchRecordEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
@@ -39,7 +40,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -105,6 +105,11 @@ class SongListViewModel(
     private val separator = settingsRepository.separator
         .stateIn(viewModelScope, SharingStarted.Eagerly, "/")
 
+    private val romaEnabled = settingsRepository.romaEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private val lyricFormat = settingsRepository.lyricFormat
+        .stateIn(viewModelScope, SharingStarted.Eagerly, LyricFormat.VERBATIM_LRC)
 
     // 当排序信息改变时，歌曲列表自动重新加载
     val songs: StateFlow<List<SongEntity>> = sortInfo
@@ -172,11 +177,16 @@ class SongListViewModel(
 
     /**
      * 批量匹配歌曲（支持并发控制）
-     * @param config 匹配配置
+     * @param matchConfig 匹配配置
      */
-    fun batchMatch(config: BatchMatchConfig) {
+    fun batchMatch(matchConfig: BatchMatchConfig) {
         val selectedIds = _selectedSongIds.value
         val separator = separator.value
+        val lyricConfig = LyricRenderConfig(
+            format = lyricFormat.value,
+            showRomanization = romaEnabled.value,
+            showTranslation = true
+        )
         if (selectedIds.isEmpty()) return
 
         // 关闭配置对话框
@@ -197,7 +207,7 @@ class SongListViewModel(
                 batchTimeMillis = 0
             ) }
 
-            val semaphore = Semaphore(config.parallelism)
+            val semaphore = Semaphore(matchConfig.parallelism)
             val processedCount = AtomicInteger(0)
             val matchResults = Collections.synchronizedList(mutableListOf<Pair<SongEntity, AudioTagData>>())
             val historyRecords = Collections.synchronizedList(mutableListOf<BatchMatchRecordEntity>())
@@ -212,7 +222,13 @@ class SongListViewModel(
                         _uiState.update { it.copy(currentFile = song.fileName) }
 
                         // 核心逻辑：根据 Config 决定是否跳过、如何匹配
-                        val result = matchAndGetTag(song, separator, currentOrder, config)
+                        val result = matchAndGetTag(
+                            song = song,
+                            separator = separator,
+                            lyricConfig = lyricConfig,
+                            order = currentOrder,
+                            matchConfig = matchConfig
+                        )
 
                         val currentProcessed = processedCount.incrementAndGet()
                         
@@ -271,11 +287,12 @@ class SongListViewModel(
     private suspend fun matchAndGetTag(
         song: SongEntity,
         separator: String,
+        lyricConfig: LyricRenderConfig,
         order: List<Source>,
-        config: BatchMatchConfig
+        matchConfig: BatchMatchConfig
     ): MatchResult = coroutineScope {
 
-        val needsProcessing = config.fields.any { (field, mode) ->
+        val needsProcessing = matchConfig.fields.any { (field, mode) ->
             if (mode == BatchMatchMode.OVERWRITE) return@any true
             
             // Supplement Mode
@@ -333,20 +350,19 @@ class SongListViewModel(
 
         try {
             val lyricsDeferred = async { finalMatch.source.getLyrics(finalMatch.result) }
-            val lyricDisplayMode = settingsRepository.lyricDisplayMode.first()
             val newLyrics = lyricsDeferred.await()?.let {
-                 LyricsUtils.formatLrcResult(it, lineByLine = lyricDisplayMode == LyricDisplayMode.LINE_BY_LINE)
+                 LyricsUtils.formatLrcResult(result = it, config = lyricConfig)
             }
 
-            val newTitle = resolveValue(config, BatchMatchField.TITLE, song.title, finalMatch.result.title)
-            val newArtist = resolveValue(config, BatchMatchField.ARTIST, song.artist, finalMatch.result.artist)
-            val newAlbum = resolveValue(config, BatchMatchField.ALBUM, song.album, finalMatch.result.album)
-            val newDate = resolveValue(config, BatchMatchField.DATE, song.date, finalMatch.result.date)
-            val newTrack = resolveValue(config, BatchMatchField.TRACK_NUMBER, song.trackerNumber, finalMatch.result.trackerNumber)
-            val newGenre = resolveValue(config, BatchMatchField.GENRE, song.genre, null)
-            val newLyricsResolved = resolveValue(config, BatchMatchField.LYRICS, song.lyrics, newLyrics)
+            val newTitle = resolveValue(matchConfig, BatchMatchField.TITLE, song.title, finalMatch.result.title)
+            val newArtist = resolveValue(matchConfig, BatchMatchField.ARTIST, song.artist, finalMatch.result.artist)
+            val newAlbum = resolveValue(matchConfig, BatchMatchField.ALBUM, song.album, finalMatch.result.album)
+            val newDate = resolveValue(matchConfig, BatchMatchField.DATE, song.date, finalMatch.result.date)
+            val newTrack = resolveValue(matchConfig, BatchMatchField.TRACK_NUMBER, song.trackerNumber, finalMatch.result.trackerNumber)
+            val newGenre = resolveValue(matchConfig, BatchMatchField.GENRE, song.genre, null)
+            val newLyricsResolved = resolveValue(matchConfig, BatchMatchField.LYRICS, song.lyrics, newLyrics)
 
-            val shouldUpdateCover = shouldUpdate(config, BatchMatchField.COVER, null)
+            val shouldUpdateCover = shouldUpdate(matchConfig, BatchMatchField.COVER, null)
             val picUrl = if (shouldUpdateCover) finalMatch.result.picUrl else null
 
             val tagDataToWrite = AudioTagData(

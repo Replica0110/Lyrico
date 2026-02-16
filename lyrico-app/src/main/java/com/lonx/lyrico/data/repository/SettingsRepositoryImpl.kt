@@ -1,14 +1,14 @@
 package com.lonx.lyrico.data.repository
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.LyricFormat
+import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
@@ -25,7 +25,7 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 class SettingsRepositoryImpl(private val context: Context) : SettingsRepository {
 
     private object PreferencesKeys {
-        val LYRIC_DISPLAY_MODE = stringPreferencesKey("lyric_display_mode")
+        val LYRIC_FORMAT = stringPreferencesKey("lyric_display_mode")
         val LAST_SCAN_TIME = longPreferencesKey("last_scan_time")
         val SORT_BY = stringPreferencesKey("sort_by")
         val SORT_ORDER = stringPreferencesKey("sort_order")
@@ -41,11 +41,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     private val defaultSourceOrder = listOf(Source.QM, Source.KG, Source.NE)
     private val defaultSearchPageSize = 10
 
-    override val lyricDisplayMode: Flow<LyricDisplayMode>
+    override val lyricFormat: Flow<LyricFormat>
         get() = context.settingsDataStore.data.map { preferences ->
-            LyricDisplayMode.valueOf(
-                preferences[PreferencesKeys.LYRIC_DISPLAY_MODE]
-                    ?: LyricDisplayMode.WORD_BY_WORD.name
+            LyricFormat.valueOf(
+                preferences[PreferencesKeys.LYRIC_FORMAT]
+                    ?: LyricFormat.VERBATIM_LRC.name
             )
         }
 
@@ -119,9 +119,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }.first()
     }
 
-    override suspend fun saveLyricDisplayMode(mode: LyricDisplayMode) {
+    override suspend fun saveLyricDisplayMode(mode: LyricFormat) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LYRIC_DISPLAY_MODE] = mode.name
+            preferences[PreferencesKeys.LYRIC_FORMAT] = mode.name
         }
     }
 
@@ -173,7 +173,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     }
 
     override val settingsFlow: Flow<SettingsSnapshot> = combine(
-        lyricDisplayMode,
+        lyricFormat,
         romaEnabled,
         separator,
         searchSourceOrder,
@@ -183,7 +183,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     ) { array ->
         @Suppress("UNCHECKED_CAST")
         SettingsSnapshot(
-            lyricDisplayMode = array[0] as LyricDisplayMode,
+            lyricFormat = array[0] as LyricFormat,
             romaEnabled = array[1] as Boolean,
             separator = array[2] as String,
             searchSourceOrder = array[3] as List<Source>,
@@ -192,6 +192,23 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             ignoreShortAudio = array[6] as Boolean
         )
     }
+    override suspend fun getLyricRenderConfig(): LyricRenderConfig {
+        val prefs = context.settingsDataStore.data.first()
+
+        val format = LyricFormat.valueOf(
+            prefs[PreferencesKeys.LYRIC_FORMAT]
+                ?: LyricFormat.VERBATIM_LRC.displayName
+        )
+
+        val roma = prefs[PreferencesKeys.ROMA_ENABLED] ?: true
+
+        return LyricRenderConfig(
+            format = format,
+            showRomanization = roma,
+            showTranslation = true
+        )
+    }
+
 
 }
 

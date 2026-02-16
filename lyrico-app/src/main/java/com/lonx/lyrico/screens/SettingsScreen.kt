@@ -11,7 +11,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.lonx.lyrico.data.model.ArtistSeparator
-import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
@@ -21,6 +21,7 @@ import com.moriafly.salt.ui.ItemDropdown
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemSlider
 import com.moriafly.salt.ui.ItemSwitcher
+import com.moriafly.salt.ui.ItemText
 import com.moriafly.salt.ui.ItemTip
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -49,7 +50,7 @@ fun SettingsScreen(
     val folderUiState by folderViewModel.uiState.collectAsState()
 
 
-    val lyricDisplayMode = settingsUiState.lyricDisplayMode
+    val lyricFormat = settingsUiState.lyricFormat
     val artistSeparator = settingsUiState.separator
     val romaEnabled = settingsUiState.romaEnabled
     val ignoreShortAudio = settingsUiState.ignoreShortAudio
@@ -139,26 +140,18 @@ fun SettingsScreen(
             RoundedColumn {
                 ItemDropdown(
                     text = "歌词模式",
-                    value = if (lyricDisplayMode == LyricDisplayMode.WORD_BY_WORD) {
-                        "逐字歌词"
-                    } else "逐行歌词",
+                    value = lyricFormat.displayName,
                     content = {
-                        ItemCheck(
-                            text = "逐字歌词",
-                            state = lyricDisplayMode == LyricDisplayMode.WORD_BY_WORD,
-                            onChange = {
-                                settingsViewModel.setLyricDisplayMode(LyricDisplayMode.WORD_BY_WORD)
-                                state.dismiss()
-                            }
-                        )
-                        ItemCheck(
-                            text = "逐行歌词",
-                            state = lyricDisplayMode == LyricDisplayMode.LINE_BY_LINE,
-                            onChange = {
-                                settingsViewModel.setLyricDisplayMode(LyricDisplayMode.LINE_BY_LINE)
-                                state.dismiss()
-                            }
-                        )
+                        LyricFormat.entries.forEach { format ->
+                            ItemCheck(
+                                text = format.displayName,
+                                state = lyricFormat == format,
+                                onChange = {
+                                    settingsViewModel.setLyricFormat(format)
+                                    state.dismiss()
+                                }
+                            )
+                        }
                     },
                 )
                 ItemSwitcher(
@@ -167,6 +160,7 @@ fun SettingsScreen(
                     text = "罗马音",
                     sub = "搜索歌词中包含罗马音"
                 )
+                ItemTip(text = "")
             }
             ItemOuterTitle("元数据")
             RoundedColumn {

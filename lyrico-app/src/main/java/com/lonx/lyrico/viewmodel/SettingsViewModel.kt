@@ -8,7 +8,7 @@ import com.lonx.lyrico.data.model.dao.FolderDao
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.dao.SongDao
 import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,12 +17,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 data class SettingsUiState(
-    val lyricDisplayMode: LyricDisplayMode = LyricDisplayMode.WORD_BY_WORD,
+    val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
     val ignoreShortAudio: Boolean = false,
@@ -44,7 +43,7 @@ class SettingsViewModel(
         settingsRepository.settingsFlow
             .map { settings ->
                 SettingsUiState(
-                    lyricDisplayMode = settings.lyricDisplayMode,
+                    lyricFormat = settings.lyricFormat,
                     romaEnabled = settings.romaEnabled,
                     separator = settings.separator.toArtistSeparator(),
                     searchSourceOrder = settings.searchSourceOrder,
@@ -68,11 +67,11 @@ class SettingsViewModel(
         }
     }
 
-    fun setLyricDisplayMode(mode: LyricDisplayMode) {
+    fun setLyricFormat(mode: LyricFormat) {
         viewModelScope.launch {
             settingsRepository.saveLyricDisplayMode(mode)
             _uiState.update {
-                it.copy(lyricDisplayMode = mode)
+                it.copy(lyricFormat = mode)
             }
         }
     }

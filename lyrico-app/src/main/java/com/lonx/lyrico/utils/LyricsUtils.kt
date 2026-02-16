@@ -1,6 +1,8 @@
 package com.lonx.lyrico.utils
 
 import android.annotation.SuppressLint
+import com.lonx.lyrico.data.model.LyricFormat
+import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrics.model.LyricsLine
 import com.lonx.lyrics.model.LyricsResult
 import kotlin.math.abs
@@ -17,67 +19,85 @@ object LyricsUtils {
 
     fun formatLrcResult(
         result: LyricsResult,
-        romaEnabled: Boolean = false,
-        lineByLine: Boolean = false
+        config: LyricRenderConfig
     ): String {
         val builder = StringBuilder()
-        val originalLines = result.original
-        val translatedLines = result.translated
-        val translatedMap = translatedLines?.associateBy { it.start } ?: emptyMap()
 
-        originalLines.forEach { line ->
-            if (lineByLine) {
-                // 逐行格式
-                val lineText = line.words.joinToString("") { it.text }
-                val endTime = line.words.lastOrNull()?.end
-                if (endTime != null) {
-                    builder.append("[${formatTimestamp(line.start)}]$lineText[${formatTimestamp(endTime)}]")
-                } else {
-                    builder.append("[${formatTimestamp(line.start)}]$lineText")
-                }
-            } else {
-                // 逐字格式
-                line.words.forEachIndexed { index, word ->
-                    if (index == line.words.lastIndex) {
-                        builder.append("[${formatTimestamp(word.start)}]${word.text}[${formatTimestamp(word.end)}]")
-                    } else {
-                        builder.append("[${formatTimestamp(word.start)}]${word.text}")
-                    }
-                }
-            }
-            builder.append("\n")
 
-            val matchedTranslation = findMatchingTranslatedLine(line, translatedMap)
-            if (romaEnabled) {
-                val romanizationLines = result.romanization
-                val romanizationMap = romanizationLines?.associateBy { it.start } ?: emptyMap()
-                val matchedRomanization = findMatchingTranslatedLine(line, romanizationMap)
-                if (matchedRomanization != null) {
-                    val formattedRomanizationLine = "[${formatTimestamp(matchedRomanization.start)}]${
-                        matchedRomanization.words.joinToString(" ") { it.text }
-                    }"
-                    builder.append(formattedRomanizationLine)
-                    builder.append("\n")
-                }
-            }
-            if (matchedTranslation != null) {
-                val formattedTranslatedLine = "[${formatTimestamp(matchedTranslation.start)}]${
-                    matchedTranslation.words.joinToString(" ") { it.text }
-                }"
-                builder.append(formattedTranslatedLine)
-                builder.append("\n")
+
+        result.original.forEach { line ->
+
+            when (config.format) {
+                LyricFormat.ENHANCED_LRC -> appendEnhancedLine(builder, line)
+                LyricFormat.PLAIN_LRC -> appendLineByLine(builder, line)
+                LyricFormat.VERBATIM_LRC -> appendWordByWord(builder, line)
             }
 
+
+            builder.append('\n')
+
+            // 罗马音
+            if (config.showRomanization){
+                val romanMap = result.romanization?.associateBy { it.start } ?: emptyMap()
+                matchingSubLine(line, romanMap)?.let {
+                    builder.append(formatPlainLine(it)).append('\n')
+                }
+            }
+
+            // 翻译
+            if (config.showTranslation){
+                val translatedMap = result.translated?.associateBy { it.start } ?: emptyMap()
+                matchingSubLine(line, translatedMap)?.let {
+                    builder.append(formatPlainLine(it)).append('\n')
+                }
+            }
         }
         return builder.toString().trim()
     }
+    private fun appendEnhancedLine(builder: StringBuilder, line: LyricsLine) {
+        if (line.words.isEmpty()) return
 
-    private fun findMatchingTranslatedLine(
+        builder.append("[${formatTimestamp(line.start)}] ")
+
+        line.words.forEach { word ->
+            builder.append("<${formatTimestamp(word.start)}>")
+            builder.append(word.text)
+        }
+
+        val lastEnd = line.words.last().end
+        builder.append(" <${formatTimestamp(lastEnd)}>")
+    }
+    private fun appendLineByLine(builder: StringBuilder, line: LyricsLine) {
+        val lineText = line.words.joinToString("") { it.text }
+        val endTime = line.words.lastOrNull()?.end
+
+        if (endTime != null) {
+            builder.append("[${formatTimestamp(line.start)}]$lineText[${formatTimestamp(endTime)}]")
+        } else {
+            builder.append("[${formatTimestamp(line.start)}]$lineText")
+        }
+    }
+    private fun appendWordByWord(builder: StringBuilder, line: LyricsLine) {
+        line.words.forEachIndexed { index, word ->
+            if (index == line.words.lastIndex) {
+                builder.append("[${formatTimestamp(word.start)}]${word.text}[${formatTimestamp(word.end)}]")
+            } else {
+                builder.append("[${formatTimestamp(word.start)}]${word.text}")
+            }
+        }
+    }
+    private fun formatPlainLine(line: LyricsLine): String {
+        return "[${formatTimestamp(line.start)}]" +
+                line.words.joinToString(" ") { it.text }
+    }
+
+
+    private fun matchingSubLine(
         originalLine: LyricsLine,
-        translatedMap: Map<Long, LyricsLine>
+        subLineMap: Map<Long, LyricsLine>
     ): LyricsLine? {
-        val matched = translatedMap[originalLine.start]
+        val matched = subLineMap[originalLine.start]
         if (matched != null) return matched
-        return translatedMap.entries.find { abs(it.key - originalLine.start) < 500 }?.value
+        return subLineMap.entries.find { abs(it.key - originalLine.start) < 500 }?.value
     }
 }

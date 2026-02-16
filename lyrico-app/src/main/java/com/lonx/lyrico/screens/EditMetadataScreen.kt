@@ -31,9 +31,15 @@ import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.LyricsSearchResult
+import com.moriafly.salt.ui.ItemContainer
+import com.moriafly.salt.ui.ItemEdit
+import com.moriafly.salt.ui.ItemOuterEdit
+import com.moriafly.salt.ui.ItemTip
+import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.moriafly.salt.ui.dialog.InputDialog
 import com.moriafly.salt.ui.icons.ArrowBack
 import com.moriafly.salt.ui.icons.SaltIcons
 import com.moriafly.salt.ui.icons.Success
@@ -226,19 +232,15 @@ fun EditMetadataScreen(
                 label = "标题",
                 value = editingTagData?.title ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            title = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        editingTagData!!.copy(title = it)
+                    }
                 },
                 isModified = editingTagData?.title != originalTagData?.title,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            title = originalTagData?.title ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(title = originalTagData?.title ?: "")
+                    }
                 }
             )
 
@@ -246,39 +248,44 @@ fun EditMetadataScreen(
                 label = "艺术家",
                 value = editingTagData?.artist ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            artist = it
-                        )
-                    )
+                    viewModel.updateTag { copy(artist = it)
+                    }
                 },
                 isModified = editingTagData?.artist != originalTagData?.artist,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            artist = originalTagData?.artist ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(artist = originalTagData?.artist ?: "")
+                    }
                 }
             )
-
+            MetadataInputGroup(
+                label = "专辑艺术家",
+                value = editingTagData?.albumArtist ?: "",
+                onValueChange = {
+                    viewModel.updateTag {
+                        copy(albumArtist = it)
+                    }
+                },
+                isModified = editingTagData?.albumArtist != originalTagData?.albumArtist,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(albumArtist = originalTagData?.albumArtist ?: "")
+                    }
+                }
+            )
             MetadataInputGroup(
                 label = "专辑",
                 value = editingTagData?.album ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            album = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(album = it)
+                    }
                 },
                 isModified = editingTagData?.album != originalTagData?.album,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            album = originalTagData?.album ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(album = originalTagData?.album ?: "")
+                    }
                 }
             )
 
@@ -286,19 +293,15 @@ fun EditMetadataScreen(
                 label = "年份",
                 value = editingTagData?.date ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            date = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(date = it)
+                    }
                 },
                 isModified = editingTagData?.date != originalTagData?.date,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            date = originalTagData?.date ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(date = originalTagData?.date ?: "")
+                    }
                 }
             )
 
@@ -306,19 +309,15 @@ fun EditMetadataScreen(
                 label = "流派",
                 value = editingTagData?.genre ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            genre = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(genre = it)
+                    }
                 },
                 isModified = editingTagData?.genre != originalTagData?.genre,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            genre = originalTagData?.genre ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(genre = originalTagData?.genre ?: "")
+                    }
                 }
             )
 
@@ -326,37 +325,86 @@ fun EditMetadataScreen(
                 label = "音轨",
                 value = editingTagData?.trackerNumber ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(trackerNumber = it)
-                    )
+                    viewModel.updateTag {
+                        copy(trackerNumber = it)
+                    }
                 },
                 isModified = editingTagData?.trackerNumber != originalTagData?.trackerNumber,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            trackerNumber = originalTagData?.trackerNumber ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(trackerNumber = originalTagData?.trackerNumber ?: "")
+                    }
                 }
             )
+            MetadataInputGroup(
+                label = "碟号",
+                value = editingTagData?.discNumber?.toString() ?: "",
+                onValueChange = {
+                    viewModel.updateTag {
+                        copy(discNumber = it.toIntOrNull())
+                    }
+                },
+                isModified = editingTagData?.discNumber != originalTagData?.discNumber,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(discNumber = originalTagData?.discNumber)
+                    }
+                }
+            )
+            MetadataInputGroup(
+                label = "作曲",
+                value = editingTagData?.composer ?: "",
+                onValueChange = {
+                    viewModel.updateTag { copy(composer = it) }
+                },
+                isModified = editingTagData?.composer != originalTagData?.composer,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(composer = originalTagData?.composer ?: "")
+                    }
+                }
+            )
+            MetadataInputGroup(
+                label = "作词",
+                value = editingTagData?.lyricist ?: "",
+                onValueChange = {
+                    viewModel.updateTag { copy(lyricist = it) }
+                },
+                isModified = editingTagData?.lyricist != originalTagData?.lyricist,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(lyricist = originalTagData?.lyricist ?: "")
+                    }
+                }
+            )
+            MetadataInputGroup(
+                label = "注释",
+                value = editingTagData?.comment ?: "",
+                onValueChange = {
+                    viewModel.updateTag { copy(comment = it) }
+                },
+                isModified = editingTagData?.comment != originalTagData?.comment,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(comment = originalTagData?.comment ?: "")
+                    }
+                }
+            )
+
 
             MetadataInputGroup(
                 label = "歌词",
                 value = editingTagData?.lyrics ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            lyrics = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(lyrics = it)
+                    }
                 },
                 isModified = editingTagData?.lyrics != originalTagData?.lyrics,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            lyrics = originalTagData?.lyrics ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(lyrics = originalTagData?.lyrics ?: "")
+                    }
                 },
                 isMultiline = true
             )
@@ -459,6 +507,7 @@ fun CoverEditor(
 
 }
 
+@OptIn(UnstableSaltUiApi::class)
 @Composable
 private fun MetadataInputGroup(
     label: String,

@@ -1,6 +1,7 @@
 package com.lonx.lyrico.data.repository
 
 import android.content.Context
+import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.net.toUri
@@ -206,33 +207,39 @@ class SongRepositoryImpl(
         audioTagData: AudioTagData,
         filePath: String,
         lastModified: Long
-    ): Boolean =
-        withContext(Dispatchers.IO) {
-            try {
-                val existingSong = songDao.getSongByPath(filePath)
-                    ?: return@withContext false
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val existingSong = songDao.getSongByPath(filePath)
+                ?: return@withContext false
 
-                val updatedSong = existingSong.copy(
-                    title = audioTagData.title ?: existingSong.title,
-                    artist = audioTagData.artist ?: existingSong.artist,
-                    album = audioTagData.album ?: existingSong.album,
-                    genre = audioTagData.genre ?: existingSong.genre,
-                    trackerNumber = audioTagData.trackerNumber ?: existingSong.trackerNumber,
-                    date = audioTagData.date ?: existingSong.date,
-                    lyrics = audioTagData.lyrics ?: existingSong.lyrics,
-                    rawProperties = audioTagData.rawProperties.toString(),
-                    fileLastModified = lastModified
-                ).withSortKeysUpdated()
+            val updatedSong = existingSong.copy(
+                title = audioTagData.title ?: existingSong.title,
+                artist = audioTagData.artist ?: existingSong.artist,
+                album = audioTagData.album ?: existingSong.album,
+                albumArtist = audioTagData.albumArtist ?: existingSong.albumArtist,
+                genre = audioTagData.genre ?: existingSong.genre,
+                trackerNumber = audioTagData.trackerNumber ?: existingSong.trackerNumber,
+                discNumber = audioTagData.discNumber ?: existingSong.discNumber,
+                date = audioTagData.date ?: existingSong.date,
 
-                songDao.update(updatedSong)
+                composer = audioTagData.composer ?: existingSong.composer,
+                lyricist = audioTagData.lyricist ?: existingSong.lyricist,
+                comment = audioTagData.comment ?: existingSong.comment,
+                lyrics = audioTagData.lyrics ?: existingSong.lyrics,
 
-                Log.d(TAG, "歌曲元数据已更新: $filePath")
-                return@withContext true
-            } catch (e: Exception) {
-                Log.e(TAG, "更新歌曲元数据失败: $filePath", e)
-                return@withContext false
-            }
+                rawProperties = audioTagData.rawProperties.toString(),
+                fileLastModified = lastModified
+            ).withSortKeysUpdated()
+
+            songDao.update(updatedSong)
+
+            Log.d(TAG, "歌曲元数据已更新: $filePath")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "更新歌曲元数据失败: $filePath", e)
+            false
         }
+    }
 
 
     override suspend fun writeAudioTagData(filePath: String, audioTagData: AudioTagData): Boolean {
@@ -240,12 +247,14 @@ class SongRepositoryImpl(
             (if (isUriPath(filePath)) {
                 context.contentResolver.openFileDescriptor(filePath.toUri(), "rw")
             } else {
-                android.os.ParcelFileDescriptor.open(
+                ParcelFileDescriptor.open(
                     File(filePath),
-                    android.os.ParcelFileDescriptor.MODE_READ_WRITE
+                    ParcelFileDescriptor.MODE_READ_WRITE
                 )
             })?.use { pfdDescriptor ->
+
                 val updates = mutableMapOf<String, String>()
+
                 audioTagData.title?.let { updates["TITLE"] = it }
                 audioTagData.artist?.let { updates["ARTIST"] = it }
                 audioTagData.album?.let { updates["ALBUM"] = it }
@@ -253,6 +262,30 @@ class SongRepositoryImpl(
                 audioTagData.date?.let { updates["DATE"] = it }
                 audioTagData.trackerNumber?.let { updates["TRACKNUMBER"] = it }
 
+                audioTagData.albumArtist?.let {
+                    updates["ALBUMARTIST"] = it   // FLAC/通用
+                    updates["TPE2"] = it          // ID3v2
+                }
+
+                audioTagData.discNumber?.let {
+                    updates["DISCNUMBER"] = it.toString()
+                    updates["TPOS"] = it.toString()
+                }
+
+                audioTagData.composer?.let {
+                    updates["COMPOSER"] = it
+                    updates["TCOM"] = it
+                }
+
+                audioTagData.lyricist?.let {
+                    updates["LYRICIST"] = it
+                    updates["TEXT"] = it
+                }
+
+                audioTagData.comment?.let {
+                    updates["COMMENT"] = it
+                    updates["COMM"] = it
+                }
                 AudioTagWriter.writeTags(pfdDescriptor, updates)
 
                 audioTagData.lyrics?.let { lyricsString ->

@@ -78,7 +78,6 @@ class EditMetadataViewModel(
 
                         picture = audioTagData.pictures.firstOrNull(),
 
-                        // 新增：保存原始封面
                         originalCover = firstPicture,
 
                         // coverUri 初始化为原始封面（未编辑时）
@@ -96,6 +95,15 @@ class EditMetadataViewModel(
         _uiState.update {
             it.copy(
                 editingTagData = audioTagData,
+                isEditing = true
+            )
+        }
+    }
+    fun updateTag(block: AudioTagData.() -> AudioTagData) {
+        _uiState.update { state ->
+            val current = state.editingTagData ?: return@update state
+            state.copy(
+                editingTagData = current.block(),
                 isEditing = true
             )
         }

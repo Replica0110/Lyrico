@@ -102,6 +102,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.reorderable)
+    implementation(libs.compose.markdown)
 
     // AndroidX
     implementation(libs.androidx.core.ktx)

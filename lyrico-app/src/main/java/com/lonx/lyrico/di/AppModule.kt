@@ -11,7 +11,12 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.data.repository.SongRepositoryImpl
+import com.lonx.lyrico.data.repository.UpdateRepository
+import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
 import com.lonx.lyrico.utils.MusicScanner
+import com.lonx.lyrico.utils.UpdateManager
+import com.lonx.lyrico.utils.UpdateManagerImpl
+import com.lonx.lyrico.viewmodel.AboutViewModel
 import com.lonx.lyrico.viewmodel.BatchMatchHistoryViewModel
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
@@ -27,6 +32,9 @@ import com.lonx.lyrics.source.ne.NeApi
 import com.lonx.lyrics.source.ne.NeSource
 import com.lonx.lyrics.source.qm.QmApi
 import com.lonx.lyrics.source.qm.QmSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import okhttp3.Cache
 import okhttp3.ConnectionPool
@@ -129,8 +137,12 @@ val appModule = module {
     ) }
 
     single { getAll<SearchSource>() }
+
+    single { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
     // 工具类
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
+    single<UpdateRepository> { UpdateRepositoryImpl(get()) }
+    single<UpdateManager> { UpdateManagerImpl(get(), get()) }
     single { MusicScanner(androidContext()) }
     
 
@@ -149,8 +161,9 @@ val appModule = module {
     single<BatchMatchHistoryRepository> { BatchMatchHistoryRepositoryImpl(get()) }
     
     // ViewModels
-    viewModel { SongListViewModel(get(), get(), get(),get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get()) }
+    viewModel { AboutViewModel(get(),get()) }
+    viewModel { SongListViewModel(get(), get(), get(),get(), get(), get(), get()) }
+    viewModel { SettingsViewModel(get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), get(), get()) }
     viewModel { LocalSearchViewModel(get()) }

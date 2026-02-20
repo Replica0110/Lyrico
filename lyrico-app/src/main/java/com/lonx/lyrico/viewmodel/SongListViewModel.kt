@@ -27,6 +27,7 @@ import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.utils.LyricsUtils
 import com.lonx.lyrico.utils.MusicContentObserver
 import com.lonx.lyrico.utils.MusicMatchUtils
+import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
@@ -48,6 +49,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -87,6 +89,7 @@ class SongListViewModel(
     private val batchMatchHistoryRepository: BatchMatchHistoryRepository,
     private val playbackRepository: PlaybackRepository,
     private val sources: List<SearchSource>,
+    private val updateManager: UpdateManager,
     application: Application
 ) : ViewModel() {
 
@@ -132,7 +135,6 @@ class SongListViewModel(
     val isSelectionMode = _isSelectionMode.asStateFlow()
     private val _sheetState = MutableStateFlow(SheetUiState())
     val sheetState = _sheetState.asStateFlow()
-
     fun showMenu(song: SongEntity) {
         _sheetState.value = SheetUiState(menuSong = song)
     }
@@ -164,6 +166,15 @@ class SongListViewModel(
         }
     }
 
+    fun onStart() {
+        viewModelScope.launch {
+            val checkUpdateEnabled = settingsRepository.checkUpdateEnabled.first()
+            if (checkUpdateEnabled) {
+                Log.d(TAG, "检查更新")
+                updateManager.checkForUpdate()
+            }
+        }
+    }
     fun openBatchMatchConfig() {
         if (_selectedSongIds.value.isNotEmpty()) {
             _uiState.update { it.copy(showBatchConfigDialog = true) }

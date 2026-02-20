@@ -2,18 +2,12 @@ package com.lonx.lyrico.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.ArtistSeparator
-import com.lonx.lyrico.data.model.dao.FolderDao
-import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.LyricFormat
-import com.lonx.lyrico.data.model.dao.SongDao
 import com.lonx.lyrics.model.Source
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,12 +26,8 @@ data class SettingsUiState(
 )
 
 class SettingsViewModel(
-    private val settingsRepository: SettingsRepository,
-    private val database: LyricoDatabase
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
-
-    private val folderDao: FolderDao = database.folderDao()
-    private val songDao: SongDao = database.songDao()
 
     val uiState: StateFlow<SettingsUiState> =
         settingsRepository.settingsFlow

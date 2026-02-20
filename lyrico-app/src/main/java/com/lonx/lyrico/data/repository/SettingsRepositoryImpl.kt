@@ -31,6 +31,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SORT_ORDER = stringPreferencesKey("sort_order")
         val SEPARATOR = stringPreferencesKey("separator")
         val ROMA_ENABLED = booleanPreferencesKey("roma_enabled")
+        val CHECK_UPDATE_ENABLED = booleanPreferencesKey("check_update_enabled")
         val TRANSLATION_ENABLED = booleanPreferencesKey("translation_enabled")
         val IGNORE_SHORT_AUDIO = booleanPreferencesKey("ignore_short_audio")
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
@@ -74,6 +75,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override val translationEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.TRANSLATION_ENABLED] ?: true
+        }
+    override val checkUpdateEnabled: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.CHECK_UPDATE_ENABLED] ?: true
         }
     override val ignoreShortAudio: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -146,6 +151,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun saveRomaEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.ROMA_ENABLED] = enabled
+        }
+    }
+    override suspend fun saveCheckUpdateEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.CHECK_UPDATE_ENABLED] = enabled
         }
     }
     override suspend fun saveTranslationEnabled(enabled: Boolean) {

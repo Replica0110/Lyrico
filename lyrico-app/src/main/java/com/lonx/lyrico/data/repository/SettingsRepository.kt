@@ -25,6 +25,7 @@ interface SettingsRepository {
     val romaEnabled: Flow<Boolean>
 
     val translationEnabled: Flow<Boolean>
+    val checkUpdateEnabled: Flow<Boolean>
     val ignoreShortAudio: Flow<Boolean>
     val searchSourceOrder: Flow<List<Source>>
     val searchPageSize: Flow<Int>
@@ -39,6 +40,7 @@ interface SettingsRepository {
     suspend fun saveSortInfo(sortInfo: SortInfo)
     suspend fun saveSeparator(separator: String)
     suspend fun saveRomaEnabled(enabled: Boolean)
+    suspend fun saveCheckUpdateEnabled(enabled: Boolean)
     suspend fun saveTranslationEnabled(enabled: Boolean)
     suspend fun saveIgnoreShortAudio(enabled: Boolean)
     suspend fun saveLastScanTime(time: Long)

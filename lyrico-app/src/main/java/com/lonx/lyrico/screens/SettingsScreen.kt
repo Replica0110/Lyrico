@@ -53,6 +53,7 @@ fun SettingsScreen(
     val lyricFormat = settingsUiState.lyricFormat
     val artistSeparator = settingsUiState.separator
     val romaEnabled = settingsUiState.romaEnabled
+    val translationEnabled = settingsUiState.translationEnabled
     val ignoreShortAudio = settingsUiState.ignoreShortAudio
     val scrollState = rememberScrollState()
     val folders = folderUiState.folders
@@ -156,11 +157,20 @@ fun SettingsScreen(
                 )
                 ItemSwitcher(
                     state = romaEnabled,
-                    onChange = settingsViewModel::setRomaEnabled,
+                    onChange = {
+                        settingsViewModel.setRomaEnabled(!romaEnabled)
+                    },
                     text = "罗马音",
                     sub = "搜索歌词中包含罗马音"
                 )
-                ItemTip(text = "")
+                ItemSwitcher(
+                    state = translationEnabled,
+                    onChange = {
+                        settingsViewModel.setTranslationEnabled(!translationEnabled)
+                    },
+                    text = "翻译",
+                    sub = "搜索歌词中包含翻译"
+                )
             }
             ItemOuterTitle("元数据")
             RoundedColumn {

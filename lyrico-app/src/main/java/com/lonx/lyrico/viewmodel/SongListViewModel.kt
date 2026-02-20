@@ -108,6 +108,9 @@ class SongListViewModel(
     private val romaEnabled = settingsRepository.romaEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    private val translationEnabled = settingsRepository.translationEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     private val lyricFormat = settingsRepository.lyricFormat
         .stateIn(viewModelScope, SharingStarted.Eagerly, LyricFormat.VERBATIM_LRC)
 
@@ -185,7 +188,7 @@ class SongListViewModel(
         val lyricConfig = LyricRenderConfig(
             format = lyricFormat.value,
             showRomanization = romaEnabled.value,
-            showTranslation = true
+            showTranslation = translationEnabled.value
         )
         if (selectedIds.isEmpty()) return
 

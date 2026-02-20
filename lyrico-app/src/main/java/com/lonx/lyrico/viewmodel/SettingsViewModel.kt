@@ -24,6 +24,7 @@ data class SettingsUiState(
     val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
+    val translationEnabled: Boolean = false,
     val ignoreShortAudio: Boolean = false,
     val searchSourceOrder: List<Source> = emptyList(),
     val searchPageSize: Int = 20,
@@ -37,7 +38,6 @@ class SettingsViewModel(
 
     private val folderDao: FolderDao = database.folderDao()
     private val songDao: SongDao = database.songDao()
-    private val _uiState = MutableStateFlow(SettingsUiState())
 
     val uiState: StateFlow<SettingsUiState> =
         settingsRepository.settingsFlow
@@ -45,6 +45,7 @@ class SettingsViewModel(
                 SettingsUiState(
                     lyricFormat = settings.lyricFormat,
                     romaEnabled = settings.romaEnabled,
+                    translationEnabled = settings.translationEnabled,
                     separator = settings.separator.toArtistSeparator(),
                     searchSourceOrder = settings.searchSourceOrder,
                     searchPageSize = settings.searchPageSize,
@@ -58,92 +59,48 @@ class SettingsViewModel(
                 initialValue = SettingsUiState()
             )
 
-
-
-
-    fun toggleFolderIgnore(folder: FolderEntity) {
-        viewModelScope.launch {
-            folderDao.setIgnored(folder.id, !folder.isIgnored)
-        }
-    }
-
     fun setLyricFormat(mode: LyricFormat) {
         viewModelScope.launch {
             settingsRepository.saveLyricDisplayMode(mode)
-            _uiState.update {
-                it.copy(lyricFormat = mode)
-            }
         }
     }
 
     fun setRomaEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveRomaEnabled(enabled)
-            _uiState.update {
-                it.copy(romaEnabled = enabled)
-            }
+        }
+    }
+    fun setTranslationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveTranslationEnabled(enabled)
         }
     }
 
     fun setSeparator(separator: ArtistSeparator) {
         viewModelScope.launch {
             settingsRepository.saveSeparator(separator.toText())
-            _uiState.update {
-                it.copy(separator = separator)
-            }
         }
     }
 
     fun setIgnoreShortAudio(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveIgnoreShortAudio(enabled)
-            _uiState.update {
-                it.copy(ignoreShortAudio = enabled)
-            }
         }
     }
     fun setSearchSourceOrder(sources: List<Source>) {
         viewModelScope.launch {
             settingsRepository.saveSearchSourceOrder(sources)
-            _uiState.update {
-                it.copy(searchSourceOrder = sources)
-            }
         }
     }
     fun setSearchPageSize(size: Int) {
         viewModelScope.launch {
             settingsRepository.saveSearchPageSize(size)
-            _uiState.update {
-                it.copy(searchPageSize = size)
-            }
         }
     }
 
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             settingsRepository.saveThemeMode(mode)
-            _uiState.update {
-                it.copy(themeMode = mode)
-            }
-        }
-    }
-
-    /**
-     * 如果用户想手动添加一个还没被扫描到的文件夹并忽略它
-     */
-    fun addFolderByPath(path: String) {
-        viewModelScope.launch {
-            // 确保文件夹在数据库中存在（upsert）
-            val id = folderDao.upsertAndGetId(path = path, addedBySaf = true)
-            // 设置为忽略
-            folderDao.setIgnored(id, true)
-        }
-    }
-    fun deleteFolder(folder: FolderEntity) {
-        viewModelScope.launch {
-            folderDao.deleteFolderPermanently(folder.id)
-            // 注意：删除文件夹记录后，SongDao 会因为外键约束或逻辑关联
-            // 导致这些歌曲在库中不可见（因为 JOIN 找不到 folderId）
         }
     }
 

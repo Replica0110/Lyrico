@@ -13,7 +13,8 @@ data class SettingsSnapshot(
     val searchSourceOrder: List<Source>,
     val searchPageSize: Int,
     val themeMode: ThemeMode,
-    val ignoreShortAudio: Boolean
+    val ignoreShortAudio: Boolean,
+    val translationEnabled: Boolean
 )
 
 interface SettingsRepository {
@@ -22,6 +23,8 @@ interface SettingsRepository {
     val sortInfo: Flow<SortInfo>
     val separator: Flow<String>
     val romaEnabled: Flow<Boolean>
+
+    val translationEnabled: Flow<Boolean>
     val ignoreShortAudio: Flow<Boolean>
     val searchSourceOrder: Flow<List<Source>>
     val searchPageSize: Flow<Int>
@@ -36,6 +39,7 @@ interface SettingsRepository {
     suspend fun saveSortInfo(sortInfo: SortInfo)
     suspend fun saveSeparator(separator: String)
     suspend fun saveRomaEnabled(enabled: Boolean)
+    suspend fun saveTranslationEnabled(enabled: Boolean)
     suspend fun saveIgnoreShortAudio(enabled: Boolean)
     suspend fun saveLastScanTime(time: Long)
     suspend fun saveSearchSourceOrder(sources: List<Source>)

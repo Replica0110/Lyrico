@@ -50,62 +50,84 @@ class SongRepositoryImpl(
     override suspend fun synchronize(fullRescan: Boolean) {
         withContext(Dispatchers.IO) {
             Log.d(TAG, "开始同步数据库与设备文件... (全量扫描: $fullRescan)")
-            val ignoreShortAudio = settingsRepository.ignoreShortAudio.first()
-            val minDuration = 60000
-            val dbSyncInfos = songDao.getAllSyncInfo()
-            val dbSongMap = dbSyncInfos.associateBy({ it.filePath }, { it.fileLastModified })
-            val dbPaths = dbSongMap.keys
 
-            val devicePaths = mutableSetOf<String>()
-            val impactedFolderIds = mutableSetOf<Long>()
-            val folderIdCache = mutableMapOf<String, Long>()
+            database.withTransaction {
+                val ignoreShortAudio = settingsRepository.ignoreShortAudio.first()
+                val minDuration = 60_000L
+                val dbSyncInfos = songDao.getAllSyncInfo()
 
-            musicScanner.scanMusicFiles().collect { deviceSong ->
-                if (deviceSong.duration <= minDuration && ignoreShortAudio) {
-                    songDao.deleteByFilePaths(listOf(deviceSong.filePath))
-                    return@collect
+                val dbSongMap = dbSyncInfos.associateBy { it.filePath }
+                val dbPaths = dbSongMap.keys.toMutableSet()
+                val deviceSongs = mutableListOf<SongFile>()
+                val devicePaths = mutableSetOf<String>()
+                val shortAudioPaths = mutableListOf<String>()
+
+                musicScanner.scanMusicFiles().collect { deviceSong ->
+                    if (ignoreShortAudio && deviceSong.duration <= minDuration) {
+                        shortAudioPaths.add(deviceSong.filePath)
+                        return@collect
+                    }
+
+                    deviceSongs.add(deviceSong)
+                    devicePaths.add(deviceSong.filePath)
                 }
-                devicePaths.add(deviceSong.filePath)
+                val folderIdCache = mutableMapOf<String, Long>()
+                val impactedFolderIds = mutableSetOf<Long>()
 
-                val folderPath = deviceSong.filePath.substringBeforeLast("/").trimEnd('/')
-                val folderId = folderIdCache.getOrPut(folderPath) {
-                    folderDao.upsertAndGetId(folderPath)
+                suspend fun resolveFolderId(path: String): Long {
+                    val folderPath = path.substringBeforeLast("/").trimEnd('/')
+                    return folderIdCache.getOrPut(folderPath) {
+                        folderDao.upsertAndGetId(folderPath)
+                    }.also { impactedFolderIds.add(it) }
                 }
-                impactedFolderIds.add(folderId)
+                val songsToUpsert = mutableListOf<Pair<SongFile, Long>>()
 
-                val lastModifiedInDb = dbSongMap[deviceSong.filePath]
+                for (deviceSong in deviceSongs) {
+                    val dbInfo = dbSongMap[deviceSong.filePath]
 
-                // 判断是否需要更新
-                if (fullRescan || lastModifiedInDb == null || lastModifiedInDb != deviceSong.lastModified) {
+                    val needsUpdate =
+                        fullRescan ||
+                                dbInfo == null ||
+                                dbInfo.fileLastModified != deviceSong.lastModified
+
+                    if (needsUpdate) {
+                        val folderId = resolveFolderId(deviceSong.filePath)
+                        songsToUpsert.add(deviceSong to folderId)
+                    }
+                }
+                val deletedPaths = dbPaths - devicePaths
+
+                if (deletedPaths.isNotEmpty()) {
+                    val folderIdsOfDeletedSongs = dbSyncInfos
+                        .filter { it.filePath in deletedPaths }
+                        .map { it.folderId }
+
+                    impactedFolderIds.addAll(folderIdsOfDeletedSongs)
+                }
+                if (shortAudioPaths.isNotEmpty()) {
+                    shortAudioPaths.chunked(500).forEach {
+                        songDao.deleteByFilePaths(it)
+                    }
+                }
+
+                if (deletedPaths.isNotEmpty()) {
+                    deletedPaths.chunked(500).forEach {
+                        songDao.deleteByFilePaths(it)
+                    }
+                }
+                for ((deviceSong, folderId) in songsToUpsert) {
                     try {
-                        // 仅在确定需要更新时，才去读写单条完整的元数据记录
-                        readAndSaveSongMetadata(deviceSong, folderId = folderId)
+                        readAndSaveSongMetadata(deviceSong, folderId)
                     } catch (e: Exception) {
                         Log.e(TAG, "处理歌曲失败: ${deviceSong.filePath}", e)
                     }
                 }
-            }
-
-            // 处理删除逻辑
-            val deletedPaths = dbPaths - devicePaths
-            if (deletedPaths.isNotEmpty()) {
-                // 筛选受影响的 folderId
-                val folderIdsOfDeletedSongs = dbSyncInfos
-                    .filter { it.filePath in deletedPaths }
-                    .map { it.folderId }
-                impactedFolderIds.addAll(folderIdsOfDeletedSongs)
-
-                deletedPaths.chunked(500).forEach { chunk ->
-                    songDao.deleteByFilePaths(chunk)
+                impactedFolderIds.forEach { folderId ->
+                    folderDao.refreshSongCount(folderId)
                 }
+                folderDao.performPostScanCleanup()
             }
 
-            // 刷新计数
-            impactedFolderIds.forEach { folderId ->
-                folderDao.refreshSongCount(folderId)
-            }
-
-            folderDao.performPostScanCleanup()
             settingsRepository.saveLastScanTime(System.currentTimeMillis())
             Log.d(TAG, "同步完成。")
         }

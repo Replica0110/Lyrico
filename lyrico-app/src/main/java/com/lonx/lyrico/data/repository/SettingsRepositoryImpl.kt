@@ -197,7 +197,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
         val format = LyricFormat.valueOf(
             prefs[PreferencesKeys.LYRIC_FORMAT]
-                ?: LyricFormat.VERBATIM_LRC.displayName
+                ?: LyricFormat.VERBATIM_LRC.name
         )
 
         val roma = prefs[PreferencesKeys.ROMA_ENABLED] ?: true

@@ -16,17 +16,18 @@ class UpdateRepositoryImpl(
     private val okHttpClient: OkHttpClient
 ) : UpdateRepository {
 
-    private val GITHUB_API_URL =
-        "https://api.github.com/repos/Replica0110/Lyrico/releases/latest"
-
     private val TAG = "UpdateRepositoryImpl"
 
-    override suspend fun checkForUpdate(): UpdateCheckResult = withContext(Dispatchers.IO) {
+    override suspend fun checkForUpdate(
+        owner: String,
+        repo: String
+    ): UpdateCheckResult = withContext(Dispatchers.IO) {
         Log.d(TAG, "开始检查更新")
 
+        val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
         try {
             val request = Request.Builder()
-                .url(GITHUB_API_URL)
+                .url(url)
                 .header("Accept", "application/vnd.github+json")
                 .build()
 
@@ -42,7 +43,7 @@ class UpdateRepositoryImpl(
 
             val latestVersionName = json.getString("tag_name")
             val releaseNotes = json.optString("body", "")
-
+            val url = json.getString("html_url")
 
             Log.d(TAG, "最新版本: $latestVersionName 当前版本: ${BuildConfig.VERSION_NAME}")
 
@@ -56,7 +57,7 @@ class UpdateRepositoryImpl(
                     UpdateDTO(
                         versionName = latestVersionName,
                         releaseNotes = releaseNotes,
-                        url = "https://github.com/Replica0110/Lyrico/releases/latest"
+                        url = url
                     )
                 )
             } else {

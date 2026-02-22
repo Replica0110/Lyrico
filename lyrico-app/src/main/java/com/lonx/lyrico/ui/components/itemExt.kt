@@ -2,6 +2,7 @@ package com.lonx.lyrico.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ fun ItemExt(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     iconPainter: Painter? = null,
+    iconContent: (@Composable () -> Unit)? = null,
     iconPaddingValues: PaddingValues = PaddingValues(0.dp),
     iconColor: Color? = SaltTheme.colors.text,
     textColor: Color = SaltTheme.colors.text,
@@ -47,23 +49,36 @@ fun ItemExt(
             .fillMaxWidth()
             .heightIn(SaltTheme.dimens.item)
             .enabledAlpha(enabled)
-            .clickable(enabled = enabled) {
-                onClick()
-            }
+            .clickable(enabled = enabled) { onClick() }
             .innerPadding(vertical = false),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        iconPainter?.let {
-            Image(
-                modifier = Modifier
-                    .size(SaltTheme.dimens.itemIcon)
-                    .padding(iconPaddingValues),
-                painter = iconPainter,
-                contentDescription = null,
-                colorFilter = iconColor?.let { ColorFilter.tint(iconColor) }
-            )
-            Spacer(modifier = Modifier.width(SaltTheme.dimens.subPadding))
+        when {
+            iconContent != null -> {
+                Box(
+                    modifier = Modifier
+                        .size(SaltTheme.dimens.itemIcon)
+                        .padding(iconPaddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    iconContent()
+                }
+                Spacer(modifier = Modifier.width(SaltTheme.dimens.subPadding))
+            }
+
+            iconPainter != null -> {
+                Image(
+                    modifier = Modifier
+                        .size(SaltTheme.dimens.itemIcon)
+                        .padding(iconPaddingValues),
+                    painter = iconPainter,
+                    contentDescription = null,
+                    colorFilter = iconColor?.let { ColorFilter.tint(it) } // 可改成 null 保留彩色
+                )
+                Spacer(modifier = Modifier.width(SaltTheme.dimens.subPadding))
+            }
         }
+
         JustifiedRow(
             startContent = {
                 Column {
@@ -85,8 +100,7 @@ fun ItemExt(
                     }
                 }
             },
-            endContent = {
-            },
+            endContent = { },
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
@@ -94,6 +108,7 @@ fun ItemExt(
             verticalAlignment = Alignment.CenterVertically,
             spaceBetween = 0.dp
         )
+
         iconEnd?.let {
             Spacer(modifier = Modifier.width(SaltTheme.dimens.subPadding))
             iconEnd()

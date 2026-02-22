@@ -1,5 +1,7 @@
 package com.lonx.lyrico.utils
 
+import com.lonx.lyrico.App.Companion.OWNER_ID
+import com.lonx.lyrico.App.Companion.REPO_NAME
 import com.lonx.lyrico.data.dto.UpdateDTO
 import com.lonx.lyrico.data.model.UpdateCheckResult
 import com.lonx.lyrico.data.repository.UpdateRepository
@@ -44,7 +46,10 @@ class UpdateManagerImpl(
 
         appScope.launch {
             _state.update { it.copy(isChecking = true) }
-            when (val result = updateRepository.checkForUpdate()) {
+            when (val result = updateRepository.checkForUpdate(
+                owner = OWNER_ID,
+                repo = REPO_NAME
+            )) {
                 is UpdateCheckResult.NewVersion -> {
                     _state.update { it.copy(updateDTO = result.info) }
                 }

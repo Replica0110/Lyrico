@@ -1,11 +1,11 @@
 package com.lonx.lyrico.data.model
 
-import com.lonx.lyrico.data.dto.UpdateDTO
+import com.lonx.lyrico.data.dto.ReleaseInfo
 import java.io.IOException
 
 sealed class UpdateCheckResult {
     /** 成功：发现了新版本 */
-    data class NewVersion(val info: UpdateDTO) : UpdateCheckResult()
+    data class NewVersion(val info: ReleaseInfo) : UpdateCheckResult()
 
     /** 成功：当前已是最新版本 */
     object NoUpdateAvailable : UpdateCheckResult()

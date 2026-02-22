@@ -183,6 +183,7 @@ fun AboutScreen(
                             ItemExt(
                                 text = contributor.login,
                                 iconColor = null,
+                                sub = "贡献了 ${contributor.contributions} 个提交",
                                 iconContent = {
                                     AsyncImage(
                                         model = contributor.avatar_url,

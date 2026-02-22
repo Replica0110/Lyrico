@@ -109,17 +109,17 @@ open class MainActivity : ComponentActivity() {
                     LocalOverscrollFactory provides CupertinoOverscrollEffectFactory()
                 ) {
                     LyricoApp(externalUri = if (hasPermission) externalUri else null)
-                    if (updateState.updateDTO != null) {
+                    if (updateState.releaseInfo != null) {
                         UpdateDialog(
-                            versionName = updateState.updateDTO!!.versionName,
+                            versionName = updateState.releaseInfo!!.versionName,
                             onConfirm =  {
-                                openBrowser(this@MainActivity, updateState.updateDTO!!.url)
+                                openBrowser(this@MainActivity, updateState.releaseInfo!!.url)
                                 updateManager.resetUpdateState()
                             },
                             onDismissRequest = {
                                 updateManager.resetUpdateState()
                             },
-                            releaseNote = updateState.updateDTO!!.releaseNotes,
+                            releaseNote = updateState.releaseInfo!!.releaseNotes,
                         )
                     }
                     if (updateState.info != null) {

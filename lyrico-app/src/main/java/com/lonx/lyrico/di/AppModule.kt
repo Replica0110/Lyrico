@@ -143,7 +143,7 @@ val appModule = module {
     single { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
     // 工具类
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
-    single<UpdateRepository> { UpdateRepositoryImpl(get()) }
+    single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
     single<UpdateManager> { UpdateManagerImpl(get(), get()) }
     single { MusicScanner(androidContext()) }
     
@@ -161,7 +161,7 @@ val appModule = module {
     single<PlaybackRepository> { PlaybackRepositoryImpl() }
     single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get()) }
     single<BatchMatchHistoryRepository> { BatchMatchHistoryRepositoryImpl(get()) }
-    single<GhContributorRepository> { GhContributorRepositoryImpl(get()) }
+    single<GhContributorRepository> { GhContributorRepositoryImpl(get(), get()) }
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
     viewModel { SongListViewModel(get(), get(), get(),get(), get(), get(), get()) }

@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.repository
 
-import com.lonx.lyrico.data.model.GitHubContributor
+import com.lonx.lyrico.data.dto.ContributorInfo
 
 interface GhContributorRepository {
-    suspend fun getContributors(owner: String, repo: String): Result<List<GitHubContributor>>
+    suspend fun getContributors(owner: String, repo: String): Result<List<ContributorInfo>>
 }

@@ -1,9 +1,6 @@
-package com.lonx.lyrico.data.model
+package com.lonx.lyrico.data.dto
 
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class GitHubContributor(
+data class ContributorInfo(
     val id: Int,
     val login: String,
     val avatar_url: String,

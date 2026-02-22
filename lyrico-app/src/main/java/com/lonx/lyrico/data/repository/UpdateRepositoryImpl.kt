@@ -2,84 +2,92 @@ package com.lonx.lyrico.data.repository
 
 import android.util.Log
 import com.lonx.lyrico.BuildConfig
-import com.lonx.lyrico.data.dto.UpdateDTO
+import com.lonx.lyrico.data.dto.GitHubReleaseDTO
+import com.lonx.lyrico.data.dto.ReleaseInfo
 import com.lonx.lyrico.data.model.UpdateCheckResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.json.JSONObject
 import java.io.IOException
 import java.net.SocketTimeoutException
 
 class UpdateRepositoryImpl(
+    private val json: Json,
     private val okHttpClient: OkHttpClient
 ) : UpdateRepository {
 
     private val TAG = "UpdateRepositoryImpl"
 
+    @OptIn(ExperimentalSerializationApi::class)
     override suspend fun checkForUpdate(
         owner: String,
         repo: String
     ): UpdateCheckResult = withContext(Dispatchers.IO) {
+
         Log.d(TAG, "开始检查更新")
 
-        val url = "https://api.github.com/repos/$owner/$repo/releases/latest"
+        val requestUrl = "https://api.github.com/repos/$owner/$repo/releases/latest"
+
         try {
             val request = Request.Builder()
-                .url(url)
+                .url(requestUrl)
                 .header("Accept", "application/vnd.github+json")
+                .header("User-Agent", "Lyrico-App")
                 .build()
 
-            val response = okHttpClient.newCall(request).execute()
+            okHttpClient.newCall(request).execute().use { response ->
 
-            if (!response.isSuccessful) {
-                throw IOException("HTTP ${response.code}")
-            }
+                if (!response.isSuccessful) {
+                    throw IOException("HTTP ${response.code}")
+                }
 
-            val body = response.body.string()
-
-            val json = JSONObject(body)
-
-            val latestVersionName = json.getString("tag_name")
-            val releaseNotes = json.optString("body", "")
-            val url = json.getString("html_url")
-
-            Log.d(TAG, "最新版本: $latestVersionName 当前版本: ${BuildConfig.VERSION_NAME}")
-
-            val hasUpdate = isNewerVersion(
-                latestVersionName,
-                BuildConfig.VERSION_NAME
-            )
-
-            return@withContext if (hasUpdate) {
-                UpdateCheckResult.NewVersion(
-                    UpdateDTO(
-                        versionName = latestVersionName,
-                        releaseNotes = releaseNotes,
-                        url = url
-                    )
+                val release = json.decodeFromStream<GitHubReleaseDTO>(
+                    response.body.byteStream()
                 )
-            } else {
-                UpdateCheckResult.NoUpdateAvailable
-            }
-        } catch (e: Exception) {
-            when (e) {
-                is SocketTimeoutException -> {
-                    Log.e(TAG, "连接超时", e)
-                    return@withContext UpdateCheckResult.TimeoutError
-                }
 
-                is IOException -> {
-                    Log.e(TAG, "更新检查时网络错误", e)
-                    return@withContext UpdateCheckResult.NetworkError(e)
-                }
+                val latestVersionName = release.tag_name
+                val releaseNotes = release.body.orEmpty()
+                val releaseUrl = release.html_url
 
-                else -> {
-                    Log.e(TAG, "更新检查时发生意外错误", e)
-                    throw e
+                Log.d(
+                    TAG,
+                    "最新版本: $latestVersionName 当前版本: ${BuildConfig.VERSION_NAME}"
+                )
+
+                val hasUpdate = isNewerVersion(
+                    latestVersionName,
+                    BuildConfig.VERSION_NAME
+                )
+
+                if (hasUpdate) {
+                    UpdateCheckResult.NewVersion(
+                        ReleaseInfo(
+                            versionName = latestVersionName,
+                            releaseNotes = releaseNotes,
+                            url = releaseUrl
+                        )
+                    )
+                } else {
+                    UpdateCheckResult.NoUpdateAvailable
                 }
             }
+
+        } catch (e: SocketTimeoutException) {
+            Log.e(TAG, "连接超时", e)
+            UpdateCheckResult.TimeoutError
+
+        } catch (e: IOException) {
+            Log.e(TAG, "更新检查网络错误", e)
+            UpdateCheckResult.NetworkError(e)
+
+        } catch (e: SerializationException) {
+            Log.e(TAG, "JSON 解析错误", e)
+            UpdateCheckResult.NetworkError(IOException("数据解析失败"))
         }
     }
 

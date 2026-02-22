@@ -2,7 +2,7 @@ package com.lonx.lyrico.utils
 
 import com.lonx.lyrico.App.Companion.OWNER_ID
 import com.lonx.lyrico.App.Companion.REPO_NAME
-import com.lonx.lyrico.data.dto.UpdateDTO
+import com.lonx.lyrico.data.dto.ReleaseInfo
 import com.lonx.lyrico.data.model.UpdateCheckResult
 import com.lonx.lyrico.data.repository.UpdateRepository
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 
 data class UpdateState(
     val isChecking: Boolean = false,
-    val updateDTO: UpdateDTO? = null,
+    val releaseInfo: ReleaseInfo? = null,
     val info: String? = null,
 )
 data class UpdateEffect(val message: String)
@@ -51,7 +51,7 @@ class UpdateManagerImpl(
                 repo = REPO_NAME
             )) {
                 is UpdateCheckResult.NewVersion -> {
-                    _state.update { it.copy(updateDTO = result.info) }
+                    _state.update { it.copy(releaseInfo = result.info) }
                 }
                 is UpdateCheckResult.NoUpdateAvailable -> {
                     _state.update { it.copy(info = "已经是最新版本") }
@@ -79,14 +79,14 @@ class UpdateManagerImpl(
     }
     override fun dismissUpdateDialog() {
         _state.update { it.copy(
-            updateDTO = null
+            releaseInfo = null
         ) }
     }
     override fun resetUpdateState() {
         _state.update {
             it.copy(
                 isChecking = false,
-                updateDTO = null,
+                releaseInfo = null,
                 info = null
             )
         }

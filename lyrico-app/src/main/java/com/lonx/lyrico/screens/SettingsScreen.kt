@@ -5,14 +5,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.utils.formatSize
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.moriafly.salt.ui.Item
@@ -26,6 +31,7 @@ import com.moriafly.salt.ui.ItemTip
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.moriafly.salt.ui.dialog.YesNoDialog
 import com.moriafly.salt.ui.rememberScrollState
 import com.moriafly.salt.ui.verticalScroll
 import com.ramcosta.composedestinations.annotation.Destination
@@ -62,10 +68,42 @@ fun SettingsScreen(
     val searchSourceOrder = settingsUiState.searchSourceOrder
     val searchPageSize = settingsUiState.searchPageSize
 
+    val showClearCacheDialog = remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        settingsViewModel.refreshCache(context)
+    }
+    val cacheContent = remember(settingsUiState.categorizedCacheSize) {
+        if (settingsUiState.categorizedCacheSize.isEmpty()) {
+            "正在计算缓存大小..."
+        } else {
+            val details = settingsUiState.categorizedCacheSize.map { (name, size) ->
+                "$name: ${size.formatSize()}"
+            }.joinToString(separator = "\n")
+
+            "确定要清理所有缓存吗？\n\n$details\n\n总计: ${settingsUiState.totalCacheSize.formatSize()}"
+        }
+    }
     BasicScreenBox(
         title = "设置",
         onBack = { navigator.popBackStack() }
     ) {
+        if (showClearCacheDialog.value) {
+            YesNoDialog(
+                title = "清理缓存",
+                onDismissRequest = {
+                    showClearCacheDialog.value = false
+                },
+                onConfirm = {
+                    showClearCacheDialog.value = false
+                    settingsViewModel.clearCache(context)
+                },
+                content = cacheContent,
+                cancelText = "取消",
+                confirmText = "确认",
+            )
+         }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -206,6 +244,13 @@ fun SettingsScreen(
                     sub = "查看批量匹配历史日志",
                     onClick = {
                         navigator.navigate(BatchMatchHistoryDestination())
+                    }
+                )
+                Item(
+                    text = "清理缓存",
+                    sub = "缓存大小: ${settingsUiState.totalCacheSize.formatSize()}",
+                    onClick = {
+                        showClearCacheDialog.value = true
                     }
                 )
                 Item(

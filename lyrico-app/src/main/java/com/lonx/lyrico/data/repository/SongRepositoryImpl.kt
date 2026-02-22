@@ -1,7 +1,12 @@
 package com.lonx.lyrico.data.repository
 
+import android.app.RecoverableSecurityException
+import android.content.ContentUris
 import android.content.Context
+import android.net.Uri
+import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.net.toUri
@@ -43,6 +48,49 @@ class SongRepositoryImpl(
     private companion object {
         const val TAG = "SongRepository"
     }
+
+    override suspend fun deleteSong(song: SongEntity) {
+        withContext(Dispatchers.IO) {
+            try {
+                val contentResolver = context.contentResolver
+
+                val uri = ContentUris.withAppendedId(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    song.mediaId
+                )
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    try {
+                        val rowsDeleted = contentResolver.delete(uri, null, null)
+                        if (rowsDeleted == 0) {
+                            val pendingIntent = MediaStore.createDeleteRequest(contentResolver, listOf(uri))
+                            Log.w(TAG, "需要用户确认删除: $uri")
+                        }
+                    } catch (e: RecoverableSecurityException) {
+                        val pendingIntent = MediaStore.createDeleteRequest(contentResolver, listOf(uri))
+                        Log.w(TAG, "RecoverableSecurityException, 需要用户确认: $uri")
+                    } catch (e: SecurityException) {
+                        Log.e(TAG, "权限不足，无法删除: $uri", e)
+                    }
+                } else {
+                    val rowsDeleted = contentResolver.delete(uri, null, null)
+                    if (rowsDeleted == 0) {
+                        val file = File(song.filePath)
+                        if (file.exists()) {
+                            file.delete()
+                        }
+                    }
+                }
+
+                songDao.deleteByFilePaths(listOf(song.filePath))
+                Log.d(TAG, "已删除歌曲: ${song.fileName}")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "删除歌曲失败: ${song.fileName}", e)
+            }
+        }
+    }
+
 
     override suspend fun getSongByFilePath(filePath: String): SongEntity? {
         return songDao.getSongByPath(filePath)

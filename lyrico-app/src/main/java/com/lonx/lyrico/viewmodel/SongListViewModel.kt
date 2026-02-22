@@ -1,7 +1,10 @@
 package com.lonx.lyrico.viewmodel
 
+import android.app.AlertDialog
 import android.app.Application
+import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.Parcelable
@@ -67,6 +70,7 @@ data class SongListUiState(
     val lastScanTime: Long = 0,
     val showBatchConfigDialog: Boolean = false, // Add this
     val isBatchMatching: Boolean = false,
+    val showDeleteDialog: Boolean = false,
     val batchProgress: Pair<Int, Int>? = null, // (当前第几首, 总共几首)
     val successCount: Int = 0,
     val failureCount: Int = 0,
@@ -138,7 +142,29 @@ class SongListViewModel(
     fun showMenu(song: SongEntity) {
         _sheetState.value = SheetUiState(menuSong = song)
     }
+    fun showDeleteDialog() {
+        _uiState.update { it.copy(showDeleteDialog = true) }
+    }
+    fun dismissDeleteDialog() {
+        _uiState.update { it.copy(showDeleteDialog = false) }
+    }
+    fun shareSong(context: Context, song: SongEntity) {
+        val uri = ContentUris.withAppendedId(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            song.mediaId
+        )
 
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "audio/*"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TITLE, song.title ?: song.fileName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        context.startActivity(
+            Intent.createChooser(intent, "分享音频")
+        )
+    }
     fun showDetail(song: SongEntity) {
         _sheetState.update {
             it.copy(detailSong = song)
@@ -184,6 +210,12 @@ class SongListViewModel(
     fun play(context: Context, song: SongEntity) {
         val uri = song.getUri
         playbackRepository.play(context, uri)
+    }
+    fun delete(song: SongEntity) {
+        viewModelScope.launch {
+            dismissAll()
+            songRepository.deleteSong(song)
+        }
     }
     fun closeBatchMatchConfig() {
         _uiState.update { it.copy(showBatchConfigDialog = false) }

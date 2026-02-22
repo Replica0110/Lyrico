@@ -3,6 +3,11 @@ package com.lonx.lyrico.screens
 import android.annotation.SuppressLint
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -11,6 +16,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -33,12 +39,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.room.Delete
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
+import com.lonx.lyrico.ui.components.ItemExt
 import com.lonx.lyrico.ui.dialog.BatchMatchConfigDialog
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.coil.CoverRequest
@@ -58,6 +67,7 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.dialog.BasicDialog
+import com.moriafly.salt.ui.dialog.YesNoDialog
 import com.moriafly.salt.ui.gestures.cupertino.rememberCupertinoOverscrollEffect
 import com.moriafly.salt.ui.icons.Check
 import com.moriafly.salt.ui.icons.SaltIcons
@@ -355,6 +365,12 @@ fun SongListScreen(
                     },
                     showInfo = {
                         viewModel.showDetail(song)
+                    },
+                    onDelete = {
+                        viewModel.showDeleteDialog()
+                    },
+                    onShare = {
+                        viewModel.shareSong(context, song)
                     }
                 )
             }
@@ -374,6 +390,20 @@ fun SongListScreen(
 
 
 
+        if (uiState.showDeleteDialog && sheetUiState.menuSong != null) {
+            YesNoDialog(
+                onDismissRequest = {viewModel.dismissDeleteDialog()},
+                onConfirm = {
+                    viewModel.dismissDeleteDialog()
+                    viewModel.dismissAll()
+                    viewModel.delete(sheetUiState.menuSong!!)
+                },
+                title = "是否删除文件？",
+                content = "确认删除文件「${sheetUiState.menuSong!!.fileName}」吗？\n此操作不可撤销！",
+                cancelText = "取消",
+                confirmText = "确认"
+            )
+        }
         // 批量匹配配置对话框
         if (uiState.showBatchConfigDialog) {
             BatchMatchConfigDialog(
@@ -419,7 +449,7 @@ fun BatchMatchingDialog(
 ) {
     BasicDialog(
         onDismissRequest = { if (!isMatching) onClose() },
-        properties = androidx.compose.ui.window.DialogProperties(
+        properties = DialogProperties(
             dismissOnBackPress = false,
             dismissOnClickOutside = false
         ),
@@ -559,10 +589,10 @@ fun AlphabetSideBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End
     ) {
-        androidx.compose.animation.AnimatedVisibility(
+        AnimatedVisibility(
             visible = currentSection != null,
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
-            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut()
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut()
         ) {
             Box(
                 modifier = Modifier
@@ -570,7 +600,7 @@ fun AlphabetSideBar(
                     .size(50.dp)
                     .background(
                         color = SaltTheme.colors.highlight,
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -815,7 +845,9 @@ fun SongListItem(
 fun SongMenuBottomSheetContent(
     song: SongEntity,
     onPlay: () -> Unit = {},
-    showInfo: () -> Unit = {}
+    showInfo: () -> Unit = {},
+    onDelete: () -> Unit = {},
+    onShare: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -834,6 +866,22 @@ fun SongMenuBottomSheetContent(
             Item(
                 onClick = { showInfo() },
                 text = "歌曲信息",
+                arrowType = ItemArrowType.None
+            )
+            Item(
+                onClick = {
+                    onShare()
+                },
+                text = "分享歌曲",
+                arrowType = ItemArrowType.None
+            )
+            Item(
+                onClick = {
+                    onDelete()
+                },
+                text = "删除歌曲",
+                sub = "此操作会删除文件，且不可撤销",
+                textColor = Color.Red,
                 arrowType = ItemArrowType.None
             )
         }

@@ -1,5 +1,6 @@
 package com.lonx.lyrico.data.repository
 
+import android.net.Uri
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.viewmodel.SortBy
@@ -11,6 +12,14 @@ import kotlinx.coroutines.flow.Flow
  * 定义了应用程序中歌曲数据的核心操作，包括数据库同步、元数据读写、搜索等。
  */
 interface SongRepository {
+
+
+    /**
+     * 从文件系统中删除歌曲文件
+     *
+     * @param SongEntity 要删除的歌曲
+     */
+    suspend fun deleteSong(song: SongEntity)
 
     suspend fun getSongByFilePath(filePath: String): SongEntity?
     /**

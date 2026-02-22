@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import kotlinx.coroutines.launch
 import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -383,7 +384,7 @@ fun SearchResultItem(
      */
     LaunchedEffect(song.picUrl) {
         if (song.picUrl.isNotBlank()) {
-            val imageLoader = ImageLoader(context)
+            val imageLoader = SingletonImageLoader.get(context)
 
             val request = ImageRequest.Builder(context)
                 .data(song.picUrl)

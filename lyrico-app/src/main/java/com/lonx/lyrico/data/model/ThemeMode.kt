@@ -1,13 +1,13 @@
 package com.lonx.lyrico.data.model
 
-enum class ThemeMode(val displayName: String) {
-    AUTO("跟随系统"),
-    LIGHT("浅色模式"),
-    DARK("深色模式");
+import androidx.annotation.StringRes
+import com.lonx.lyrico.R
 
-    companion object {
-        fun fromDisplayName(name: String): ThemeMode {
-            return entries.firstOrNull { it.displayName == name } ?: AUTO
-        }
-    }
+enum class ThemeMode(
+    @field:StringRes val labelRes: Int
+) {
+    AUTO(R.string.theme_mode_auto),
+    LIGHT(R.string.theme_mode_light),
+    DARK(R.string.theme_mode_dark)
+
 }

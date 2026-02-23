@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ne_source_name">网易云音乐</string>
+    <string name="kg_source_name">酷狗音乐</string>
+    <string name="qm_source_name">QQ音乐</string>
+</resources>

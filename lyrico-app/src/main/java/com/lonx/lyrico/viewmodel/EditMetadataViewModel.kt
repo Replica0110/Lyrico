@@ -2,7 +2,6 @@ package com.lonx.lyrico.viewmodel
 
 import android.app.Application
 import android.content.Context
-import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
@@ -91,14 +90,6 @@ class EditMetadataViewModel(
     }
 
 
-    fun onUpdateEditingTagData(audioTagData: AudioTagData) {
-        _uiState.update {
-            it.copy(
-                editingTagData = audioTagData,
-                isEditing = true
-            )
-        }
-    }
     fun updateTag(block: AudioTagData.() -> AudioTagData) {
         _uiState.update { state ->
             val current = state.editingTagData ?: return@update state

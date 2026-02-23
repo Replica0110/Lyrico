@@ -1,3 +1,252 @@
 <resources>
-    <string name="app_name">Lyrico</string>
+    <string name="app_name" translatable="false">Lyrico</string>
+    <string name="search_settings">Search Settings</string>
+    <string name="search_source_priority">Search Source Priority</string>
+    <string name="search_source_priority_tip">Long press and drag to reorder search source priority. This affects the source order used in batch matching and the default source for single searches.</string>
+
+
+    <!-- Search -->
+    <string name="search_lyrics_placeholder">Search lyrics…</string>
+    <string name="search_failed">Search failed: %1$s</string>
+    <string name="search_no_results">No results found</string>
+    <string name="fetch_lyrics_failed">Failed to fetch lyrics. Please try again.</string>
+    <string name="apply_action">Apply</string>
+    <string name="preview_action">Preview</string>
+    <string name="cd_no_results">No Result</string>
+    <string name="search_limit">Search limit</string>
+    <string name="search_limit_tip">Limits results per source. Higher values use more data and cache more images.</string>
+    <string name="local_search_hint">Search title / artist / album</string>
+
+    <!-- Folder -->
+    <string name="no_songs_in_folder">No songs in this folder</string>
+    <!-- General -->
+    <string name="settings_title">Settings</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+
+    <!-- Cache -->
+    <string name="clear_cache">Clear Cache</string>
+    <string name="calculating_cache">Calculating cache size…</string>
+    <string name="clear_cache_confirm">Are you sure you want to clear all cache?</string>
+    <string name="cache_item">%1$s: %2$s</string>
+    <string name="cache_total">Total: %1$s</string>
+    <string name="cache_size_label">Cache size: %1$s</string>
+
+    <!-- Sections -->
+    <string name="section_appearance">Appearance</string>
+    <string name="section_scan">Scan Settings</string>
+    <string name="section_search">Search</string>
+    <string name="section_lyrics">Lyrics</string>
+    <string name="section_metadata">Metadata</string>
+    <string name="section_other">Others</string>
+
+    <!-- Appearance -->
+    <string name="theme_mode">Theme Mode</string>
+
+    <!-- Scan -->
+    <string name="folder_manager">Folder Manager</string>
+    <string name="folder_manage_hint">Manage scan paths</string>
+    <string name="folder_found">%1$d folders found</string>
+    <string name="folder_ignored">, %1$d ignored</string>
+    <string name="ignore_short_audio">Ignore audio shorter than 60 seconds</string>
+
+
+    <!-- Lyrics -->
+    <string name="lyric_mode">Lyric Mode</string>
+    <string name="roma">Romaji</string>
+    <string name="roma_hint">Include romaji in lyric</string>
+    <string name="translation">Translation</string>
+    <string name="translation_hint">Include translations in lyric</string>
+
+    <!-- Metadata -->
+    <string name="artist_separator">Artist Separator</string>
+    <string name="artist_separator_hint">Used when multiple artists exist</string>
+
+    <!-- Other -->
+    <string name="batch_match_history">Batch Match History</string>
+    <string name="batch_match_history_hint">View batch match logs</string>
+    <string name="about">About</string>
+
+    <string name="cache_category_image">Image Cache</string>
+    <string name="cache_category_network">Network Cache</string>
+    <string name="cache_category_external">External Cache</string>
+    <string name="cache_category_other">Other Cache</string>
+
+    <string name="load_failed">Loading failed</string>
+    <string name="cd_drag_to_reorder">Drag to reorder</string>
+
+    <string name="about_title">About</string>
+
+    <!-- App Info -->
+    <string name="about_app_info">App Info</string>
+    <string name="about_app_version">App Version</string>
+    <string name="about_project_url">GitHub</string>
+    <string name="about_project_url_sub">View source code on GitHub</string>
+    <string name="about_telegram">Telegram</string>
+
+    <string name="about_auto_check_update">Auto-check for updates</string>
+    <string name="about_auto_check_update_sub">Check for updates when the app starts</string>
+
+    <string name="about_check_update">Check for updates</string>
+    <string name="about_check_update_default">Check for updates now</string>
+
+    <!-- Contributors -->
+    <string name="about_contributors">Contributors</string>
+    <string name="about_no_contributors">No contributors yet</string>
+
+    <string name="about_contribution_count">%1$d commits</string>
+
+    <!-- Update status -->
+    <string name="update_already_latest">You are already on the latest version</string>
+
+    <string name="update_api_error">API error: %1$d</string>
+    <string name="update_network_error">Network error. Please check your connection</string>
+    <string name="update_parse_error">Failed to parse update info</string>
+    <string name="update_timeout">Update check timed out</string>
+
+    <!-- Lyric Format -->
+    <string name="lyric_format_plain">Line-by-line lyrics</string>
+    <string name="lyric_format_verbatim">Word-by-word lyrics</string>
+    <string name="lyric_format_enhanced">Enhanced word-by-word lyrics</string>
+
+    <!-- Theme Mode -->
+    <string name="theme_mode_auto">Follow system</string>
+    <string name="theme_mode_light">Light mode</string>
+    <string name="theme_mode_dark">Dark mode</string>
+
+    <!-- Page -->
+    <string name="batch_match_history_title">Batch match history</string>
+    <string name="batch_match_history_empty">No history yet</string>
+
+    <!-- Delete dialog -->
+    <string name="batch_match_delete_title">Delete this record?</string>
+    <string name="batch_match_delete_message">This action cannot be undone</string>
+
+    <!-- Stats -->
+    <string name="batch_match_stat_success">Success</string>
+    <string name="batch_match_stat_failure">Failed</string>
+    <string name="batch_match_stat_skipped">Skipped</string>
+    <string name="batch_match_stat_duration">Duration</string>
+    <string name="batch_match_stat_format">
+    Success: %1$d | Failed: %2$d | Skipped: %3$d
+    </string>
+
+    <string name="batch_match_duration_format">
+    Duration: %1$.1fs
+    </string>
+    <!-- Accessibility -->
+    <string name="common_delete">Delete</string>
+
+    <!-- Top Bar -->
+    <string name="song_list_title">Songs (%d)</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_sort">Sort</string>
+    <string name="cd_info">Info</string>
+
+    <!-- Selection Mode -->
+    <string name="selection_mode_selected_count">Selected %d items</string>
+    <string name="action_select_all">Select All</string>
+    <string name="action_match_tags">Match Tags</string>
+
+    <!-- Song List Item -->
+    <string name="unknown_artist">Unknown Artist</string>
+
+    <!-- Song Menu Bottom Sheet -->
+    <string name="menu_play_music">Play Music</string>
+    <string name="menu_play_music_sub">Play audio using system player</string>
+    <string name="menu_song_info">Song Info</string>
+    <string name="menu_share_song">Share Song</string>
+    <string name="menu_delete_song">Delete Song</string>
+    <string name="menu_delete_song_sub">This will delete the file and cannot be undone</string>
+    <string name="share_chooser_title">Share Audio</string>
+
+    <!-- Delete Dialog -->
+    <string name="dialog_delete_file_title">Delete file?</string>
+    <string name="dialog_delete_file_content">Are you sure you want to delete \"%s\"?\nThis action cannot be undone!</string>
+
+    <!-- Batch Matching Dialog -->
+    <string name="batch_matching_title">Batch Match</string>
+    <string name="batch_matching_progress">Progress: %1$d / %2$d</string>
+    <string name="batch_matching_current">Matching: %s</string>
+    <string name="batch_matching_success">Success: %d</string>
+    <string name="batch_matching_skipped">Skipped: %d</string>
+    <string name="batch_matching_failure">Failure: %d</string>
+    <string name="batch_matching_total_time">Total time: %.2f s</string>
+    <string name="action_abort">Abort</string>
+    <string name="action_close">Close</string>
+    <string name="action_view_results">View Results</string>
+    <string name="no_record">No Record</string>
+    <string name="batch_match_history_detail">Record Detail</string>
+
+    <!-- Song Details -->
+    <string name="label_title">Title</string>
+    <string name="label_artists">Artists</string>
+    <string name="label_album">Album</string>
+    <string name="label_date">Year/Date</string>
+    <string name="label_genre">Genre</string>
+    <string name="label_track_number">Track Number</string>
+    <string name="label_duration">Duration</string>
+    <string name="label_bitrate">Bitrate</string>
+    <string name="label_sample_rate">Sample Rate</string>
+    <string name="label_channels">Channels</string>
+    <string name="label_date_added">Date Added</string>
+    <string name="label_date_modified">Date Modified</string>
+    <string name="label_file_path">File Path</string>
+
+    <!-- Screen Titles -->
+    <string name="folder_manager_title">Folder Management</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_remove_folder_title">Remove this folder?</string>
+    <string name="dialog_remove_folder_content_tip">This operation will not delete local files.\nSongs in this folder will be hidden from the music library and will reappear after re-scanning.</string>
+    <!-- Folder List Status -->
+    <string name="folder_tip_disabled_logic">Songs in disabled folders and their subdirectories will not be shown in the library.</string>
+    <string name="section_folder_discovered">Discovered Folders</string>
+    <string name="folder_empty_state_tip">No folder data yet. Complete the first scan to manage them.</string>
+
+    <!-- Folder Item Info -->
+    <string name="folder_song_count_format">Songs: %d</string>
+    <string name="folder_status_ignored">(Ignored)</string>
+    <string name="folder_source_manual">Manually Added</string>
+    <string name="folder_source_auto">Auto Discovered</string>
+
+    <!-- Folder Action Sheet -->
+    <string name="folder_sheet_path_prefix">Path: %s</string>
+    <string name="folder_action_enable">Enable this folder</string>
+    <string name="folder_action_enable_sub">When disabled, songs in this folder will be hidden from the library.</string>
+    <string name="folder_action_remove">Remove Record</string>
+    <string name="folder_action_remove_sub">Remove this folder record from the database; physical files will not be deleted.</string>
+
+    <!-- General Actions -->
+    <string name="action_save">Save</string>
+    <string name="action_undo_changes">Undo changes</string>
+    <string name="action_back">Back</string>
+    <string name="action_search">Search</string>
+
+    <!-- Snackbar Messages -->
+    <string name="msg_save_success">Save successful</string>
+    <string name="msg_save_failed">Save failed</string>
+
+    <!-- Metadata Labels -->
+    <string name="edit_metadata_default_title">Edit Metadata</string>
+    <string name="label_album_artist">Album Artist</string>
+    <string name="label_disc_number">Disc Number</string>
+    <string name="label_composer">Composer</string>
+    <string name="label_lyricist">Lyricist</string>
+    <string name="label_comment">Comment</string>
+    <string name="label_lyrics">Lyrics</string>
+
+    <!-- Cover Editor -->
+    <string name="status_modified">Modified</string>
+    <string name="cd_cover">Cover Art</string>
+    <string name="cd_play">Play</string>
+    <!-- Song Menu -->
+    <string name="menu_song_tip_format">%1$s - %2$s</string>
+    <string name="menu_action_play">Play Music</string>
+    <string name="menu_action_play_sub">Play audio using system player</string>
+    <string name="menu_action_info">Song Info</string>
+    <string name="menu_action_share">Share Song</string>
+    <string name="menu_action_delete">Delete Song</string>
+    <string name="menu_action_delete_sub">This will delete the file and cannot be undone</string>
 </resources>

@@ -158,7 +158,7 @@ class SearchViewModel(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            _uiState.update { it.copy(searchError = "搜索失败: ${e.message}", isSearching = false) }
+            _uiState.update { it.copy(searchError = e.message, isSearching = false) }
         }
     }
 

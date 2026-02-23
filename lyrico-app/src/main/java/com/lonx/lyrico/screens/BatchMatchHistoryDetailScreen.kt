@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.viewmodel.BatchMatchHistoryViewModel
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.RoundedColumn
@@ -26,7 +27,8 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.BatchMatchStatus
+import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.BatchMatchResult
 import com.moriafly.salt.ui.ItemTip
 import com.moriafly.salt.ui.RoundedColumnType
 import com.moriafly.salt.ui.SaltTheme
@@ -47,7 +49,7 @@ fun BatchMatchHistoryDetailScreen(
     }
 
     BasicScreenBox(
-        title = "记录详情",
+        title = stringResource(R.string.batch_match_history_detail),
         onBack = { navigator.popBackStack() }
     ) {
 
@@ -60,7 +62,7 @@ fun BatchMatchHistoryDetailScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(BatchMatchStatus.entries) { status ->
+                items(BatchMatchResult.entries) { status ->
 
                     val isSelected = status == uiState.selectedTab
 
@@ -69,7 +71,7 @@ fun BatchMatchHistoryDetailScreen(
                         onClick = { viewModel.onTabSelected(status) },
                         label = {
                             com.moriafly.salt.ui.Text(
-                                text = status.displayName,
+                                text = stringResource(status.labelRes),
                                 fontWeight = if (isSelected)
                                     FontWeight.Bold
                                 else
@@ -91,14 +93,14 @@ fun BatchMatchHistoryDetailScreen(
                 item {
                     RoundedColumn {
                         if (uiState.records.isEmpty()) {
-                            ItemTip(text = "无项")
+                            ItemTip(text = stringResource(R.string.no_record))
                         }
                     }
                 }
 
                 items(
                     items = uiState.records,
-                    key = { it.id }   // 建议加 key
+                    key = { it.id }
                 ) { record ->
 
                     RoundedColumn(

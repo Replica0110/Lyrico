@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -91,13 +92,22 @@ open class MainActivity : ComponentActivity() {
             )
             val updateManager: UpdateManager = koinInject()
             val updateState by updateManager.state.collectAsState()
+            val context = this
             LyricoTheme(themeMode = themeMode) {
                 val isDarkTheme = when (themeMode) {
                     ThemeMode.AUTO -> isSystemInDarkTheme()
                     ThemeMode.LIGHT -> false
                     ThemeMode.DARK -> true
                 }
-
+                LaunchedEffect(Unit) {
+                    updateManager.effect.collect { effect ->
+                        val message = context.getString(
+                            effect.messageRes,
+                            *effect.formatArgs.toTypedArray()
+                        )
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
                 SideEffect {
                     WindowUtil.setStatusBarForegroundColor(
                         window,
@@ -121,9 +131,6 @@ open class MainActivity : ComponentActivity() {
                             },
                             releaseNote = updateState.releaseInfo!!.releaseNotes,
                         )
-                    }
-                    if (updateState.info != null) {
-                        Toast.makeText(this, updateState.info, Toast.LENGTH_SHORT).show()
                     }
                 }
             }

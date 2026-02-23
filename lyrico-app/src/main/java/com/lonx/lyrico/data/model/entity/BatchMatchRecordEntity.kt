@@ -5,7 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.lonx.lyrico.data.model.BatchMatchHistory
-import com.lonx.lyrico.data.model.BatchMatchStatus
+import com.lonx.lyrico.data.model.BatchMatchResult
 
 @Entity(
     tableName = "batch_match_records",
@@ -24,5 +24,5 @@ data class BatchMatchRecordEntity(
     val id: Long = 0,
     val historyId: Long,
     val filePath: String,
-    val status: BatchMatchStatus
+    val status: BatchMatchResult
 )

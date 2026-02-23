@@ -1,7 +1,12 @@
 package com.lonx.lyrico.data.model
 
-enum class LyricFormat(val displayName: String) {
-    PLAIN_LRC("逐行歌词"),
-    VERBATIM_LRC("逐字歌词"),
-    ENHANCED_LRC("增强型逐字歌词")
+import androidx.annotation.StringRes
+import com.lonx.lyrico.R
+
+enum class LyricFormat(
+    @field:StringRes val labelRes: Int
+) {
+    PLAIN_LRC(R.string.lyric_format_plain),
+    VERBATIM_LRC(R.string.lyric_format_verbatim),
+    ENHANCED_LRC(R.string.lyric_format_enhanced)
 }

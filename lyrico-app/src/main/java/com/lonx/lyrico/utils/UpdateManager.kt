@@ -1,7 +1,9 @@
 package com.lonx.lyrico.utils
 
+import androidx.annotation.StringRes
 import com.lonx.lyrico.App.Companion.OWNER_ID
 import com.lonx.lyrico.App.Companion.REPO_NAME
+import com.lonx.lyrico.R
 import com.lonx.lyrico.data.dto.ReleaseInfo
 import com.lonx.lyrico.data.model.UpdateCheckResult
 import com.lonx.lyrico.data.repository.UpdateRepository
@@ -18,10 +20,12 @@ import kotlinx.coroutines.launch
 
 data class UpdateState(
     val isChecking: Boolean = false,
-    val releaseInfo: ReleaseInfo? = null,
-    val info: String? = null,
+    val releaseInfo: ReleaseInfo? = null
 )
-data class UpdateEffect(val message: String)
+data class UpdateEffect(
+    @field:StringRes val messageRes: Int,
+    val formatArgs: List<Any> = emptyList()
+)
 
 interface UpdateManager {
     val state: StateFlow<UpdateState>
@@ -54,24 +58,19 @@ class UpdateManagerImpl(
                     _state.update { it.copy(releaseInfo = result.info) }
                 }
                 is UpdateCheckResult.NoUpdateAvailable -> {
-                    _state.update { it.copy(info = "已经是最新版本") }
-                    _effect.emit(UpdateEffect("已经是最新版本"))
+                    _effect.emit(UpdateEffect(R.string.update_already_latest))
                 }
                 is UpdateCheckResult.ApiError -> {
-                    _state.update { it.copy(info = "API错误: ${result.code}") }
-                    _effect.emit(UpdateEffect("API错误: ${result.code}"))
+                    _effect.emit(UpdateEffect(R.string.update_api_error))
                 }
                 is UpdateCheckResult.NetworkError -> {
-                    _state.update { it.copy(info = "网络错误，请检查连接") }
-                    _effect.emit(UpdateEffect("网络错误，请检查连接"))
+                    _effect.emit(UpdateEffect(R.string.update_network_error))
                 }
                 UpdateCheckResult.ParsingError -> {
-                    _state.update { it.copy(info = "解析更新信息失败") }
-                    _effect.emit(UpdateEffect("解析更新信息失败"))
+                    _effect.emit(UpdateEffect(R.string.update_parse_error))
                 }
                 UpdateCheckResult.TimeoutError -> {
-                    _state.update { it.copy(info = "检查更新超时") }
-                    _effect.emit(UpdateEffect("检查更新超时"))
+                    _effect.emit(UpdateEffect(R.string.update_timeout))
                 }
             }
             _state.update { it.copy(isChecking = false) }
@@ -86,8 +85,7 @@ class UpdateManagerImpl(
         _state.update {
             it.copy(
                 isChecking = false,
-                releaseInfo = null,
-                info = null
+                releaseInfo = null
             )
         }
     }

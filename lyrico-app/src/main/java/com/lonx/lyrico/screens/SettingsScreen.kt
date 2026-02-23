@@ -1,12 +1,12 @@
 package com.lonx.lyrico.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -14,6 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.ThemeMode
@@ -26,7 +28,6 @@ import com.moriafly.salt.ui.ItemDropdown
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemSlider
 import com.moriafly.salt.ui.ItemSwitcher
-import com.moriafly.salt.ui.ItemText
 import com.moriafly.salt.ui.ItemTip
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -44,6 +45,7 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(UnstableSaltUiApi::class)
 @Composable
 @Destination<RootGraph>(route = "settings")
@@ -74,24 +76,47 @@ fun SettingsScreen(
     LaunchedEffect(Unit) {
         settingsViewModel.refreshCache(context)
     }
-    val cacheContent = remember(settingsUiState.categorizedCacheSize) {
-        if (settingsUiState.categorizedCacheSize.isEmpty()) {
-            "正在计算缓存大小..."
-        } else {
-            val details = settingsUiState.categorizedCacheSize.map { (name, size) ->
-                "$name: ${size.formatSize()}"
-            }.joinToString(separator = "\n")
+    val calculatingText = stringResource(R.string.calculating_cache)
+    val confirmText = stringResource(R.string.clear_cache_confirm)
 
-            "确定要清理所有缓存吗？\n\n$details\n\n总计: ${settingsUiState.totalCacheSize.formatSize()}"
+    val cacheContent = remember(
+        settingsUiState.categorizedCacheSize,
+        settingsUiState.totalCacheSize
+    ) {
+        if (settingsUiState.categorizedCacheSize.isEmpty()) {
+            calculatingText
+        } else {
+            val details = settingsUiState.categorizedCacheSize
+                .map { (category, size) ->
+                    context.getString(
+                        R.string.cache_item,
+                        context.getString(category.labelRes),
+                        size.formatSize()
+                    )
+                }
+                .joinToString(separator = "\n")
+
+            buildString {
+                append(confirmText)
+                append("\n\n")
+                append(details)
+                append("\n\n")
+                append(
+                    context.getString(
+                        R.string.cache_total,
+                        settingsUiState.totalCacheSize.formatSize()
+                    )
+                )
+            }
         }
     }
     BasicScreenBox(
-        title = "设置",
+        title = stringResource(R.string.settings_title),
         onBack = { navigator.popBackStack() }
     ) {
         if (showClearCacheDialog.value) {
             YesNoDialog(
-                title = "清理缓存",
+                title = stringResource(R.string.clear_cache),
                 onDismissRequest = {
                     showClearCacheDialog.value = false
                 },
@@ -100,8 +125,8 @@ fun SettingsScreen(
                     settingsViewModel.clearCache(context)
                 },
                 content = cacheContent,
-                cancelText = "取消",
-                confirmText = "确认",
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm),
             )
          }
         Column(
@@ -109,15 +134,15 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            ItemOuterTitle("外观")
+            ItemOuterTitle(stringResource(R.string.section_appearance))
             RoundedColumn {
                 ItemDropdown(
-                    text = "主题模式",
-                    value = settingsUiState.themeMode.displayName,
+                    text = stringResource(R.string.theme_mode),
+                    value = stringResource(settingsUiState.themeMode.labelRes),
                     content = {
                         ThemeMode.entries.forEach { mode ->
                             ItemCheck(
-                                text = mode.displayName,
+                                text = stringResource(mode.labelRes),
                                 state = settingsUiState.themeMode == mode,
                                 onChange = {
                                     settingsViewModel.setThemeMode(mode)
@@ -129,17 +154,25 @@ fun SettingsScreen(
                 )
             }
 
-            ItemOuterTitle("扫描设置")
+            ItemOuterTitle(stringResource(R.string.section_scan))
             RoundedColumn {
+                val sub = if (totalFolders > 0) {
+                    buildString {
+                        append(stringResource(R.string.folder_found, totalFolders))
+                        if (ignoredFolders > 0) {
+                            append(stringResource(R.string.folder_ignored, ignoredFolders))
+                        }
+                    }
+                } else {
+                    stringResource(R.string.folder_manage_hint)
+                }
                 Item(
                     onClick = { navigator.navigate(FolderManagerDestination()) },
-                    text = "文件夹管理",
-                    sub = if (totalFolders > 0) {
-                        "已发现 $totalFolders 个文件夹" + if (ignoredFolders > 0) "，已忽略 $ignoredFolders 个" else ""
-                    } else "管理扫描路径"
+                    text = stringResource(R.string.folder_manager),
+                    sub = sub
                 )
                 ItemSwitcher(
-                    text = "不扫描 60 秒以下音频",
+                    text = stringResource(R.string.ignore_short_audio),
                     state = ignoreShortAudio,
                     onChange = {
                         settingsViewModel.setIgnoreShortAudio(!ignoreShortAudio)
@@ -147,12 +180,14 @@ fun SettingsScreen(
                 )
             }
 
-            ItemOuterTitle("搜索设置")
+            ItemOuterTitle(stringResource(R.string.section_search))
             RoundedColumn {
+                val subText = searchSourceOrder.map { stringResource(it.labelRes) }
+                    .joinToString(" > ")
                 Item(
                     onClick = { navigator.navigate(SearchSourcePriorityDestination()) },
-                    text = "搜索源优先级",
-                    sub = searchSourceOrder.joinToString(" > ") { it.sourceName }
+                    text = stringResource(R.string.search_source_priority),
+                    sub = subText
                 )
                 val tempPageSize = remember(searchPageSize) {
                     mutableIntStateOf(searchPageSize)
@@ -168,22 +203,22 @@ fun SettingsScreen(
                         settingsViewModel.setSearchPageSize(tempPageSize.intValue)
                     },
                     sub = "${tempPageSize.intValue}",
-                    text = "搜索限制数"
+                    text = stringResource(R.string.search_limit)
                 )
                 ItemTip(
-                    text = "限制每个源的搜索结果数量，设置更大的值会消耗更多流量，同时产生更多图片缓存"
+                    text = stringResource(R.string.search_limit_tip)
                 )
             }
 
-            ItemOuterTitle("歌词")
+            ItemOuterTitle(stringResource(R.string.section_lyrics))
             RoundedColumn {
                 ItemDropdown(
-                    text = "歌词模式",
-                    value = lyricFormat.displayName,
+                    text = stringResource(R.string.lyric_mode),
+                    value = stringResource(lyricFormat.labelRes),
                     content = {
                         LyricFormat.entries.forEach { format ->
                             ItemCheck(
-                                text = format.displayName,
+                                text = stringResource(format.labelRes),
                                 state = lyricFormat == format,
                                 onChange = {
                                     settingsViewModel.setLyricFormat(format)
@@ -198,24 +233,24 @@ fun SettingsScreen(
                     onChange = {
                         settingsViewModel.setRomaEnabled(!romaEnabled)
                     },
-                    text = "罗马音",
-                    sub = "搜索歌词中包含罗马音"
+                    text = stringResource(R.string.roma),
+                    sub = stringResource(R.string.roma_hint)
                 )
                 ItemSwitcher(
                     state = translationEnabled,
                     onChange = {
                         settingsViewModel.setTranslationEnabled(!translationEnabled)
                     },
-                    text = "翻译",
-                    sub = "搜索歌词中包含翻译"
+                    text = stringResource(R.string.translation),
+                    sub = stringResource(R.string.translation_hint)
                 )
             }
-            ItemOuterTitle("元数据")
+            ItemOuterTitle(stringResource(R.string.section_metadata))
             RoundedColumn {
                 ItemDropdown(
-                    text = "艺术家分隔符",
+                    text = stringResource(R.string.artist_separator),
                     value = artistSeparator.toText(),
-                    sub = "存在多个艺术家时使用该分隔符分隔",
+                    sub = stringResource(R.string.artist_separator_hint),
                     content = {
                         val separators = listOf(
                             ArtistSeparator.ENUMERATION_COMMA,
@@ -237,24 +272,28 @@ fun SettingsScreen(
                 )
             }
 
-            ItemOuterTitle("其他")
+            ItemOuterTitle(stringResource(R.string.section_other))
             RoundedColumn {
                 Item(
-                    text = "批量匹配记录",
-                    sub = "查看批量匹配历史日志",
+                    text = stringResource(R.string.batch_match_history),
+                    sub = stringResource(R.string.batch_match_history_hint),
                     onClick = {
                         navigator.navigate(BatchMatchHistoryDestination())
                     }
                 )
+                val sub = stringResource(
+                    R.string.cache_size_label,
+                    settingsUiState.totalCacheSize.formatSize()
+                )
                 Item(
-                    text = "清理缓存",
-                    sub = "缓存大小: ${settingsUiState.totalCacheSize.formatSize()}",
+                    text = stringResource(R.string.clear_cache),
+                    sub = sub,
                     onClick = {
                         showClearCacheDialog.value = true
                     }
                 )
                 Item(
-                    text = "关于",
+                    text = stringResource(R.string.about),
                     onClick = {
                         navigator.navigate(AboutDestination())
                     }

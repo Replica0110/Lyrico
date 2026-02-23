@@ -12,9 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
 import com.ramcosta.composedestinations.annotation.Destination
@@ -69,7 +71,7 @@ fun LocalSearchScreen(
                     onValueChange = {
                         viewModel.onSearchQueryChanged(it)
                     },
-                    placeholder = "搜索标题/歌手/专辑",
+                    placeholder = stringResource(R.string.local_search_hint),
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(focusRequester)
@@ -78,7 +80,7 @@ fun LocalSearchScreen(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "取消",
+                    text = stringResource(R.string.cancel),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = SaltTheme.colors.highlight,

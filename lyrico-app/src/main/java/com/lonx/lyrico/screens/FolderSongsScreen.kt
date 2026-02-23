@@ -8,7 +8,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lonx.lyrico.R
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
 import com.moriafly.salt.ui.ItemTip
 import com.moriafly.salt.ui.RoundedColumn
@@ -28,7 +30,6 @@ import org.koin.androidx.compose.koinViewModel
 @Destination<RootGraph>(route = "folder_songs")
 fun FolderSongsScreen(
     navigator: DestinationsNavigator,
-    folderId: Long,
     folderPath: String
 ) {
     val viewModel: FolderSongsViewModel = koinViewModel()
@@ -53,7 +54,7 @@ fun FolderSongsScreen(
                     RoundedColumn(
                         type = RoundedColumnType.InList
                     ) {
-                        ItemTip("该文件夹下暂无歌曲")
+                        ItemTip(stringResource(R.string.no_songs_in_folder))
                     }
                 }
             } else {

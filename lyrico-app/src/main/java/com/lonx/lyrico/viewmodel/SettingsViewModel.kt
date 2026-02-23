@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.ArtistSeparator
+import com.lonx.lyrico.data.model.CacheCategory
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.LyricFormat
@@ -12,12 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
 import com.lonx.lyrico.utils.CacheManager
-import com.lonx.lyrico.utils.formatSize
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 data class SettingsUiState(
@@ -29,14 +27,14 @@ data class SettingsUiState(
     val searchSourceOrder: List<Source> = emptyList(),
     val searchPageSize: Int = 20,
     val themeMode: ThemeMode = ThemeMode.AUTO,
-    val categorizedCacheSize: Map<String, Long> = emptyMap(),
+    val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
 )
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
-    private val _categorizedCacheSize = MutableStateFlow<Map<String, Long>>(emptyMap())
+    private val _categorizedCacheSize = MutableStateFlow<Map<CacheCategory, Long>>(emptyMap())
 
     // 使用 combine 合并设置流和缓存流
     val uiState: StateFlow<SettingsUiState> = combine(
@@ -78,12 +76,7 @@ class SettingsViewModel(
             refreshCache(context)
         }
     }
-    fun clearCacheByCategory(context: Context, category: String) {
-        viewModelScope.launch {
-            CacheManager.clearCacheByCategory(context, category)
-            refreshCache(context)
-        }
-    }
+
     fun setRomaEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveRomaEnabled(enabled)

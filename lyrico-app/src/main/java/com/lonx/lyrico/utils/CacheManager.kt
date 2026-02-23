@@ -2,8 +2,11 @@ package com.lonx.lyrico.utils
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.annotation.StringRes
 import coil.annotation.ExperimentalCoilApi
 import coil.imageLoader
+import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.CacheCategory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -14,83 +17,101 @@ object CacheManager {
 
     private const val TAG = "CacheManager"
 
-    // 定义缓存分类常量
-    const val CATEGORY_IMAGE = "图片缓存"
-    const val CATEGORY_NETWORK = "网络缓存"
-    const val CATEGORY_EXTERNAL = "外部缓存"
-    const val CATEGORY_OTHER = "其他缓存"
-
     /**
      * 获取按目录分类的缓存大小
-     * @return Map<分类名称, 字节大小>
+     * @return Map<分类, 字节大小>
      */
     @OptIn(ExperimentalCoilApi::class)
-    suspend fun getCategorizedCacheSize(context: Context): Map<String, Long> = withContext(Dispatchers.IO) {
-        val cacheMap = mutableMapOf<String, Long>()
+    suspend fun getCategorizedCacheSize(
+        context: Context
+    ): Map<CacheCategory, Long> = withContext(Dispatchers.IO) {
 
-        // 获取 Coil 图片缓存路径和大小
+        val cacheMap = mutableMapOf<CacheCategory, Long>()
+
+        // Coil 图片缓存
         val coilCacheFile = context.imageLoader.diskCache?.directory?.toFile()
         val coilSize = coilCacheFile?.getFolderSize() ?: 0L
-        cacheMap[CATEGORY_IMAGE] = coilSize
+        cacheMap[CacheCategory.IMAGE] = coilSize
 
-        // 统计内部缓存目录 (context.cacheDir)
         val internalCacheDir = context.cacheDir
         var networkSize = 0L
         var otherInternalSize = 0L
 
         internalCacheDir.listFiles()?.forEach { file ->
             when {
-                // 如果是 Coil 的路径，已经计算过了
-                coilCacheFile != null && file.absolutePath == coilCacheFile.absolutePath -> {
-                    /* skip */
+                coilCacheFile != null &&
+                        file.absolutePath == coilCacheFile.absolutePath -> {
+                    // skip coil
                 }
-                file.name.contains("http", ignoreCase = true) || file.name.contains("network", ignoreCase = true) -> {
+
+                file.name.contains("http", true) ||
+                        file.name.contains("network", true) -> {
                     networkSize += file.getFolderSize()
                 }
+
                 else -> {
                     otherInternalSize += file.getFolderSize()
                 }
             }
         }
-        cacheMap[CATEGORY_NETWORK] = networkSize
-        cacheMap[CATEGORY_OTHER] = otherInternalSize
 
-        // 统计外部缓存目录 (context.externalCacheDir)
-        val externalCacheSize = context.externalCacheDir?.getFolderSize() ?: 0L
-        cacheMap[CATEGORY_EXTERNAL] = externalCacheSize
+        cacheMap[CacheCategory.NETWORK] = networkSize
+        cacheMap[CacheCategory.OTHER] = otherInternalSize
+
+        // 外部缓存
+        val externalSize = context.externalCacheDir?.getFolderSize() ?: 0L
+        cacheMap[CacheCategory.EXTERNAL] = externalSize
 
         cacheMap
     }
 
     /**
-     * 计算总大小（工具方法）
+     * 总大小
      */
-    fun getTotalSize(map: Map<String, Long>): Long = map.values.sum()
+    fun getTotalSize(map: Map<CacheCategory, Long>): Long =
+        map.values.sum()
 
     /**
-     * 清理指定类别的缓存
+     * 清理指定类别
      */
     @OptIn(ExperimentalCoilApi::class)
-    suspend fun clearCacheByCategory(context: Context, category: String) = withContext(Dispatchers.IO) {
+    suspend fun clearCacheByCategory(
+        context: Context,
+        category: CacheCategory
+    ) = withContext(Dispatchers.IO) {
+
         when (category) {
-            CATEGORY_IMAGE -> {
+
+            CacheCategory.IMAGE -> {
                 context.imageLoader.diskCache?.clear()
                 context.imageLoader.memoryCache?.clear()
             }
-            CATEGORY_NETWORK -> {
-                context.cacheDir.listFiles()?.filter {
-                    it.name.contains("http", ignoreCase = true) || it.name.contains("network", ignoreCase = true)
-                }?.forEach { it.deleteRecursively() }
+
+            CacheCategory.NETWORK -> {
+                context.cacheDir.listFiles()
+                    ?.filter {
+                        it.name.contains("http", true) ||
+                                it.name.contains("network", true)
+                    }
+                    ?.forEach { it.deleteRecursively() }
             }
-            CATEGORY_EXTERNAL -> {
+
+            CacheCategory.EXTERNAL -> {
                 context.externalCacheDir?.deleteRecursively()
             }
-            CATEGORY_OTHER -> {
-                // 删除除了图片和网络缓存之外的所有内部缓存文件
-                val coilPath = context.imageLoader.diskCache?.directory?.toString()
+
+            CacheCategory.OTHER -> {
+                val coilPath =
+                    context.imageLoader.diskCache?.directory?.toString()
+
                 context.cacheDir.listFiles()?.forEach { file ->
-                    val isImage = coilPath != null && file.absolutePath == coilPath
-                    val isNetwork = file.name.contains("http", ignoreCase = true) || file.name.contains("network", ignoreCase = true)
+                    val isImage =
+                        coilPath != null && file.absolutePath == coilPath
+
+                    val isNetwork =
+                        file.name.contains("http", true) ||
+                                file.name.contains("network", true)
+
                     if (!isImage && !isNetwork) {
                         file.deleteRecursively()
                     }
@@ -100,15 +121,16 @@ object CacheManager {
     }
 
     /**
-     * 清理所有缓存
+     * 清理全部
      */
     @OptIn(ExperimentalCoilApi::class)
-    suspend fun clearAllCache(context: Context) = withContext(Dispatchers.IO) {
-        context.imageLoader.diskCache?.clear()
-        context.imageLoader.memoryCache?.clear()
-        context.cacheDir.deleteRecursively()
-        context.externalCacheDir?.deleteRecursively()
-    }
+    suspend fun clearAllCache(context: Context) =
+        withContext(Dispatchers.IO) {
+            context.imageLoader.diskCache?.clear()
+            context.imageLoader.memoryCache?.clear()
+            context.cacheDir.deleteRecursively()
+            context.externalCacheDir?.deleteRecursively()
+        }
 }
 
 /**

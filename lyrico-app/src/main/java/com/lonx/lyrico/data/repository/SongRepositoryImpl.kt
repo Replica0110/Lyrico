@@ -3,7 +3,6 @@ package com.lonx.lyrico.data.repository
 import android.app.RecoverableSecurityException
 import android.content.ContentUris
 import android.content.Context
-import android.net.Uri
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
@@ -446,7 +445,7 @@ class SongRepositoryImpl(
                 else songDao.getAllSongsOrderByTitleDesc()
             }
 
-            SortBy.ARTIST -> {
+            SortBy.ARTISTS -> {
                 if (order == SortOrder.ASC) songDao.getAllSongsOrderByArtistAsc()
                 else songDao.getAllSongsOrderByArtistDesc()
             }

@@ -1,7 +1,9 @@
 package com.lonx.lyrico.data.model
 
+import androidx.annotation.StringRes
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.lonx.lyrico.R
 
 @Entity(tableName = "batch_match_history")
 data class BatchMatchHistory(
@@ -13,8 +15,10 @@ data class BatchMatchHistory(
     val skippedCount: Int,
     val durationMillis: Long
 )
-enum class BatchMatchStatus(val displayName: String) {
-    SUCCESS("成功"),
-    FAILURE("失败"),
-    SKIPPED("跳过")
+enum class BatchMatchResult(
+    @field:StringRes val labelRes: Int
+) {
+    SUCCESS(R.string.batch_match_stat_success),
+    FAILURE(R.string.batch_match_stat_failure),
+    SKIPPED(R.string.batch_match_stat_skipped)
 }

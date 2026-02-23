@@ -1,6 +1,9 @@
 package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
+import android.content.ContentUris
+import android.content.Intent
+import android.provider.MediaStore
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -34,6 +37,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,13 +45,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.room.Delete
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
-import com.lonx.lyrico.ui.components.ItemExt
 import com.lonx.lyrico.ui.dialog.BatchMatchConfigDialog
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.coil.CoverRequest
@@ -94,6 +96,7 @@ private val SECTIONS_ASC = listOf(
 
 private val SECTIONS_DESC = SECTIONS_ASC.asReversed()
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(
     ExperimentalMaterial3Api::class, UnstableSaltUiApi::class
 )
@@ -120,10 +123,10 @@ fun SongListScreen(
     val context = LocalContext.current
     val sectionIndexMap = remember(songs, sortInfo) {
         val map = mutableMapOf<String, Int>()
-        if (sortInfo.sortBy == SortBy.TITLE || sortInfo.sortBy == SortBy.ARTIST) {
+        if (sortInfo.sortBy == SortBy.TITLE || sortInfo.sortBy == SortBy.ARTISTS) {
             songs.forEachIndexed { index, song ->
                 val key =
-                    if (sortInfo.sortBy == SortBy.ARTIST) song.artistGroupKey else song.titleGroupKey
+                    if (sortInfo.sortBy == SortBy.ARTISTS) song.artistGroupKey else song.titleGroupKey
                 if (!map.containsKey(key)) {
                     map[key] = index
                 }
@@ -156,7 +159,7 @@ fun SongListScreen(
                                 viewModel.selectAll(songs)
                             }
                         ) {
-                            Text(text = "全选", color = SaltTheme.colors.highlight)
+                            Text(text = stringResource(id = R.string.action_select_all), color = SaltTheme.colors.highlight)
                         }
                         TextButton(
                             enabled = selectedPaths.isNotEmpty(),
@@ -165,7 +168,7 @@ fun SongListScreen(
                             }
                         ) {
                             Text(
-                                text = "匹配标签",
+                                text = stringResource(id = R.string.action_match_tags),
                                 color = if (selectedPaths.isNotEmpty()) SaltTheme.colors.highlight else SaltTheme.colors.subText
                             )
                         }
@@ -174,7 +177,7 @@ fun SongListScreen(
                                 viewModel.exitSelectionMode()
                             }
                         ) {
-                            Text(text = "取消", color = SaltTheme.colors.highlight)
+                            Text(text = stringResource(id = R.string.cancel), color = SaltTheme.colors.highlight)
                         }
                     }
                 )
@@ -190,7 +193,7 @@ fun SongListScreen(
                     ),
                     title = {
                         Text(
-                            text = "歌曲(${songs.size}首)",
+                            text = stringResource(R.string.song_list_title, songs.size),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             fontWeight = FontWeight.Bold
@@ -199,7 +202,7 @@ fun SongListScreen(
                     navigationIcon = {
                         Icon(
                             painter = painterResource(R.drawable.ic_settings_24dp),
-                            contentDescription = "Settings",
+                            contentDescription = stringResource(R.string.cd_settings),
                             tint = SaltTheme.colors.text,
                             modifier = Modifier
                                 .size(48.dp)
@@ -212,7 +215,7 @@ fun SongListScreen(
                     actions = {
                         Icon(
                             painter = painterResource(R.drawable.ic_search_24dp),
-                            contentDescription = "Search",
+                            contentDescription = stringResource(R.string.cd_search),
                             tint = SaltTheme.colors.text,
                             modifier = Modifier
                                 .size(48.dp)
@@ -224,7 +227,7 @@ fun SongListScreen(
                         Box(modifier = Modifier.wrapContentSize()) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_sort_24dp),
-                                contentDescription = "Sort",
+                                contentDescription = stringResource(R.string.cd_sort),
                                 tint = SaltTheme.colors.text,
                                 modifier = Modifier
                                     .size(36.dp)
@@ -240,7 +243,7 @@ fun SongListScreen(
                             ) {
                                 val sortTypes = listOf(
                                     SortBy.TITLE,
-                                    SortBy.ARTIST,
+                                    SortBy.ARTISTS,
                                     SortBy.DATE_MODIFIED,
                                     SortBy.DATE_ADDED
                                 )
@@ -248,7 +251,7 @@ fun SongListScreen(
                                 sortTypes.forEach { type ->
                                     val isSelected = sortInfo.sortBy == type
                                     PopupMenuItem(
-                                        text = type.displayName,
+                                        text = stringResource(type.labelRes),
                                         selected = isSelected,
                                         iconPainter = if (isSelected) {
                                             if (sortInfo.order == SortOrder.ASC) {
@@ -370,7 +373,21 @@ fun SongListScreen(
                         viewModel.showDeleteDialog()
                     },
                     onShare = {
-                        viewModel.shareSong(context, song)
+                        val uri = ContentUris.withAppendedId(
+                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                            song.mediaId
+                        )
+
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "audio/*"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            putExtra(Intent.EXTRA_TITLE, song.title ?: song.fileName)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+
+                        context.startActivity(
+                            Intent.createChooser(intent, context.getString(R.string.share_chooser_title))
+                        )
                     }
                 )
             }
@@ -398,10 +415,13 @@ fun SongListScreen(
                     viewModel.dismissAll()
                     viewModel.delete(sheetUiState.menuSong!!)
                 },
-                title = "是否删除文件？",
-                content = "确认删除文件「${sheetUiState.menuSong!!.fileName}」吗？\n此操作不可撤销！",
-                cancelText = "取消",
-                confirmText = "确认"
+                title = stringResource(R.string.dialog_delete_file_title),
+                content = stringResource(
+                    R.string.dialog_delete_file_content,
+                    sheetUiState.menuSong!!.fileName
+                ),
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm)
             )
         }
         // 批量匹配配置对话框
@@ -421,7 +441,6 @@ fun SongListScreen(
                 failureCount = uiState.failureCount,
                 skippedCount = uiState.skippedCount,
                 isMatching = uiState.isBatchMatching,
-                loadingMessage = uiState.loadingMessage,
                 batchTimeMillis = uiState.batchTimeMillis,
                 onAbort = { viewModel.abortBatchMatch() },
                 historyId = uiState.batchHistoryId,
@@ -440,7 +459,6 @@ fun BatchMatchingDialog(
     skippedCount: Int,
     failureCount: Int,
     isMatching: Boolean,
-    loadingMessage: String,
     batchTimeMillis: Long,
     onAbort: () -> Unit,
     onClose: () -> Unit,
@@ -462,14 +480,14 @@ fun BatchMatchingDialog(
             ) {
                 // 标题或加载信息
                 Text(
-                    text = if (isMatching) "批量匹配中" else loadingMessage,
+                    text = stringResource(R.string.batch_matching_title),
                     style = SaltTheme.textStyles.main
                 )
 
                 // 进度信息
                 progress?.let { (current, total) ->
                     Text(
-                        text = "进度: $current / $total",
+                        text = stringResource(R.string.batch_matching_progress, current, total),
                         style = SaltTheme.textStyles.main
                     )
                 }
@@ -477,22 +495,22 @@ fun BatchMatchingDialog(
                 // 当前文件
                 if (currentFile.isNotEmpty()) {
                     Text(
-                        text = "正在匹配: $currentFile",
+                        text = stringResource(R.string.batch_matching_current, currentFile),
                         style = SaltTheme.textStyles.main
                     )
                 }
 
                 // 成功/失败计数
                 Text(
-                    text = "成功: $successCount",
+                    text = stringResource(R.string.batch_matching_success, successCount),
                     style = SaltTheme.textStyles.main
                 )
                 Text(
-                    text = "跳过: $skippedCount",
+                    text = stringResource(R.string.batch_matching_skipped, skippedCount),
                     style = SaltTheme.textStyles.main
                 )
                 Text(
-                    text = "失败: $failureCount",
+                    text = stringResource(R.string.batch_matching_failure, failureCount),
                     style = SaltTheme.textStyles.main
                 )
 
@@ -500,7 +518,7 @@ fun BatchMatchingDialog(
                 if (!isMatching && batchTimeMillis > 0) {
                     val seconds = batchTimeMillis / 1000.0
                     Text(
-                        text = "总用时: %.2f 秒".format(seconds),
+                        text = stringResource(R.string.batch_matching_total_time, seconds),
                         style = SaltTheme.textStyles.main
                     )
                 }
@@ -511,13 +529,14 @@ fun BatchMatchingDialog(
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = if (isMatching) onAbort else onClose,
-                    text = if (isMatching) "中止" else "关闭",
+                    text = if (isMatching) stringResource(R.string.action_abort) else stringResource(R.string.action_close),
                     type = if (isMatching) ButtonType.Sub else ButtonType.Highlight
                 )
                 if (!isMatching) {
                     Button(
                         modifier = Modifier.fillMaxWidth(),
-                        text = "查看结果", onClick = {
+                        text = stringResource(R.string.action_view_results),
+                        onClick = {
                             navigator.navigate(BatchMatchHistoryDetailDestination(historyId))
                         },
                         type = ButtonType.Highlight
@@ -780,7 +799,7 @@ fun SongListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // 歌手
                     Text(
-                        text = song.artist.takeIf { !it.isNullOrBlank() } ?: "未知艺术家",
+                        text = song.artist.takeIf { !it.isNullOrBlank() } ?: stringResource(R.string.unknown_artist),
                         color = SaltTheme.colors.subText,
                         fontSize = 13.sp,
                         maxLines = 1,
@@ -856,31 +875,33 @@ fun SongMenuBottomSheetContent(
     ) {
         // 操作列表
         RoundedColumn {
-            ItemTip("${song.title} - ${song.artist}")
+            ItemTip(
+                text = stringResource(
+                    R.string.menu_song_tip_format,
+                    song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
+                    song.artist.takeIf { !it.isNullOrBlank() } ?: stringResource(R.string.unknown_artist)
+                )
+            )
             Item(
                 onClick = { onPlay() },
-                text = "播放音乐",
-                sub = "调用系统播放器播放音频",
+                text = stringResource(R.string.menu_action_play),
+                sub = stringResource(R.string.menu_action_play_sub),
                 arrowType = ItemArrowType.None
             )
             Item(
                 onClick = { showInfo() },
-                text = "歌曲信息",
+                text = stringResource(R.string.menu_action_info),
                 arrowType = ItemArrowType.None
             )
             Item(
-                onClick = {
-                    onShare()
-                },
-                text = "分享歌曲",
+                onClick = { onShare() },
+                text = stringResource(R.string.menu_action_share),
                 arrowType = ItemArrowType.None
             )
             Item(
-                onClick = {
-                    onDelete()
-                },
-                text = "删除歌曲",
-                sub = "此操作会删除文件，且不可撤销",
+                onClick = { onDelete() },
+                text = stringResource(R.string.menu_action_delete),
+                sub = stringResource(R.string.menu_action_delete_sub),
                 textColor = Color.Red,
                 arrowType = ItemArrowType.None
             )
@@ -913,7 +934,7 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
                 ) {
                     AsyncImage(
                         model = CoverRequest(song.getUri, song.fileLastModified),
-                        contentDescription = "Cover",
+                        contentDescription = stringResource(R.string.cd_cover),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         placeholder = rememberTintedPainter(
@@ -936,7 +957,7 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
                         color = SaltTheme.colors.text
                     )
                     Text(
-                        text = song.artist.takeIf { !it.isNullOrBlank() } ?: "未知艺术家",
+                        text = song.artist.takeIf { !it.isNullOrBlank() } ?: stringResource(R.string.unknown_artist),
                         style = SaltTheme.textStyles.sub,
                         color = SaltTheme.colors.highlight
                     )
@@ -945,15 +966,15 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
         }
 
 
-        item { SongDetailItem(label = "专辑", value = song.album) }
-        item { SongDetailItem(label = "年份/日期", value = song.date) }
-        item { SongDetailItem(label = "流派", value = song.genre) }
-        item { SongDetailItem(label = "音轨号", value = song.trackerNumber) }
+        item { SongDetailItem(label = stringResource(R.string.label_album), value = song.album) }
+        item { SongDetailItem(label = stringResource(R.string.label_date), value = song.date) }
+        item { SongDetailItem(label = stringResource(R.string.label_genre), value = song.genre) }
+        item { SongDetailItem(label = stringResource(R.string.label_track_number), value = song.trackerNumber) }
 
 
         item {
             SongDetailItem(
-                label = "时长",
+                label = stringResource(R.string.label_duration),
                 value = if (song.durationMilliseconds > 0) {
                     val min = song.durationMilliseconds / 60000
                     val sec = (song.durationMilliseconds % 60000) / 1000
@@ -963,38 +984,38 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
         }
         item {
             SongDetailItem(
-                label = "比特率",
+                label = stringResource(R.string.label_bitrate),
                 value = if (song.bitrate > 0) "${song.bitrate} kbps" else null
             )
         }
         item {
             SongDetailItem(
-                label = "采样率",
+                label = stringResource(R.string.label_sample_rate),
                 value = if (song.sampleRate > 0) "${song.sampleRate} Hz" else null
             )
         }
         item {
             SongDetailItem(
-                label = "声道",
+                label = stringResource(R.string.label_channels),
                 value = if (song.channels > 0) "${song.channels}" else null
             )
         }
 
         item {
             SongDetailItem(
-                label = "添加时间",
+                label = stringResource(R.string.label_date_added),
                 value = if (song.fileAdded > 0) dateFormat.format(Date(song.fileAdded)) else null
             )
         }
         item {
             SongDetailItem(
-                label = "修改时间",
+                label = stringResource(R.string.label_date_modified),
                 value = if (song.fileLastModified > 0) dateFormat.format(Date(song.fileLastModified)) else null
             )
         }
         item {
             SongDetailItem(
-                label = "文件路径",
+                label = stringResource(R.string.label_file_path),
                 value = song.filePath
             )
         }
@@ -1032,7 +1053,7 @@ fun SelectionModeTopAppBar(
 
         title = {
             Text(
-                text = "已选择 $selectedCount 项",
+                text = stringResource(R.string.selection_mode_selected_count, selectedCount),
                 style = SaltTheme.textStyles.main,
                 color = SaltTheme.colors.text,
                 fontWeight = FontWeight.Bold

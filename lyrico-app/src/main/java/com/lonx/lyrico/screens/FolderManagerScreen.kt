@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.FolderEntity
@@ -94,7 +95,7 @@ fun FolderManagerScreen(
     }
 
     BasicScreenBox(
-        title = "文件夹管理",
+        title = stringResource(R.string.folder_manager_title),
         onBack = {
             navigator.popBackStack()
         },
@@ -123,18 +124,18 @@ fun FolderManagerScreen(
                     viewModel.deleteFolder(currentFolder)
                     showSheet = false
                 },
-                title = "是否移除此文件夹？",
+                title = stringResource(R.string.dialog_remove_folder_title),
                 content = currentFolder.path,
                 drawContent = {
                     Column(modifier = Modifier.fillMaxWidth().padding(SaltTheme.dimens.padding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "该操作不会删除本地文件\n文件夹下的歌曲将从音乐库中隐藏，重新扫描后会再次显示",
+                            text = stringResource(R.string.dialog_remove_folder_content_tip),
                             style = SaltTheme.textStyles.sub
                         )
                     }
                 },
-                cancelText = "取消",
-                confirmText = "确定"
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm),
             )
         }
 
@@ -167,14 +168,14 @@ fun FolderManagerScreen(
             item {
                 // TODO Replace ItemOuterTip when Salt UI 2.9.0-alpha07 released
                 ItemTip(
-                    text = "未启用的文件夹及其子目录中的歌曲将不会显示在库中",
+                    text = stringResource(R.string.folder_tip_disabled_logic),
                     modifier = Modifier
                         .outerPadding(vertical = false)
                 )
             }
 
             item {
-                ItemOuterTitle("已发现的文件夹")
+                ItemOuterTitle(stringResource(R.string.section_folder_discovered))
             }
 
             item {
@@ -186,21 +187,27 @@ fun FolderManagerScreen(
                     RoundedColumn(
                         type = RoundedColumnType.InList
                     ) {
-                        ItemTip("暂无文件夹数据，完成首次扫描后即可管理")
+                        ItemTip(stringResource(R.string.folder_empty_state_tip))
                     }
                 }
             } else {
                 items(folders) { folder ->
+                    val ignoredText = if (folder.isIgnored) stringResource(R.string.folder_status_ignored) else ""
+                    val songCountText = stringResource(R.string.folder_song_count_format, folder.songCount)
+                    val songInfo = "$songCountText$ignoredText"
+
+                    val sourceInfo = if (folder.addedBySaf)
+                        stringResource(R.string.folder_source_manual)
+                    else
+                        stringResource(R.string.folder_source_auto)
                     val folderName = folder.path.substringAfterLast("/").ifBlank { folder.path }
-                    val songInfo = "歌曲 ${folder.songCount} 首${if (folder.isIgnored) " (已忽略)" else ""}"
-                    val sourceInfo = if (folder.addedBySaf) "手动添加" else "自动发现"
 
                     RoundedColumn(
                         type = RoundedColumnType.InList
                     ) {
                         ItemExt(
                             onClick = {
-                                navigator.navigate(FolderSongsDestination(folder.id, folder.path))
+                                navigator.navigate(FolderSongsDestination(folder.path))
                             },
                             iconPainter = if (folder.isIgnored)
                                 painterResource(id = R.drawable.ic_invisible_24dp)
@@ -252,22 +259,22 @@ fun FolderActionSheetContent(
     ) {
         // 操作列表
         RoundedColumn {
-            ItemTip("路径: ${folder.path}")
+            ItemTip(stringResource(R.string.folder_sheet_path_prefix, folder.path))
 
             // 忽略/启用设置
             ItemSwitcher(
                 state = !folder.isIgnored,
                 onChange = { onIgnoreChange() },
-                text = "启用此文件夹",
-                sub = "关闭后，该文件夹下的歌曲将从库中隐藏"
+                text = stringResource(R.string.folder_action_enable),
+                sub = stringResource(R.string.folder_action_enable_sub)
             )
 
             // 删除设置
             Item(
                 onClick = onDelete,
-                text = "移除记录",
+                text = stringResource(R.string.folder_action_remove),
                 textColor = Color.Red,
-                sub = "从数据库中移除此文件夹记录，不会删除物理文件",
+                sub = stringResource(R.string.folder_action_remove_sub),
                 iconColor = Color.Red,
                 arrowType = ItemArrowType.None
             )

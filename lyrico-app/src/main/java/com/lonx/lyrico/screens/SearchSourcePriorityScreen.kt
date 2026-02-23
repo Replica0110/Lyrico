@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
@@ -78,13 +79,13 @@ fun SearchSourcePriorityScreen(
 
 
     BasicScreenBox(
-        title = "搜索源优先级",
+        title = stringResource(id = R.string.search_source_priority),
         onBack = { navigator.popBackStack() }
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            ItemTip(text = "长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源")
+            ItemTip(text = stringResource(id = R.string.search_source_priority_tip))
             Spacer(modifier = Modifier.height(8.dp))
             LazyColumn(
                 state = lazyListState,
@@ -92,11 +93,11 @@ fun SearchSourcePriorityScreen(
             ) {
                 itemsIndexed(
                     items = currentList,
-                    key = { _, source -> source.sourceName }
+                    key = { _, source -> source.labelRes }
                 ) { index, source ->
                     ReorderableItem(
                         reorderableLazyColumnState,
-                        source.sourceName
+                        source.labelRes
                     ) { isDragging ->
                         val interactionSource = remember { MutableInteractionSource() }
 
@@ -172,7 +173,7 @@ private fun ReorderableSourceItem(
                 startContent = {
                     Column {
                         Text(
-                            text = source.sourceName,
+                            text = stringResource(source.labelRes),
                             color = SaltTheme.colors.text,
                             style = SaltTheme.textStyles.main
                         )
@@ -191,7 +192,7 @@ private fun ReorderableSourceItem(
                 Icon(
                     modifier = Modifier.size(20.dp),
                     painter = painterResource(R.drawable.ic_draghandle_24dp),
-                    contentDescription = "拖动排序",
+                    contentDescription = stringResource(R.string.cd_drag_to_reorder),
                     tint = SaltTheme.colors.subText.copy(alpha = 0.5f)
                 )
 

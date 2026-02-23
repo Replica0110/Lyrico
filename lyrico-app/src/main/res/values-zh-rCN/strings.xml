@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_settings">搜索设置</string>
+    <string name="search_source_priority">搜索源优先级</string>
+    <string name="search_source_priority_tip">长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源</string>
+
+    <!-- 搜索 -->
+    <string name="search_lyrics_placeholder">搜索歌词…</string>
+    <string name="search_failed">搜索失败: %1$s</string>
+    <string name="search_no_results">未找到相关结果</string>
+    <string name="fetch_lyrics_failed">获取歌词失败，请重试</string>
+    <string name="apply_action">应用</string>
+    <string name="preview_action">预览</string>
+    <string name="cd_no_results">搜索结果为空</string>
+    <string name="local_search_hint">搜索标题/歌手/专辑</string>
+
+    <!-- 文件夹 -->
+    <string name="no_songs_in_folder">该文件夹下暂无歌曲</string>
+
+    <!-- 通用 -->
+    <string name="settings_title">设置</string>
+    <string name="cancel">取消</string>
+    <string name="confirm">确认</string>
+
+    <!-- 缓存 -->
+    <string name="clear_cache">清理缓存</string>
+    <string name="calculating_cache">正在计算缓存大小…</string>
+    <string name="clear_cache_confirm">确定要清理所有缓存吗？</string>
+    <string name="cache_item">%1$s: %2$s</string>
+    <string name="cache_total">总计: %1$s</string>
+    <string name="cache_size_label">缓存大小: %1$s</string>
+
+    <!-- 分组标题 -->
+    <string name="section_appearance">外观</string>
+    <string name="section_scan">扫描设置</string>
+    <string name="section_search">搜索设置</string>
+    <string name="section_lyrics">歌词</string>
+    <string name="section_metadata">元数据</string>
+    <string name="section_other">其他</string>
+
+    <!-- 外观 -->
+    <string name="theme_mode">主题模式</string>
+
+    <!-- 扫描 -->
+    <string name="folder_manager">文件夹管理</string>
+    <string name="folder_manage_hint">管理扫描路径</string>
+    <string name="folder_found">已发现 %1$d 个文件夹</string>
+    <string name="folder_ignored">，已忽略 %1$d 个</string>
+    <string name="ignore_short_audio">不扫描 60 秒以下音频</string>
+
+    <!-- 搜索 -->
+    <string name="search_limit">搜索限制数</string>
+    <string name="search_limit_tip">限制每个源的搜索结果数量，设置更大的值会消耗更多流量，同时产生更多图片缓存</string>
+
+    <!-- 歌词 -->
+    <string name="lyric_mode">歌词模式</string>
+    <string name="roma">罗马音</string>
+    <string name="roma_hint">搜索歌词中包含罗马音</string>
+    <string name="translation">翻译</string>
+    <string name="translation_hint">搜索歌词中包含翻译</string>
+
+    <!-- 元数据 -->
+    <string name="artist_separator">艺术家分隔符</string>
+    <string name="artist_separator_hint">存在多个艺术家时使用该分隔符分隔</string>
+
+    <!-- 其他 -->
+    <string name="batch_match_history">批量匹配记录</string>
+    <string name="batch_match_history_hint">查看批量匹配历史日志</string>
+    <string name="about">关于</string>
+
+    <string name="cache_category_image">图片缓存</string>
+    <string name="cache_category_network">网络缓存</string>
+    <string name="cache_category_external">外部缓存</string>
+    <string name="cache_category_other">其他缓存</string>
+
+    <string name="load_failed">加载失败</string>
+    <string name="cd_drag_to_reorder">拖动排序</string>
+
+
+    <string name="about_title">关于</string>
+
+    <!-- 应用信息 -->
+    <string name="about_app_info">应用信息</string>
+    <string name="about_app_version">应用版本</string>
+    <string name="about_project_url">GitHub</string>
+    <string name="about_project_url_sub">在 GitHub 上查看项目源码</string>
+    <string name="about_telegram">Telegram</string>
+
+    <string name="about_auto_check_update">自动检查新版本</string>
+    <string name="about_auto_check_update_sub">应用启动时检查是否有新版本</string>
+
+    <string name="about_check_update">检查更新</string>
+    <string name="about_check_update_default">立即检查应用是否有更新</string>
+
+    <!-- 贡献者 -->
+    <string name="about_contributors">贡献者</string>
+    <string name="about_no_contributors">暂无贡献者</string>
+
+    <string name="about_contribution_count">贡献了 %1$d 个提交</string>
+
+
+    <!-- 更新状态 -->
+    <string name="update_already_latest">已经是最新版本</string>
+
+    <string name="update_api_error">API错误: %1$d</string>
+    <string name="update_network_error">网络错误，请检查连接</string>
+    <string name="update_parse_error">解析更新信息失败</string>
+    <string name="update_timeout">检查更新超时</string>
+
+    <!-- 歌词格式 -->
+    <string name="lyric_format_plain">逐行歌词</string>
+    <string name="lyric_format_verbatim">逐字歌词</string>
+    <string name="lyric_format_enhanced">增强型逐字歌词</string>
+
+
+    <!-- 主题模式 -->
+    <string name="theme_mode_auto">跟随系统</string>
+    <string name="theme_mode_light">浅色模式</string>
+    <string name="theme_mode_dark">深色模式</string>
+
+    <!-- 页面 -->
+    <string name="batch_match_history_title">批量匹配记录</string>
+    <string name="batch_match_history_empty">暂无记录</string>
+
+    <!-- 删除确认 -->
+    <string name="batch_match_delete_title">是否确认删除？</string>
+    <string name="batch_match_delete_message">删除记录不可恢复</string>
+
+    <!-- 统计文本 -->
+    <string name="batch_match_stat_success">成功</string>
+    <string name="batch_match_stat_failure">失败</string>
+    <string name="batch_match_stat_skipped">跳过</string>
+    <string name="batch_match_stat_duration">耗时</string>
+    <string name="batch_match_stat_format">
+    成功: %1$d | 失败: %2$d | 跳过: %3$d
+    </string>
+
+    <string name="batch_match_duration_format">
+    耗时: %1$.1fs
+    </string>
+
+    <!-- 无障碍 -->
+    <string name="common_delete">删除</string>
+
+    <!-- Top Bar -->
+    <string name="song_list_title">歌曲(%d首)</string>
+    <string name="cd_settings">设置</string>
+    <string name="cd_search">搜索</string>
+    <string name="cd_sort">排序方式</string>
+    <string name="cd_info">信息</string>
+
+    <!-- 选择模式 -->
+    <string name="selection_mode_selected_count">已选择 %d 项</string>
+    <string name="action_select_all">全选</string>
+    <string name="action_match_tags">匹配标签</string>
+
+    <!-- 列表项 -->
+    <string name="unknown_artist">未知艺术家</string>
+
+    <!-- 歌曲菜单 -->
+    <string name="menu_play_music">播放音乐</string>
+    <string name="menu_play_music_sub">调用系统播放器播放音频</string>
+    <string name="menu_song_info">歌曲信息</string>
+    <string name="menu_share_song">分享歌曲</string>
+    <string name="menu_delete_song">删除歌曲</string>
+    <string name="menu_delete_song_sub">此操作会删除文件，且不可撤销</string>
+    <string name="share_chooser_title">分享音频</string>
+
+    <!-- 删除对话框 -->
+    <string name="dialog_delete_file_title">是否删除文件？</string>
+    <string name="dialog_delete_file_content">确认删除文件「%s」吗？\n此操作不可撤销！</string>
+
+    <!-- 批量匹配对话框 -->
+    <string name="batch_matching_title">批量匹配</string>
+    <string name="batch_matching_progress">进度: %1$d / %2$d</string>
+    <string name="batch_matching_current">正在匹配: %s</string>
+    <string name="batch_matching_success">成功: %d</string>
+    <string name="batch_matching_skipped">跳过: %d</string>
+    <string name="batch_matching_failure">失败: %d</string>
+    <string name="batch_matching_total_time">总用时: %.2f 秒</string>
+    <string name="action_abort">中止</string>
+    <string name="action_close">关闭</string>
+    <string name="action_view_results">查看结果</string>
+    <string name="no_record">无记录</string>
+    <string name="batch_match_history_detail">记录详情</string>
+
+    <!-- 歌曲详情 -->
+    <string name="label_title">标题</string>
+    <string name="label_artists">艺术家</string>
+    <string name="label_album">专辑</string>
+    <string name="label_date">年份/日期</string>
+    <string name="label_genre">流派</string>
+    <string name="label_track_number">音轨号</string>
+    <string name="label_duration">时长</string>
+    <string name="label_bitrate">比特率</string>
+    <string name="label_sample_rate">采样率</string>
+    <string name="label_channels">声道</string>
+    <string name="label_date_added">添加时间</string>
+    <string name="label_date_modified">修改时间</string>
+    <string name="label_file_path">文件路径</string>
+
+    <!-- 标题 -->
+    <string name="folder_manager_title">文件夹管理</string>
+
+    <!-- 对话框 -->
+    <string name="dialog_remove_folder_title">是否移除此文件夹？</string>
+    <string name="dialog_remove_folder_content_tip">该操作不会删除本地文件\n文件夹下的歌曲将从音乐库中隐藏，重新扫描后会再次显示</string>
+
+    <!-- 文件夹列表状态 -->
+    <string name="folder_tip_disabled_logic">未启用的文件夹及其子目录中的歌曲将不会显示在库中</string>
+    <string name="section_folder_discovered">已发现的文件夹</string>
+    <string name="folder_empty_state_tip">暂无文件夹数据，完成首次扫描后即可管理</string>
+
+    <!-- 文件夹项信息 -->
+    <string name="folder_song_count_format">歌曲 %d 首</string>
+    <string name="folder_status_ignored">(已忽略)</string>
+    <string name="folder_source_manual">手动添加</string>
+    <string name="folder_source_auto">自动发现</string>
+
+    <!-- 文件夹操作菜单 -->
+    <string name="folder_sheet_path_prefix">路径: %s</string>
+    <string name="folder_action_enable">启用此文件夹</string>
+    <string name="folder_action_enable_sub">关闭后，该文件夹下的歌曲将从库中隐藏</string>
+    <string name="folder_action_remove">移除记录</string>
+    <string name="folder_action_remove_sub">从数据库中移除此文件夹记录，不会删除物理文件</string>
+
+    <!-- 通用操作 -->
+    <string name="action_save">保存</string>
+    <string name="action_undo_changes">撤销修改</string>
+    <string name="action_back">返回</string>
+    <string name="action_search">搜索</string>
+
+    <!-- 提示消息 -->
+    <string name="msg_save_success">保存成功</string>
+    <string name="msg_save_failed">保存失败</string>
+
+    <!-- 元数据标签 -->
+    <string name="edit_metadata_default_title">编辑元数据</string>
+    <string name="label_album_artist">专辑艺术家</string>
+    <string name="label_disc_number">碟号</string>
+    <string name="label_composer">作曲</string>
+    <string name="label_lyricist">作词</string>
+    <string name="label_comment">注释</string>
+    <string name="label_lyrics">歌词</string>
+
+    <!-- 封面编辑 -->
+    <string name="status_modified">已修改</string>
+    <string name="cd_cover">封面</string>
+    <string name="cd_play">播放</string>
+
+    <!-- 歌曲菜单 -->
+    <string name="menu_song_tip_format">%1$s - %2$s</string>
+    <string name="menu_action_play">播放音乐</string>
+    <string name="menu_action_play_sub">调用系统播放器播放音频</string>
+    <string name="menu_action_info">歌曲信息</string>
+    <string name="menu_action_share">分享歌曲</string>
+    <string name="menu_action_delete">删除歌曲</string>
+    <string name="menu_action_delete_sub">此操作会删除文件，且不可撤销</string>
+</resources>

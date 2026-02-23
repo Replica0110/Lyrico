@@ -1,10 +1,7 @@
 package com.lonx.lyrico.viewmodel
 
-import android.app.AlertDialog
 import android.app.Application
-import android.content.ContentUris
 import android.content.Context
-import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.Parcelable
@@ -20,7 +17,7 @@ import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchField
 import com.lonx.lyrico.data.model.BatchMatchHistory
 import com.lonx.lyrico.data.model.BatchMatchMode
-import com.lonx.lyrico.data.model.BatchMatchStatus
+import com.lonx.lyrico.data.model.BatchMatchResult
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.entity.BatchMatchRecordEntity
@@ -76,7 +73,6 @@ data class SongListUiState(
     val failureCount: Int = 0,
     val skippedCount: Int = 0,
     val currentFile: String = "",
-    val loadingMessage: String = "",
     val batchHistoryId: Long = 0,
     val batchTimeMillis: Long = 0  // 批量匹配总用时（毫秒）
 )
@@ -148,23 +144,7 @@ class SongListViewModel(
     fun dismissDeleteDialog() {
         _uiState.update { it.copy(showDeleteDialog = false) }
     }
-    fun shareSong(context: Context, song: SongEntity) {
-        val uri = ContentUris.withAppendedId(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            song.mediaId
-        )
 
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "audio/*"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_TITLE, song.title ?: song.fileName)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-
-        context.startActivity(
-            Intent.createChooser(intent, "分享音频")
-        )
-    }
     fun showDetail(song: SongEntity) {
         _sheetState.update {
             it.copy(detailSong = song)
@@ -287,12 +267,12 @@ class SongListViewModel(
                         )
 
                         when (result.status) {
-                            BatchMatchStatus.SUCCESS if result.tagData != null -> {
+                            BatchMatchResult.SUCCESS if result.tagData != null -> {
                                 matchResults.add(song to result.tagData)
                                 val s = successCounter.incrementAndGet()
                                 _uiState.update { it.copy(successCount = s) }
                             }
-                            BatchMatchStatus.FAILURE -> {
+                            BatchMatchResult.FAILURE -> {
                                 val f = failureCounter.incrementAndGet()
                                 _uiState.update { it.copy(failureCount = f) }
                             }
@@ -309,7 +289,6 @@ class SongListViewModel(
             }.joinAll()
 
             if (matchResults.isNotEmpty()) {
-                _uiState.update { it.copy(loadingMessage = "正在批量持久化...") }
                 songRepository.applyBatchMetadata(matchResults)
             }
 
@@ -324,11 +303,11 @@ class SongListViewModel(
             )
             val historyId = batchMatchHistoryRepository.saveHistory(history, historyRecords)
 
-            _uiState.update { it.copy(batchHistoryId = historyId,isBatchMatching = false, loadingMessage = "匹配完成", batchTimeMillis = totalTime) }
+            _uiState.update { it.copy(batchHistoryId = historyId,isBatchMatching = false, batchTimeMillis = totalTime) }
         }
     }
 
-    private data class MatchResult(val tagData: AudioTagData?, val status: BatchMatchStatus)
+    private data class MatchResult(val tagData: AudioTagData?, val status: BatchMatchResult)
 
     private suspend fun matchAndGetTag(
         song: SongEntity,
@@ -354,7 +333,7 @@ class SongListViewModel(
             }
         }
 
-        if (!needsProcessing) return@coroutineScope MatchResult(null, BatchMatchStatus.SKIPPED)
+        if (!needsProcessing) return@coroutineScope MatchResult(null, BatchMatchResult.SKIPPED)
 
         val queries = MusicMatchUtils.buildSearchQueries(song)
         val (parsedTitle, parsedArtist) = MusicMatchUtils.parseFileName(song.fileName)
@@ -391,8 +370,8 @@ class SongListViewModel(
             }
         }
 
-        val finalMatch = bestMatch ?: return@coroutineScope MatchResult(null, BatchMatchStatus.FAILURE) // No match found
-        if (finalMatch.score < 0.35) return@coroutineScope MatchResult(null, BatchMatchStatus.FAILURE) // Score too low
+        val finalMatch = bestMatch ?: return@coroutineScope MatchResult(null, BatchMatchResult.FAILURE) // No match found
+        if (finalMatch.score < 0.35) return@coroutineScope MatchResult(null, BatchMatchResult.FAILURE) // Score too low
 
         try {
             val lyricsDeferred = async { finalMatch.source.getLyrics(finalMatch.result) }
@@ -427,15 +406,15 @@ class SongListViewModel(
                     newGenre == null && newDate == null && newTrack == null &&
                     newLyricsResolved == null && picUrl == null
 
-            if (isEffectivelyEmpty) return@coroutineScope MatchResult(null, BatchMatchStatus.SKIPPED)
+            if (isEffectivelyEmpty) return@coroutineScope MatchResult(null, BatchMatchResult.SKIPPED)
 
             if (songRepository.writeAudioTagData(song.filePath, tagDataToWrite)) {
-                MatchResult(tagDataToWrite, BatchMatchStatus.SUCCESS)
+                MatchResult(tagDataToWrite, BatchMatchResult.SUCCESS)
             } else {
-                MatchResult(null, BatchMatchStatus.FAILURE) // Write failed
+                MatchResult(null, BatchMatchResult.FAILURE) // Write failed
             }
         } catch (e: Exception) { 
-            MatchResult(null, BatchMatchStatus.FAILURE)
+            MatchResult(null, BatchMatchResult.FAILURE)
         }
     }
     
@@ -493,15 +472,14 @@ class SongListViewModel(
 
     private fun triggerSync(isAuto: Boolean) {
         viewModelScope.launch {
-            val message = if (isAuto) "检测到文件变化，正在更新..." else "正在扫描歌曲..."
-            _uiState.update { it.copy(isLoading = true, loadingMessage = message) }
+            _uiState.update { it.copy(isLoading = true) }
             try {
                 songRepository.synchronize(false)
             } catch (e: Exception) {
                 Log.e(TAG, "同步失败", e)
             } finally {
                 delay(500L)
-                _uiState.update { it.copy(isLoading = false, loadingMessage = "") }
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -524,14 +502,13 @@ class SongListViewModel(
     fun abortBatchMatch() {
         batchMatchJob?.cancel()
         batchMatchJob = null
-        _uiState.update { it.copy(isBatchMatching = false, loadingMessage = "已中止") }
+        _uiState.update { it.copy(isBatchMatching = false) }
     }
     fun closeBatchMatchDialog() {
         _uiState.update {
             it.copy(
                 batchProgress = null,
                 currentFile = "",
-                loadingMessage = "",
                 batchTimeMillis = 0
             )
         }

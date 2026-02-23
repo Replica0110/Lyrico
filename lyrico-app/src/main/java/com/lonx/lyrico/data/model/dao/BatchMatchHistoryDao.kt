@@ -5,7 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import com.lonx.lyrico.data.model.BatchMatchHistory
 import com.lonx.lyrico.data.model.entity.BatchMatchRecordEntity
-import com.lonx.lyrico.data.model.BatchMatchStatus
+import com.lonx.lyrico.data.model.BatchMatchResult
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,7 +26,7 @@ interface BatchMatchHistoryDao {
     fun getRecordsByHistoryId(historyId: Long): Flow<List<BatchMatchRecordEntity>>
 
     @Query("SELECT * FROM batch_match_records WHERE historyId = :historyId AND status = :status")
-    fun getRecordsByHistoryIdAndStatus(historyId: Long, status: BatchMatchStatus): Flow<List<BatchMatchRecordEntity>>
+    fun getRecordsByHistoryIdAndStatus(historyId: Long, status: BatchMatchResult): Flow<List<BatchMatchRecordEntity>>
 
     @Query("DELETE FROM batch_match_history WHERE id = :id")
     suspend fun deleteHistory(id: Long)

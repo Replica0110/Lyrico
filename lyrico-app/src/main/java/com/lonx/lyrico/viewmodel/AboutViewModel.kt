@@ -17,6 +17,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+
+sealed interface UiError {
+    data object LoadFailed : UiError
+    data class Message(val text: String) : UiError
+}
 class AboutViewModel(
     private val settingsRepository: SettingsRepository,
     private val updateManager: UpdateManager,
@@ -34,8 +39,8 @@ class AboutViewModel(
     private val _loadingContributors = MutableStateFlow(false)
     val loadingContributors: StateFlow<Boolean> = _loadingContributors
 
-    private val _contributorsError = MutableStateFlow<String?>(null)
-    val contributorsError: StateFlow<String?> = _contributorsError
+    private val _contributorsError = MutableStateFlow<UiError?>(null)
+    val contributorsError: StateFlow<UiError?> = _contributorsError
     init {
         loadContributors()
     }
@@ -71,7 +76,9 @@ class AboutViewModel(
                     _contributors.value = it
                 }
                 .onFailure {
-                    _contributorsError.value = it.message ?: "加载失败"
+                    _contributorsError.value =
+                        it.message?.let { msg -> UiError.Message(msg) }
+                            ?: UiError.LoadFailed
                 }
 
             _loadingContributors.value = false

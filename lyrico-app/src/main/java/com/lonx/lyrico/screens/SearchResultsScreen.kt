@@ -102,7 +102,7 @@ fun SearchResultsScreen(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = stringResource(id = R.string.section_search),
+                    text = stringResource(id = R.string.action_search),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = SaltTheme.colors.highlight,

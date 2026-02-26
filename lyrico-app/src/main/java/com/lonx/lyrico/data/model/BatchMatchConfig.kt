@@ -1,27 +1,33 @@
 package com.lonx.lyrico.data.model
 
 import android.os.Parcelable
+import androidx.annotation.StringRes
+import com.lonx.lyrico.R
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class BatchMatchConfig(
     val fields: Map<BatchMatchField, BatchMatchMode>,
-    val parallelism: Int = 3
+    val concurrency: Int = 3
 ) : Parcelable {
 }
 
-enum class BatchMatchMode {
-    SUPPLEMENT, // 仅为空时补充
-    OVERWRITE   // 覆盖
+enum class BatchMatchMode(
+    @field:StringRes val labelRes: Int
+) {
+    SUPPLEMENT(R.string.batch_match_mode_supplement), // 仅为空时补充
+    OVERWRITE(R.string.batch_match_mode_overwrite)   // 覆盖
 }
 
-enum class BatchMatchField(val displayName: String) {
-    TITLE("标题"),
-    ARTIST("艺术家"),
-    ALBUM("专辑"),
-    GENRE("流派"),
-    DATE("日期"),
-    TRACK_NUMBER("音轨号"),
-    LYRICS("歌词"),
-    COVER("封面")
+enum class BatchMatchField(
+    @field:StringRes val labelRes: Int
+) {
+    TITLE(R.string.label_title),
+    ARTIST(R.string.label_artists),
+    ALBUM(R.string.label_album),
+    GENRE(R.string.label_genre),
+    DATE(R.string.label_date),
+    TRACK_NUMBER(R.string.label_track_number),
+    LYRICS(R.string.label_lyrics),
+    COVER(R.string.label_cover)
 }

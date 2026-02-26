@@ -233,7 +233,7 @@ class SongListViewModel(
                 batchTimeMillis = 0
             ) }
 
-            val semaphore = Semaphore(matchConfig.parallelism)
+            val semaphore = Semaphore(matchConfig.concurrency)
             val processedCount = AtomicInteger(0)
             val matchResults = Collections.synchronizedList(mutableListOf<Pair<SongEntity, AudioTagData>>())
             val historyRecords = Collections.synchronizedList(mutableListOf<BatchMatchRecordEntity>())

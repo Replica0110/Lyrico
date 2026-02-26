@@ -193,7 +193,7 @@
     <string name="label_date_added">Date Added</string>
     <string name="label_date_modified">Date Modified</string>
     <string name="label_file_path">File Path</string>
-
+    <string name="label_cover">Cover</string>
     <!-- Screen Titles -->
     <string name="folder_manager_title">Folder Management</string>
 
@@ -249,4 +249,12 @@
     <string name="menu_action_share">Share Song</string>
     <string name="menu_action_delete">Delete Song</string>
     <string name="menu_action_delete_sub">This will delete the file and cannot be undone</string>
+
+    <string name="dialog_action_go_update">Update</string>
+    <string name="dialog_title_update_available">New version available: %s</string>
+    <string name="batch_match_config_title">Batch Match Config</string>
+    <string name="batch_match_config_concurrency">Concurrency</string>
+    <string name="batch_match_config_rate_limit_tip">Higher concurrency leads to faster matching but may cause request failures or temporary rate limiting.</string>
+    <string name="batch_match_mode_supplement">Supplement</string>
+    <string name="batch_match_mode_overwrite">Overwrite</string>
 </resources>

@@ -12,9 +12,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lonx.lyrico.R
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -36,7 +38,7 @@ fun UpdateDialog(
     ) {
         // 标题
         Text(
-            text = "发现新版本: $versionName",
+            text = stringResource(id = R.string.dialog_title_update_available, versionName),
             modifier = Modifier.outerPadding(),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
@@ -65,7 +67,7 @@ fun UpdateDialog(
         ) {
             Button(
                 onClick = onDismissRequest,
-                text = "取消",
+                text = stringResource(id = R.string.cancel),
                 modifier = Modifier.weight(1f),
                 type = com.moriafly.salt.ui.ButtonType.Sub
             )
@@ -75,7 +77,7 @@ fun UpdateDialog(
                     onDismissRequest()
                     onConfirm()
                 },
-                text = "去更新",
+                text = stringResource(id = R.string.dialog_action_go_update),
                 modifier = Modifier.weight(1f),
                 maxLines = 1
             )

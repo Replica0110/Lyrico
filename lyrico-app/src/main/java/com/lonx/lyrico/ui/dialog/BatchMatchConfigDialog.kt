@@ -22,10 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lonx.lyrico.R
 import com.moriafly.salt.ui.dialog.BasicDialog
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchField
@@ -55,7 +57,7 @@ fun BatchMatchConfigDialog(
         mutableStateOf(
             BatchMatchConfig(
                 fields = BatchMatchField.entries.associateWith { BatchMatchMode.SUPPLEMENT },
-                parallelism = 3
+                concurrency = 3
             )
         )
     }
@@ -77,7 +79,7 @@ fun BatchMatchConfigDialog(
     ) {
         // 标题
         Text(
-            text = "批量匹配配置",
+            text = stringResource(id = R.string.batch_match_config_title),
             modifier = Modifier.outerPadding(),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
@@ -121,26 +123,26 @@ fun BatchMatchConfigDialog(
             Spacer(modifier = Modifier.height(SaltTheme.dimens.subPadding))
 
             RoundedColumn(paddingValues = PaddingValues(0.dp)) {
-                val tempParallelism = remember(config.parallelism) {
-                    mutableIntStateOf(config.parallelism)
+                val tempConcurrency = remember(config.concurrency) {
+                    mutableIntStateOf(config.concurrency)
                 }
 
                 ItemSlider(
-                    text = "并发数",
-                    sub = "${tempParallelism.intValue}",
+                    text = stringResource(id = R.string.batch_match_config_concurrency),
+                    sub = "${tempConcurrency.intValue}",
                     steps = 3,
-                    value = tempParallelism.intValue.toFloat(),
+                    value = tempConcurrency.intValue.toFloat(),
                     valueRange = 1f..5f,
                     onValueChangeFinished = {
-                        config = config.copy(parallelism = tempParallelism.intValue)
+                        config = config.copy(concurrency = tempConcurrency.intValue)
                     },
                     onValueChange = {
-                        tempParallelism.intValue = it.toInt()
+                        tempConcurrency.intValue = it.toInt()
                     }
                 )
 
                 ItemTip(
-                    text = "并发数越高，匹配速度越快，但可能导致请求失败或被临时限制。"
+                    text = stringResource(id = R.string.batch_match_config_rate_limit_tip),
                 )
             }
         }
@@ -150,7 +152,7 @@ fun BatchMatchConfigDialog(
         ) {
             Button(
                 onClick = onDismissRequest,
-                text = "取消",
+                text = stringResource(id = R.string.cancel),
                 modifier = Modifier.weight(1f),
                 type = com.moriafly.salt.ui.ButtonType.Sub
             )
@@ -160,7 +162,7 @@ fun BatchMatchConfigDialog(
                     onDismissRequest()
                     onConfirm(config)
                 },
-                text = "确定",
+                text = stringResource(id = R.string.confirm),
                 modifier = Modifier.weight(1f),
                 maxLines = 1
             )
@@ -185,7 +187,7 @@ private fun BatchMatchFieldItem(
         ) {
             Icon(
                 imageVector = if (isSelected) SaltIcons.Check else SaltIcons.Uncheck,
-                contentDescription = field.displayName,
+                contentDescription = stringResource(field.labelRes),
                 tint = if (isSelected) SaltTheme.colors.highlight else SaltTheme.colors.subText,
                 modifier = Modifier
                     .size(SaltTheme.dimens.itemIcon)
@@ -195,7 +197,7 @@ private fun BatchMatchFieldItem(
             Spacer(modifier = Modifier.width(SaltTheme.dimens.subPadding))
 
             Text(
-                text = field.displayName,
+                text = stringResource(field.labelRes),
                 style = SaltTheme.textStyles.main,
                 color = if (isSelected) SaltTheme.colors.text else SaltTheme.colors.subText,
                 modifier = Modifier.weight(1f)

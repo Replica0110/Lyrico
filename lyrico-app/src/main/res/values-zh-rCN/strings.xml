@@ -198,7 +198,7 @@
     <string name="label_date_added">添加时间</string>
     <string name="label_date_modified">修改时间</string>
     <string name="label_file_path">文件路径</string>
-
+    <string name="label_cover">封面</string>
     <!-- 标题 -->
     <string name="folder_manager_title">文件夹管理</string>
 
@@ -256,4 +256,13 @@
     <string name="menu_action_share">分享歌曲</string>
     <string name="menu_action_delete">删除歌曲</string>
     <string name="menu_action_delete_sub">此操作会删除文件，且不可撤销</string>
+
+    <string name="dialog_action_go_update">去更新</string>
+    <string name="dialog_title_update_available">发现新版本: %s</string>
+    <string name="batch_match_config_title">批量匹配配置</string>
+    <string name="batch_match_config_concurrency">并发数</string>
+    <string name="batch_match_config_rate_limit_tip">并发数越高，匹配速度越快，但可能导致请求失败或被临时限制</string>
+    <string name="batch_match_mode_supplement">补充</string>
+    <string name="batch_match_mode_overwrite">覆盖</string>
+
 </resources>

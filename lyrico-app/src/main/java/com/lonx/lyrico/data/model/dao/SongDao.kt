@@ -10,6 +10,7 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import kotlinx.coroutines.flow.Flow
 
 data class SongSyncInfo(
+    val id: Long,
     val filePath: String,
     val fileLastModified: Long,
     val folderId: Long
@@ -88,7 +89,10 @@ interface SongDao {
     /**
      * 获取所有需要同步的歌曲信息
      */
-    @Query("SELECT filePath, fileLastModified, folderId FROM songs")
+    /**
+     * 获取所有需要同步的歌曲信息，包含 ID 以便进行精准更新
+     */
+    @Query("SELECT id, filePath, fileLastModified, folderId FROM songs")
     suspend fun getAllSyncInfo(): List<SongSyncInfo>
 
     /**

@@ -132,9 +132,12 @@ class SongRepositoryImpl(
             }
 
             musicScanner.scanMusicFiles().collect { deviceSong ->
-                devicePaths.add(deviceSong.filePath)
+                if (ignoreShortAudio && deviceSong.duration <= minDuration) {
+                    // 如果是短音频，直接跳过
+                    return@collect
+                }
 
-                if (ignoreShortAudio && deviceSong.duration <= minDuration) return@collect
+                devicePaths.add(deviceSong.filePath)
 
                 val dbInfo = dbSongMap[deviceSong.filePath]
                 val needsUpdate = fullRescan || dbInfo == null || dbInfo.fileLastModified != deviceSong.lastModified
@@ -144,44 +147,44 @@ class SongRepositoryImpl(
                     val entity = extractSongMetadata(
                         deviceSong,
                         folderId,
-                        existingId = dbInfo?.folderId ?: 0L
+                        existingId = dbInfo?.id ?: 0L
                     )
-
                     if (entity != null) {
                         batchBuffer.add(entity)
                     }
                 }
 
-                // 缓冲区满，写入数据库并触发 UI 更新
                 if (batchBuffer.size >= BATCH_SIZE) {
                     flushBatch()
                 }
             }
 
-            // 扫描完成后，提交剩余部分
             flushBatch()
 
-            // 处理删除逻辑
+            // 3. 处理需要删除的路径 (物理已删除的 + 现在被设置为忽略的短音频)
             val deletedPaths = dbPaths - devicePaths
             if (deletedPaths.isNotEmpty()) {
+                Log.d(TAG, "正在从数据库清理 ${deletedPaths.size} 条记录 (包含物理删除和短音频)")
+
+                // 找出这些被删除歌曲所属的 folderId，以便后续更新计数
+                val folderIdsOfDeletedSongs = dbSyncInfos
+                    .filter { it.filePath in deletedPaths }
+                    .map { it.folderId }
+                impactedFolderIds.addAll(folderIdsOfDeletedSongs)
+
                 deletedPaths.chunked(BATCH_SIZE).forEach { chunk ->
                     songDao.deleteByFilePaths(chunk)
                 }
-                // 记录受影响的文件夹 ID 以便刷新计数
-                val deletedFolderIds = dbSyncInfos
-                    .filter { it.filePath in deletedPaths }
-                    .map { it.folderId }
-                impactedFolderIds.addAll(deletedFolderIds)
             }
 
-            // 后期清理与统计
+            // 4. 刷新统计
             impactedFolderIds.forEach { folderId ->
                 folderDao.refreshSongCount(folderId)
             }
             folderDao.performPostScanCleanup()
 
             settingsRepository.saveLastScanTime(System.currentTimeMillis())
-            Log.d(TAG, "同步完成。")
+            Log.d(TAG, "同步全部完成。")
         }
     }
 

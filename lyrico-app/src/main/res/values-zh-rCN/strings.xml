@@ -264,5 +264,7 @@
     <string name="batch_match_config_rate_limit_tip">并发数越高，匹配速度越快，但可能导致请求失败或被临时限制</string>
     <string name="batch_match_mode_supplement">补充</string>
     <string name="batch_match_mode_overwrite">覆盖</string>
+    <string name="only_translation_if_available">仅下载翻译歌词</string>
+    <string name="only_translation_if_available_hint">若存在翻译，仅下载翻译歌词（需启用翻译下载）</string>
 
 </resources>

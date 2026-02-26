@@ -27,6 +27,7 @@ data class SettingsUiState(
     val searchSourceOrder: List<Source> = emptyList(),
     val searchPageSize: Int = 20,
     val themeMode: ThemeMode = ThemeMode.AUTO,
+    val onlyTranslationIfAvailable: Boolean = false,
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
 )
@@ -39,7 +40,7 @@ class SettingsViewModel(
     // 使用 combine 合并设置流和缓存流
     val uiState: StateFlow<SettingsUiState> = combine(
         settingsRepository.settingsFlow,
-        _categorizedCacheSize
+        _categorizedCacheSize,
     ) { settings, cacheMap ->
         SettingsUiState(
             lyricFormat = settings.lyricFormat,
@@ -51,6 +52,7 @@ class SettingsViewModel(
             themeMode = settings.themeMode,
             ignoreShortAudio = settings.ignoreShortAudio,
             categorizedCacheSize = cacheMap,
+            onlyTranslationIfAvailable = settings.onlyTranslationIfAvailable,
             totalCacheSize = cacheMap.values.sum()
         )
     }.stateIn(
@@ -85,6 +87,11 @@ class SettingsViewModel(
     fun setTranslationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveTranslationEnabled(enabled)
+        }
+    }
+    fun setOnlyTranslationIfAvailable(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveOnlyTranslationIfAvailable(enabled)
         }
     }
 

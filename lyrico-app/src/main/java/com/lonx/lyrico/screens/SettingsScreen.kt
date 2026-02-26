@@ -62,6 +62,7 @@ fun SettingsScreen(
     val artistSeparator = settingsUiState.separator
     val romaEnabled = settingsUiState.romaEnabled
     val translationEnabled = settingsUiState.translationEnabled
+    val onlyTranslationIfAvailable = settingsUiState.onlyTranslationIfAvailable
     val ignoreShortAudio = settingsUiState.ignoreShortAudio
     val scrollState = rememberScrollState()
     val folders = folderUiState.folders
@@ -235,6 +236,15 @@ fun SettingsScreen(
                     },
                     text = stringResource(R.string.roma),
                     sub = stringResource(R.string.roma_hint)
+                )
+                ItemSwitcher(
+                    enabled = translationEnabled,
+                    state = onlyTranslationIfAvailable,
+                    onChange = {
+                        settingsViewModel.setOnlyTranslationIfAvailable(!onlyTranslationIfAvailable)
+                    },
+                    text = stringResource(R.string.only_translation_if_available),
+                    sub = stringResource(R.string.only_translation_if_available_hint)
                 )
                 ItemSwitcher(
                     state = translationEnabled,

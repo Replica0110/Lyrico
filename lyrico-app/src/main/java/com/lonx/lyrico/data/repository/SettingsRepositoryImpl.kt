@@ -37,6 +37,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+
+        val ONLY_TRANSLATION_IF_AVAILABLE = booleanPreferencesKey("only_translation_if_available")
     }
 
     // 默认搜索源顺序
@@ -123,6 +125,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             }
         }
 
+    override val onlyTranslationIfAvailable: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] ?: false
+        }
+
     override suspend fun getLastScanTime(): Long {
         return context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.LAST_SCAN_TIME] ?: 0L
@@ -191,28 +198,72 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.THEME_MODE] = mode.name
         }
     }
+    private data class LyricPart(
+        val lyricFormat: LyricFormat,
+        val romaEnabled: Boolean,
+        val translationEnabled: Boolean,
+        val onlyTranslationIfAvailable: Boolean
+    )
 
-    override val settingsFlow: Flow<SettingsSnapshot> = combine(
-        lyricFormat,
-        romaEnabled,
-        separator,
-        searchSourceOrder,
-        searchPageSize,
-        themeMode,
-        ignoreShortAudio,
-        translationEnabled
-    ) { array ->
-        @Suppress("UNCHECKED_CAST")
-        SettingsSnapshot(
-            lyricFormat = array[0] as LyricFormat,
-            romaEnabled = array[1] as Boolean,
-            separator = array[2] as String,
-            searchSourceOrder = array[3] as List<Source>,
-            searchPageSize = array[4] as Int,
-            themeMode = array[5] as ThemeMode,
-            ignoreShortAudio = array[6] as Boolean,
-            translationEnabled = array[7] as Boolean
-        )
+    private val lyricPartFlow =
+        combine(
+            lyricFormat,
+            romaEnabled,
+            translationEnabled,
+            onlyTranslationIfAvailable
+        ) { format, roma, translation, onlyTranslation ->
+            LyricPart(
+                lyricFormat = format,
+                romaEnabled = roma,
+                translationEnabled = translation,
+                onlyTranslationIfAvailable = onlyTranslation
+            )
+        }
+    private data class SearchPart(
+        val separator: String,
+        val searchSourceOrder: List<Source>,
+        val searchPageSize: Int
+    )
+
+    private val searchPartFlow =
+        combine(separator, searchSourceOrder, searchPageSize) { sep, order, size ->
+            SearchPart(sep, order, size)
+        }
+    private data class UiPart(
+        val themeMode: ThemeMode,
+        val ignoreShortAudio: Boolean
+    )
+
+    private val uiPartFlow =
+        combine(themeMode, ignoreShortAudio) { theme, ignore ->
+            UiPart(
+                themeMode = theme,
+                ignoreShortAudio = ignore
+            )
+        }
+    override val settingsFlow: Flow<SettingsSnapshot> =
+        combine(
+            lyricPartFlow,
+            searchPartFlow,
+            uiPartFlow
+        ) { lyric, search, ui ->
+            SettingsSnapshot(
+                lyricFormat = lyric.lyricFormat,
+                romaEnabled = lyric.romaEnabled,
+                translationEnabled = lyric.translationEnabled,
+                onlyTranslationIfAvailable = lyric.onlyTranslationIfAvailable,
+                separator = search.separator,
+                searchSourceOrder = search.searchSourceOrder,
+                searchPageSize = search.searchPageSize,
+                themeMode = ui.themeMode,
+                ignoreShortAudio = ui.ignoreShortAudio
+            )
+        }
+
+    override suspend fun saveOnlyTranslationIfAvailable(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] = enabled
+        }
     }
     override suspend fun getLyricRenderConfig(): LyricRenderConfig {
         val prefs = context.settingsDataStore.data.first()
@@ -226,10 +277,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
         val showTranslation = prefs[PreferencesKeys.TRANSLATION_ENABLED] ?: true
 
+        val onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] ?: false
         return LyricRenderConfig(
             format = format,
             showRomanization = roma,
-            showTranslation = showTranslation
+            showTranslation = showTranslation,
+            onlyTranslationIfAvailable = onlyTranslationIfAvailable
         )
     }
 

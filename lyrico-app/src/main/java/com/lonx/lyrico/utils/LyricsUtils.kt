@@ -23,33 +23,35 @@ object LyricsUtils {
     ): String {
         val builder = StringBuilder()
 
+        val romanMap = if (config.showRomanization) {
+            result.romanization?.associateBy { it.start } ?: emptyMap()
+        } else emptyMap()
 
+        val translatedMap = if (config.showTranslation) {
+            result.translated?.associateBy { it.start } ?: emptyMap()
+        } else emptyMap()
 
         result.original.forEach { line ->
+            val matchedTranslation = if (config.showTranslation) matchingSubLine(line, translatedMap) else null
+            val matchedRoman = if (config.showRomanization) matchingSubLine(line, romanMap) else null
 
-            when (config.format) {
-                LyricFormat.ENHANCED_LRC -> appendEnhancedLine(builder, line)
-                LyricFormat.PLAIN_LRC -> appendLineByLine(builder, line)
-                LyricFormat.VERBATIM_LRC -> appendWordByWord(builder, line)
+            val skipOriginal = config.onlyTranslationIfAvailable && matchedTranslation != null
+
+            if (!skipOriginal) {
+                when (config.format) {
+                    LyricFormat.ENHANCED_LRC -> appendEnhancedLine(builder, line)
+                    LyricFormat.PLAIN_LRC -> appendLineByLine(builder, line)
+                    LyricFormat.VERBATIM_LRC -> appendWordByWord(builder, line)
+                }
+                builder.append('\n')
             }
 
-
-            builder.append('\n')
-
-            // 罗马音
-            if (config.showRomanization){
-                val romanMap = result.romanization?.associateBy { it.start } ?: emptyMap()
-                matchingSubLine(line, romanMap)?.let {
-                    builder.append(formatPlainLine(it)).append('\n')
-                }
+            if (matchedRoman != null && !skipOriginal) {
+                builder.append(formatPlainLine(matchedRoman)).append('\n')
             }
 
-            // 翻译
-            if (config.showTranslation){
-                val translatedMap = result.translated?.associateBy { it.start } ?: emptyMap()
-                matchingSubLine(line, translatedMap)?.let {
-                    builder.append(formatPlainLine(it)).append('\n')
-                }
+            if (matchedTranslation != null) {
+                builder.append(formatPlainLine(matchedTranslation)).append('\n')
             }
         }
         return builder.toString().trim()
@@ -98,6 +100,6 @@ object LyricsUtils {
     ): LyricsLine? {
         val matched = subLineMap[originalLine.start]
         if (matched != null) return matched
-        return subLineMap.entries.find { abs(it.key - originalLine.start) < 500 }?.value
+        return subLineMap.entries.find { abs(it.key - originalLine.start) < 300 }?.value
     }
 }

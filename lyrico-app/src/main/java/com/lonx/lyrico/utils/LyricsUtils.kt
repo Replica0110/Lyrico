@@ -17,6 +17,12 @@ object LyricsUtils {
         return String.format("%02d:%02d.%03d", minutes, seconds, ms)
     }
 
+    private fun isBlankOrPlaceholder(line: LyricsLine): Boolean {
+        // 将所有单词拼接成一行文本
+        val text = line.words.joinToString("") { it.text }.trim()
+        return text.isEmpty() || text.matches(Regex("^[\\s/]*$"))
+    }
+
     fun formatLrcResult(
         result: LyricsResult,
         config: LyricRenderConfig
@@ -32,8 +38,18 @@ object LyricsUtils {
         } else emptyMap()
 
         result.original.forEach { line ->
-            val matchedTranslation = if (config.showTranslation) matchingSubLine(line, translatedMap) else null
-            val matchedRoman = if (config.showRomanization) matchingSubLine(line, romanMap) else null
+            if (config.removeEmptyLines && isBlankOrPlaceholder(line)) {
+                return@forEach
+            }
+            val matchedTranslation = if (config.showTranslation) {
+                val match = matchingSubLine(line, translatedMap)
+                if (config.removeEmptyLines && match != null && isBlankOrPlaceholder(match)) null else match
+            } else null
+
+            val matchedRoman = if (config.showRomanization) {
+                val match = matchingSubLine(line, romanMap)
+                if (config.removeEmptyLines && match != null && isBlankOrPlaceholder(match)) null else match
+            } else null
 
             val skipOriginal = config.onlyTranslationIfAvailable && matchedTranslation != null
 
@@ -56,6 +72,7 @@ object LyricsUtils {
         }
         return builder.toString().trim()
     }
+
     private fun appendEnhancedLine(builder: StringBuilder, line: LyricsLine) {
         if (line.words.isEmpty()) return
 
@@ -69,6 +86,7 @@ object LyricsUtils {
         val lastEnd = line.words.last().end
         builder.append(" <${formatTimestamp(lastEnd)}>")
     }
+
     private fun appendLineByLine(builder: StringBuilder, line: LyricsLine) {
         val lineText = line.words.joinToString("") { it.text }
         val endTime = line.words.lastOrNull()?.end
@@ -79,6 +97,7 @@ object LyricsUtils {
             builder.append("[${formatTimestamp(line.start)}]$lineText")
         }
     }
+
     private fun appendWordByWord(builder: StringBuilder, line: LyricsLine) {
         line.words.forEachIndexed { index, word ->
             if (index == line.words.lastIndex) {
@@ -88,11 +107,11 @@ object LyricsUtils {
             }
         }
     }
+
     private fun formatPlainLine(line: LyricsLine): String {
         return "[${formatTimestamp(line.start)}]" +
                 line.words.joinToString(" ") { it.text }
     }
-
 
     private fun matchingSubLine(
         originalLine: LyricsLine,

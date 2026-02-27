@@ -259,4 +259,7 @@
     <string name="batch_match_mode_overwrite">Overwrite</string>
     <string name="only_translation_if_available">Download Translated Lyrics Only</string>
     <string name="only_translation_if_available_hint">Downloads only translated lyrics when available. \nRequires translation download to be enabled.</string>
+    <string name="remove_empty_lines">Remove Empty Lines</string>
+    <string name="remove_empty_lines_hint">Remove lines that are empty or contain only placeholders</string>
+
 </resources>

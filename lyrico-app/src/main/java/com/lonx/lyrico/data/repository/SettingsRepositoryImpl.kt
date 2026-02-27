@@ -25,6 +25,7 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 class SettingsRepositoryImpl(private val context: Context) : SettingsRepository {
 
     private object PreferencesKeys {
+        val REMOVE_EMPTY_LINES = booleanPreferencesKey("remove_empty_lines")
         val LYRIC_FORMAT = stringPreferencesKey("lyric_display_mode")
         val LAST_SCAN_TIME = longPreferencesKey("last_scan_time")
         val SORT_BY = stringPreferencesKey("sort_by")
@@ -130,6 +131,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] ?: false
         }
 
+    override val removeEmptyLines: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.REMOVE_EMPTY_LINES] ?: true
+        }
     override suspend fun getLastScanTime(): Long {
         return context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.LAST_SCAN_TIME] ?: 0L
@@ -202,7 +207,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val lyricFormat: LyricFormat,
         val romaEnabled: Boolean,
         val translationEnabled: Boolean,
-        val onlyTranslationIfAvailable: Boolean
+        val onlyTranslationIfAvailable: Boolean,
+        val removeEmptyLines: Boolean
     )
 
     private val lyricPartFlow =
@@ -210,13 +216,15 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             lyricFormat,
             romaEnabled,
             translationEnabled,
-            onlyTranslationIfAvailable
-        ) { format, roma, translation, onlyTranslation ->
+            onlyTranslationIfAvailable,
+            removeEmptyLines
+        ) { format, roma, translation, onlyTranslation, removeEmptyLines ->
             LyricPart(
                 lyricFormat = format,
                 romaEnabled = roma,
                 translationEnabled = translation,
-                onlyTranslationIfAvailable = onlyTranslation
+                onlyTranslationIfAvailable = onlyTranslation,
+                removeEmptyLines = removeEmptyLines
             )
         }
     private data class SearchPart(
@@ -256,13 +264,20 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 searchSourceOrder = search.searchSourceOrder,
                 searchPageSize = search.searchPageSize,
                 themeMode = ui.themeMode,
-                ignoreShortAudio = ui.ignoreShortAudio
+                ignoreShortAudio = ui.ignoreShortAudio,
+                removeEmptyLines = lyric.removeEmptyLines
             )
         }
 
     override suspend fun saveOnlyTranslationIfAvailable(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] = enabled
+        }
+    }
+
+    override suspend fun saveRemoveEmptyLines(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.REMOVE_EMPTY_LINES] = enabled
         }
     }
     override suspend fun getLyricRenderConfig(): LyricRenderConfig {

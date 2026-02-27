@@ -266,5 +266,7 @@
     <string name="batch_match_mode_overwrite">覆盖</string>
     <string name="only_translation_if_available">仅下载翻译歌词</string>
     <string name="only_translation_if_available_hint">若存在翻译，仅下载翻译歌词（需启用翻译下载）</string>
+    <string name="remove_empty_lines">移除空行</string>
+    <string name="remove_empty_lines_hint">删除内容为空或仅包含占位符的行</string>
 
 </resources>

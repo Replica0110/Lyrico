@@ -1,6 +1,7 @@
 package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +64,7 @@ fun SettingsScreen(
     val romaEnabled = settingsUiState.romaEnabled
     val translationEnabled = settingsUiState.translationEnabled
     val onlyTranslationIfAvailable = settingsUiState.onlyTranslationIfAvailable
+    val removeEmptyLines = settingsUiState.removeEmptyLines
     val ignoreShortAudio = settingsUiState.ignoreShortAudio
     val scrollState = rememberScrollState()
     val folders = folderUiState.folders
@@ -238,21 +240,33 @@ fun SettingsScreen(
                     sub = stringResource(R.string.roma_hint)
                 )
                 ItemSwitcher(
-                    enabled = translationEnabled,
-                    state = onlyTranslationIfAvailable,
-                    onChange = {
-                        settingsViewModel.setOnlyTranslationIfAvailable(!onlyTranslationIfAvailable)
-                    },
-                    text = stringResource(R.string.only_translation_if_available),
-                    sub = stringResource(R.string.only_translation_if_available_hint)
-                )
-                ItemSwitcher(
                     state = translationEnabled,
                     onChange = {
                         settingsViewModel.setTranslationEnabled(!translationEnabled)
                     },
                     text = stringResource(R.string.translation),
                     sub = stringResource(R.string.translation_hint)
+                )
+                AnimatedVisibility(
+                    visible = translationEnabled
+                ) {
+                    ItemSwitcher(
+                        enabled = translationEnabled,
+                        state = onlyTranslationIfAvailable,
+                        onChange = {
+                            settingsViewModel.setOnlyTranslationIfAvailable(!onlyTranslationIfAvailable)
+                        },
+                        text = stringResource(R.string.only_translation_if_available),
+                        sub = stringResource(R.string.only_translation_if_available_hint)
+                    )
+                }
+                ItemSwitcher(
+                    state = removeEmptyLines,
+                    text = stringResource(R.string.remove_empty_lines),
+                    sub = stringResource(R.string.remove_empty_lines_hint),
+                    onChange = {
+                        settingsViewModel.setRemoveEmptyLines(!removeEmptyLines)
+                    }
                 )
             }
             ItemOuterTitle(stringResource(R.string.section_metadata))

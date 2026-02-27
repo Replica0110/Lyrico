@@ -28,6 +28,7 @@ data class SettingsUiState(
     val searchPageSize: Int = 20,
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val onlyTranslationIfAvailable: Boolean = false,
+    val removeEmptyLines: Boolean = true,
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
 )
@@ -53,7 +54,8 @@ class SettingsViewModel(
             ignoreShortAudio = settings.ignoreShortAudio,
             categorizedCacheSize = cacheMap,
             onlyTranslationIfAvailable = settings.onlyTranslationIfAvailable,
-            totalCacheSize = cacheMap.values.sum()
+            totalCacheSize = cacheMap.values.sum(),
+            removeEmptyLines = settings.removeEmptyLines
         )
     }.stateIn(
         scope = viewModelScope,
@@ -95,6 +97,11 @@ class SettingsViewModel(
         }
     }
 
+    fun setRemoveEmptyLines(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveRemoveEmptyLines(enabled)
+        }
+    }
     fun setSeparator(separator: ArtistSeparator) {
         viewModelScope.launch {
             settingsRepository.saveSeparator(separator.toText())

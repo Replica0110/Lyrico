@@ -206,7 +206,11 @@ private fun BatchMatchFieldItem(
 
             if (isSelected) {
                 Text(
-                    text = if (mode == BatchMatchMode.OVERWRITE) "覆盖" else "补充",
+                    text = if (mode == BatchMatchMode.OVERWRITE) {
+                        stringResource(R.string.batch_match_mode_overwrite)
+                    } else {
+                        stringResource(R.string.batch_match_mode_supplement)
+                    },
                     style = SaltTheme.textStyles.sub,
                     color = if (mode == BatchMatchMode.OVERWRITE)
                         SaltTheme.colors.highlight

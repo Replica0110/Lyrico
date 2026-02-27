@@ -1,9 +1,9 @@
 [versions]
-agp = "8.13.2"
-coil = "3.3.0"
+agp = "9.0.1"
+coil = "3.4.0"
 core = "2.3.0"
-kotlin = "2.2.21"
-ksp = "2.3.3"
+kotlin = "2.3.10"
+ksp = "2.3.6"
 composeMarkdown = "0.5.7"
 coreKtx = "1.17.0"
 junit = "4.13.2"
@@ -12,8 +12,8 @@ koinAndroid = "4.1.1"
 koinAndroidxCompose = "4.1.1"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
-activityCompose = "1.12.3"
-composeBom = "2026.01.01"
+activityCompose = "1.12.4"
+composeBom = "2026.02.00"
 kotlinxCoroutinesAndroid = "1.10.2"
 kotlinxSerializationJson = "1.10.0"
 okhttp = "5.3.2"
@@ -66,7 +66,6 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

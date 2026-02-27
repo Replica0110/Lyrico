@@ -1,0 +1,5 @@
+<resources>
+    <string name="ne_source_name">NetEase Cloud Music</string>
+    <string name="kg_source_name">KuGou Music</string>
+    <string name="qm_source_name">QQ Music</string>
+</resources>

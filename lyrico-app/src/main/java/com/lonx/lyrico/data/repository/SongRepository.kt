@@ -1,7 +1,8 @@
 package com.lonx.lyrico.data.repository
 
+import android.net.Uri
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.SongEntity
+import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortOrder
 import kotlinx.coroutines.flow.Flow
@@ -12,6 +13,15 @@ import kotlinx.coroutines.flow.Flow
  */
 interface SongRepository {
 
+
+    /**
+     * 从文件系统中删除歌曲文件
+     *
+     * @param SongEntity 要删除的歌曲
+     */
+    suspend fun deleteSong(song: SongEntity)
+
+    suspend fun getSongByFilePath(filePath: String): SongEntity?
     /**
      * 同步数据库与设备文件
      *
@@ -20,14 +30,14 @@ interface SongRepository {
      *
      * @param fullRescan 是否进行彻底的重新扫描（强制读取所有文件的元数据，忽略修改时间检查）
      */
-    suspend fun synchronizeWithDevice(fullRescan: Boolean)
+    suspend fun synchronize(fullRescan: Boolean)
 
     /**
-     * 获取所有歌曲
+     * 更新歌曲元数据（仅更新数据库）
      *
-     * @return 返回包含所有 [SongEntity] 的 Flow 流。
+     * @param updates 要更新的歌曲列表，包含歌曲实体和音频标签数据
      */
-    fun getAllSongs(): Flow<List<SongEntity>>
+    suspend fun applyBatchMetadata(updates: List<Pair<SongEntity, AudioTagData>>)
 
     /**
      * 根据查询条件搜索歌曲
@@ -93,5 +103,5 @@ interface SongRepository {
      * @param filePath 文件路径或 URI
      * @return 文件名称
      */
-    fun getFileName(filePath: String): String
+    fun resolveDisplayName(filePath: String): String
 }

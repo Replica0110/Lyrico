@@ -158,7 +158,7 @@ class SearchViewModel(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            _uiState.update { it.copy(searchError = "搜索失败: ${e.message}", isSearching = false) }
+            _uiState.update { it.copy(searchError = e.message, isSearching = false) }
         }
     }
 
@@ -265,11 +265,13 @@ class SearchViewModel(
         val sourceImpl = findSource(song.source) ?: return null
         val lyricsResult = sourceImpl.getLyrics(song) ?: return null
 
-        val romaEnabled = settingsRepository.romaEnabled.first()
+        val config = settingsRepository.getLyricRenderConfig()
+
         return LyricsUtils.formatLrcResult(
             result = lyricsResult,
-            romaEnabled = romaEnabled
+            config = config
         )
+
     }
 
     // -------------------------------------------------------------------------

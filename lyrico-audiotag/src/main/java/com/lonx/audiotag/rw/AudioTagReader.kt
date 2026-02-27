@@ -40,34 +40,87 @@ object AudioTagReader {
 
                 // 处理属性 Map
                 val props = metadata.propertyMap
-                // 辅助函数：安全获取 Map 中的第一个值
-                fun getValue(key: String): String? {
-                    if (props.containsKey(key)) {
+
+
+                fun firstOf(vararg keys: String): String? {
+                    for (key in keys) {
                         val arr = props[key]
-                        if (arr != null && arr.isNotEmpty()) {
-                            return arr[0]
+                        if (!arr.isNullOrEmpty()) {
+                            val value = arr[0].trim()
+                            if (value.isNotEmpty()) return value
                         }
                     }
                     return null
                 }
 
-                // 尝试读取 "LYRICS", 如果没有则尝试 "UNSYNCED LYRICS" (常见于某些 ID3v2 解析)
-                var lyricsStr = getValue("LYRICS")
-                if (lyricsStr == null || lyricsStr.isEmpty()) {
-                    lyricsStr = getValue("UNSYNCED LYRICS")
+                fun firstIntOf(vararg keys: String): Int? {
+                    val raw = firstOf(*keys) ?: return null
+                    return raw.substringBefore('/').toIntOrNull()
                 }
-                if (lyricsStr == null || lyricsStr.isEmpty()) {
-                    // 极少数情况下的 Key
-                    lyricsStr = getValue("USLT")
-                }
+
+                val lyrics = firstOf(
+                    "LYRICS",
+                    "UNSYNCED LYRICS",
+                    "USLT",
+                    "LYRIC",
+                    "LYRICSENG"
+                )
+
+
+                val albumArtist = firstOf(
+                    "ALBUMARTIST",     // FLAC/Vorbis
+                    "ALBUM ARTIST",
+                    "TPE2",            // ID3v2
+                    "aART",            // MP4
+                    "ALBUMARTISTSORT"
+                )
+
+                val discNumber = firstIntOf(
+                    "DISCNUMBER",
+                    "DISC",
+                    "TPOS",           // ID3v2
+                    "DISKNUMBER"
+                )
+
+                val composer = firstOf(
+                    "COMPOSER",
+                    "TCOM",           // ID3v2
+                    "©wrt"            // MP4
+                )
+
+                val lyricist = firstOf(
+                    "LYRICIST",
+                    "TEXT",           // ID3v2 作词
+                    "WRITER",
+                    "LYRICS BY"
+                )
+
+                val comment = firstOf(
+                    "COMMENT",
+                    "COMM",           // ID3
+                    "DESCRIPTION"
+                )
+
+                val style = firstOf(
+                    "STYLE",
+                    "SUBGENRE",
+                    "MOOD"
+                )
+
                 return@withContext AudioTagData(
-                    title = getValue("TITLE"),
-                    artist = getValue("ARTIST"),
-                    album = getValue("ALBUM"),
-                    genre = getValue("GENRE"),
-                    date = getValue("DATE"),
-                    trackerNumber = getValue("TRACKNUMBER"),
-                    lyrics = lyricsStr, // 赋值歌词
+                    title = firstOf("TITLE"),
+                    artist = firstOf("ARTIST"),
+                    album = firstOf("ALBUM"),
+                    genre = firstOf("GENRE") ?: style, // fallback 到 style
+                    date = firstOf("DATE", "YEAR"),
+                    trackerNumber = firstIntOf("TRACKNUMBER", "TRACK", "TRCK")?.toString(),
+
+                    albumArtist = albumArtist,
+                    discNumber = discNumber,
+                    composer = composer,
+                    lyricist = lyricist,
+                    comment = comment,
+                    lyrics = lyrics,
 
                     durationMilliseconds = audioProps?.length ?: 0,
                     bitrate = audioProps?.bitrate ?: 0,
@@ -79,7 +132,7 @@ object AudioTagReader {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Read error", e)
-                return@withContext AudioTagData()
+                AudioTagData()
             }
         }
     }

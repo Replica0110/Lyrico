@@ -1,8 +1,8 @@
 package com.lonx.lyrics.source.ne
 
+import android.content.Context
 import android.util.Base64
 import android.util.Log
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
@@ -19,37 +19,30 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import retrofit2.Retrofit
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.random.Random
+import androidx.core.content.edit
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
+import okhttp3.RequestBody
 
-class NeSource: SearchSource {
+class NeSource(
+    private val api: NeApi,
+    private val json: Json,
+    private val context: Context
+): SearchSource {
     override val sourceType = Source.NE
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-        isLenient = true
-        encodeDefaults = true
-    }
+
 
     // Cookie 管理
     private val cookieMap = mutableMapOf<String, String>()
     private val DEVICEID_XOR_KEY = "3go8&$8*3*3h0k(2)2"
 
-    private val client = OkHttpClient.Builder().build()
-
-    private val api: NeApi = Retrofit.Builder()
-        .baseUrl("https://interface.music.163.com/")
-        .client(client)
-        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-        .build()
-        .create(NeApi::class.java)
 
     private val initMutex = Mutex()
     private var isInitialized = false
@@ -62,13 +55,52 @@ class NeSource: SearchSource {
     private val DEVICE_ID = UUID.randomUUID().toString().replace("-", "")
     private var clientSign: String = ""
 
+    private val PREF_NAME = "ne_source_prefs"
+    private val KEY_COOKIES = "cookies"
+    private val KEY_USER_ID = "user_id"
+    private val KEY_INIT_TIME = "init_time"
+    private val EXPIRE_TIME = 10 * 24 * 60 * 60 * 1000L // 登录有效期 10 天
+
     init {
         // 初始化时生成 clientSign
         clientSign = generateClientSign()
     }
+    /**
+     * 尝试从本地加载缓存的 Session
+     */
+    private fun loadSession(): Boolean {
+        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        val savedInitTime = prefs.getLong(KEY_INIT_TIME, 0L)
+
+        if (System.currentTimeMillis() - savedInitTime > EXPIRE_TIME) return false
+
+        val savedCookiesJson = prefs.getString(KEY_COOKIES, null)
+        val savedUserId = prefs.getLong(KEY_USER_ID, 0L)
+
+        return if (!savedCookiesJson.isNullOrEmpty() && savedUserId != 0L) {
+            try {
+                val map: Map<String, String> = json.decodeFromString(savedCookiesJson)
+                cookieMap.clear()
+                cookieMap.putAll(map)
+                userId = savedUserId
+                true
+            } catch (e: Exception) { false }
+        } else false
+    }
 
     /**
-     * 生成 ClientSign (对应 Python 代码中的逻辑)
+     * 保存 Session 到本地
+     */
+    private fun saveSession(uid: Long, cookies: Map<String, String>) {
+        val prefs = context.getSharedPreferences("ne_source_prefs", Context.MODE_PRIVATE)
+        prefs.edit {
+            putLong("user_id", uid)
+                .putString("cookies", json.encodeToString(cookies))
+                .putLong("init_time", System.currentTimeMillis())
+        }
+    }
+    /**
+     * 生成 ClientSign
      * 格式: MAC@@@RANDOM@@@@@@HASH
      */
     private fun generateClientSign(): String {
@@ -78,14 +110,11 @@ class NeSource: SearchSource {
         val randomStr = (1..8).map {
             ('A'..'Z').random()
         }.joinToString("")
-        val hashPart = (1..32).joinToString("") {
-            "%02x".format(Random.nextInt(256))
-        }
-        val realHashPart = (1..64).map {
+        val hashPart = (1..64).map {
             "0123456789abcdef".random()
         }.joinToString("")
 
-        return "$mac@@@$randomStr@@@@@@$realHashPart"
+        return "$mac@@@$randomStr@@@@@@$hashPart"
     }
 
     private suspend fun ensureInit() {
@@ -94,13 +123,27 @@ class NeSource: SearchSource {
         initMutex.withLock {
             if (isInitialized) return
 
-            // 1. 构造初始 Cookie
-            cookieMap["os"] = "pc"
-            cookieMap["appver"] = APP_VER
-            cookieMap["osver"] = OS_VER
-            cookieMap["deviceId"] = DEVICE_ID
-            cookieMap["channel"] = "netease"
-            cookieMap["clientSign"] = clientSign
+            if (loadSession()) {
+                isInitialized = true
+                Log.d("NeSource", "从缓存恢复会话成功, uid: $userId")
+                return@withLock
+            }
+
+            Log.d("NeSource", "开始执行匿名登录流程...")
+
+            val modes = listOf(
+                "MS-iCraft B760M WIFI", "ASUS ROG STRIX Z790", "MSI MAG B550 TOMAHAWK",
+                "ASRock X670E Taichi", "GIGABYTE Z790 AORUS ELITE"
+            )
+            val preCookies = mutableMapOf(
+                "os" to "pc",
+                "deviceId" to DEVICE_ID,
+                "osver" to "Microsoft-Windows-10--build-${Random.nextInt(20000, 30000)}-64bit",
+                "clientSign" to clientSign,
+                "channel" to "netease",
+                "mode" to modes.random(),
+                "appver" to APP_VER
+            )
 
             val path = "/eapi/register/anonimous"
 
@@ -112,29 +155,101 @@ class NeSource: SearchSource {
             }
 
             try {
-                val result = doRequest(path, params, "/api/register/anonimous")
-                Log.d("NeSource", "Register result: $result")
+                val cookieStr = preCookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
+                val headers = mapOf(
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36 Chrome/91.0.4472.164 NeteaseMusicDesktop/$APP_VER",
+                    "Referer" to "https://music.163.com/",
+                    "Cookie" to cookieStr,
+                    "Accept" to "*/*",
+                    "Host" to "interface.music.163.com"
+                )
+                val requestBody = buildBody(path, params, preCookies)
 
-                val jsonRes = json.decodeFromString<JsonObject>(result)
+                val response = api.request("https://interface.music.163.com$path", headers, requestBody)
 
-                if (jsonRes["code"].toString() == "200") {
-                    userId = jsonRes["userId"].toString().toLongOrNull() ?: 0
-                    isInitialized = true
-                    Log.d("NeSource", "Anonimous login success, uid: $userId")
+                if (response.isSuccessful) {
+                    val setCookieHeaders = response.headers().values("Set-Cookie")
+                    val responseCookies = mutableMapOf<String, String>()
+                    setCookieHeaders.forEach { cookieLine ->
+                        val cookiePair = cookieLine.split(";")[0].split("=")
+                        if (cookiePair.size >= 2) {
+                            responseCookies[cookiePair[0]] = cookiePair[1]
+                        }
+                    }
+
+                    cookieMap.clear()
+                    cookieMap.putAll(preCookies)
+                    responseCookies["MUSIC_A"]?.let { cookieMap["MUSIC_A"] = it }
+                    responseCookies["NMTID"]?.let { cookieMap["NMTID"] = it }
+                    responseCookies["__csrf"]?.let { cookieMap["__csrf"] = it }
+
+                    val wnmcid = "${(1..6).map { ('a'..'z').random() }.joinToString("")}.${System.currentTimeMillis()}.01.0"
+                    cookieMap["WNMCID"] = wnmcid
+
+                    val responseBodyBytes = response.body()?.bytes() ?: byteArrayOf()
+                    if (responseBodyBytes.isNotEmpty()) {
+                        val decrypted = NeCryptoUtils.aesDecrypt(responseBodyBytes)
+                        val jsonRes = json.decodeFromString<JsonObject>(decrypted)
+
+                        if (jsonRes["code"]?.jsonPrimitive?.content == "200") {
+                            userId = jsonRes["userId"]?.jsonPrimitive?.longOrNull ?: 0
+
+                            saveSession(userId, cookieMap)
+
+                            isInitialized = true
+                            Log.d("NeSource", "匿名登录成功: userId=$userId, 缓存已更新")
+                        } else {
+                            Log.e("NeSource", "登录失败, 服务器返回: ${jsonRes["code"]}")
+                        }
+                    }
                 } else {
-                    Log.e("NeSource", "Login failed code: ${jsonRes["code"]}")
+                    Log.e("NeSource", "HTTP 请求失败: ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("NeSource", "Init failed", e)
+                Log.e("NeSource", "初始化过程中发生异常", e)
             }
         }
+    }
+
+    /**
+     * 构造 EAPI 加密后的请求体
+     * @param path 接口路径，例如 "/eapi/register/anonimous"
+     * @param params 业务参数
+     * @param preCookies 用于生成内部 header 字段的设备信息
+     */
+    private fun buildBody(path: String, params: JsonObject, preCookies: Map<String, String>): RequestBody {
+        val headerParam = buildJsonObject {
+            put("clientSign", preCookies["clientSign"] ?: "")
+            put("osver", preCookies["osver"] ?: "")
+            put("deviceId", preCookies["deviceId"] ?: "")
+            put("os", preCookies["os"] ?: "")
+            put("appver", preCookies["appver"] ?: "")
+            put("requestId", System.currentTimeMillis().toString())
+        }
+
+        val finalParamsMap = params.toMutableMap()
+        finalParamsMap["header"] = JsonPrimitive(json.encodeToString(headerParam))
+
+        if (!finalParamsMap.containsKey("e_r")) {
+            finalParamsMap["e_r"] = JsonPrimitive(true)
+        }
+
+        val paramsStr = json.encodeToString(JsonObject(finalParamsMap))
+        val encryptPath = path.replace("/eapi/", "/api/")
+
+        val encryptedBytes = NeCryptoUtils.encryptParams(encryptPath, paramsStr)
+        val encryptedHexString = encryptedBytes.joinToString("") { "%02x".format(it) }.uppercase()
+
+        val formBody = "params=$encryptedHexString"
+        return formBody.toRequestBody("application/x-www-form-urlencoded".toMediaType())
     }
 
     private suspend fun doRequest(
         path: String,
         params: JsonObject,
         encryptPath: String? = null
-    ): String {
+    ): String = withContext(Dispatchers.Default) {
+
         val headerParam = buildJsonObject {
             put("clientSign", clientSign)
             put("osver", OS_VER)
@@ -144,12 +259,9 @@ class NeSource: SearchSource {
             put("requestId", System.currentTimeMillis().toString())
         }
 
-        // The python implementation shows that the header field must be a string.
         val headerParamString = json.encodeToString(headerParam)
-
         val finalParams = params.toMutableMap()
         finalParams["header"] = JsonPrimitive(headerParamString)
-
         if (!finalParams.containsKey("e_r")) {
             finalParams["e_r"] = JsonPrimitive(true)
         }
@@ -157,40 +269,38 @@ class NeSource: SearchSource {
         val mergedParams = JsonObject(finalParams)
         val paramsStr = json.encodeToString(mergedParams)
         val actualEncryptPath = encryptPath ?: path.replace("/eapi/", "/api/")
-        val encryptedBytes = NeCryptoUtils.encryptParams(actualEncryptPath, paramsStr)
 
-        // The request body should be in the format "params=ENCRYPTED_DATA"
+        // 加密
+        val encryptedBytes = NeCryptoUtils.encryptParams(actualEncryptPath, paramsStr)
         val encryptedHexString = encryptedBytes.joinToString("") { "%02x".format(it) }.uppercase()
         val formBody = "params=$encryptedHexString"
         val requestBody = formBody.toRequestBody("application/x-www-form-urlencoded".toMediaType())
 
-
         val headers = mutableMapOf(
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36 Chrome/91.0.4472.164 NeteaseMusicDesktop/$APP_VER",
-            "Referer" to "https://music.163.com/"
+            "Referer" to "https://music.163.com/",
+            "Cookie" to cookieMap.entries.joinToString("; ") { "${it.key}=${it.value}" }
         )
-        val cookieStr = cookieMap.entries.joinToString("; ") { "${it.key}=${it.value}" }
-        headers["Cookie"] = cookieStr
 
         val fullUrl = "https://interface.music.163.com$path"
 
         val responseBody = api.request(fullUrl, headers, requestBody)
+        val responseBytes = responseBody.body()?.bytes() ?: return@withContext ""
+        if (responseBytes.isEmpty()) return@withContext ""
 
-        // Read the response body only once to avoid consuming the stream.
-        val responseBytes = responseBody.bytes()
-
-        if (responseBytes.isEmpty()) {
-            Log.w("NeSource", "doRequest for $path failed: response body is empty")
-            return ""
-        }
-
+        // 解密
         try {
             val decrypted = NeCryptoUtils.aesDecrypt(responseBytes)
-            // Log.d("NeSource", "Decrypted: $decrypted")
-            return decrypted
+
+            // 检测 Session 是否失效
+            if (decrypted.contains("\"code\":301") || decrypted.contains("\"code\":401")) {
+                Log.w("NeSource", "Session invalid (code 301/401), clearing cache...")
+                isInitialized = false // 触发下一次请求重连
+            }
+
+            return@withContext decrypted
         } catch (e: Exception) {
-            Log.e("NeSource", "Decrypt failed for $path", e)
-            return ""
+            ""
         }
     }
 

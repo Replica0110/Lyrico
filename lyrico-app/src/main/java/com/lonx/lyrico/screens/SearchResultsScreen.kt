@@ -1,5 +1,6 @@
 package com.lonx.lyrico.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -25,8 +25,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
-import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -43,13 +44,12 @@ import com.lonx.lyrics.model.SongSearchResult
 import com.moriafly.salt.ui.ItemDivider
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
-import com.moriafly.salt.ui.icons.Check
-import com.moriafly.salt.ui.icons.SaltIcons
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.result.ResultBackNavigator
 import org.koin.androidx.compose.koinViewModel
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Destination<RootGraph>(route = "search_results")
@@ -95,14 +95,14 @@ fun SearchResultsScreen(
                 SearchBar(
                     value = uiState.searchKeyword,
                     onValueChange = viewModel::onKeywordChanged,
-                    placeholder = "搜索歌词...",
+                    placeholder = stringResource(id = R.string.search_lyrics_placeholder),
                     modifier = Modifier.weight(1f)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "搜索",
+                    text = stringResource(id = R.string.action_search),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = SaltTheme.colors.highlight,
@@ -144,16 +144,6 @@ fun SearchResultsScreen(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
                         },
-                        leadingIcon = {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = SaltIcons.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = SaltTheme.colors.highlight
-                                )
-                            }
-                        },
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = SaltTheme.colors.subBackground,
                             selectedContainerColor = SaltTheme.colors.highlight.copy(alpha = 0.1f),
@@ -194,7 +184,7 @@ fun SearchResultsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = uiState.searchError!!,
+                                text = stringResource(id = R.string.search_failed,uiState.searchError!!),
                                 color = SaltTheme.colors.highlight,
                                 fontSize = 14.sp
                             )
@@ -209,13 +199,13 @@ fun SearchResultsScreen(
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_searchoff_24dp),
-                                contentDescription = "No results",
+                                contentDescription = stringResource(id = R.string.cd_no_results),
                                 modifier = Modifier.size(48.dp),
                                 tint = SaltTheme.colors.subText
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "未找到相关结果",
+                                text = stringResource(id = R.string.search_no_results),
                                 color = SaltTheme.colors.subText
                             )
                         }
@@ -254,7 +244,7 @@ fun SearchResultsScreen(
                                             } else {
                                                 Toast.makeText(
                                                     context,
-                                                    "获取歌词失败，请重试",
+                                                    context.getString(R.string.fetch_lyrics_failed),
                                                     Toast.LENGTH_SHORT
                                                 ).show()
                                             }
@@ -370,7 +360,7 @@ private fun LyricsBottomSheetContent(
                 containerColor = SaltTheme.colors.highlight
             )
         ) {
-            Text("使用此歌词", color = SaltTheme.colors.onHighlight)
+            Text(stringResource(R.string.apply_action), color = SaltTheme.colors.onHighlight)
         }
     }
 }
@@ -393,7 +383,7 @@ fun SearchResultItem(
      */
     LaunchedEffect(song.picUrl) {
         if (song.picUrl.isNotBlank()) {
-            val imageLoader = ImageLoader(context)
+            val imageLoader = SingletonImageLoader.get(context)
 
             val request = ImageRequest.Builder(context)
                 .data(song.picUrl)
@@ -523,7 +513,7 @@ fun SearchResultItem(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "预览",
+                        text = stringResource(R.string.preview_action),
                         fontSize = 13.sp,
                         color = SaltTheme.colors.highlight
                     )
@@ -540,7 +530,7 @@ fun SearchResultItem(
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
-                    Text("应用", fontSize = 13.sp)
+                    Text(stringResource(R.string.apply_action), fontSize = 13.sp)
                 }
             }
         }

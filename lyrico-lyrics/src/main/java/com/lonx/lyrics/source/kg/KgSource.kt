@@ -2,7 +2,6 @@ package com.lonx.lyrics.source.kg
 
 import android.util.Base64
 import android.util.Log
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
@@ -13,53 +12,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import retrofit2.Retrofit
 
 
-class KgSource: SearchSource {
+class KgSource(
+    private val api: KgApi
+): SearchSource {
     override val sourceType = Source.KG
-    // 配置更宽容的 JSON 解析器
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-        isLenient = true
-    }
-
-    private val client = OkHttpClient.Builder()
-        .addInterceptor { chain ->
-            val original = chain.request()
-            val module = if (original.url.encodedPath.contains("search")) "SearchSong" else "Lyric"
-
-            val requestBuilder = original.newBuilder()
-                .header("User-Agent", "Android14-1070-11070-201-0-$module-wifi")
-                .header("KG-Rec", "1")
-                .header("KG-RC", "1")
-                .header("KG-CLIENTTIMEMS", System.currentTimeMillis().toString())
-                .header("mid", deviceMid)
-
-            chain.proceed(requestBuilder.build())
-        }
-        .build()
     private val deviceMid by lazy {
         KgCryptoUtils.md5(System.currentTimeMillis().toString())
     }
-    private val api: KgApi = Retrofit.Builder()
-        .baseUrl("http://complexsearch.kugou.com/")
-        .client(client)
-        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-        .build()
-        .create(KgApi::class.java)
 
     private var dfid: String? = null
     private val dfidMutex = Mutex()
 
-    private val APPID = "3116"
-    private val CLIENT_VER = "11070"
     private val SALT = "LnT6xpN3khm36zse0QzvmgTZ3waWdRSA"
 
     /**
@@ -86,24 +53,22 @@ class KgSource: SearchSource {
 
             val bodyJson = "{\"uuid\":\"\"}"
             val bodyBase64 = Base64.encodeToString(bodyJson.toByteArray(), Base64.NO_WRAP)
+            val requestBody = bodyBase64.toRequestBody("text/plain".toMediaTypeOrNull())
 
-            // 使用 RequestBody 发送纯文本，避免 Retrofit 加引号
-            val requestBody = bodyBase64.toRequestBody("text/plain". toMediaTypeOrNull())
-
-            try {
+            dfid = try {
                 val resp = api.registerDev(params, requestBody)
                 // 如果 error_code 不是 0，data 可能是错误字符串，这里会解析失败抛异常
                 // 如果签名正确，应该返回 0
                 if (resp.errorCode == 0 && resp.data != null) {
-                    dfid = resp.data.dfid
                     Log.d("KgSource", "DFID obtained: $dfid")
+                    resp.data.dfid
                 } else {
                     Log.e("KgSource", "Get DFID error: code=${resp.errorCode}")
-                    dfid = "-"
+                    "-"
                 }
             } catch (e: Exception) {
                 Log.e("KgSource", "Failed to get DFID", e)
-                dfid = "-"
+                "-"
             }
             return dfid!!
         }
@@ -119,17 +84,12 @@ class KgSource: SearchSource {
         )
 
         try {
-            // 注意：Search 不需要 Body，所以 body 传空字符串参与签名
             val signedParams = buildSignedParams(params, body = "", module = "Search")
             val response = api.searchSong(signedParams)
-            Log.d("KgSource", "Search response: ${response.data}")
 
-            if (response.errorCode != 0) {
-                Log.e("KgSource", "Search failed: ${response.errorCode}")
-                return@withContext emptyList()
-            }
-            Log.d("KgSource", "Search result: ${response.data?.lists}")
-            return@withContext response.data?.lists?.map { item ->
+            if (response.errorCode != 0) return@withContext emptyList()
+
+            response.data?.lists?.map { item ->
                 SongSearchResult(
                     id = item.id ?: "",
                     title = item.songName,
@@ -137,16 +97,13 @@ class KgSource: SearchSource {
                     album = item.albumName ?: "",
                     duration = (item.duration * 1000).toLong(),
                     source = Source.KG,
-                    date = item.publishDate ?:"",
-                    extras = mapOf(
-                        "hash" to item.fileHash
-                    ),
-                    picUrl = if (item.picUrl != "") item.picUrl.replace("{size}", "480") else "", // 酷狗默认480*480
+                    date = item.publishDate ?: "",
+                    extras = mapOf("hash" to item.fileHash),
+                    picUrl = if (item.picUrl.isNotBlank()) item.picUrl.replace("{size}", "480") else "",
                 )
             } ?: emptyList()
         } catch (e: Exception) {
-            Log.e("KgSource", "Search exception", e)
-            return@withContext emptyList()
+            emptyList()
         }
     }
 
@@ -156,7 +113,7 @@ class KgSource: SearchSource {
         customParams: Map<String, String>,
         body: String = "",
         module: String = "Search"
-    ): Map<String, String> {
+    ): Map<String, String> = withContext(Dispatchers.Default) {
         val currentTime = System.currentTimeMillis()
         val baseParams = mutableMapOf<String, String>()
 
@@ -185,14 +142,13 @@ class KgSource: SearchSource {
         val raw = "$SALT$sortedString$body$SALT"
         baseParams["signature"] = KgCryptoUtils.md5(raw)
 
-        return baseParams
+        baseParams
     }
 
     override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
         val hash = song.extras["hash"] ?: return@withContext null
 
         try {
-            // 搜索歌词
             val searchParams = mapOf(
                 "album_audio_id" to song.id,
                 "duration" to song.duration.toString(),
@@ -203,17 +159,9 @@ class KgSource: SearchSource {
             )
 
             val signedSearchParams = buildSignedParams(searchParams, module = "Lyric")
-
             val searchResp = api.searchLyrics(signedSearchParams)
+            val candidate = searchResp.candidates?.firstOrNull() ?: return@withContext null
 
-            val candidate = searchResp.candidates?.firstOrNull()
-
-            if (candidate == null) {
-                Log.w("KgSource", "No lyrics candidates found for ${song.title}")
-                return@withContext null
-            }
-
-            // 下载歌词
             val downloadParams = mapOf(
                 "accesskey" to candidate.accesskey,
                 "charset" to "utf8",
@@ -227,18 +175,17 @@ class KgSource: SearchSource {
             val contentResp = api.downloadLyrics(signedDownloadParams)
             val rawBase64 = contentResp.content
 
-            var lyricText = ""
-            if (contentResp.contenttype == 2) {
-                lyricText = String(Base64.decode(rawBase64, Base64.DEFAULT), Charsets.UTF_8)
-            } else {
-                lyricText = KgCryptoUtils.decryptKrc(rawBase64)
+            val lyricText = withContext(Dispatchers.Default) {
+                if (contentResp.contenttype == 2) {
+                    String(Base64.decode(rawBase64, Base64.DEFAULT), Charsets.UTF_8)
+                } else {
+                    KgCryptoUtils.decryptKrc(rawBase64)
+                }
             }
-            Log.d("KgSource", "Lyric text: $lyricText")
-            return@withContext KrcParser.parse(lyricText)
 
+            KrcParser.parse(lyricText)
         } catch (e: Exception) {
-            Log.e("KgSource", "Get Lyric exception", e)
-            return@withContext null
+            null
         }
     }
 }

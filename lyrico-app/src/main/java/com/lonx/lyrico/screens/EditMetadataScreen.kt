@@ -1,5 +1,6 @@
 package com.lonx.lyrico.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,17 +24,27 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.LyricsSearchResult
+import com.moriafly.salt.ui.ItemContainer
+import com.moriafly.salt.ui.ItemEdit
+import com.moriafly.salt.ui.ItemOuterEdit
+import com.moriafly.salt.ui.ItemTip
+import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.moriafly.salt.ui.dialog.InputDialog
 import com.moriafly.salt.ui.icons.ArrowBack
 import com.moriafly.salt.ui.icons.SaltIcons
+import com.moriafly.salt.ui.icons.Success
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.SearchResultsDestination
@@ -41,6 +52,7 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.result.ResultRecipient
 import com.ramcosta.composedestinations.result.onResult
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(
     ExperimentalMaterial3Api::class,
     UnstableSaltUiApi::class
@@ -59,7 +71,7 @@ fun EditMetadataScreen(
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
+    val context = LocalContext.current
 
     onLyricsResult.onResult { result ->
         viewModel.updateMetadataFromSearchResult(result)
@@ -75,14 +87,14 @@ fun EditMetadataScreen(
         when (uiState.saveSuccess) {
             true -> {
                 scope.launch {
-                    snackbarHostState.showSnackbar("保存成功")
+                    snackbarHostState.showSnackbar(context.getString(R.string.msg_save_success))
 //                    onSaveSuccess()
                 }
             }
 
             false -> {
                 scope.launch {
-                    snackbarHostState.showSnackbar("保存失败")
+                    snackbarHostState.showSnackbar(context.getString(R.string.msg_save_failed))
                 }
             }
 
@@ -101,12 +113,38 @@ fun EditMetadataScreen(
             .fillMaxSize()
             .background(SaltTheme.colors.background),
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            Surface(
+                modifier = Modifier
+                    .padding(12.dp)
+                    .size(48.dp),
+                shape = CircleShape,
+                color = SaltTheme.colors.highlight,
+                tonalElevation = 2.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(
+                        onClick = {viewModel.play(context)},
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            painter = rememberTintedPainter(painterResource(R.drawable.ic_play_24dp), tint = SaltTheme.colors.text),
+                            contentDescription = null,
+                            tint = SaltTheme.colors.text,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        },
         topBar = {
 
             val titleText = if (uiState.songInfo?.tagData?.title != null) {
                 "${uiState.songInfo!!.tagData!!.title}"
             } else {
-                uiState.songInfo?.tagData?.fileName ?: "编辑元数据"
+                uiState.songInfo?.tagData?.fileName ?: stringResource(R.string.edit_metadata_default_title)
             }
 
             CenterAlignedTopAppBar(
@@ -130,7 +168,7 @@ fun EditMetadataScreen(
                     IconButton(onClick = {
                         navigator.popBackStack()
                     }) {
-                        Icon(SaltIcons.ArrowBack, contentDescription = "返回")
+                        Icon(SaltIcons.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -148,7 +186,7 @@ fun EditMetadataScreen(
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_search_24dp),
-                            contentDescription = "搜索"
+                            contentDescription = stringResource(R.string.action_search)
                         )
                     }
                     IconButton(
@@ -164,7 +202,7 @@ fun EditMetadataScreen(
                         } else {
                             Icon(
                                 painter = painterResource(R.drawable.ic_save_24dp),
-                                contentDescription = "保存"
+                                contentDescription = stringResource(R.string.action_save)
                             )
                         }
                     }
@@ -194,140 +232,182 @@ fun EditMetadataScreen(
             )
 
             MetadataInputGroup(
-                label = "标题",
+                label = stringResource(R.string.label_title),
                 value = editingTagData?.title ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            title = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        editingTagData!!.copy(title = it)
+                    }
                 },
                 isModified = editingTagData?.title != originalTagData?.title,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            title = originalTagData?.title ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(title = originalTagData?.title ?: "")
+                    }
                 }
             )
 
             MetadataInputGroup(
-                label = "艺术家",
+                label = stringResource(R.string.label_artists),
                 value = editingTagData?.artist ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            artist = it
-                        )
-                    )
+                    viewModel.updateTag { copy(artist = it)
+                    }
                 },
                 isModified = editingTagData?.artist != originalTagData?.artist,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            artist = originalTagData?.artist ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(artist = originalTagData?.artist ?: "")
+                    }
                 }
             )
-
             MetadataInputGroup(
-                label = "专辑",
+                label = stringResource(R.string.label_album_artist),
+                value = editingTagData?.albumArtist ?: "",
+                onValueChange = {
+                    viewModel.updateTag {
+                        copy(albumArtist = it)
+                    }
+                },
+                isModified = editingTagData?.albumArtist != originalTagData?.albumArtist,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(albumArtist = originalTagData?.albumArtist ?: "")
+                    }
+                }
+            )
+            MetadataInputGroup(
+                label = stringResource(R.string.label_album),
                 value = editingTagData?.album ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            album = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(album = it)
+                    }
                 },
                 isModified = editingTagData?.album != originalTagData?.album,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            album = originalTagData?.album ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(album = originalTagData?.album ?: "")
+                    }
                 }
             )
 
             MetadataInputGroup(
-                label = "年份",
+                label = stringResource(R.string.label_date),
                 value = editingTagData?.date ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            date = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(date = it)
+                    }
                 },
                 isModified = editingTagData?.date != originalTagData?.date,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            date = originalTagData?.date ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(date = originalTagData?.date ?: "")
+                    }
                 }
             )
 
             MetadataInputGroup(
-                label = "流派",
+                label = stringResource(R.string.label_genre),
                 value = editingTagData?.genre ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            genre = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(genre = it)
+                    }
                 },
                 isModified = editingTagData?.genre != originalTagData?.genre,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            genre = originalTagData?.genre ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(genre = originalTagData?.genre ?: "")
+                    }
                 }
             )
 
             MetadataInputGroup(
-                label = "音轨",
+                label = stringResource(R.string.label_track_number),
                 value = editingTagData?.trackerNumber ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(trackerNumber = it)
-                    )
+                    viewModel.updateTag {
+                        copy(trackerNumber = it)
+                    }
                 },
                 isModified = editingTagData?.trackerNumber != originalTagData?.trackerNumber,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            trackerNumber = originalTagData?.trackerNumber ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(trackerNumber = originalTagData?.trackerNumber ?: "")
+                    }
+                }
+            )
+            MetadataInputGroup(
+                label = stringResource(R.string.label_disc_number),
+                value = editingTagData?.discNumber?.toString() ?: "",
+                onValueChange = {
+                    viewModel.updateTag {
+                        copy(discNumber = it.toIntOrNull())
+                    }
+                },
+                isModified = editingTagData?.discNumber != originalTagData?.discNumber,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(discNumber = originalTagData?.discNumber)
+                    }
+                }
+            )
+            MetadataInputGroup(
+                label = stringResource(R.string.label_composer),
+                value = editingTagData?.composer ?: "",
+                onValueChange = {
+                    viewModel.updateTag { copy(composer = it) }
+                },
+                isModified = editingTagData?.composer != originalTagData?.composer,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(composer = originalTagData?.composer ?: "")
+                    }
+                }
+            )
+            MetadataInputGroup(
+                label = stringResource(R.string.label_lyricist),
+                value = editingTagData?.lyricist ?: "",
+                onValueChange = {
+                    viewModel.updateTag { copy(lyricist = it) }
+                },
+                isModified = editingTagData?.lyricist != originalTagData?.lyricist,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(lyricist = originalTagData?.lyricist ?: "")
+                    }
+                }
+            )
+            MetadataInputGroup(
+                label = stringResource(R.string.label_comment),
+                value = editingTagData?.comment ?: "",
+                onValueChange = {
+                    viewModel.updateTag { copy(comment = it) }
+                },
+                isModified = editingTagData?.comment != originalTagData?.comment,
+                onRevert = {
+                    viewModel.updateTag {
+                        copy(comment = originalTagData?.comment ?: "")
+                    }
                 }
             )
 
+
             MetadataInputGroup(
-                label = "歌词",
+                label = stringResource(R.string.label_lyrics),
                 value = editingTagData?.lyrics ?: "",
                 onValueChange = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            lyrics = it
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(lyrics = it)
+                    }
                 },
                 isModified = editingTagData?.lyrics != originalTagData?.lyrics,
                 onRevert = {
-                    viewModel.onUpdateEditingTagData(
-                        editingTagData!!.copy(
-                            lyrics = originalTagData?.lyrics ?: ""
-                        )
-                    )
+                    viewModel.updateTag {
+                        copy(lyrics = originalTagData?.lyrics ?: "")
+                    }
                 },
                 isMultiline = true
             )
@@ -364,7 +444,7 @@ fun CoverEditor(
     ) {
         AsyncImage(
             model = coverUri,
-            contentDescription = "封面",
+            contentDescription = stringResource(R.string.cd_cover),
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
             placeholder = rememberTintedPainter(
@@ -378,42 +458,51 @@ fun CoverEditor(
         )
 
         if (isModified) {
-            // 已修改角标
-            Box(
+            // 顶部对齐容器：已修改角标和撤销按钮
+            Row(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-                    .background(
-                        color = LyricoColors.modifiedBadgeBackground.copy(alpha = 0.8f),
-                        shape = RoundedCornerShape(4.dp)
-                    )
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                    .shadow(1.dp, RoundedCornerShape(4.dp))
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "已修改",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = LyricoColors.modifiedText
-                )
-            }
+                // 已修改角标（左侧）
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = LyricoColors.modifiedBadgeBackground.copy(alpha = 0.8f),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .shadow(1.dp, RoundedCornerShape(4.dp))
+                ) {
+                    Text(
+                        text = stringResource(R.string.status_modified),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = LyricoColors.modifiedText
+                    )
+                }
 
-            // 撤销按钮
-            IconButton(
-                onClick = onRevertClick,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp) // 和角标错开一些
-                    .background(
-                        color = SaltTheme.colors.background.copy(alpha = 0.8f),
-                        shape = CircleShape
+                // 撤销按钮（右侧）
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(
+                            color = SaltTheme.colors.background.copy(alpha = 0.8f),
+                            shape = CircleShape
+                        )
+                        .clickable { onRevertClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_undo_24dp),
+                        contentDescription = stringResource(R.string.action_undo_changes),
+                        modifier = Modifier.size(18.dp),
+                        tint = SaltTheme.colors.text
                     )
-                    .size(28.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_undo_24dp),
-                    contentDescription = "撤销"
-                )
+                }
             }
         }
 
@@ -421,6 +510,7 @@ fun CoverEditor(
 
 }
 
+@OptIn(UnstableSaltUiApi::class)
 @Composable
 private fun MetadataInputGroup(
     label: String,
@@ -460,7 +550,7 @@ private fun MetadataInputGroup(
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = "已修改",
+                        text = stringResource(R.string.status_modified),
                         color = LyricoColors.modifiedText,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
@@ -469,7 +559,7 @@ private fun MetadataInputGroup(
                 IconButton(onClick = onRevert, modifier = Modifier.size(24.dp)) {
                     Icon(
                         painter = painterResource(R.drawable.ic_undo_24dp),
-                        contentDescription = "撤销修改",
+                        contentDescription = stringResource(R.string.action_undo_changes),
                         tint = SaltTheme.colors.subText
                     )
                 }

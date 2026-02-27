@@ -1,51 +1,61 @@
 package com.lonx.lyrico.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.ArtistSeparator
-import com.lonx.lyrico.data.model.FolderDao
-import com.lonx.lyrico.data.model.FolderEntity
+import com.lonx.lyrico.data.model.CacheCategory
+import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.model.LyricDisplayMode
+import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrics.model.Source
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
+import com.lonx.lyrico.utils.CacheManager
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 data class SettingsUiState(
-    val lyricDisplayMode: LyricDisplayMode = LyricDisplayMode.WORD_BY_WORD,
+    val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
-    val folders: List<FolderEntity> = emptyList(),
+    val translationEnabled: Boolean = false,
+    val ignoreShortAudio: Boolean = false,
     val searchSourceOrder: List<Source> = emptyList(),
-    val searchPageSize: Int = 20
+    val searchPageSize: Int = 20,
+    val themeMode: ThemeMode = ThemeMode.AUTO,
+    val onlyTranslationIfAvailable: Boolean = false,
+    val removeEmptyLines: Boolean = true,
+    val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
+    val totalCacheSize: Long = 0L,
 )
 
 class SettingsViewModel(
-    private val settingsRepository: SettingsRepository,
-    private val database: LyricoDatabase
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+    private val _categorizedCacheSize = MutableStateFlow<Map<CacheCategory, Long>>(emptyMap())
 
-    private val folderDao: FolderDao = database.folderDao()
-    private val _uiState = MutableStateFlow(SettingsUiState())
-
+    // 使用 combine 合并设置流和缓存流
     val uiState: StateFlow<SettingsUiState> = combine(
         settingsRepository.settingsFlow,
-        folderDao.getAllFolders()
-    ) { settings, folders ->
+        _categorizedCacheSize,
+    ) { settings, cacheMap ->
         SettingsUiState(
-            lyricDisplayMode = settings.lyricDisplayMode,
+            lyricFormat = settings.lyricFormat,
             romaEnabled = settings.romaEnabled,
+            translationEnabled = settings.translationEnabled,
             separator = settings.separator.toArtistSeparator(),
-            folders = folders,
             searchSourceOrder = settings.searchSourceOrder,
-            searchPageSize = settings.searchPageSize
+            searchPageSize = settings.searchPageSize,
+            themeMode = settings.themeMode,
+            ignoreShortAudio = settings.ignoreShortAudio,
+            categorizedCacheSize = cacheMap,
+            onlyTranslationIfAvailable = settings.onlyTranslationIfAvailable,
+            totalCacheSize = cacheMap.values.sum(),
+            removeEmptyLines = settings.removeEmptyLines
         )
     }.stateIn(
         scope = viewModelScope,
@@ -53,73 +63,70 @@ class SettingsViewModel(
         initialValue = SettingsUiState()
     )
 
-
-
-    fun toggleFolderIgnore(folder: FolderEntity) {
-        viewModelScope.launch {
-            folderDao.setIgnored(folder.id, !folder.isIgnored)
-        }
-    }
-
-    fun setLyricDisplayMode(mode: LyricDisplayMode) {
+    fun setLyricFormat(mode: LyricFormat) {
         viewModelScope.launch {
             settingsRepository.saveLyricDisplayMode(mode)
-            _uiState.update {
-                it.copy(lyricDisplayMode = mode)
-            }
+        }
+    }
+    fun refreshCache(context: Context) {
+        viewModelScope.launch {
+            val sizes = CacheManager.getCategorizedCacheSize(context)
+            _categorizedCacheSize.value = sizes
+        }
+    }
+    fun clearCache(context: Context) {
+        viewModelScope.launch {
+            CacheManager.clearAllCache(context)
+            refreshCache(context)
         }
     }
 
     fun setRomaEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveRomaEnabled(enabled)
-            _uiState.update {
-                it.copy(romaEnabled = enabled)
-            }
+        }
+    }
+    fun setTranslationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveTranslationEnabled(enabled)
+        }
+    }
+    fun setOnlyTranslationIfAvailable(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveOnlyTranslationIfAvailable(enabled)
         }
     }
 
+    fun setRemoveEmptyLines(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveRemoveEmptyLines(enabled)
+        }
+    }
     fun setSeparator(separator: ArtistSeparator) {
         viewModelScope.launch {
             settingsRepository.saveSeparator(separator.toText())
-            _uiState.update {
-                it.copy(separator = separator)
-            }
         }
     }
 
+    fun setIgnoreShortAudio(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveIgnoreShortAudio(enabled)
+        }
+    }
     fun setSearchSourceOrder(sources: List<Source>) {
         viewModelScope.launch {
             settingsRepository.saveSearchSourceOrder(sources)
-            _uiState.update {
-                it.copy(searchSourceOrder = sources)
-            }
         }
     }
     fun setSearchPageSize(size: Int) {
         viewModelScope.launch {
             settingsRepository.saveSearchPageSize(size)
-            _uiState.update {
-                it.copy(searchPageSize = size)
-            }
         }
     }
-    /**
-     * 如果用户想手动添加一个还没被扫描到的文件夹并忽略它
-     */
-    fun addFolderByPath(path: String) {
+
+    fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
-            // 确保文件夹在数据库中存在（upsert）
-            val id = folderDao.upsertAndGetId(path = path, addedBySaf = true)
-            // 设置为忽略
-            folderDao.setIgnored(id, true)
-        }
-    }
-    fun deleteFolder(folder: FolderEntity) {
-        viewModelScope.launch {
-            folderDao.deleteFolderPermanently(folder.id)
-            // 注意：删除文件夹记录后，SongDao 会因为外键约束或逻辑关联
-            // 导致这些歌曲在库中不可见（因为 JOIN 找不到 folderId）
+            settingsRepository.saveThemeMode(mode)
         }
     }
 

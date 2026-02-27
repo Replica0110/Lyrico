@@ -1,15 +1,21 @@
 package com.lonx.lyrico.data.repository
 
+import android.app.RecoverableSecurityException
+import android.content.ContentUris
 import android.content.Context
+import android.os.Build
+import android.os.ParcelFileDescriptor
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.net.toUri
+import androidx.room.withTransaction
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
 import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.model.SongEntity
+import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.data.utils.SortKeyUtils
 import com.lonx.lyrico.utils.MusicScanner
@@ -20,8 +26,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
+import java.io.IOException
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
  * 歌曲数据存储库实现类
@@ -30,85 +37,198 @@ class SongRepositoryImpl(
     private val database: LyricoDatabase,
     private val context: Context,
     private val musicScanner: MusicScanner,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val okHttpClient: OkHttpClient
 ) : SongRepository {
 
     private val songDao = database.songDao()
     private val folderDao = database.folderDao()
+
     private companion object {
         const val TAG = "SongRepository"
     }
 
-    override suspend fun synchronizeWithDevice(fullRescan: Boolean) {
+    override suspend fun deleteSong(song: SongEntity) {
+        withContext(Dispatchers.IO) {
+            try {
+                val contentResolver = context.contentResolver
+
+                val uri = ContentUris.withAppendedId(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    song.mediaId
+                )
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    try {
+                        val rowsDeleted = contentResolver.delete(uri, null, null)
+                        if (rowsDeleted == 0) {
+                            val pendingIntent = MediaStore.createDeleteRequest(contentResolver, listOf(uri))
+                            Log.w(TAG, "需要用户确认删除: $uri")
+                        }
+                    } catch (e: RecoverableSecurityException) {
+                        val pendingIntent = MediaStore.createDeleteRequest(contentResolver, listOf(uri))
+                        Log.w(TAG, "RecoverableSecurityException, 需要用户确认: $uri")
+                    } catch (e: SecurityException) {
+                        Log.e(TAG, "权限不足，无法删除: $uri", e)
+                    }
+                } else {
+                    val rowsDeleted = contentResolver.delete(uri, null, null)
+                    if (rowsDeleted == 0) {
+                        val file = File(song.filePath)
+                        if (file.exists()) {
+                            file.delete()
+                        }
+                    }
+                }
+
+                songDao.deleteByFilePaths(listOf(song.filePath))
+                Log.d(TAG, "已删除歌曲: ${song.fileName}")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "删除歌曲失败: ${song.fileName}", e)
+            }
+        }
+    }
+
+
+    override suspend fun getSongByFilePath(filePath: String): SongEntity? {
+        return songDao.getSongByPath(filePath)
+    }
+    override suspend fun synchronize(fullRescan: Boolean) {
         withContext(Dispatchers.IO) {
             Log.d(TAG, "开始同步数据库与设备文件... (全量扫描: $fullRescan)")
 
-            val dbSongs = songDao.getAllSongs().first()
-            val dbSongMap = dbSongs.associate { it.filePath to it.fileLastModified }
-            val dbPaths = dbSongMap.keys
+            val ignoreShortAudio = settingsRepository.ignoreShortAudio.first()
+            val minDuration = 60_000L
+
+            // 获取现有快照
+            val dbSyncInfos = songDao.getAllSyncInfo()
+            val dbSongMap = dbSyncInfos.associateBy { it.filePath }
+            val dbPaths = dbSongMap.keys.toMutableSet()
 
             val devicePaths = mutableSetOf<String>()
-            val impactedFolderIds = mutableSetOf<Long>()
             val folderIdCache = mutableMapOf<String, Long>()
+            val impactedFolderIds = mutableSetOf<Long>()
+
+            // 分批缓冲区
+            val batchBuffer = mutableListOf<SongEntity>()
+            val BATCH_SIZE = 20
+
+            suspend fun flushBatch() {
+                if (batchBuffer.isEmpty()) return
+                // 使用小事务批量写入
+                database.withTransaction {
+                    songDao.upsertAll(batchBuffer)
+                }
+                batchBuffer.clear()
+                Log.d(TAG, "已提交一批歌曲到数据库")
+            }
+
+            suspend fun resolveFolderId(path: String): Long {
+                val folderPath = path.substringBeforeLast("/").trimEnd('/')
+                return folderIdCache.getOrPut(folderPath) {
+                    folderDao.upsertAndGetId(folderPath)
+                }.also { impactedFolderIds.add(it) }
+            }
 
             musicScanner.scanMusicFiles().collect { deviceSong ->
+                if (ignoreShortAudio && deviceSong.duration <= minDuration) {
+                    // 如果是短音频，直接跳过
+                    return@collect
+                }
+
                 devicePaths.add(deviceSong.filePath)
 
-                val folderPath = deviceSong.filePath.substringBeforeLast("/").trimEnd('/')
-                val folderId = folderIdCache.getOrPut(folderPath) {
-                    folderDao.upsertAndGetId(folderPath)
-                }
-                impactedFolderIds.add(folderId)
+                val dbInfo = dbSongMap[deviceSong.filePath]
+                val needsUpdate = fullRescan || dbInfo == null || dbInfo.fileLastModified != deviceSong.lastModified
 
-                val lastModifiedInDb = dbSongMap[deviceSong.filePath]
-
-                // 判断是否需要更新
-                if (fullRescan || lastModifiedInDb == null || lastModifiedInDb != deviceSong.lastModified) {
-                    try {
-                        readAndSaveSongMetadata(deviceSong, folderId = folderId)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "处理歌曲失败: ${deviceSong.filePath}", e)
+                if (needsUpdate) {
+                    val folderId = resolveFolderId(deviceSong.filePath)
+                    val entity = extractSongMetadata(
+                        deviceSong,
+                        folderId,
+                        existingId = dbInfo?.id ?: 0L
+                    )
+                    if (entity != null) {
+                        batchBuffer.add(entity)
                     }
+                }
+
+                if (batchBuffer.size >= BATCH_SIZE) {
+                    flushBatch()
                 }
             }
 
-            // 处理删除逻辑
+            flushBatch()
+
+            // 3. 处理需要删除的路径 (物理已删除的 + 现在被设置为忽略的短音频)
             val deletedPaths = dbPaths - devicePaths
             if (deletedPaths.isNotEmpty()) {
-                val folderIdsOfDeletedSongs = dbSongs
+                Log.d(TAG, "正在从数据库清理 ${deletedPaths.size} 条记录 (包含物理删除和短音频)")
+
+                // 找出这些被删除歌曲所属的 folderId，以便后续更新计数
+                val folderIdsOfDeletedSongs = dbSyncInfos
                     .filter { it.filePath in deletedPaths }
                     .map { it.folderId }
                 impactedFolderIds.addAll(folderIdsOfDeletedSongs)
 
-                deletedPaths.chunked(500).forEach { chunk ->
+                deletedPaths.chunked(BATCH_SIZE).forEach { chunk ->
                     songDao.deleteByFilePaths(chunk)
                 }
             }
 
-            // 刷新计数
+            // 4. 刷新统计
             impactedFolderIds.forEach { folderId ->
                 folderDao.refreshSongCount(folderId)
             }
-
             folderDao.performPostScanCleanup()
+
             settingsRepository.saveLastScanTime(System.currentTimeMillis())
-            Log.d(TAG, "同步完成。")
+            Log.d(TAG, "同步全部完成。")
+        }
+    }
+
+    /**
+     * 专门用于批量匹配后的局部更新，避开全量同步的开销
+     */
+    override suspend fun applyBatchMetadata(updates: List<Pair<SongEntity, AudioTagData>>) {
+        withContext(Dispatchers.IO) {
+            if (updates.isEmpty()) return@withContext
+
+            val updatedEntities = updates.map { (song, tag) ->
+                song.copy(
+                    title = tag.title ?: song.title,
+                    artist = tag.artist ?: song.artist,
+                    lyrics = tag.lyrics ?: song.lyrics,
+                    date = tag.date ?: song.date,
+                    trackerNumber = tag.trackerNumber ?: song.trackerNumber,
+                    album = tag.album ?: song.album,
+                    genre = tag.genre ?: song.genre,
+                    fileLastModified = File(song.filePath).lastModified() // 获取最新真实时间
+                ).withSortKeysUpdated()
+            }
+
+            database.withTransaction {
+                updatedEntities.chunked(100).forEach { chunk ->
+                    songDao.upsertAll(chunk)
+                }
+            }
+
+            updatedEntities.map { it.folderId }.distinct().forEach { folderId ->
+                folderDao.refreshSongCount(folderId)
+            }
         }
     }
 
     /**
      *  读取并保存歌曲元数据
      */
-    private suspend fun readAndSaveSongMetadata(
+    private suspend fun extractSongMetadata(
         songFile: SongFile,
         folderId: Long,
-        forceUpdate: Boolean = false
+        existingId: Long = 0L
     ): SongEntity? = withContext(Dispatchers.IO) {
         try {
-            val existingSong = songDao.getSongByPath(songFile.filePath)
-            if (!forceUpdate && existingSong != null && existingSong.fileLastModified == songFile.lastModified) {
-                return@withContext existingSong
-            }
 
             val audioData = context.contentResolver.openFileDescriptor(
                 songFile.uri, "r"
@@ -116,8 +236,8 @@ class SongRepositoryImpl(
                 AudioTagReader.read(pfd, readPictures = false)
             } ?: return@withContext null
 
-            val songEntity = SongEntity(
-                id = existingSong?.id ?: 0,
+            return@withContext SongEntity(
+                id = existingId,
                 mediaId = songFile.mediaId,
                 filePath = songFile.filePath,
                 fileName = songFile.fileName,
@@ -137,55 +257,54 @@ class SongRepositoryImpl(
                 fileAdded = songFile.dateAdded,
                 folderId = folderId
             ).withSortKeysUpdated()
-
-            if (songEntity.id == 0L) {
-                songDao.insert(songEntity)
-            } else {
-                songDao.update(songEntity)
-            }
-
-            return@withContext songEntity
         } catch (e: Exception) {
-            Log.e(TAG, "读取元数据失败: ${songFile.fileName}", e)
-            return@withContext null
+            Log.e(TAG, "解析元数据失败: ${songFile.fileName}", e)
+            null
         }
     }
 
-    override fun getAllSongs(): Flow<List<SongEntity>> {
-        return songDao.getAllSongs()
-    }
 
     override fun searchSongs(query: String): Flow<List<SongEntity>> {
         return songDao.searchSongsByAll(query)
     }
 
-    override suspend fun updateSongMetadata(audioTagData: AudioTagData, filePath: String, lastModified: Long): Boolean =
-        withContext(Dispatchers.IO) {
-            try {
-                val existingSong = songDao.getSongByPath(filePath)
-                    ?: return@withContext false
+    override suspend fun updateSongMetadata(
+        audioTagData: AudioTagData,
+        filePath: String,
+        lastModified: Long
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val existingSong = songDao.getSongByPath(filePath)
+                ?: return@withContext false
 
-                val updatedSong = existingSong.copy(
-                    title = audioTagData.title ?: existingSong.title,
-                    artist = audioTagData.artist ?: existingSong.artist,
-                    album = audioTagData.album ?: existingSong.album,
-                    genre = audioTagData.genre ?: existingSong.genre,
-                    trackerNumber = audioTagData.trackerNumber ?: existingSong.trackerNumber,
-                    date = audioTagData.date ?: existingSong.date,
-                    lyrics = audioTagData.lyrics ?: existingSong.lyrics,
-                    rawProperties = audioTagData.rawProperties.toString(),
-                    fileLastModified = lastModified
-                ).withSortKeysUpdated()
+            val updatedSong = existingSong.copy(
+                title = audioTagData.title ?: existingSong.title,
+                artist = audioTagData.artist ?: existingSong.artist,
+                album = audioTagData.album ?: existingSong.album,
+                albumArtist = audioTagData.albumArtist ?: existingSong.albumArtist,
+                genre = audioTagData.genre ?: existingSong.genre,
+                trackerNumber = audioTagData.trackerNumber ?: existingSong.trackerNumber,
+                discNumber = audioTagData.discNumber ?: existingSong.discNumber,
+                date = audioTagData.date ?: existingSong.date,
 
-                songDao.update(updatedSong)
+                composer = audioTagData.composer ?: existingSong.composer,
+                lyricist = audioTagData.lyricist ?: existingSong.lyricist,
+                comment = audioTagData.comment ?: existingSong.comment,
+                lyrics = audioTagData.lyrics ?: existingSong.lyrics,
 
-                Log.d(TAG, "歌曲元数据已更新: $filePath")
-                return@withContext true
-            } catch (e: Exception) {
-                Log.e(TAG, "更新歌曲元数据失败: $filePath", e)
-                return@withContext false
-            }
+                rawProperties = audioTagData.rawProperties.toString(),
+                fileLastModified = lastModified
+            ).withSortKeysUpdated()
+
+            songDao.update(updatedSong)
+
+            Log.d(TAG, "歌曲元数据已更新: $filePath")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "更新歌曲元数据失败: $filePath", e)
+            false
         }
+    }
 
 
     override suspend fun writeAudioTagData(filePath: String, audioTagData: AudioTagData): Boolean {
@@ -193,9 +312,14 @@ class SongRepositoryImpl(
             (if (isUriPath(filePath)) {
                 context.contentResolver.openFileDescriptor(filePath.toUri(), "rw")
             } else {
-                android.os.ParcelFileDescriptor.open(File(filePath), android.os.ParcelFileDescriptor.MODE_READ_WRITE)
+                ParcelFileDescriptor.open(
+                    File(filePath),
+                    ParcelFileDescriptor.MODE_READ_WRITE
+                )
             })?.use { pfdDescriptor ->
+
                 val updates = mutableMapOf<String, String>()
+
                 audioTagData.title?.let { updates["TITLE"] = it }
                 audioTagData.artist?.let { updates["ARTIST"] = it }
                 audioTagData.album?.let { updates["ALBUM"] = it }
@@ -203,6 +327,30 @@ class SongRepositoryImpl(
                 audioTagData.date?.let { updates["DATE"] = it }
                 audioTagData.trackerNumber?.let { updates["TRACKNUMBER"] = it }
 
+                audioTagData.albumArtist?.let {
+                    updates["ALBUMARTIST"] = it   // FLAC/通用
+                    updates["TPE2"] = it          // ID3v2
+                }
+
+                audioTagData.discNumber?.let {
+                    updates["DISCNUMBER"] = it.toString()
+                    updates["TPOS"] = it.toString()
+                }
+
+                audioTagData.composer?.let {
+                    updates["COMPOSER"] = it
+                    updates["TCOM"] = it
+                }
+
+                audioTagData.lyricist?.let {
+                    updates["LYRICIST"] = it
+                    updates["TEXT"] = it
+                }
+
+                audioTagData.comment?.let {
+                    updates["COMMENT"] = it
+                    updates["COMM"] = it
+                }
                 AudioTagWriter.writeTags(pfdDescriptor, updates)
 
                 audioTagData.lyrics?.let { lyricsString ->
@@ -213,7 +361,7 @@ class SongRepositoryImpl(
                     val imageBytes = downloadImageBytes(picUrl)
                     val pictures = AudioPicture(
                         data = imageBytes
-                        )
+                    )
                     AudioTagWriter.writePictures(pfdDescriptor, listOf(pictures))
                 }
 
@@ -227,12 +375,15 @@ class SongRepositoryImpl(
 
     override suspend fun readAudioTagData(filePath: String): AudioTagData {
         return withContext(Dispatchers.IO) {
-            val fileName = getFileName(filePath)
+            val fileName = resolveDisplayName(filePath)
             try {
                 (if (isUriPath(filePath)) {
                     context.contentResolver.openFileDescriptor(filePath.toUri(), "r")
                 } else {
-                    android.os.ParcelFileDescriptor.open(File(filePath), android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+                    android.os.ParcelFileDescriptor.open(
+                        File(filePath),
+                        android.os.ParcelFileDescriptor.MODE_READ_ONLY
+                    )
                 })?.use { descriptor ->
                     val data = AudioTagReader.read(descriptor, true)
                     // 使用 copy 将文件名注入到返回的对象中
@@ -266,6 +417,7 @@ class SongRepositoryImpl(
             false
         }
     }
+
     private fun SongEntity.withSortKeysUpdated(): SongEntity {
         val titleText = (title?.takeIf { it.isNotBlank() } ?: fileName)
         val artistText = (artist?.takeIf { it.isNotBlank() } ?: "未知艺术家")
@@ -289,7 +441,7 @@ class SongRepositoryImpl(
                 else songDao.getAllSongsOrderByTitleDesc()
             }
 
-            SortBy.ARTIST -> {
+            SortBy.ARTISTS -> {
                 if (order == SortOrder.ASC) songDao.getAllSongsOrderByArtistAsc()
                 else songDao.getAllSongsOrderByArtistDesc()
             }
@@ -305,15 +457,21 @@ class SongRepositoryImpl(
             }
         }
     }
+
     private suspend fun downloadImageBytes(url: String): ByteArray =
         withContext(Dispatchers.IO) {
-            val connection = URL(url).openConnection() as HttpURLConnection
-            connection.connectTimeout = 8000
-            connection.readTimeout = 8000
-            connection.inputStream.use { it.readBytes() }
+            val request = Request.Builder()
+                .url(url)
+                .build()
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("图片下载失败: $url, 响应码: ${response.code}")
+                }
+                response.body.bytes()
+            }
         }
 
-    override fun getFileName(filePath: String): String {
+    override fun resolveDisplayName(filePath: String): String {
         // Content URI (例如 content://media/external/...)
         if (filePath.startsWith("content://")) {
             try {

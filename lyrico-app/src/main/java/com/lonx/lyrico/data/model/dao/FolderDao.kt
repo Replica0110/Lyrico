@@ -1,4 +1,4 @@
-package com.lonx.lyrico.data.model
+package com.lonx.lyrico.data.model.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.lonx.lyrico.data.model.entity.FolderEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -33,7 +34,7 @@ interface FolderDao {
     suspend fun isIgnored(path: String): Boolean?
 
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.Companion.IGNORE)
     suspend fun insert(folder: FolderEntity): Long
 
     @Update
@@ -49,13 +50,15 @@ interface FolderDao {
         val existing = findByPath(path)
 
         return if (existing == null) {
-            insert(FolderEntity(
-                path = path,
-                addedBySaf = addedBySaf,
-                lastScanned = now,
-                dbUpdateTime = now,
-                songCount = 0
-            ))
+            insert(
+                FolderEntity(
+                    path = path,
+                    addedBySaf = addedBySaf,
+                    lastScanned = now,
+                    dbUpdateTime = now,
+                    songCount = 0
+                )
+            )
         } else {
             // 如果原来不是 SAF 添加的，现在是，则更新状态
             val shouldUpdateSaf = addedBySaf && !existing.addedBySaf

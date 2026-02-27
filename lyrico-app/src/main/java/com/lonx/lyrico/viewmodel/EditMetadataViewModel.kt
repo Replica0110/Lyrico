@@ -1,5 +1,6 @@
 package com.lonx.lyrico.viewmodel
 
+import android.app.Application
 import android.content.Context
 import android.provider.MediaStore
 import android.util.Log
@@ -9,6 +10,9 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.LyricsSearchResult
+import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.entity.getUri
+import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,11 +42,12 @@ data class EditMetadataUiState(
 
 class EditMetadataViewModel(
     private val songRepository: SongRepository,
-    private val applicationContext: Context
+    private val playbackRepository: PlaybackRepository,
+    application: Application
 ) : ViewModel() {
-
+    private val contentResolver = application.contentResolver
     private val TAG = "EditMetadataViewModel"
-
+    private var currentSong: SongEntity? = null
     private val _uiState = MutableStateFlow(EditMetadataUiState())
     val uiState: StateFlow<EditMetadataUiState> = _uiState.asStateFlow()
 
@@ -54,6 +59,8 @@ class EditMetadataViewModel(
 
         viewModelScope.launch {
             try {
+                val song = songRepository.getSongByFilePath(filePath)
+                currentSong = song
                 val audioTagData = songRepository.readAudioTagData(filePath)
                 val firstPicture = audioTagData.pictures.firstOrNull()?.data
 
@@ -70,7 +77,6 @@ class EditMetadataViewModel(
 
                         picture = audioTagData.pictures.firstOrNull(),
 
-                        // 新增：保存原始封面
                         originalCover = firstPicture,
 
                         // coverUri 初始化为原始封面（未编辑时）
@@ -84,10 +90,11 @@ class EditMetadataViewModel(
     }
 
 
-    fun onUpdateEditingTagData(audioTagData: AudioTagData) {
-        _uiState.update {
-            it.copy(
-                editingTagData = audioTagData,
+    fun updateTag(block: AudioTagData.() -> AudioTagData) {
+        _uiState.update { state ->
+            val current = state.editingTagData ?: return@update state
+            state.copy(
+                editingTagData = current.block(),
                 isEditing = true
             )
         }
@@ -178,7 +185,7 @@ class EditMetadataViewModel(
 
         return try {
             if (uri.scheme == "content") {
-                applicationContext.contentResolver.query(
+                contentResolver.query(
                     uri,
                     arrayOf(MediaStore.MediaColumns.DATE_MODIFIED),
                     null,
@@ -201,5 +208,11 @@ class EditMetadataViewModel(
             System.currentTimeMillis()
         }
     }
+
+    fun play(context: Context) {
+        val song = currentSong ?: return
+        playbackRepository.play(context, song.getUri)
+    }
+
 }
 

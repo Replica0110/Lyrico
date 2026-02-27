@@ -1,4 +1,4 @@
-package com.lonx.lyrico.data.model
+package com.lonx.lyrico.data.model.entity
 
 import androidx.room.Entity
 import androidx.room.Index

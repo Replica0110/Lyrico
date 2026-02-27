@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.Indication
+package com.lonx.lyrico.ui.components.indication
 
 
 import androidx.compose.animation.core.Animatable

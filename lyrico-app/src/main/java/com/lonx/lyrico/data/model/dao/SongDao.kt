@@ -1,13 +1,20 @@
-package com.lonx.lyrico.data.model
+package com.lonx.lyrico.data.model.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
+import com.lonx.lyrico.data.model.entity.SongEntity
 import kotlinx.coroutines.flow.Flow
+
+data class SongSyncInfo(
+    val id: Long,
+    val filePath: String,
+    val fileLastModified: Long,
+    val folderId: Long
+)
 
 @Dao
 interface SongDao {
@@ -78,6 +85,16 @@ interface SongDao {
     """)
     fun getAllSongs(): Flow<List<SongEntity>>
 
+
+    /**
+     * 获取所有需要同步的歌曲信息
+     */
+    /**
+     * 获取所有需要同步的歌曲信息，包含 ID 以便进行精准更新
+     */
+    @Query("SELECT id, filePath, fileLastModified, folderId FROM songs")
+    suspend fun getAllSyncInfo(): List<SongSyncInfo>
+
     /**
      * 获取未忽略歌曲的总数
      */
@@ -127,6 +144,16 @@ interface SongDao {
         ORDER BY s.artistSortKey ASC
     """)
     fun getAllSongsOrderByArtistAsc(): Flow<List<SongEntity>>
+
+
+    /**
+     * 按文件夹id获取歌曲
+     */
+    @Query("""
+    SELECT * FROM songs
+    WHERE folderId = :folderId
+    """)
+    fun getSongsByFolderId(folderId: Long): Flow<List<SongEntity>>
 
     /**
      * 按艺术家降序（Z-A）获取所有歌曲

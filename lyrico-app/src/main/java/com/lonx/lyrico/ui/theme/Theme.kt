@@ -3,7 +3,8 @@ package com.lonx.lyrico.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import com.lonx.lyrico.ui.components.Indication.AlphaIndication
+import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.ui.components.indication.AlphaIndication
 import com.moriafly.salt.ui.SaltConfigs
 import com.moriafly.salt.ui.SaltDynamicColors
 import com.moriafly.salt.ui.SaltTheme
@@ -26,11 +27,18 @@ private fun indicationColor(): Color {
 
 @Composable
 fun LyricoTheme(
+    themeMode: ThemeMode = ThemeMode.AUTO,
     content: @Composable () -> Unit
 ) {
+    val isDarkTheme = when (themeMode) {
+        ThemeMode.AUTO -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
     SaltTheme(
         configs = SaltConfigs.default(
-            isDarkTheme = isSystemInDarkTheme(),
+            isDarkTheme = isDarkTheme,
             indication = AlphaIndication(indicationColor())
         ),
         dynamicColors = SaltDynamicColors.default(),

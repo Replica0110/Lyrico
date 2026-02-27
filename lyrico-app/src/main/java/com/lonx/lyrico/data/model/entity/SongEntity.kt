@@ -1,13 +1,15 @@
-package com.lonx.lyrico.data.model
+package com.lonx.lyrico.data.model.entity
 
 import android.content.ContentUris
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.core.net.toUri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.io.File
 
 /**
  * 数据库中存储的歌曲实体
@@ -64,6 +66,11 @@ data class SongEntity(
     val fileName: String,
     val title: String? = null,
     val artist: String? = null,
+    val albumArtist: String? = null,
+    val discNumber: Int? = null,
+    val composer: String? = null,
+    val lyricist: String? = null,
+    val comment: String? = null,
     val album: String? = null,
     val genre: String? = null,
     val trackerNumber: String? = null,

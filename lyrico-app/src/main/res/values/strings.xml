@@ -147,7 +147,11 @@
     <!-- Selection Mode -->
     <string name="selection_mode_selected_count">Selected %d items</string>
     <string name="action_select_all">Select All</string>
+    <string name="action_deselect_all">Deselect All</string>
     <string name="action_match_tags">Match Tags</string>
+    <string name="action_share">Share</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_batch_match">Batch Match</string>
 
     <!-- Song List Item -->
     <string name="unknown_artist">Unknown Artist</string>
@@ -164,6 +168,8 @@
     <!-- Delete Dialog -->
     <string name="dialog_delete_file_title">Delete file?</string>
     <string name="dialog_delete_file_content">Are you sure you want to delete \"%s\"?\nThis action cannot be undone!</string>
+    <string name="dialog_batch_delete_title">Delete selected files?</string>
+    <string name="dialog_batch_delete_content">Are you sure you want to delete %d files?\nThis action cannot be undone!</string>
 
     <!-- Batch Matching Dialog -->
     <string name="batch_matching_title">Batch Match</string>

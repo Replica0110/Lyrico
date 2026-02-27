@@ -44,6 +44,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
@@ -57,6 +59,8 @@ import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
+import com.moriafly.salt.ui.BottomBar
+import com.moriafly.salt.ui.BottomBarItem
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonType
 import com.moriafly.salt.ui.Icon
@@ -154,22 +158,22 @@ fun SongListScreen(
                 SelectionModeTopAppBar(
                     selectedCount = selectedPaths.size,
                     actions = {
+                        val allSelected = viewModel.isAllSelected(songs)
                         TextButton(
                             onClick = {
-                                viewModel.selectAll(songs)
-                            }
-                        ) {
-                            Text(text = stringResource(id = R.string.action_select_all), color = SaltTheme.colors.highlight)
-                        }
-                        TextButton(
-                            enabled = selectedPaths.isNotEmpty(),
-                            onClick = {
-                                viewModel.openBatchMatchConfig()
+                                if (allSelected) {
+                                    viewModel.deselectAll()
+                                } else {
+                                    viewModel.selectAll(songs)
+                                }
                             }
                         ) {
                             Text(
-                                text = stringResource(id = R.string.action_match_tags),
-                                color = if (selectedPaths.isNotEmpty()) SaltTheme.colors.highlight else SaltTheme.colors.subText
+                                text = stringResource(
+                                    if (allSelected) R.string.action_deselect_all
+                                    else R.string.action_select_all
+                                ),
+                                color = SaltTheme.colors.highlight
                             )
                         }
                         TextButton(
@@ -277,6 +281,72 @@ fun SongListScreen(
                 )
             }
 
+        },
+        bottomBar = {
+            if (isSelectionMode) {
+                val hasSelection = selectedPaths.isNotEmpty()
+                NavigationBar(
+                    containerColor = SaltTheme.colors.background
+                ) {
+                    NavigationBarItem(
+                        selected = false,
+                        enabled = hasSelection,
+                        onClick = { viewModel.batchShare(context, songs) },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_share_24dp),
+                                contentDescription = stringResource(R.string.action_share),
+                                tint = if (hasSelection) SaltTheme.colors.highlight else SaltTheme.colors.subText
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.action_share),
+                                color = if (hasSelection) SaltTheme.colors.text else SaltTheme.colors.subText,
+                                fontSize = 12.sp
+                            )
+                        }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        enabled = hasSelection,
+                        onClick = { viewModel.showBatchDeleteDialog() },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete_24dp),
+                                contentDescription = stringResource(R.string.action_delete),
+                                tint = if (hasSelection) SaltTheme.colors.highlight else SaltTheme.colors.subText
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.action_delete),
+                                color = if (hasSelection) SaltTheme.colors.text else SaltTheme.colors.subText,
+                                fontSize = 12.sp
+                            )
+                        }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        enabled = hasSelection,
+                        onClick = { viewModel.openBatchMatchConfig() },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_match_24dp),
+                                contentDescription = stringResource(R.string.action_batch_match),
+                                tint = if (hasSelection) SaltTheme.colors.highlight else SaltTheme.colors.subText
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.action_batch_match),
+                                color = if (hasSelection) SaltTheme.colors.text else SaltTheme.colors.subText,
+                                fontSize = 12.sp
+                            )
+                        }
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         PullToRefreshBox(
@@ -419,6 +489,23 @@ fun SongListScreen(
                 content = stringResource(
                     R.string.dialog_delete_file_content,
                     sheetUiState.menuSong!!.fileName
+                ),
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm)
+            )
+        }
+        // 批量删除确认对话框
+        if (uiState.showBatchDeleteDialog) {
+            YesNoDialog(
+                onDismissRequest = { viewModel.dismissBatchDeleteDialog() },
+                onConfirm = {
+                    viewModel.dismissBatchDeleteDialog()
+                    viewModel.batchDelete(songs)
+                },
+                title = stringResource(R.string.dialog_batch_delete_title),
+                content = stringResource(
+                    R.string.dialog_batch_delete_content,
+                    selectedPaths.size
                 ),
                 cancelText = stringResource(R.string.cancel),
                 confirmText = stringResource(R.string.confirm)

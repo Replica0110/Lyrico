@@ -1,7 +1,9 @@
 package com.lonx.lyrico.viewmodel
 
 import android.app.Application
+import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.Parcelable
@@ -68,6 +70,7 @@ data class SongListUiState(
     val showBatchConfigDialog: Boolean = false, // Add this
     val isBatchMatching: Boolean = false,
     val showDeleteDialog: Boolean = false,
+    val showBatchDeleteDialog: Boolean = false,
     val batchProgress: Pair<Int, Int>? = null, // (当前第几首, 总共几首)
     val successCount: Int = 0,
     val failureCount: Int = 0,
@@ -468,6 +471,56 @@ class SongListViewModel(
     fun exitSelectionMode() {
         _isSelectionMode.value = false
         _selectedSongIds.value = emptySet()
+    }
+
+    fun deselectAll() {
+        _selectedSongIds.value = emptySet()
+    }
+
+    fun isAllSelected(songs: List<SongEntity>): Boolean {
+        return songs.isNotEmpty() && _selectedSongIds.value.size == songs.size
+    }
+
+    fun showBatchDeleteDialog() {
+        _uiState.update { it.copy(showBatchDeleteDialog = true) }
+    }
+
+    fun dismissBatchDeleteDialog() {
+        _uiState.update { it.copy(showBatchDeleteDialog = false) }
+    }
+
+    fun batchDelete(songs: List<SongEntity>) {
+        val selectedIds = _selectedSongIds.value
+        val toDelete = songs.filter { it.mediaId in selectedIds }
+        viewModelScope.launch {
+            toDelete.forEach { song ->
+                songRepository.deleteSong(song)
+            }
+            exitSelectionMode()
+        }
+    }
+
+    fun batchShare(context: Context, songs: List<SongEntity>) {
+        val selectedIds = _selectedSongIds.value
+        val toShare = songs.filter { it.mediaId in selectedIds }
+        if (toShare.isEmpty()) return
+
+        val uris = toShare.map { song ->
+            ContentUris.withAppendedId(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                song.mediaId
+            )
+        }.toCollection(ArrayList())
+
+        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "audio/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        context.startActivity(
+            Intent.createChooser(intent, context.getString(com.lonx.lyrico.R.string.share_chooser_title))
+        )
     }
 
     private fun triggerSync(isAuto: Boolean) {

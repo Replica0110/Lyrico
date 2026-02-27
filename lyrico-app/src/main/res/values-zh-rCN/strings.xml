@@ -152,7 +152,11 @@
     <!-- 选择模式 -->
     <string name="selection_mode_selected_count">已选择 %d 项</string>
     <string name="action_select_all">全选</string>
+    <string name="action_deselect_all">取消全选</string>
     <string name="action_match_tags">匹配标签</string>
+    <string name="action_share">分享</string>
+    <string name="action_delete">删除</string>
+    <string name="action_batch_match">批量匹配</string>
 
     <!-- 列表项 -->
     <string name="unknown_artist">未知艺术家</string>
@@ -169,6 +173,8 @@
     <!-- 删除对话框 -->
     <string name="dialog_delete_file_title">是否删除文件？</string>
     <string name="dialog_delete_file_content">确认删除文件「%s」吗？\n此操作不可撤销！</string>
+    <string name="dialog_batch_delete_title">删除所选文件？</string>
+    <string name="dialog_batch_delete_content">确认删除 %d 个文件吗？\n此操作不可撤销！</string>
 
     <!-- 批量匹配对话框 -->
     <string name="batch_matching_title">批量匹配</string>

@@ -86,6 +86,9 @@ import com.ramcosta.composedestinations.generated.destinations.SettingsDestinati
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -146,9 +149,6 @@ fun SongListScreen(
         viewModel.exitSelectionMode()
     }
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(SaltTheme.colors.background),
         topBar = {
             if (isSelectionMode) {
                 SelectionModeTopAppBar(
@@ -182,48 +182,32 @@ fun SongListScreen(
                     }
                 )
             } else {
-                CenterAlignedTopAppBar(
-                    colors = TopAppBarColors(
-                        containerColor = SaltTheme.colors.background,
-                        scrolledContainerColor = SaltTheme.colors.background,
-                        navigationIconContentColor = SaltTheme.colors.text,
-                        titleContentColor = SaltTheme.colors.text,
-                        actionIconContentColor = SaltTheme.colors.text,
-                        subtitleContentColor = SaltTheme.colors.subText
-                    ),
-                    title = {
-                        Text(
-                            text = stringResource(R.string.song_list_title, songs.size),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
+                SmallTopAppBar(
+                    title = stringResource(R.string.song_list_title, songs.size),
                     navigationIcon = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_settings_24dp),
-                            contentDescription = stringResource(R.string.cd_settings),
-                            tint = SaltTheme.colors.text,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .noRippleClickable(role = Role.Button) {
-                                    navigator.navigate(SettingsDestination())
-                                }
-                                .padding(12.dp)
-                        )
+                        IconButton(
+                            modifier = Modifier.padding(start = 16.dp),
+                            onClick = {
+                                navigator.navigate(SettingsDestination())
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_settings_24dp),
+                                contentDescription = stringResource(R.string.cd_settings)
+                            )
+                        }
                     },
                     actions = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_search_24dp),
-                            contentDescription = stringResource(R.string.cd_search),
-                            tint = SaltTheme.colors.text,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .noRippleClickable(role = Role.Button) {
-                                    navigator.navigate(LocalSearchDestination())
-                                }
-                                .padding(12.dp)
-                        )
+                        IconButton(
+                            onClick = {
+                                navigator.navigate(LocalSearchDestination())
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_search_24dp),
+                                contentDescription = stringResource(R.string.cd_search)
+                            )
+                        }
                         Box(modifier = Modifier.wrapContentSize()) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_sort_24dp),
@@ -275,6 +259,99 @@ fun SongListScreen(
                         }
                     },
                 )
+//                CenterAlignedTopAppBar(
+//                    colors = TopAppBarColors(
+//                        containerColor = SaltTheme.colors.background,
+//                        scrolledContainerColor = SaltTheme.colors.background,
+//                        navigationIconContentColor = SaltTheme.colors.text,
+//                        titleContentColor = SaltTheme.colors.text,
+//                        actionIconContentColor = SaltTheme.colors.text,
+//                        subtitleContentColor = SaltTheme.colors.subText
+//                    ),
+//                    title = {
+//                        Text(
+//                            text = stringResource(R.string.song_list_title, songs.size),
+//                            maxLines = 1,
+//                            overflow = TextOverflow.Ellipsis,
+//                            fontWeight = FontWeight.Bold
+//                        )
+//                    },
+//                    navigationIcon = {
+//                        Icon(
+//                            painter = painterResource(R.drawable.ic_settings_24dp),
+//                            contentDescription = stringResource(R.string.cd_settings),
+//                            tint = SaltTheme.colors.text,
+//                            modifier = Modifier
+//                                .size(48.dp)
+//                                .noRippleClickable(role = Role.Button) {
+//                                    navigator.navigate(SettingsDestination())
+//                                }
+//                                .padding(12.dp)
+//                        )
+//                    },
+//                    actions = {
+//                        Icon(
+//                            painter = painterResource(R.drawable.ic_search_24dp),
+//                            contentDescription = stringResource(R.string.cd_search),
+//                            tint = SaltTheme.colors.text,
+//                            modifier = Modifier
+//                                .size(48.dp)
+//                                .noRippleClickable(role = Role.Button) {
+//                                    navigator.navigate(LocalSearchDestination())
+//                                }
+//                                .padding(12.dp)
+//                        )
+//                        Box(modifier = Modifier.wrapContentSize()) {
+//                            Icon(
+//                                painter = painterResource(R.drawable.ic_sort_24dp),
+//                                contentDescription = stringResource(R.string.cd_sort),
+//                                tint = SaltTheme.colors.text,
+//                                modifier = Modifier
+//                                    .size(36.dp)
+//                                    .noRippleClickable(role = Role.Button) {
+//                                        sortOrderDropdownExpanded = true
+//                                    }
+//                                    .padding(8.dp)
+//                            )
+//
+//                            PopupMenu(
+//                                expanded = sortOrderDropdownExpanded,
+//                                onDismissRequest = { sortOrderDropdownExpanded = false }
+//                            ) {
+//                                val sortTypes = listOf(
+//                                    SortBy.TITLE,
+//                                    SortBy.ARTISTS,
+//                                    SortBy.DATE_MODIFIED,
+//                                    SortBy.DATE_ADDED
+//                                )
+//
+//                                sortTypes.forEach { type ->
+//                                    val isSelected = sortInfo.sortBy == type
+//                                    PopupMenuItem(
+//                                        text = stringResource(type.labelRes),
+//                                        selected = isSelected,
+//                                        iconPainter = if (isSelected) {
+//                                            if (sortInfo.order == SortOrder.ASC) {
+//                                                painterResource(R.drawable.ic_arrow_down_24dp)
+//                                            } else {
+//                                                painterResource(R.drawable.ic_arrow_up_24dp)
+//                                            }
+//                                        } else null,
+//                                        iconPaddingValues = PaddingValues(2.dp),
+//                                        onClick = {
+//                                            val newOrder = if (isSelected) {
+//                                                if (sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC
+//                                            } else {
+//                                                SortOrder.ASC
+//                                            }
+//                                            viewModel.onSortChange(SortInfo(type, newOrder))
+//                                        }
+//                                    )
+//                                }
+//                            }
+//                        }
+//                    },
+//                )
             }
 
         }
@@ -841,7 +918,7 @@ fun SongListItem(
                     Text(
                         text = "${song.bitrate}kbps",
                         fontSize = 10.sp,
-                        color = LyricoColors.secondaryText,
+                        color = MiuixTheme.colorScheme.onSecondary,
                         fontWeight = FontWeight.Normal
                     )
                 }

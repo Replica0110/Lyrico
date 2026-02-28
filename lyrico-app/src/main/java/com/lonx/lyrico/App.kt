@@ -9,24 +9,19 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.request.crossfade
 import com.lonx.lyrico.di.appModule
+import com.lonx.lyrico.plugin.PluginManager
 import com.lonx.lyrico.utils.coil.AudioCoverFetcher
 import com.lonx.lyrico.utils.coil.AudioCoverKeyer
-import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.app.SaltApplication
-import com.lonx.lyrico.plugin.PluginManager
-import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
+import kotlin.getValue
 
-@OptIn(UnstableSaltUiApi::class)
-class App : SaltApplication(), SingletonImageLoader.Factory {
-    
-    private val pluginManager: PluginManager by inject()
-
+class App : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
+        private val pluginManager: PluginManager by inject()
         context = applicationContext
 
         startKoin {
@@ -34,7 +29,7 @@ class App : SaltApplication(), SingletonImageLoader.Factory {
             androidContext(this@App)
             modules(appModule)
         }
-        
+
         pluginManager.startDiscovery()
     }
 

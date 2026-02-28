@@ -3,6 +3,7 @@ package com.lonx.lyrico.data.repository
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +17,9 @@ data class SettingsSnapshot(
     val ignoreShortAudio: Boolean,
     val translationEnabled: Boolean,
     val onlyTranslationIfAvailable: Boolean,
-    val removeEmptyLines: Boolean
+    val removeEmptyLines: Boolean,
+    val monetEnable: Boolean,
+    val keyColor: KeyColor
 )
 
 interface SettingsRepository {
@@ -32,6 +35,8 @@ interface SettingsRepository {
     val searchSourceOrder: Flow<List<Source>>
     val searchPageSize: Flow<Int>
     val themeMode: Flow<ThemeMode>
+    val keyColor: Flow<KeyColor>
+    val monetEnable: Flow<Boolean>
     val onlyTranslationIfAvailable: Flow<Boolean>
     val removeEmptyLines: Flow<Boolean>
     val settingsFlow: Flow<SettingsSnapshot>
@@ -50,6 +55,8 @@ interface SettingsRepository {
     suspend fun saveSearchSourceOrder(sources: List<Source>)
     suspend fun saveSearchPageSize(size: Int)
     suspend fun saveThemeMode(mode: ThemeMode)
+    suspend fun saveKeyColor(selectedKeyColor: KeyColor)
+    suspend fun saveMonetEnable(enabled: Boolean)
     suspend fun saveOnlyTranslationIfAvailable(enabled: Boolean)
     suspend fun saveRemoveEmptyLines(enabled: Boolean)
     suspend fun getLyricRenderConfig(): LyricRenderConfig

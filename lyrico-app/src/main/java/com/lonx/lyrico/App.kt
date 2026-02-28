@@ -1,6 +1,7 @@
 package com.lonx.lyrico
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
 import android.util.Log
 import coil3.ImageLoader
@@ -12,6 +13,7 @@ import com.lonx.lyrico.di.appModule
 import com.lonx.lyrico.plugin.PluginManager
 import com.lonx.lyrico.utils.coil.AudioCoverFetcher
 import com.lonx.lyrico.utils.coil.AudioCoverKeyer
+import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -21,7 +23,7 @@ import kotlin.getValue
 class App : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
-        private val pluginManager: PluginManager by inject()
+        val pluginManager: PluginManager by inject()
         context = applicationContext
 
         startKoin {

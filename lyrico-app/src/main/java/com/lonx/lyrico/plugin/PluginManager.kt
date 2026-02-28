@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,4 +128,29 @@ class PluginManager(private val context: Context) {
             }
         }
     }
+}
+/**
+ * 宿主内部使用的通用接口，用于统一处理 Search 和 Lyric 插件的配置
+ */
+interface UnifiedPlugin {
+    fun getPluginInfo(): PluginInfo
+    fun getConfigSchema(): List<ConfigField>
+    fun getSettings(): Bundle
+    fun updateSettings(settings: Bundle)
+}
+
+// 为 ISearchSource 创建代理
+class SearchPluginWrapper(private val inner: ISearchSource) : UnifiedPlugin {
+    override fun getPluginInfo(): PluginInfo = inner.pluginInfo
+    override fun getConfigSchema() = inner.configSchema ?: emptyList()
+    override fun getSettings() = inner.settings ?: Bundle()
+    override fun updateSettings(settings: Bundle) = inner.updateSettings(settings)
+}
+
+// 为 ILyricSource 创建代理
+class LyricPluginWrapper(private val inner: ILyricSource) : UnifiedPlugin {
+    override fun getPluginInfo(): PluginInfo = inner.pluginInfo
+    override fun getConfigSchema() = inner.configSchema ?: emptyList()
+    override fun getSettings() = inner.settings ?: Bundle()
+    override fun updateSettings(settings: Bundle) = inner.updateSettings(settings)
 }

@@ -311,7 +311,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 themeMode = ui.themeMode,
                 ignoreShortAudio = ui.ignoreShortAudio,
                 removeEmptyLines = lyric.removeEmptyLines,
-                ignoreShortAudio = ui.ignoreShortAudio,
                 monetEnable = ui.monetEnable,
                 keyColor = ui.keyColor
             )

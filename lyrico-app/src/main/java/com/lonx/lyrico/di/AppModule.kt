@@ -15,6 +15,7 @@ import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.data.repository.SongRepositoryImpl
 import com.lonx.lyrico.data.repository.UpdateRepository
 import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
+import com.lonx.lyrico.plugin.PluginManager
 import com.lonx.lyrico.utils.MusicScanner
 import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrico.utils.UpdateManagerImpl
@@ -24,6 +25,7 @@ import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
+import com.lonx.lyrico.viewmodel.PluginListViewModel
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.lonx.lyrico.viewmodel.SongListViewModel

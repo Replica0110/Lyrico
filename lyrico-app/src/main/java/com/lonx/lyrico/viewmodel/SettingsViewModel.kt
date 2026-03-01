@@ -12,6 +12,8 @@ import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
+import com.lonx.lyrico.ui.theme.KeyColor
+import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.utils.CacheManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +33,8 @@ data class SettingsUiState(
     val removeEmptyLines: Boolean = true,
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
+    val monetEnable: Boolean = false,
+    val keyColor: KeyColor = KeyColors.first(),
 )
 
 class SettingsViewModel(
@@ -55,6 +59,8 @@ class SettingsViewModel(
             categorizedCacheSize = cacheMap,
             onlyTranslationIfAvailable = settings.onlyTranslationIfAvailable,
             totalCacheSize = cacheMap.values.sum(),
+            monetEnable = settings.monetEnable,
+            keyColor = settings.keyColor,
             removeEmptyLines = settings.removeEmptyLines
         )
     }.stateIn(
@@ -89,6 +95,9 @@ class SettingsViewModel(
     fun setTranslationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveTranslationEnabled(enabled)
+            if (!enabled && uiState.value.onlyTranslationIfAvailable){
+                setOnlyTranslationIfAvailable(false)
+            }
         }
     }
     fun setOnlyTranslationIfAvailable(enabled: Boolean) {
@@ -127,6 +136,17 @@ class SettingsViewModel(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             settingsRepository.saveThemeMode(mode)
+        }
+    }
+    fun setMonetEnable(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveMonetEnable(enabled)
+        }
+    }
+
+    fun setKeyColor(selectedMode: KeyColor) {
+        viewModelScope.launch {
+            settingsRepository.saveKeyColor(selectedMode)
         }
     }
 

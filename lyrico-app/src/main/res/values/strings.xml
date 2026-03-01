@@ -30,7 +30,6 @@
     <string name="clear_cache_confirm">Are you sure you want to clear all cache?</string>
     <string name="cache_item">%1$s: %2$s</string>
     <string name="cache_total">Total: %1$s</string>
-    <string name="cache_size_label">Cache size: %1$s</string>
 
     <!-- Sections -->
     <string name="section_appearance">Appearance</string>
@@ -113,7 +112,17 @@
     <string name="theme_mode_auto">Follow system</string>
     <string name="theme_mode_light">Light mode</string>
     <string name="theme_mode_dark">Dark mode</string>
-
+    <string name="color_blue">Blue</string>
+    <string name="color_green">Green</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_pink">Pink</string>
+    <string name="color_teal">Teal</string>
+    <string name="color_default">Default</string>
+    <string name="cd_back">Back</string>
+    <string name="monet">Monet palette</string>
+    <string name="key_color">Key Color</string>
     <!-- Page -->
     <string name="batch_match_history_title">Batch match history</string>
     <string name="batch_match_history_empty">No history yet</string>

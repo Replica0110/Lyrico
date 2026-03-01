@@ -16,6 +16,8 @@ activityCompose = "1.12.4"
 composeBom = "2026.02.00"
 kotlinxCoroutinesAndroid = "1.10.2"
 kotlinxSerializationJson = "1.10.0"
+miuixAndroid = "0.8.5"
+miuixIconsAndroid = "0.8.5"
 okhttp = "5.3.2"
 reorderable = "3.0.0"
 retrofit = "3.0.0"
@@ -47,6 +49,8 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-destinations-ksp = { module = "io.github.raamcosta.compose-destinations:ksp", version.ref = "core" }
+miuix-android = { module = "top.yukonga.miuix.kmp:miuix-android", version.ref = "miuixAndroid" }
+miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuixIconsAndroid" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 salt-ui-android = { module = "io.github.moriafly:salt-ui-android", version.ref = "saltui" }
 tinypinyin = { module = "com.github.promeg:tinypinyin", version.ref = "tinypinyin" }

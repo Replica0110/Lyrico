@@ -1,6 +1,7 @@
 package com.lonx.lyrico
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
 import android.util.Log
 import coil3.ImageLoader
@@ -11,15 +12,12 @@ import coil3.request.crossfade
 import com.lonx.lyrico.di.appModule
 import com.lonx.lyrico.utils.coil.AudioCoverFetcher
 import com.lonx.lyrico.utils.coil.AudioCoverKeyer
-import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.app.SaltApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 
-@OptIn(UnstableSaltUiApi::class)
-class App : SaltApplication(), SingletonImageLoader.Factory {
+class App : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         context = applicationContext

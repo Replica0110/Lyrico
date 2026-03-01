@@ -1,6 +1,8 @@
 package com.lonx.lyrico.data.repository
 
 import android.content.Context
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -10,6 +12,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.ui.theme.KeyColor
+import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
@@ -38,6 +42,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val MONET_ENABLE = booleanPreferencesKey("monet_enable")
+        val KEY_THEME_COLOR = intPreferencesKey("theme_color_argb")
 
         val ONLY_TRANSLATION_IF_AVAILABLE = booleanPreferencesKey("only_translation_if_available")
     }
@@ -45,7 +51,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     // 默认搜索源顺序
     private val defaultSourceOrder = listOf(Source.QM, Source.KG, Source.NE)
     private val defaultSearchPageSize = 10
-
+    private val DEFAULT_COLOR_INT = 0xFF3482FF.toInt()
     override val lyricFormat: Flow<LyricFormat>
         get() = context.settingsDataStore.data.map { preferences ->
             LyricFormat.valueOf(
@@ -125,6 +131,23 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
             }
         }
+    override val keyColor: Flow<KeyColor>
+        get() = context.settingsDataStore.data.map { preferences ->
+            // 检查 DataStore 中是否有保存颜色的 Key
+            if (preferences.contains(PreferencesKeys.KEY_THEME_COLOR)) {
+                val savedColorInt = preferences[PreferencesKeys.KEY_THEME_COLOR]!!
+                val savedColor = Color(savedColorInt)
+                // 查找对应的颜色，找不到则返回默认项(第一个)
+                KeyColors.find { it.color == savedColor } ?: KeyColors.first()
+            } else {
+                // 如果没有保存过，说明是“系统默认”
+                KeyColors.first()
+            }
+        }
+    override val monetEnable: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.MONET_ENABLE] ?: false
+        }
 
     override val onlyTranslationIfAvailable: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -203,6 +226,24 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.THEME_MODE] = mode.name
         }
     }
+
+    override suspend fun saveMonetEnable(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.MONET_ENABLE] = enabled
+        }
+    }
+
+    override suspend fun saveKeyColor(selectedKeyColor: KeyColor) {
+        context.settingsDataStore.edit { preferences ->
+            if (selectedKeyColor.color == null) {
+                // 如果选了“系统默认”，直接移除保存的值
+                preferences.remove(PreferencesKeys.KEY_THEME_COLOR)
+            } else {
+                // 否则保存颜色具体的 ARGB 值
+                preferences[PreferencesKeys.KEY_THEME_COLOR] = selectedKeyColor.color.toArgb()
+            }
+        }
+    }
     private data class LyricPart(
         val lyricFormat: LyricFormat,
         val romaEnabled: Boolean,
@@ -239,14 +280,18 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     private data class UiPart(
         val themeMode: ThemeMode,
-        val ignoreShortAudio: Boolean
+        val ignoreShortAudio: Boolean,
+        val monetEnable: Boolean,
+        val keyColor: KeyColor
     )
 
     private val uiPartFlow =
-        combine(themeMode, ignoreShortAudio) { theme, ignore ->
+        combine(themeMode, ignoreShortAudio, monetEnable, keyColor) { theme, ignore, monetEnable, keyColor ->
             UiPart(
                 themeMode = theme,
-                ignoreShortAudio = ignore
+                ignoreShortAudio = ignore,
+                monetEnable = monetEnable,
+                keyColor = keyColor
             )
         }
     override val settingsFlow: Flow<SettingsSnapshot> =
@@ -265,6 +310,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 searchPageSize = search.searchPageSize,
                 themeMode = ui.themeMode,
                 ignoreShortAudio = ui.ignoreShortAudio,
+                monetEnable = ui.monetEnable,
+                keyColor = ui.keyColor,
                 removeEmptyLines = lyric.removeEmptyLines
             )
         }

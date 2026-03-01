@@ -2,10 +2,18 @@ package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -13,13 +21,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.ui.components.RoundedRectanglePainter
+import com.lonx.lyrico.ui.components.getSystemWallpaperColor
+import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.utils.formatSize
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
@@ -44,6 +58,30 @@ import com.ramcosta.composedestinations.generated.destinations.FolderManagerDest
 import com.ramcosta.composedestinations.generated.destinations.SearchSourcePriorityDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.SpinnerEntry
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.extra.SuperArrow
+import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.extra.SuperDropdown
+import top.yukonga.miuix.kmp.extra.SuperSpinner
+import top.yukonga.miuix.kmp.extra.SuperSwitch
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import kotlin.math.roundToInt
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -57,7 +95,8 @@ fun SettingsScreen(
     val settingsUiState by settingsViewModel.uiState.collectAsState()
     val folderViewModel: FolderManagerViewModel = koinViewModel()
     val folderUiState by folderViewModel.uiState.collectAsState()
-
+    val minSearchSize = 1
+    val maxSearchSize = 20
 
     val lyricFormat = settingsUiState.lyricFormat
     val artistSeparator = settingsUiState.separator
@@ -66,14 +105,17 @@ fun SettingsScreen(
     val onlyTranslationIfAvailable = settingsUiState.onlyTranslationIfAvailable
     val removeEmptyLines = settingsUiState.removeEmptyLines
     val ignoreShortAudio = settingsUiState.ignoreShortAudio
-    val scrollState = rememberScrollState()
     val folders = folderUiState.folders
     val totalFolders = folders.size
     val ignoredFolders = folders.count { it.isIgnored }
     val searchSourceOrder = settingsUiState.searchSourceOrder
     val searchPageSize = settingsUiState.searchPageSize
 
+    val themeMode = settingsUiState.themeMode
+    val monetEnable = settingsUiState.monetEnable
+    val currentKeyColor = settingsUiState.keyColor
     val showClearCacheDialog = remember { mutableStateOf(false) }
+    val showSearchLimitConfigDialog = remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -113,52 +155,196 @@ fun SettingsScreen(
             }
         }
     }
-    BasicScreenBox(
-        title = stringResource(R.string.settings_title),
-        onBack = { navigator.popBackStack() }
-    ) {
-        if (showClearCacheDialog.value) {
-            YesNoDialog(
-                title = stringResource(R.string.clear_cache),
-                onDismissRequest = {
-                    showClearCacheDialog.value = false
+
+
+    val topAppBarScrollBehavior = MiuixScrollBehavior()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(
+                        onClick = { navigator.navigateUp() }
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Back,
+                            contentDescription = stringResource(R.string.cd_back)
+                        )
+                    }
                 },
-                onConfirm = {
-                    showClearCacheDialog.value = false
-                    settingsViewModel.clearCache(context)
-                },
-                content = cacheContent,
-                cancelText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.confirm),
+                title = stringResource(R.string.settings_title),
+                scrollBehavior = topAppBarScrollBehavior
             )
-         }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
+        }
+    ) { paddingValues ->
+        val tempSearchPageSize = remember(searchPageSize) {
+            mutableIntStateOf(searchPageSize)
+        }
+        SuperDialog(
+            show = showClearCacheDialog,
+            title = stringResource(R.string.clear_cache),
+            onDismissRequest = {
+                showClearCacheDialog.value = false
+            }
         ) {
-            ItemOuterTitle(stringResource(R.string.section_appearance))
-            RoundedColumn {
-                ItemDropdown(
-                    text = stringResource(R.string.theme_mode),
-                    value = stringResource(settingsUiState.themeMode.labelRes),
-                    content = {
-                        ThemeMode.entries.forEach { mode ->
-                            ItemCheck(
-                                text = stringResource(mode.labelRes),
-                                state = settingsUiState.themeMode == mode,
-                                onChange = {
-                                    settingsViewModel.setThemeMode(mode)
-                                    state.dismiss()
-                                }
-                            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(text = cacheContent)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    TextButton(
+                        text = stringResource(R.string.cancel),
+                        onClick = {
+                            showClearCacheDialog.value = false
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    TextButton(
+                        text = stringResource(R.string.confirm),
+                        onClick = {
+                            settingsViewModel.clearCache(context)
+                            showClearCacheDialog.value = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
+            }
+        }
+        SuperDialog(
+            show = showSearchLimitConfigDialog,
+            title = stringResource(R.string.search_limit),
+            onDismissRequest = {
+                showSearchLimitConfigDialog.value = false
+            }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.search_limit_tip),
+                    fontSize = MiuixTheme.textStyles.footnote1.fontSize,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                var text by remember { mutableStateOf(searchPageSize.toString()) }
+                TextField(
+                    value = text,
+                    maxLines = 1,
+                    onValueChange = { newValue ->
+                        val digits = newValue.filter { it.isDigit() }
+                        if (digits.isEmpty()) {
+                            text = ""
+                        } else {
+                            val limited = digits.take(3)
+                            val num = limited.toIntOrNull()
+                            val clamped = num?.coerceIn(minSearchSize, maxSearchSize)
+                            text = clamped.toString()
                         }
                     }
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    TextButton(
+                        text = stringResource(R.string.cancel),
+                        onClick = {
+                            showSearchLimitConfigDialog.value = false
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    TextButton(
+                        text = stringResource(R.string.confirm),
+                        onClick = {
+                            tempSearchPageSize.intValue = text.toIntOrNull() ?: 1
+                            settingsViewModel.setSearchPageSize(tempSearchPageSize.intValue)
+                            showSearchLimitConfigDialog.value = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
             }
+        }
+        LazyColumn(
+            modifier = Modifier
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                .fillMaxHeight(),
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding() + 12.dp,
+            ),
+            overscrollEffect = null,
+        ) {
+            item(
+                key = "appearance"
+            ) {
+                SmallTitle(stringResource(R.string.section_appearance))
+                Card(
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .padding(horizontal = 12.dp)
+                ) {
+                    val themeModes = ThemeMode.entries
 
-            ItemOuterTitle(stringResource(R.string.section_scan))
-            RoundedColumn {
+                    val themeModeNames = themeModes.map { stringResource(it.labelRes) }
+
+                    val currentSelectedIndex = themeModes.indexOf(themeMode).let {
+                        if (it == -1) 0 else it // 防止异常情况导致 -1，给个默认值 0
+                    }
+                    SuperDropdown(
+                        title = stringResource(R.string.theme_mode),
+                        items = themeModeNames,
+                        selectedIndex = currentSelectedIndex,
+                        onSelectedIndexChange = { index ->
+                            val selectedMode = themeModes[index]
+                            settingsViewModel.setThemeMode(selectedMode)
+                        }
+                    )
+                    SuperSwitch(
+                        title = stringResource(R.string.monet),
+                        checked = monetEnable,
+                        onCheckedChange = {
+                            settingsViewModel.setMonetEnable(!monetEnable)
+                        }
+                    )
+                    AnimatedVisibility(visible = (monetEnable)) {
+                        val currentSelectedIndex = KeyColors.indexOf(currentKeyColor).let {
+                            if (it == -1) 0 else it
+                        }
+                        val options = KeyColors.map { keyColor ->
+                            SpinnerEntry(
+                                title = stringResource(keyColor.nameResId),
+                                icon = {
+                                    val tintColor = keyColor.color ?: getSystemWallpaperColor(context)
+
+                                    Icon(
+                                        painter = RoundedRectanglePainter(),
+                                        contentDescription = stringResource(keyColor.nameResId),
+                                        modifier = Modifier.padding(end = 12.dp),
+                                        tint = tintColor
+                                    )
+                                }
+                            )
+                        }
+                        SuperSpinner(
+                            items = options,
+                            selectedIndex = currentSelectedIndex,
+                            title = stringResource(R.string.key_color),
+                            onSelectedIndexChange = {
+                                val selectedKeyColor = KeyColors[it]
+                                settingsViewModel.setKeyColor(selectedKeyColor)
+                            }
+                        )
+                    }
+                }
+            }
+            item(
+                key = "scan"
+            ) {
                 val sub = if (totalFolders > 0) {
                     buildString {
                         append(stringResource(R.string.folder_found, totalFolders))
@@ -169,161 +355,196 @@ fun SettingsScreen(
                 } else {
                     stringResource(R.string.folder_manage_hint)
                 }
-                Item(
-                    onClick = { navigator.navigate(FolderManagerDestination()) },
-                    text = stringResource(R.string.folder_manager),
-                    sub = sub
-                )
-                ItemSwitcher(
-                    text = stringResource(R.string.ignore_short_audio),
-                    state = ignoreShortAudio,
-                    onChange = {
-                        settingsViewModel.setIgnoreShortAudio(!ignoreShortAudio)
-                    }
-                )
-            }
-
-            ItemOuterTitle(stringResource(R.string.section_search))
-            RoundedColumn {
-                val subText = searchSourceOrder.map { stringResource(it.labelRes) }
-                    .joinToString(" > ")
-                Item(
-                    onClick = { navigator.navigate(SearchSourcePriorityDestination()) },
-                    text = stringResource(R.string.search_source_priority),
-                    sub = subText
-                )
-                val tempPageSize = remember(searchPageSize) {
-                    mutableIntStateOf(searchPageSize)
-                }
-                ItemSlider(
-                    value = tempPageSize.intValue.toFloat(),
-                    valueRange = 1f..20f,
-                    steps = 18,
-                    onValueChange = {
-                        tempPageSize.intValue = it.roundToInt()
-                    },
-                    onValueChangeFinished = {
-                        settingsViewModel.setSearchPageSize(tempPageSize.intValue)
-                    },
-                    sub = "${tempPageSize.intValue}",
-                    text = stringResource(R.string.search_limit)
-                )
-                ItemTip(
-                    text = stringResource(R.string.search_limit_tip)
-                )
-            }
-
-            ItemOuterTitle(stringResource(R.string.section_lyrics))
-            RoundedColumn {
-                ItemDropdown(
-                    text = stringResource(R.string.lyric_mode),
-                    value = stringResource(lyricFormat.labelRes),
-                    content = {
-                        LyricFormat.entries.forEach { format ->
-                            ItemCheck(
-                                text = stringResource(format.labelRes),
-                                state = lyricFormat == format,
-                                onChange = {
-                                    settingsViewModel.setLyricFormat(format)
-                                    state.dismiss()
-                                }
-                            )
-                        }
-                    },
-                )
-                ItemSwitcher(
-                    state = romaEnabled,
-                    onChange = {
-                        settingsViewModel.setRomaEnabled(!romaEnabled)
-                    },
-                    text = stringResource(R.string.roma),
-                    sub = stringResource(R.string.roma_hint)
-                )
-                ItemSwitcher(
-                    state = translationEnabled,
-                    onChange = {
-                        settingsViewModel.setTranslationEnabled(!translationEnabled)
-                    },
-                    text = stringResource(R.string.translation),
-                    sub = stringResource(R.string.translation_hint)
-                )
-                AnimatedVisibility(
-                    visible = translationEnabled
+                SmallTitle(stringResource(R.string.section_scan))
+                Card(
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .padding(horizontal = 12.dp)
                 ) {
-                    ItemSwitcher(
-                        enabled = translationEnabled,
-                        state = onlyTranslationIfAvailable,
-                        onChange = {
-                            settingsViewModel.setOnlyTranslationIfAvailable(!onlyTranslationIfAvailable)
+                    SuperArrow(
+                        title = stringResource(R.string.folder_manager),
+                        onClick = {
+                            navigator.navigate(FolderManagerDestination())
                         },
-                        text = stringResource(R.string.only_translation_if_available),
-                        sub = stringResource(R.string.only_translation_if_available_hint)
+                        summary = sub
+                    )
+                    SuperSwitch(
+                        title = stringResource(R.string.ignore_short_audio),
+                        checked = ignoreShortAudio,
+                        onCheckedChange = {
+                            settingsViewModel.setIgnoreShortAudio(!ignoreShortAudio)
+                        }
                     )
                 }
-                ItemSwitcher(
-                    state = removeEmptyLines,
-                    text = stringResource(R.string.remove_empty_lines),
-                    sub = stringResource(R.string.remove_empty_lines_hint),
-                    onChange = {
-                        settingsViewModel.setRemoveEmptyLines(!removeEmptyLines)
-                    }
-                )
             }
-            ItemOuterTitle(stringResource(R.string.section_metadata))
-            RoundedColumn {
-                ItemDropdown(
-                    text = stringResource(R.string.artist_separator),
-                    value = artistSeparator.toText(),
-                    sub = stringResource(R.string.artist_separator_hint),
-                    content = {
-                        val separators = listOf(
-                            ArtistSeparator.ENUMERATION_COMMA,
-                            ArtistSeparator.SLASH,
-                            ArtistSeparator.COMMA,
-                            ArtistSeparator.SEMICOLON
-                        )
-                        separators.forEach { separator ->
-                            ItemCheck(
-                                text = separator.toText(),
-                                state = artistSeparator == separator,
-                                onChange = {
-                                    settingsViewModel.setSeparator(separator)
-                                    state.dismiss()
+            item(
+                key = "search"
+            ) {
+                SmallTitle(stringResource(R.string.section_search))
+                Card(
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .padding(horizontal = 12.dp)
+                ) {
+                    val subText =
+                        searchSourceOrder.joinToString(" > ") { context.getString(it.labelRes) }
+                    SuperArrow(
+                        title = stringResource(R.string.search_source_priority),
+                        onClick = {
+                            navigator.navigate(SearchSourcePriorityDestination())
+                        },
+                        summary = subText
+                    )
+                    SuperArrow(
+                        title = stringResource(R.string.search_limit),
+                        endActions = {
+                            Text(
+                                text = "${tempSearchPageSize.intValue}",
+                                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            )
+                        },
+                        onClick = {
+                            showSearchLimitConfigDialog.value = true
+                        },
+                        bottomAction = {
+                            Slider(
+                                showKeyPoints = true,
+                                valueRange = minSearchSize.toFloat()..maxSearchSize.toFloat(),
+                                steps = maxSearchSize - minSearchSize - 1,
+                                value = tempSearchPageSize.intValue.toFloat(),
+                                onValueChange = {
+                                    tempSearchPageSize.intValue = it.roundToInt()
+                                },
+                                onValueChangeFinished = {
+                                    settingsViewModel.setSearchPageSize(tempSearchPageSize.intValue)
                                 }
                             )
+                            Spacer(modifier = Modifier.height(BasicComponentDefaults.InsideMargin.calculateBottomPadding()))
+                            Text(
+                                text = stringResource(R.string.search_limit_tip),
+                                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                            )
                         }
-                    }
-                )
+                    )
+                }
             }
+            item(
+                key = "lyric"
+            ) {
+                SmallTitle(stringResource(R.string.section_lyrics))
+                Card(
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .padding(horizontal = 12.dp)
+                ) {
+                    val lyricoFormats = LyricFormat.entries
 
-            ItemOuterTitle(stringResource(R.string.section_other))
-            RoundedColumn {
-                Item(
-                    text = stringResource(R.string.batch_match_history),
-                    sub = stringResource(R.string.batch_match_history_hint),
-                    onClick = {
-                        navigator.navigate(BatchMatchHistoryDestination())
+                    val lyricoFormatNames = lyricoFormats.map { stringResource(it.labelRes) }
+
+                    val currentSelectedIndex = lyricoFormats.indexOf(lyricFormat).let {
+                        if (it == -1) 0 else it
                     }
-                )
-                val sub = stringResource(
-                    R.string.cache_size_label,
-                    settingsUiState.totalCacheSize.formatSize()
-                )
-                Item(
-                    text = stringResource(R.string.clear_cache),
-                    sub = sub,
-                    onClick = {
-                        showClearCacheDialog.value = true
-                    }
-                )
-                Item(
-                    text = stringResource(R.string.about),
-                    onClick = {
-                        navigator.navigate(AboutDestination())
-                    }
-                )
+                    SuperDropdown(
+                        title = stringResource(R.string.lyric_mode),
+                        items = lyricoFormatNames,
+                        selectedIndex = currentSelectedIndex,
+                        onSelectedIndexChange = { index ->
+                            val selectedMode = lyricoFormats[index]
+                            settingsViewModel.setLyricFormat(selectedMode)
+                        }
+                    )
+                    SuperSwitch(
+                        title = stringResource(R.string.roma),
+                        summary = stringResource(R.string.roma_hint),
+                        checked = romaEnabled,
+                        onCheckedChange = {
+                            settingsViewModel.setRomaEnabled(!romaEnabled)
+                        }
+                    )
+                    SuperSwitch(
+                        title = stringResource(R.string.translation),
+                        summary = stringResource(R.string.translation_hint),
+                        checked = translationEnabled,
+                        onCheckedChange = {
+                            settingsViewModel.setTranslationEnabled(!translationEnabled)
+                        }
+                    )
+                    SuperSwitch(
+                        title = stringResource(R.string.only_translation_if_available),
+                        summary = stringResource(R.string.only_translation_if_available_hint),
+                        checked = onlyTranslationIfAvailable,
+                        onCheckedChange = {
+                            settingsViewModel.setOnlyTranslationIfAvailable(!onlyTranslationIfAvailable)
+                        },
+                        enabled = translationEnabled
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(SaltTheme.dimens.padding))
+            item(
+                key = "metadata"
+            ) {
+                SmallTitle(stringResource(R.string.section_metadata))
+                Card(
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .padding(horizontal = 12.dp)
+                ) {
+                    val artistSeparators = ArtistSeparator.entries
+                    val artistSeparatorNames = artistSeparators.map { it.toText() }
+                    val currentSelectedIndex = artistSeparators.indexOf(artistSeparator).let {
+                        if (it == -1) 0 else it
+                    }
+                    SuperDropdown(
+                        title = stringResource(R.string.artist_separator),
+                        summary = stringResource(R.string.artist_separator_hint),
+                        items = artistSeparatorNames,
+                        selectedIndex = currentSelectedIndex,
+                        onSelectedIndexChange = { index ->
+                            val selectedSeparator = artistSeparators[index]
+                            settingsViewModel.setSeparator(selectedSeparator)
+                        }
+                    )
+                }
+            }
+            item(
+                key = "other"
+            ) {
+                SmallTitle(stringResource(R.string.section_other))
+                Card(
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .padding(horizontal = 12.dp)
+                ) {
+                    SuperArrow(
+                        title = stringResource(R.string.batch_match_history),
+                        summary = stringResource(R.string.batch_match_history_hint),
+                        onClick = {
+                            navigator.navigate(BatchMatchHistoryDestination())
+                        }
+                    )
+                    SuperArrow(
+                        title = stringResource(R.string.clear_cache),
+                        onClick = {
+                            showClearCacheDialog.value = true
+                        },
+                        endActions = {
+                            Text(
+                                text = settingsUiState.totalCacheSize.formatSize(),
+                                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            )
+                        }
+                    )
+                    SuperArrow(
+                        title = stringResource(R.string.about),
+                        onClick = {
+                            navigator.navigate(AboutDestination())
+                        }
+                    )
+                }
+            }
         }
     }
 }

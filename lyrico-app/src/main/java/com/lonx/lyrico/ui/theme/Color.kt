@@ -1,7 +1,9 @@
 package com.lonx.lyrico.ui.theme
 
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
+import com.lonx.lyrico.R
 import com.moriafly.salt.ui.SaltTheme
 
 /**
@@ -92,3 +94,18 @@ object LyricoColors {
         get() = SaltTheme.colors.subText
 }
 
+data class KeyColor(
+    @field:StringRes val nameResId: Int,
+    val color: Color?
+)
+
+val KeyColors = listOf(
+    KeyColor(R.string.color_default, null),
+    KeyColor(R.string.color_blue, Color(0xFF3482FF)),
+    KeyColor(R.string.color_green, Color(0xFF36D167)),
+    KeyColor(R.string.color_yellow, Color(0xFFFFB21D)),
+    KeyColor(R.string.color_orange, Color(0xFFFF5722)),
+    KeyColor(R.string.color_purple, Color(0xFF7C4DFF)),
+    KeyColor(R.string.color_pink, Color(0xFFE91E63)),
+    KeyColor(R.string.color_teal, Color(0xFF00BCD4))
+)

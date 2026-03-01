@@ -99,6 +99,9 @@ dependencies {
     implementation(libs.reorderable)
     implementation(libs.compose.markdown)
 
+
+    implementation(libs.miuix.android)
+    implementation(libs.miuix.icons.android)
     // AndroidX
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

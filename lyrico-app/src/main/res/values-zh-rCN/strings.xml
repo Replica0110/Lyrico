@@ -28,7 +28,6 @@
     <string name="clear_cache_confirm">确定要清理所有缓存吗？</string>
     <string name="cache_item">%1$s: %2$s</string>
     <string name="cache_total">总计: %1$s</string>
-    <string name="cache_size_label">缓存大小: %1$s</string>
 
     <!-- 分组标题 -->
     <string name="section_appearance">外观</string>
@@ -117,7 +116,16 @@
     <string name="theme_mode_auto">跟随系统</string>
     <string name="theme_mode_light">浅色模式</string>
     <string name="theme_mode_dark">深色模式</string>
-
+    <string name="color_teal">青色</string>
+    <string name="color_blue">蓝色</string>
+    <string name="color_green">绿色</string>
+    <string name="color_purple">紫色</string>
+    <string name="color_yellow">黄色</string>
+    <string name="color_orange">橙色</string>
+    <string name="color_pink">粉色</string>
+    <string name="color_default">系统默认</string>
+    <string name="monet">莫奈取色</string>
+    <string name="key_color">种子色</string>
     <!-- 页面 -->
     <string name="batch_match_history_title">批量匹配记录</string>
     <string name="batch_match_history_empty">暂无记录</string>
@@ -275,4 +283,8 @@
     <string name="remove_empty_lines">移除空行</string>
     <string name="remove_empty_lines_hint">删除内容为空或仅包含占位符的行</string>
 
+
+
+
+    <string name="cd_back">返回</string>
 </resources>

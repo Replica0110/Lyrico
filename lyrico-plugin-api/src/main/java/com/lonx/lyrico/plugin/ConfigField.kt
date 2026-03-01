@@ -7,7 +7,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 enum class FieldType : Parcelable {
     TEXT,       // 普通文本
-    PASSWORD,   // 密码/密文（宿主应隐藏输入）
+    PASSWORD,   // 密码/密文
     NUMBER,     // 数字输入
     SWITCH,     // 开关（Boolean）
     SELECT      // 下拉单选
@@ -23,5 +23,8 @@ data class ConfigField(
     val description: String = "",   // 详细说明文字
     val isRequired: Boolean = false,// 是否必填
     val defaultValue: String = "",  // 默认值
-    val options: List<String>? = null // 仅当类型为 SELECT 时有效
+    val options: List<String>? = null, // 仅当类型为 SELECT 时有效
+    // 可见性依赖规则
+    // 根节点：可以是 Match, 也可以是 And(...) 或 Or(...)
+    val dependency: ConfigDependency? = null
 ) : Parcelable

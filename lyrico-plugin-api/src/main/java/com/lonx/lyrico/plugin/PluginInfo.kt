@@ -5,8 +5,6 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class PluginInfo(
-    /** 插件唯一 ID（全局唯一，反向 DNS 强烈推荐） */
-    val id: String,
 
     /** 插件显示名称 */
     val name: String,

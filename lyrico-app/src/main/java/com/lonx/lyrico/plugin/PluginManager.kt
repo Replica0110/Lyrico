@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,43 +14,25 @@ import kotlinx.coroutines.flow.update
 
 class PluginManager(private val context: Context) {
 
-    private val _connectedLyricSources = MutableStateFlow<List<ILyricSource>>(emptyList())
-    val connectedLyricSources: StateFlow<List<ILyricSource>> = _connectedLyricSources.asStateFlow()
-
-    private val _connectedSearchSources = MutableStateFlow<List<ISearchSource>>(emptyList())
-    val connectedSearchSources: StateFlow<List<ISearchSource>> = _connectedSearchSources.asStateFlow()
-
-    // Map to keep track of connections and their associated interfaces for cleanup
-    private val serviceConnections = mutableMapOf<ComponentName, ServiceConnection>()
-    private val componentToPluginMap = mutableMapOf<ComponentName, Any>()
-
     companion object {
         private const val TAG = "PluginManager"
         private const val PERMISSION_SEARCH_SOURCE = "com.lonx.lyrico.permission.SEARCH_SOURCE"
-        private const val ACTION_LYRIC_SOURCE = "com.lonx.lyrico.plugin.LyricSource"
-        private const val ACTION_SEARCH_SOURCE = "com.lonx.lyrico.plugin.SearchSource"
+        private const val ACTION_PLUGIN = "com.lonx.lyrico.plugin.PLUGIN"
     }
+
+    private val serviceConnections = mutableMapOf<ComponentName, ServiceConnection>()
+    private val componentToPlugin = mutableMapOf<ComponentName, IPlugin>()
+
+    private val _plugins = MutableStateFlow<List<PluginHandle>>(emptyList())
+    val plugins: StateFlow<List<PluginHandle>> = _plugins.asStateFlow()
+
+    private val _searchSources = MutableStateFlow<List<ISearchSource>>(emptyList())
+
+    private val _lyricSources = MutableStateFlow<List<ILyricSource>>(emptyList())
 
     fun startDiscovery() {
-        Log.i(TAG, "Starting plugin discovery")
-        discoverAndBind(ACTION_LYRIC_SOURCE) { binder -> ILyricSource.Stub.asInterface(binder) }
-        discoverAndBind(ACTION_SEARCH_SOURCE) { binder -> ISearchSource.Stub.asInterface(binder) }
-    }
-
-    fun stopDiscovery() {
-        Log.i(TAG, "Stopping plugin discovery and unbinding services")
-        serviceConnections.values.forEach { context.unbindService(it) }
-        serviceConnections.clear()
-        componentToPluginMap.clear()
-        _connectedLyricSources.value = emptyList()
-        _connectedSearchSources.value = emptyList()
-    }
-
-    private fun <T : Any> discoverAndBind(action: String, asInterface: (IBinder) -> T) {
         val pm = context.packageManager
-        val intent = Intent(action)
-        // QUERY_RESULT_INTENT_DOCUMENT is not needed unless we process specifically? 
-        // 0 is usually fine but GET_META_DATA or GET_RESOLVED_FILTER might be safer.
+        val intent = Intent(ACTION_PLUGIN)
         val services = pm.queryIntentServices(intent, 0)
 
         for (resolveInfo in services) {
@@ -73,27 +54,15 @@ class PluginManager(private val context: Context) {
 
             val connection = object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                    Log.i(TAG, "Service connected: $name")
-                    try {
-                        val interfaceObj = asInterface(service)
-                        synchronized(this@PluginManager) {
-                           componentToPluginMap[name] = interfaceObj
-                           addPlugin(interfaceObj)
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error casting plugin interface", e)
-                    }
+                    val plugin = IPlugin.Stub.asInterface(service)
+                    componentToPlugin[name] = plugin
+                    registerPlugin(name.packageName, plugin)
                 }
 
                 override fun onServiceDisconnected(name: ComponentName) {
-                    Log.i(TAG, "Service disconnected: $name")
-                    synchronized(this@PluginManager) {
-                        val plugin = componentToPluginMap.remove(name)
-                        if (plugin != null) {
-                            removePlugin(plugin)
-                        }
-                        serviceConnections.remove(name)
-                    }
+                    val plugin = componentToPlugin.remove(name)
+                    plugin?.let { unregisterPlugin(it) }
+                    serviceConnections.remove(name)
                 }
             }
 
@@ -107,50 +76,57 @@ class PluginManager(private val context: Context) {
         }
     }
 
-    private fun addPlugin(plugin: Any) {
-        when (plugin) {
-            is ILyricSource -> {
-                _connectedLyricSources.update { it + plugin }
-            }
-            is ISearchSource -> {
-                _connectedSearchSources.update { it + plugin }
-            }
-        }
+    fun stopDiscovery() {
+        serviceConnections.values.forEach { context.unbindService(it) }
+        serviceConnections.clear()
+        componentToPlugin.clear()
+        _plugins.value = emptyList()
+        _searchSources.value = emptyList()
+        _lyricSources.value = emptyList()
     }
 
-    private fun removePlugin(plugin: Any) {
-        when (plugin) {
-            is ILyricSource -> {
-                _connectedLyricSources.update { it - plugin }
-            }
-            is ISearchSource -> {
-                _connectedSearchSources.update { it - plugin }
-            }
+    private fun registerPlugin(
+        packageName: String,
+        plugin: IPlugin
+    ) {
+        val caps = plugin.capabilities
+
+        var search: ISearchSource? = null
+        var lyric: ILyricSource? = null
+
+        if ("search" in caps) {
+            search = ISearchSource.Stub.asInterface(plugin.getCapability("search"))
+            _searchSources.update { it + search }
         }
+
+        if ("lyric" in caps) {
+            lyric = ILyricSource.Stub.asInterface(plugin.getCapability("lyric"))
+            _lyricSources.update { it + lyric }
+        }
+
+        val handle = PluginHandle(packageName, plugin, search, lyric)
+        _plugins.update { it + handle }
+    }
+
+    private fun unregisterPlugin(plugin: IPlugin) {
+        val handle = _plugins.value.find { it.plugin == plugin } ?: return
+
+        handle.search?.let { s ->
+            _searchSources.update { it - s }
+        }
+        handle.lyric?.let { l ->
+            _lyricSources.update { it - l }
+        }
+
+        _plugins.update { it - handle }
     }
 }
-/**
- * 宿主内部使用的通用接口，用于统一处理 Search 和 Lyric 插件的配置
- */
-interface UnifiedPlugin {
-    fun getPluginInfo(): PluginInfo
-    fun getConfigSchema(): List<ConfigField>
-    fun getSettings(): Bundle
-    fun updateSettings(settings: Bundle)
-}
+data class PluginHandle(
+    val packageName: String,
+    val plugin: IPlugin,
+    val search: ISearchSource?,
+    val lyric: ILyricSource?
+) {
+    val info: PluginInfo get() = plugin.pluginInfo
 
-// 为 ISearchSource 创建代理
-class SearchPluginWrapper(private val inner: ISearchSource) : UnifiedPlugin {
-    override fun getPluginInfo(): PluginInfo = inner.pluginInfo
-    override fun getConfigSchema() = inner.configSchema ?: emptyList()
-    override fun getSettings() = inner.settings ?: Bundle()
-    override fun updateSettings(settings: Bundle) = inner.updateSettings(settings)
-}
-
-// 为 ILyricSource 创建代理
-class LyricPluginWrapper(private val inner: ILyricSource) : UnifiedPlugin {
-    override fun getPluginInfo(): PluginInfo = inner.pluginInfo
-    override fun getConfigSchema() = inner.configSchema ?: emptyList()
-    override fun getSettings() = inner.settings ?: Bundle()
-    override fun updateSettings(settings: Bundle) = inner.updateSettings(settings)
 }

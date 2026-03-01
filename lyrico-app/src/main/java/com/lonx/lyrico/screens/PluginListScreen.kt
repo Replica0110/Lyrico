@@ -54,6 +54,7 @@ import com.lonx.lyrico.viewmodel.PluginListViewModel
 import com.lonx.lyrico.viewmodel.PluginUiModel
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.generated.destinations.PluginConfigDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.Button
@@ -91,19 +92,9 @@ fun PluginListScreen(
 ) {
     val viewModel: PluginListViewModel = koinViewModel()
     val plugins by viewModel.pluginList.collectAsState()
-
-    // 监听配置状态
-    val configState by viewModel.configUiState.collectAsState()
-    // 控制 BottomSheet 显示的状态
-    val showSheet = remember { mutableStateOf(false) }
-
-    // 监听 configState 变化来自动显示 BottomSheet
-    LaunchedEffect(configState) {
-        showSheet.value = configState != null
-        // 如果外部(如保存成功)置空了状态，确保 Sheet 关闭
-    }
-
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+
+
     Scaffold(
         topBar = {
             SmallTopAppBar(
@@ -111,71 +102,23 @@ fun PluginListScreen(
                 scrollBehavior = topAppBarScrollBehavior,
                 navigationIcon = {
                     IconButton(
-                        onClick = {
-                            navigator.popBackStack()
-                        },
+                        onClick = { navigator.popBackStack() },
                         modifier = Modifier.padding(start = 16.dp)
                     ) {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = null
-                        )
+                        Icon(imageVector = MiuixIcons.Back, contentDescription = null)
                     }
                 },
                 actions = {
                     IconButton(
-                        onClick = {
-                            viewModel.refresh()
-                        },
+                        onClick = { viewModel.refresh() },
                         modifier = Modifier.padding(end = 16.dp)
                     ) {
-                        Icon(
-                            imageVector = MiuixIcons.Refresh,
-                            contentDescription = null
-                        )
+                        Icon(imageVector = MiuixIcons.Refresh, contentDescription = null)
                     }
                 }
             )
         }
     ) { paddingValues ->
-        configState?.let { state ->
-            SuperBottomSheet(
-                show = showSheet,
-                title = state.pluginName,
-                onDismissRequest = {
-                    showSheet.value = false
-                },
-                onDismissFinished = {
-                    viewModel.dismissConfig()
-                }
-            ) {
-                when {
-                    state.isLoading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        )
-                    }
-
-                    state.error != null -> {
-                        Text(text = "加载配置失败: ${state.error}")
-                    }
-
-                    else -> {
-                        DynamicConfigForm(
-                            schema = state.schema,
-                            currentSettings = state.currentSettings,
-                            onSave = { settings ->
-                                viewModel.saveConfig(settings)
-                                showSheet.value = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
         LazyColumn(
             modifier = Modifier
                 .scrollEndHaptic()
@@ -188,16 +131,19 @@ fun PluginListScreen(
             ),
             overscrollEffect = null,
         ) {
-            items(items = plugins, key = { it.id }) {
+            items(items = plugins, key = { it.id }) { plugin ->
                 var enabled by remember { mutableStateOf(true) }
                 PluginItem(
-                    plugin = it,
+                    plugin = plugin,
                     enabled = enabled,
-                    onCheckChanged = {
-                        enabled = it
-                    },
+                    onCheckChanged = { enabled = it },
                     onSettings = {
-                        viewModel.loadConfig(it.id, it.name)
+                        navigator.navigate(
+                            PluginConfigDestination(
+                                pluginId = plugin.id,
+                                pluginName = plugin.name
+                            )
+                        )
                     }
                 )
             }
@@ -212,7 +158,8 @@ fun PluginItem(
     onSettings: () -> Unit,
     onCheckChanged: (Boolean) -> Unit,
 ) {
-
+    // ... (保持原样，没有任何逻辑需要修改) ...
+    // 原代码...
     // Miuix 风格常量
     val secondaryContainer = colorScheme.secondaryContainer.copy(alpha = 0.8f)
     val badgeBg = colorScheme.tertiaryContainer.copy(alpha = 0.6f)
@@ -239,6 +186,13 @@ fun PluginItem(
                         fontSize = 17.sp,
                         fontWeight = FontWeight(550),
                         color = colorScheme.onSurface
+                    )
+                    Text(
+                        text = "id: ${plugin.id}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight(550),
+                        color = colorScheme.onSurfaceVariantSummary,
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                     Text(
                         text = "作者: ${plugin.author}",
@@ -342,177 +296,3 @@ fun CapabilityBadge(text: String, bg: Color, tint: Color) {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DynamicConfigForm(
-    schema: List<ConfigField>,
-    currentSettings: Bundle,
-    onSave: (Bundle) -> Unit
-) {
-    val formState = remember(currentSettings) {
-        val map = mutableStateMapOf<String, Any>()
-        schema.forEach { field ->
-            map[field.key] = when (field.type) {
-                FieldType.SWITCH -> currentSettings.getBoolean(
-                    field.key,
-                    field.defaultValue.toBooleanStrictOrNull() ?: false
-                )
-
-                FieldType.NUMBER -> currentSettings.getInt(
-                    field.key,
-                    field.defaultValue.toIntOrNull() ?: 0
-                )
-
-                else -> currentSettings.getString(field.key) ?: field.defaultValue
-            }
-        }
-        map
-    }
-
-    val groupedFields = remember(schema) {
-        schema.groupBy { field ->
-            field.group.ifEmpty { "基础设置" }
-        }
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .scrollEndHaptic()
-            .overScrollVertical(),
-        contentPadding = PaddingValues(bottom = 16.dp),
-        overscrollEffect = null,
-    ) {
-        groupedFields.forEach { (groupName, fields) ->
-            item(key = groupName) {
-                SmallTitle(
-                    text = groupName,
-                    insideMargin = PaddingValues(start = 16.dp, top = 16.dp, bottom = 8.dp)
-                )
-
-            }
-            items(items = fields, key = { field -> field.key }) { field ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-
-                    ) { FormItem(field = field, formState = formState) }
-            }
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = {
-                    val bundle = Bundle()
-                    formState.forEach { (key, value) ->
-                        when (value) {
-                            is Boolean -> bundle.putBoolean(key, value)
-                            is Int -> bundle.putInt(key, value)
-                            is String -> bundle.putString(key, value)
-                        }
-                    }
-                    onSave(bundle)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(50.dp)
-            ) {
-                Text("保存配置")
-            }
-
-            // 底部导航栏避让
-            Spacer(
-                Modifier.padding(
-                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                )
-            )
-        }
-    }
-}
-
-/**
- * 抽取单个表单项渲染逻辑，保持代码整洁
- */
-@Composable
-private fun FormItem(
-    field: ConfigField,
-    formState: SnapshotStateMap<String, Any>
-) {
-    when (field.type) {
-        FieldType.SWITCH -> {
-            val isChecked = formState[field.key] as? Boolean ?: false
-            SuperSwitch(
-                title = field.label,
-                summary = field.description, // 如果没有描述，可以传 null
-                checked = isChecked,
-                onCheckedChange = { formState[field.key] = it }
-            )
-        }
-
-        FieldType.SELECT -> {
-            val selectedValue = formState[field.key] as? String ?: ""
-            val options = field.options ?: emptyList()
-            // 找到当前选中项的索引，如果找不到默认为 0
-            val selectedIndex = options.indexOf(selectedValue).takeIf { it >= 0 } ?: 0
-
-            SuperDropdown(
-                title = field.label,
-                summary = field.description,
-                items = options,
-                selectedIndex = selectedIndex,
-                onSelectedIndexChange = { index ->
-                    if (index in options.indices) {
-                        formState[field.key] = options[index]
-                    }
-                },
-                // 如果 SuperDropdown 支持 summary 也可以传 field.description
-            )
-        }
-
-        FieldType.TEXT, FieldType.PASSWORD -> {
-
-            val textValue = formState[field.key] as? String ?: ""
-            TextField(
-                value = textValue,
-                onValueChange = { formState[field.key] = it },
-                label = field.label,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                visualTransformation = if (field.type == FieldType.PASSWORD)
-                    PasswordVisualTransformation() else VisualTransformation.None
-            )
-            if (field.description.isNotEmpty()) {
-                Text(
-                    text = field.description,
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    modifier = Modifier.padding(top = 4.dp, start = 4.dp)
-                )
-            }
-        }
-
-        FieldType.NUMBER -> {
-            val numValue = formState[field.key]
-            val textValue = numValue?.toString() ?: ""
-
-            TextField(
-                value = textValue,
-                onValueChange = { input ->
-                    if (input.isEmpty()) {
-                        formState[field.key] = 0
-                    } else if (input.all { it.isDigit() }) {
-                        formState[field.key] = input.toInt()
-                    }
-                },
-                label = field.label,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-        }
-
-    }
-}

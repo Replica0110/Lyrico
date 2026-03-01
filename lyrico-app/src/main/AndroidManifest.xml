@@ -10,10 +10,7 @@
 
     <queries>
         <intent>
-            <action android:name="com.lonx.lyrico.plugin.LyricSource" />
-        </intent>
-        <intent>
-            <action android:name="com.lonx.lyrico.plugin.SearchSource" />
+            <action android:name="com.lonx.lyrico.plugin.PLUGIN" />
         </intent>
     </queries>
 

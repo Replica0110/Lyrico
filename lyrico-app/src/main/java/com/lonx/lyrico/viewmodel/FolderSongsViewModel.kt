@@ -10,12 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
 class FolderSongsViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val folderId: Long,
     private val database: LyricoDatabase
 ) : ViewModel() {
 
-    private val folderId: Long =
-        savedStateHandle.get<Long>("folderId")!!
 
     private val songDao = database.songDao()
 

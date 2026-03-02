@@ -24,15 +24,19 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class, UnstableSaltUiApi::class)
 @Composable
 @Destination<RootGraph>(route = "folder_songs")
 fun FolderSongsScreen(
     navigator: DestinationsNavigator,
+    folderId: Long,
     folderPath: String
 ) {
-    val viewModel: FolderSongsViewModel = koinViewModel()
+    val viewModel: FolderSongsViewModel = koinViewModel(
+        parameters = { parametersOf(folderId) }
+    )
     val songs by viewModel.songs.collectAsStateWithLifecycle()
 
 

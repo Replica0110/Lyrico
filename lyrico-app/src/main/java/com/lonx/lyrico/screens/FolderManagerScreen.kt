@@ -207,7 +207,7 @@ fun FolderManagerScreen(
                     ) {
                         ItemExt(
                             onClick = {
-                                navigator.navigate(FolderSongsDestination(folder.path))
+                                navigator.navigate(FolderSongsDestination(folder.id,folder.path))
                             },
                             iconPainter = if (folder.isIgnored)
                                 painterResource(id = R.drawable.ic_invisible_24dp)

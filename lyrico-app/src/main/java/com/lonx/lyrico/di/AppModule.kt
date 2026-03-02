@@ -171,6 +171,11 @@ val appModule = module {
     viewModel { LocalSearchViewModel(get()) }
     viewModel { BatchMatchHistoryViewModel(get()) }
     viewModel { FolderManagerViewModel(get()) }
-    viewModel { FolderSongsViewModel(get(), get()) }
+    viewModel { (folderId: Long) ->
+        FolderSongsViewModel(
+            folderId = folderId,
+            database = get()
+        )
+    }
 }
 

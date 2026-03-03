@@ -21,12 +21,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,49 +39,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
+import com.lonx.lyrico.ui.components.DropdownItem
 import com.lonx.lyrico.ui.dialog.BatchMatchConfigDialog
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.coil.CoverRequest
+import com.lonx.lyrico.viewmodel.SongListUiState
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
-import com.moriafly.salt.ui.BottomBar
-import com.moriafly.salt.ui.BottomBarItem
-import com.moriafly.salt.ui.Button
-import com.moriafly.salt.ui.ButtonType
-import com.moriafly.salt.ui.Icon
-import com.moriafly.salt.ui.Item
-import com.moriafly.salt.ui.ItemArrowType
-import com.moriafly.salt.ui.ItemDivider
-import com.moriafly.salt.ui.ItemTip
-import com.moriafly.salt.ui.RoundedColumn
-import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.dialog.BasicDialog
 import com.moriafly.salt.ui.dialog.YesNoDialog
-import com.moriafly.salt.ui.gestures.cupertino.rememberCupertinoOverscrollEffect
-import com.moriafly.salt.ui.icons.Check
-import com.moriafly.salt.ui.icons.SaltIcons
-import com.moriafly.salt.ui.icons.Uncheck
-import com.moriafly.salt.ui.noRippleClickable
-import com.moriafly.salt.ui.popup.PopupMenu
-import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.BatchMatchHistoryDetailDestination
@@ -92,6 +72,41 @@ import com.ramcosta.composedestinations.generated.destinations.SettingsDestinati
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.BasicComponentColors
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Checkbox
+import top.yukonga.miuix.kmp.basic.FloatingNavigationBar
+import top.yukonga.miuix.kmp.basic.FloatingNavigationBarItem
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.ListPopupDefaults
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.extra.SuperArrow
+import top.yukonga.miuix.kmp.extra.SuperBottomSheet
+import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.extra.SuperListPopup
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.icon.extended.Edit
+import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.Pause
+import top.yukonga.miuix.kmp.icon.extended.Search
+import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.icon.extended.Share
+import top.yukonga.miuix.kmp.icon.extended.Sort
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -117,13 +132,29 @@ fun SongListScreen(
     val songs by viewModel.songs.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState(initial = false)
     val selectedPaths by viewModel.selectedSongIds.collectAsState()
-    var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
-    val pullToRefreshState = rememberPullToRefreshState()
+    val sortOrderDropdownExpanded = remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val sheetUiState by viewModel.sheetState.collectAsStateWithLifecycle()
 
-    val menuSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val detailSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val showDetailSheet = remember(sheetUiState.detailSong) {
+        mutableStateOf(sheetUiState.detailSong != null)
+    }
+    val showMenuSheet = remember(sheetUiState.menuSong) {
+        mutableStateOf(sheetUiState.menuSong != null)
+    }
+    val showDeleteDialog = remember(uiState.showDeleteDialog) {
+        mutableStateOf(uiState.showDeleteDialog && sheetUiState.menuSong != null)
+    }
+    val showBatchDeleteDialog = remember(uiState.showBatchDeleteDialog) {
+        mutableStateOf(uiState.showBatchDeleteDialog)
+    }
+    val showBatchConfigDialog = remember(uiState.showBatchConfigDialog) {
+        mutableStateOf(uiState.showBatchConfigDialog)
+    }
+
+    val showBatchMatchingDialog = remember(uiState.showBatchConfigDialog) {
+        mutableStateOf(uiState.isBatchMatching || uiState.batchProgress != null)
+    }
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -151,118 +182,115 @@ fun SongListScreen(
     BackHandler(enabled = isSelectionMode) {
         viewModel.exitSelectionMode()
     }
-    Box {
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(SaltTheme.colors.background),
-            topBar = {
-                if (isSelectionMode) {
-                    SelectionModeTopAppBar(
-                        selectedCount = selectedPaths.size,
-                        actions = {
-                            val allSelected = viewModel.isAllSelected(songs)
-                            TextButton(
-                                onClick = {
-                                    if (allSelected) {
-                                        viewModel.deselectAll()
-                                    } else {
-                                        viewModel.selectAll(songs)
-                                    }
+    val topAppBarScrollBehavior = MiuixScrollBehavior()
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize(),
+        topBar = {
+            if (isSelectionMode) {
+                val allSelected = viewModel.isAllSelected(songs)
+                SmallTopAppBar(
+                    title = "",
+                    scrollBehavior = topAppBarScrollBehavior,
+                    navigationIcon = {
+                        Text(
+                            modifier = Modifier.padding(start = 12.dp),
+                            text = stringResource(
+                                R.string.selection_mode_selected_count,
+                                selectedPaths.size
+                            )
+                        )
+                    },
+                    actions = {
+                        TextButton(
+                            onClick = {
+                                if (allSelected) {
+                                    viewModel.deselectAll()
+                                } else {
+                                    viewModel.selectAll(songs)
                                 }
-                            ) {
-                                Text(
-                                    text = stringResource(
-                                        if (allSelected) R.string.action_deselect_all
-                                        else R.string.action_select_all
-                                    ),
-                                    color = SaltTheme.colors.highlight
-                                )
                             }
-                            TextButton(
-                                onClick = {
-                                    viewModel.exitSelectionMode()
-                                }
-                            ) {
-                                Text(
-                                    text = stringResource(id = R.string.cancel),
-                                    color = SaltTheme.colors.highlight
-                                )
-                            }
-                        }
-                    )
-                } else {
-                    CenterAlignedTopAppBar(
-                        colors = TopAppBarColors(
-                            containerColor = SaltTheme.colors.background,
-                            scrolledContainerColor = SaltTheme.colors.background,
-                            navigationIconContentColor = SaltTheme.colors.text,
-                            titleContentColor = SaltTheme.colors.text,
-                            actionIconContentColor = SaltTheme.colors.text,
-                            subtitleContentColor = SaltTheme.colors.subText
-                        ),
-                        title = {
+                        ) {
                             Text(
-                                text = stringResource(R.string.song_list_title, songs.size),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        navigationIcon = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_settings_24dp),
-                                contentDescription = stringResource(R.string.cd_settings),
-                                tint = SaltTheme.colors.text,
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .noRippleClickable(role = Role.Button) {
-                                        navigator.navigate(SettingsDestination())
-                                    }
-                                    .padding(12.dp)
-                            )
-                        },
-                        actions = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_search_24dp),
-                                contentDescription = stringResource(R.string.cd_search),
-                                tint = SaltTheme.colors.text,
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .noRippleClickable(role = Role.Button) {
-                                        navigator.navigate(LocalSearchDestination())
-                                    }
-                                    .padding(12.dp)
-                            )
-                            Box(modifier = Modifier.wrapContentSize()) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_sort_24dp),
-                                    contentDescription = stringResource(R.string.cd_sort),
-                                    tint = SaltTheme.colors.text,
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .noRippleClickable(role = Role.Button) {
-                                            sortOrderDropdownExpanded = true
-                                        }
-                                        .padding(8.dp)
+                                text = stringResource(
+                                    if (allSelected) R.string.action_deselect_all
+                                    else R.string.action_select_all
                                 )
-
-                                PopupMenu(
-                                    expanded = sortOrderDropdownExpanded,
-                                    onDismissRequest = { sortOrderDropdownExpanded = false }
-                                ) {
+                            )
+                        }
+                        TextButton(
+                            modifier = Modifier.padding(end = 12.dp),
+                            onClick = {
+                                viewModel.exitSelectionMode()
+                            }
+                        ) {
+                            Text(
+                                text = stringResource(id = R.string.cancel)
+                            )
+                        }
+                    }
+                )
+            } else {
+                SmallTopAppBar(
+                    title = stringResource(R.string.song_list_title, songs.size),
+                    scrollBehavior = topAppBarScrollBehavior,
+                    navigationIcon = {
+                        IconButton(
+                            modifier = Modifier.padding(start = 12.dp),
+                            onClick = {
+                                navigator.navigate(SettingsDestination())
+                            }
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Settings,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                navigator.navigate(LocalSearchDestination())
+                            }
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.Search,
+                                contentDescription = stringResource(R.string.cd_search)
+                            )
+                        }
+                        Box() {
+                            IconButton(
+                                modifier = Modifier.padding(end = 12.dp),
+                                onClick = {
+                                    sortOrderDropdownExpanded.value = true
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.Sort,
+                                    contentDescription = stringResource(R.string.cd_sort)
+                                )
+                            }
+                            SuperListPopup(
+                                show = sortOrderDropdownExpanded,
+                                popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
+                                onDismissRequest = {
+                                    sortOrderDropdownExpanded.value = false
+                                }
+                            ) {
+                                ListPopupColumn {
                                     val sortTypes = listOf(
                                         SortBy.TITLE,
                                         SortBy.ARTISTS,
                                         SortBy.DATE_MODIFIED,
                                         SortBy.DATE_ADDED
                                     )
-
                                     sortTypes.forEach { type ->
                                         val isSelected = sortInfo.sortBy == type
-                                        PopupMenuItem(
+                                        DropdownItem(
                                             text = stringResource(type.labelRes),
-                                            selected = isSelected,
+                                            optionSize = sortTypes.size,
+                                            index = sortTypes.indexOf(type),
+                                            isSelected = isSelected,
                                             iconPainter = if (isSelected) {
                                                 if (sortInfo.order == SortOrder.ASC) {
                                                     painterResource(R.drawable.ic_arrow_down_24dp)
@@ -270,8 +298,7 @@ fun SongListScreen(
                                                     painterResource(R.drawable.ic_arrow_up_24dp)
                                                 }
                                             } else null,
-                                            iconPaddingValues = PaddingValues(2.dp),
-                                            onClick = {
+                                            onSelectedIndexChange = {
                                                 val newOrder = if (isSelected) {
                                                     if (sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC
                                                 } else {
@@ -283,36 +310,63 @@ fun SongListScreen(
                                     }
                                 }
                             }
-                        },
+                        }
+                    }
+                )
+            }
+
+        },
+        floatingToolbar = {
+            AnimatedVisibility(
+                visible = isSelectionMode,
+                enter = slideInVertically { it },
+                exit = slideOutVertically { it }
+            ) {
+                val hasSelection = selectedPaths.isNotEmpty()
+
+                FloatingNavigationBar {
+
+                    FloatingNavigationBarItem(
+                        selected = hasSelection,
+                        enabled = hasSelection,
+                        label = stringResource(R.string.action_share),
+                        onClick = { viewModel.batchShare(context, songs) },
+                        icon = MiuixIcons.Share
+                    )
+                    FloatingNavigationBarItem(
+                        selected = hasSelection,
+                        enabled = hasSelection,
+                        label = stringResource(R.string.action_delete),
+                        onClick = { viewModel.showBatchDeleteDialog() },
+                        icon = MiuixIcons.Delete
+                    )
+                    FloatingNavigationBarItem(
+                        selected = hasSelection,
+                        enabled = hasSelection,
+                        label = stringResource(R.string.action_batch_match),
+                        onClick = { viewModel.openBatchMatchConfig() },
+                        icon = MiuixIcons.Edit
                     )
                 }
-
             }
-        ) { paddingValues ->
-            PullToRefreshBox(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(SaltTheme.colors.background)
-                    .padding(paddingValues),
+        }
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            PullToRefresh(
+                modifier = Modifier.padding(paddingValues),
                 isRefreshing = uiState.isLoading,
-                state = pullToRefreshState,
-                indicator = {
-                    PullToRefreshDefaults.Indicator(
-                        modifier = Modifier.align(Alignment.TopCenter),
-                        isRefreshing = uiState.isLoading,
-                        state = pullToRefreshState,
-                        color = SaltTheme.colors.highlight,
-                        containerColor = SaltTheme.colors.background
-                    )
-                },
                 onRefresh = {
                     viewModel.refreshSongs()
                 }
             ) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .scrollEndHaptic()
+                        .overScrollVertical()
+                        .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                        .fillMaxHeight(),
                     state = listState,
-                    overscrollEffect = rememberCupertinoOverscrollEffect(allowTopOverscroll = false)
+                    overscrollEffect = null
                 ) {
                     items(
                         items = songs,
@@ -326,328 +380,263 @@ fun SongListScreen(
                             isSelected = selectedPaths.contains(song.mediaId),
                             onToggleSelection = { viewModel.toggleSelection(song.mediaId) },
                             trailingContent = {
-                                if (!isSelectionMode) {
-                                    IconButton(onClick = { viewModel.showMenu(song) }) {
-                                        Icon(painterResource(R.drawable.ic_info_24dp), "Info")
-                                    }
-                                } else {
-                                    IconButton(onClick = { viewModel.toggleSelection(song.mediaId) }) {
-                                        Icon(
-                                            imageVector = if (selectedPaths.contains(song.mediaId)) SaltIcons.Check else SaltIcons.Uncheck,
-                                            contentDescription = null,
-                                            tint = if (selectedPaths.contains(song.mediaId)) SaltTheme.colors.highlight else SaltTheme.colors.text
+                                Box(modifier = Modifier.padding(end = 8.dp)) {
+                                    if (!isSelectionMode) {
+                                        IconButton(
+                                            onClick = { viewModel.showMenu(song) }
+                                        ) {
+                                            Icon(
+                                                imageVector = MiuixIcons.More,
+                                                contentDescription = "More"
+                                            )
+                                        }
+                                    } else {
+                                        Checkbox(
+                                            checked = selectedPaths.contains(song.mediaId),
+                                            onCheckedChange = {
+                                                viewModel.toggleSelection(song.mediaId)
+                                            }
                                         )
                                     }
                                 }
                             }
                         )
-                        ItemDivider()
+                        HorizontalDivider()
                     }
                 }
-                if (sections.isNotEmpty() && sortInfo.sortBy.supportsIndex) {
-                    AlphabetSideBar(
-                        sections = sections,
-                        onSectionSelected = { section ->
-                            val index = findScrollIndex(
-                                section = section,
-                                sectionIndexMap = sectionIndexMap,
-                                order = sortInfo.order
-                            )
-                            scope.launch {
-                                listState.scrollToItem(index)
-                            }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                    )
-                }
 
             }
-            sheetUiState.menuSong?.let { song ->
-                ModalBottomSheet(
-                    onDismissRequest = { viewModel.dismissAll() },
-                    sheetState = menuSheetState,
-                    containerColor = SaltTheme.colors.background,
-                    tonalElevation = 0.dp,
-                    contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
-                ) {
-                    SongMenuBottomSheetContent(
-                        song = song,
-                        onPlay = {
-                            viewModel.play(context, song)
-                        },
-                        showInfo = {
-                            viewModel.showDetail(song)
-                        },
-                        onDelete = {
-                            viewModel.showDeleteDialog()
-                        },
-                        onShare = {
-                            val uri = ContentUris.withAppendedId(
-                                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                                song.mediaId
-                            )
-
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "audio/*"
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                putExtra(Intent.EXTRA_TITLE, song.title ?: song.fileName)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-
-                            context.startActivity(
-                                Intent.createChooser(
-                                    intent,
-                                    context.getString(R.string.share_chooser_title)
-                                )
-                            )
+            if (sections.isNotEmpty() && sortInfo.sortBy.supportsIndex) {
+                AlphabetSideBar(
+                    sections = sections,
+                    onSectionSelected = { section ->
+                        val index = findScrollIndex(
+                            section = section,
+                            sectionIndexMap = sectionIndexMap,
+                            order = sortInfo.order
+                        )
+                        scope.launch {
+                            listState.scrollToItem(index)
                         }
-                    )
-                }
-            }
-            sheetUiState.detailSong?.let { song ->
-                ModalBottomSheet(
-                    onDismissRequest = { viewModel.dismissDetail() },
-                    sheetState = detailSheetState,
-                    dragHandle = null,
-                    containerColor = SaltTheme.colors.background,
-                    tonalElevation = 0.dp,
-                    contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
-                ) {
-                    SongDetailBottomSheetContent(song = song)
-                }
-            }
-
-
-
-            if (uiState.showDeleteDialog && sheetUiState.menuSong != null) {
-                YesNoDialog(
-                    onDismissRequest = { viewModel.dismissDeleteDialog() },
-                    onConfirm = {
-                        viewModel.dismissDeleteDialog()
-                        viewModel.dismissAll()
-                        viewModel.delete(sheetUiState.menuSong!!)
                     },
-                    title = stringResource(R.string.dialog_delete_file_title),
-                    content = stringResource(
-                        R.string.dialog_delete_file_content,
-                        sheetUiState.menuSong!!.fileName
-                    ),
-                    cancelText = stringResource(R.string.cancel),
-                    confirmText = stringResource(R.string.confirm)
-                )
-            }
-            // 批量删除确认对话框
-            if (uiState.showBatchDeleteDialog) {
-                YesNoDialog(
-                    onDismissRequest = { viewModel.dismissBatchDeleteDialog() },
-                    onConfirm = {
-                        viewModel.dismissBatchDeleteDialog()
-                        viewModel.batchDelete(songs)
-                    },
-                    title = stringResource(R.string.dialog_batch_delete_title),
-                    content = stringResource(
-                        R.string.dialog_batch_delete_content,
-                        selectedPaths.size
-                    ),
-                    cancelText = stringResource(R.string.cancel),
-                    confirmText = stringResource(R.string.confirm)
-                )
-            }
-            // 批量匹配配置对话框
-            if (uiState.showBatchConfigDialog) {
-                BatchMatchConfigDialog(
-                    onDismissRequest = { viewModel.closeBatchMatchConfig() },
-                    onConfirm = { config -> viewModel.batchMatch(config) }
-                )
-            }
-
-            // 批量匹配进度对话框
-            if (uiState.isBatchMatching || uiState.batchProgress != null) {
-                BatchMatchingDialog(
-                    currentFile = uiState.currentFile,
-                    progress = uiState.batchProgress,
-                    successCount = uiState.successCount,
-                    failureCount = uiState.failureCount,
-                    skippedCount = uiState.skippedCount,
-                    isMatching = uiState.isBatchMatching,
-                    batchTimeMillis = uiState.batchTimeMillis,
-                    onAbort = { viewModel.abortBatchMatch() },
-                    historyId = uiState.batchHistoryId,
-                    navigator = navigator,
-                    onClose = { viewModel.closeBatchMatchDialog() }
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
                 )
             }
         }
-        AnimatedVisibility(
-            visible = isSelectionMode,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically { it },
-            exit = slideOutVertically { it }
+        SuperBottomSheet(
+            show = showMenuSheet,
+            onDismissRequest = {
+                viewModel.dismissAll()
+            },
+            onDismissFinished = {
+                viewModel.dismissAll()
+            }
         ) {
-            val hasSelection = selectedPaths.isNotEmpty()
-            NavigationBar(
-                containerColor = SaltTheme.colors.background
+            val song = sheetUiState.menuSong
+            song?.let {
+                SongMenuBottomSheetContent(
+                    song = it,
+                    onPlay = { viewModel.play(context, it) },
+                    showInfo = { viewModel.showDetail(it) },
+                    onDelete = { viewModel.showDeleteDialog() },
+                    onShare = {
+                        val uri = ContentUris.withAppendedId(
+                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                            it.mediaId
+                        )
+
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "audio/*"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            putExtra(Intent.EXTRA_TITLE, it.title ?: it.fileName)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+
+                        context.startActivity(
+                            Intent.createChooser(
+                                intent,
+                                context.getString(R.string.share_chooser_title)
+                            )
+                        )
+                    }
+                )
+            }
+        }
+        SuperBottomSheet(
+            show = showDetailSheet,
+            onDismissRequest = { viewModel.dismissDetail() },
+        ) {
+            val song = sheetUiState.menuSong
+            song?.let {
+                SongDetailBottomSheetContent(song = it)
+            }
+        }
+
+
+        if (uiState.showDeleteDialog && sheetUiState.menuSong != null) {
+            YesNoDialog(
+                onDismissRequest = { viewModel.dismissDeleteDialog() },
+                onConfirm = {
+                    viewModel.dismissDeleteDialog()
+                    viewModel.dismissAll()
+                    viewModel.delete(sheetUiState.menuSong!!)
+                },
+                title = stringResource(R.string.dialog_delete_file_title),
+                content = stringResource(
+                    R.string.dialog_delete_file_content,
+                    sheetUiState.menuSong!!.fileName
+                ),
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm)
+            )
+
+        }
+        // 批量删除确认对话框
+        if (uiState.showBatchDeleteDialog) {
+            YesNoDialog(
+                onDismissRequest = { viewModel.dismissBatchDeleteDialog() },
+                onConfirm = {
+                    viewModel.dismissBatchDeleteDialog()
+                    viewModel.batchDelete(songs)
+                },
+                title = stringResource(R.string.dialog_batch_delete_title),
+                content = stringResource(
+                    R.string.dialog_batch_delete_content,
+                    selectedPaths.size
+                ),
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm)
+            )
+        }
+        // 批量匹配配置对话框
+        BatchMatchConfigDialog(
+            title = stringResource(R.string.batch_match_config_title),
+            show = showBatchConfigDialog,
+            onDismissRequest = { viewModel.closeBatchMatchConfig() },
+            onConfirm = { config -> viewModel.batchMatch(config) }
+        )
+
+
+        SuperDialog(
+            show = showBatchMatchingDialog,
+            onDismissRequest = {
+                if (!uiState.isBatchMatching) {
+                    showBatchMatchingDialog.value = false
+                    viewModel.closeBatchMatchDialog()
+                }
+            },
+            title = stringResource(R.string.batch_matching_title),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
             ) {
-                NavigationBarItem(
-                    selected = false,
-                    enabled = hasSelection,
-                    onClick = { viewModel.batchShare(context, songs) },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_share_24dp),
-                            contentDescription = stringResource(R.string.action_share),
-                            tint = if (hasSelection) SaltTheme.colors.highlight else SaltTheme.colors.subText
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = stringResource(R.string.action_share),
-                            color = if (hasSelection) SaltTheme.colors.text else SaltTheme.colors.subText,
-                            fontSize = 12.sp
-                        )
-                    }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    enabled = hasSelection,
-                    onClick = { viewModel.showBatchDeleteDialog() },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_delete_24dp),
-                            contentDescription = stringResource(R.string.action_delete),
-                            tint = if (hasSelection) SaltTheme.colors.highlight else SaltTheme.colors.subText
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = stringResource(R.string.action_delete),
-                            color = if (hasSelection) SaltTheme.colors.text else SaltTheme.colors.subText,
-                            fontSize = 12.sp
-                        )
-                    }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    enabled = hasSelection,
-                    onClick = { viewModel.openBatchMatchConfig() },
-                    icon = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_match_24dp),
-                            contentDescription = stringResource(R.string.action_batch_match),
-                            tint = if (hasSelection) SaltTheme.colors.highlight else SaltTheme.colors.subText
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = stringResource(R.string.action_batch_match),
-                            color = if (hasSelection) SaltTheme.colors.text else SaltTheme.colors.subText,
-                            fontSize = 12.sp
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    uiState.batchProgress?.let { (current, total) ->
+                        val progress = if (total > 0) current.toFloat() / total.toFloat() else 0f
+
+                        // 进度文字
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            Text(
+                                text = if (uiState.isBatchMatching)
+                                    uiState.currentFile
+                                else
+                                    stringResource(
+                                        R.string.batch_matching_total_time,
+                                        uiState.batchTimeMillis / 1000.0
+                                    ),
+                                style = MiuixTheme.textStyles.subtitle,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f) // 占满剩余空间
+                            )
+
+                            Text(
+                                text = "$current / $total",
+                                style = MiuixTheme.textStyles.main,
+                                textAlign = TextAlign.End
+                            )
+                        }
+
+                        LinearProgressIndicator(
+                            progress = progress
                         )
                     }
-                )
+                }
+
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.batch_matching_success,
+                            uiState.successCount
+                        ),
+                        style = MiuixTheme.textStyles.main
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.batch_matching_skipped,
+                            uiState.skippedCount
+                        ),
+                        style = MiuixTheme.textStyles.main
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.batch_matching_failure,
+                            uiState.failureCount
+                        ),
+                        style = MiuixTheme.textStyles.main
+                    )
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        enabled = !uiState.isBatchMatching,
+                        text = stringResource(R.string.action_close),
+                        onClick = {
+                            showBatchMatchingDialog.value = false
+                            viewModel.closeBatchMatchDialog()
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        text = if (uiState.isBatchMatching) stringResource(R.string.action_abort) else stringResource(
+                            R.string.action_view_results
+                        ),
+                        onClick = {
+                            if (uiState.isBatchMatching) {
+                                viewModel.abortBatchMatch()
+                            } else {
+                                showBatchMatchingDialog.value = false
+                                viewModel.closeBatchMatchDialog()
+                                navigator.navigate(
+                                    BatchMatchHistoryDetailDestination(uiState.batchHistoryId)
+                                )
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
             }
         }
     }
 }
 
-@Composable
-fun BatchMatchingDialog(
-    currentFile: String,
-    progress: Pair<Int, Int>?,
-    successCount: Int,
-    skippedCount: Int,
-    failureCount: Int,
-    isMatching: Boolean,
-    batchTimeMillis: Long,
-    onAbort: () -> Unit,
-    onClose: () -> Unit,
-    historyId: Long,
-    navigator: DestinationsNavigator
-) {
-    BasicDialog(
-        onDismissRequest = { if (!isMatching) onClose() },
-        properties = DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false
-        ),
-        content = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // 标题或加载信息
-                Text(
-                    text = stringResource(R.string.batch_matching_title),
-                    style = SaltTheme.textStyles.main
-                )
-
-                // 进度信息
-                progress?.let { (current, total) ->
-                    Text(
-                        text = stringResource(R.string.batch_matching_progress, current, total),
-                        style = SaltTheme.textStyles.main
-                    )
-                }
-
-                // 当前文件
-                if (currentFile.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.batch_matching_current, currentFile),
-                        style = SaltTheme.textStyles.main
-                    )
-                }
-
-                // 成功/失败计数
-                Text(
-                    text = stringResource(R.string.batch_matching_success, successCount),
-                    style = SaltTheme.textStyles.main
-                )
-                Text(
-                    text = stringResource(R.string.batch_matching_skipped, skippedCount),
-                    style = SaltTheme.textStyles.main
-                )
-                Text(
-                    text = stringResource(R.string.batch_matching_failure, failureCount),
-                    style = SaltTheme.textStyles.main
-                )
-
-                // 总用时显示（仅当任务完成时显示）
-                if (!isMatching && batchTimeMillis > 0) {
-                    val seconds = batchTimeMillis / 1000.0
-                    Text(
-                        text = stringResource(R.string.batch_matching_total_time, seconds),
-                        style = SaltTheme.textStyles.main
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 操作按钮
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = if (isMatching) onAbort else onClose,
-                    text = if (isMatching) stringResource(R.string.action_abort) else stringResource(
-                        R.string.action_close
-                    ),
-                    type = if (isMatching) ButtonType.Sub else ButtonType.Highlight
-                )
-                if (!isMatching) {
-                    Button(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = stringResource(R.string.action_view_results),
-                        onClick = {
-                            navigator.navigate(BatchMatchHistoryDetailDestination(historyId))
-                        },
-                        type = ButtonType.Highlight
-                    )
-                }
-            }
-        }
-    )
-}
 
 fun findScrollIndex(
     section: String,
@@ -720,15 +709,15 @@ fun AlphabetSideBar(
                     .padding(end = 16.dp)
                     .size(50.dp)
                     .background(
-                        color = SaltTheme.colors.highlight,
+                        color = MiuixTheme.colorScheme.primary,
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = currentSection ?: "",
-                    style = SaltTheme.textStyles.largeTitle,
-                    color = SaltTheme.colors.background,
+                    style = MiuixTheme.textStyles.title1,
+                    color = MiuixTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -778,8 +767,8 @@ fun AlphabetSideBar(
             sections.forEach { section ->
                 Text(
                     text = section,
-                    style = SaltTheme.textStyles.sub.copy(fontSize = 12.sp),
-                    color = if (currentSection == section) SaltTheme.colors.highlight else SaltTheme.colors.subText,
+                    style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
+                    color = if (currentSection == section) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceContainerVariant,
                     modifier = Modifier.padding(vertical = 1.dp)
                 )
             }
@@ -800,7 +789,7 @@ fun SongListItem(
 ) {
     val view = LocalView.current
     val backgroundColor =
-        if (isSelected == true) SaltTheme.colors.highlight.copy(alpha = 0.1f) else SaltTheme.colors.background
+        if (isSelected == true) MiuixTheme.colorScheme.primary.copy(alpha = 0.1f) else MiuixTheme.colorScheme.surface
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -828,7 +817,7 @@ fun SongListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -853,31 +842,24 @@ fun SongListItem(
                     )
                 )
 
-                val formatGradientColor = if (SaltTheme.configs.isDarkTheme) {
-                    Color.White.copy(alpha = 0.7f)  // 深色模式改为白底
-                } else {
-                    Color.Black.copy(alpha = 0.7f)  // 浅色模式改为黑底
-                }
-                val formatTextColor = if (SaltTheme.configs.isDarkTheme) {
-                    Color.Black  // 深色模式改为黑字
-                } else {
-                    Color.White  // 浅色模式改为白字
-                }
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, formatGradientColor),
+                                colors = listOf(
+                                    Color.Transparent,
+                                    MiuixTheme.colorScheme.onSecondaryContainer
+                                ),
                             )
                         )
                 ) {
                     Text(
                         text = song.fileName.substringAfterLast('.', "").uppercase(),
-                        color = formatTextColor,
-                        fontSize = 8.sp, // 字体缩小
+                        fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
+                        color = MiuixTheme.colorScheme.secondaryContainer,
                         modifier = Modifier
                             .align(Alignment.Center)
                             .padding(bottom = 1.dp)
@@ -893,7 +875,6 @@ fun SongListItem(
                     text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
                     fontWeight = FontWeight.Medium, // 稍微降低字重以显得清秀
                     fontSize = 15.sp,
-                    color = SaltTheme.colors.text,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -903,7 +884,7 @@ fun SongListItem(
                     Text(
                         text = song.artist.takeIf { !it.isNullOrBlank() }
                             ?: stringResource(R.string.unknown_artist),
-                        color = SaltTheme.colors.subText,
+                        color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -912,7 +893,7 @@ fun SongListItem(
                     if (!song.album.isNullOrBlank()) {
                         Text(
                             text = " - ${song.album}",
-                            color = SaltTheme.colors.subText,
+                            color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                             fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -933,7 +914,7 @@ fun SongListItem(
                     val seconds = (song.durationMilliseconds % 60000) / 1000
                     Text(
                         text = String.format("%d:%02d", minutes, seconds),
-                        color = SaltTheme.colors.subText,
+                        color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -944,7 +925,7 @@ fun SongListItem(
                     Text(
                         text = "${song.bitrate}kbps",
                         fontSize = 10.sp,
-                        color = LyricoColors.secondaryText,
+                        color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontWeight = FontWeight.Normal
                     )
                 }
@@ -971,44 +952,44 @@ fun SongMenuBottomSheetContent(
     onDelete: () -> Unit = {},
     onShare: () -> Unit = {},
 ) {
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 32.dp)
+            .scrollEndHaptic()
+            .overScrollVertical(),
+        overscrollEffect = null,
     ) {
-        // 操作列表
-        RoundedColumn {
-            ItemTip(
-                text = stringResource(
-                    R.string.menu_song_tip_format,
-                    song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
-                    song.artist.takeIf { !it.isNullOrBlank() }
-                        ?: stringResource(R.string.unknown_artist)
+        item(key = "song_menu") {
+            Card(
+                modifier = Modifier.padding(bottom = 12.dp),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.secondaryContainer,
                 )
-            )
-            Item(
-                onClick = { onPlay() },
-                text = stringResource(R.string.menu_action_play),
-                sub = stringResource(R.string.menu_action_play_sub),
-                arrowType = ItemArrowType.None
-            )
-            Item(
-                onClick = { showInfo() },
-                text = stringResource(R.string.menu_action_info),
-                arrowType = ItemArrowType.None
-            )
-            Item(
-                onClick = { onShare() },
-                text = stringResource(R.string.menu_action_share),
-                arrowType = ItemArrowType.None
-            )
-            Item(
-                onClick = { onDelete() },
-                text = stringResource(R.string.menu_action_delete),
-                sub = stringResource(R.string.menu_action_delete_sub),
-                textColor = Color.Red,
-                arrowType = ItemArrowType.None
-            )
+            ) {
+                SuperArrow(
+                    title = stringResource(R.string.menu_action_play),
+                    summary = stringResource(R.string.menu_action_play_sub),
+                    onClick = { onPlay() }
+                )
+                SuperArrow(
+                    title = stringResource(R.string.menu_action_share),
+                    onClick = { onShare() }
+                )
+                SuperArrow(
+                    title = stringResource(R.string.menu_action_info),
+                    onClick = { showInfo() }
+                )
+                SuperArrow(
+                    title = stringResource(R.string.menu_action_delete),
+                    summary = stringResource(R.string.menu_action_delete_sub),
+                    titleColor = BasicComponentColors(
+                        MiuixTheme.colorScheme.error,
+                        MiuixTheme.colorScheme.disabledOnSecondaryVariant
+                    ),
+                    onClick = { onDelete() }
+                )
+            }
         }
     }
 }
@@ -1016,118 +997,109 @@ fun SongMenuBottomSheetContent(
 @SuppressLint("DefaultLocale")
 @Composable
 fun SongDetailBottomSheetContent(song: SongEntity) {
-    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
+
+    val dateFormat = remember {
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp) // 底部留白
+            .padding(bottom = 32.dp)
+            .scrollEndHaptic()
+            .overScrollVertical(),
+        overscrollEffect = null,
     ) {
+
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Card(
-                    shape = RoundedCornerShape(0.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    modifier = Modifier.size(100.dp)
-                ) {
-                    AsyncImage(
-                        model = CoverRequest(song.getUri, song.fileLastModified),
-                        contentDescription = stringResource(R.string.cd_cover),
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        placeholder = rememberTintedPainter(
-                            painter = painterResource(R.drawable.ic_album_24dp),
-                            tint = LyricoColors.coverPlaceholderIcon
-                        ),
-                        error = rememberTintedPainter(
-                            painter = painterResource(R.drawable.ic_album_24dp),
-                            tint = LyricoColors.coverPlaceholderIcon
-                        )
-                    )
-                }
 
-                // 标题和艺术家
+                AsyncImage(
+                    model = CoverRequest(song.getUri, song.fileLastModified),
+                    contentDescription = stringResource(R.string.cd_cover),
+                    modifier = Modifier.size(100.dp),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(R.drawable.ic_album_24dp),
+                    error = painterResource(R.drawable.ic_album_24dp)
+                )
+
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
-                        style = SaltTheme.textStyles.main,
-                        fontWeight = FontWeight.Bold,
-                        color = SaltTheme.colors.text
+                        text = song.title.takeIf { !it.isNullOrBlank() }
+                            ?: song.fileName,
+                        style = MiuixTheme.textStyles.title3,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = song.artist.takeIf { !it.isNullOrBlank() }
                             ?: stringResource(R.string.unknown_artist),
-                        style = SaltTheme.textStyles.sub,
-                        color = SaltTheme.colors.highlight
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.primary
                     )
                 }
             }
-        }
 
-
-        item { SongDetailItem(label = stringResource(R.string.label_album), value = song.album) }
-        item { SongDetailItem(label = stringResource(R.string.label_date), value = song.date) }
-        item { SongDetailItem(label = stringResource(R.string.label_genre), value = song.genre) }
-        item {
-            SongDetailItem(
-                label = stringResource(R.string.label_track_number),
-                value = song.trackerNumber
-            )
-        }
-
-
-        item {
-            SongDetailItem(
-                label = stringResource(R.string.label_duration),
-                value = if (song.durationMilliseconds > 0) {
-                    val min = song.durationMilliseconds / 60000
-                    val sec = (song.durationMilliseconds % 60000) / 1000
-                    String.format("%d:%02d", min, sec)
-                } else null
-            )
-        }
-        item {
-            SongDetailItem(
-                label = stringResource(R.string.label_bitrate),
-                value = if (song.bitrate > 0) "${song.bitrate} kbps" else null
-            )
-        }
-        item {
-            SongDetailItem(
-                label = stringResource(R.string.label_sample_rate),
-                value = if (song.sampleRate > 0) "${song.sampleRate} Hz" else null
-            )
-        }
-        item {
-            SongDetailItem(
-                label = stringResource(R.string.label_channels),
-                value = if (song.channels > 0) "${song.channels}" else null
-            )
         }
 
         item {
-            SongDetailItem(
-                label = stringResource(R.string.label_date_added),
-                value = if (song.fileAdded > 0) dateFormat.format(Date(song.fileAdded)) else null
-            )
-        }
-        item {
-            SongDetailItem(
-                label = stringResource(R.string.label_date_modified),
-                value = if (song.fileLastModified > 0) dateFormat.format(Date(song.fileLastModified)) else null
-            )
-        }
-        item {
-            SongDetailItem(
-                label = stringResource(R.string.label_file_path),
-                value = song.filePath
-            )
+            Card(
+                modifier = Modifier.padding(bottom = 12.dp),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.secondaryContainer,
+                )
+            ) {
+                SongDetailItem(stringResource(R.string.label_album), song.album)
+                SongDetailItem(stringResource(R.string.label_date), song.date)
+                SongDetailItem(stringResource(R.string.label_genre), song.genre)
+                SongDetailItem(stringResource(R.string.label_track_number), song.trackerNumber)
+                SongDetailItem(
+                    stringResource(R.string.label_duration),
+                    if (song.durationMilliseconds > 0) {
+                        val min = song.durationMilliseconds / 60000
+                        val sec = (song.durationMilliseconds % 60000) / 1000
+                        String.format("%d:%02d", min, sec)
+                    } else null
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_bitrate),
+                    if (song.bitrate > 0) "${song.bitrate} kbps" else null
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_sample_rate),
+                    if (song.sampleRate > 0) "${song.sampleRate} Hz" else null
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_channels),
+                    if (song.channels > 0) "${song.channels}" else null
+                )
+                SongDetailItem(
+                    stringResource(R.string.label_date_added),
+                    if (song.fileAdded > 0)
+                        dateFormat.format(Date(song.fileAdded))
+                    else null
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_date_modified),
+                    if (song.fileLastModified > 0)
+                        dateFormat.format(Date(song.fileLastModified))
+                    else null
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_file_path),
+                    song.filePath
+                )
+            }
         }
 
     }
@@ -1137,40 +1109,20 @@ fun SongDetailBottomSheetContent(song: SongEntity) {
 fun SongDetailItem(label: String, value: String?) {
     if (value.isNullOrBlank()) return
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .fillMaxWidth()
+    ) {
         Text(
             text = label,
-            style = SaltTheme.textStyles.sub
+            style = MiuixTheme.textStyles.footnote1,
         )
         Text(
             text = value,
-            style = SaltTheme.textStyles.main,
+            style = MiuixTheme.textStyles.main,
             modifier = Modifier.padding(top = 2.dp)
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SelectionModeTopAppBar(
-    selectedCount: Int,
-    actions: @Composable RowScope.() -> Unit = {},
-) {
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = SaltTheme.colors.background
-        ),
-
-        title = {
-            Text(
-                text = stringResource(R.string.selection_mode_selected_count, selectedCount),
-                style = SaltTheme.textStyles.main,
-                color = SaltTheme.colors.text,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        actions = {
-            actions()
-        }
-    )
-}

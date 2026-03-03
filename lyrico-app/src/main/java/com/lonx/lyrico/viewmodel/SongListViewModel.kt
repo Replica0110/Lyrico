@@ -9,6 +9,8 @@ import android.os.Looper
 import android.os.Parcelable
 import android.provider.MediaStore
 import android.util.Log
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
@@ -306,7 +308,7 @@ class SongListViewModel(
             )
             val historyId = batchMatchHistoryRepository.saveHistory(history, historyRecords)
 
-            _uiState.update { it.copy(batchHistoryId = historyId,isBatchMatching = false, batchTimeMillis = totalTime) }
+            _uiState.update { it.copy(batchHistoryId = historyId,isBatchMatching = false, currentFile =  "", batchTimeMillis = totalTime) }
         }
     }
 
@@ -555,7 +557,7 @@ class SongListViewModel(
     fun abortBatchMatch() {
         batchMatchJob?.cancel()
         batchMatchJob = null
-        _uiState.update { it.copy(isBatchMatching = false) }
+        _uiState.update { it.copy(isBatchMatching = false, currentFile = "") }
     }
     fun closeBatchMatchDialog() {
         _uiState.update {

@@ -16,14 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.rememberNavController
 import com.lonx.lyrico.viewmodel.SongListViewModel
-import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.Surface
 import com.ramcosta.composedestinations.DestinationsNavHost
 import com.ramcosta.composedestinations.animations.NavHostAnimatedDestinationStyle
 import com.ramcosta.composedestinations.generated.NavGraphs
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.utils.rememberDestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.Surface
 
 @Composable
 fun LyricoApp(externalUri: Uri?) {
@@ -47,7 +46,6 @@ fun LyricoApp(externalUri: Uri?) {
     Surface(
         modifier = Modifier
             .fillMaxSize()
-            .background(SaltTheme.colors.background),
     ) {
         DestinationsNavHost(
             navGraph = NavGraphs.root,

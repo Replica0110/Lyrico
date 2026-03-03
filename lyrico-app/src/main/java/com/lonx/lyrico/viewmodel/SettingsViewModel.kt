@@ -12,6 +12,8 @@ import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
+import com.lonx.lyrico.ui.theme.KeyColor
+import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.utils.CacheManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +29,8 @@ data class SettingsUiState(
     val searchSourceOrder: List<Source> = emptyList(),
     val searchPageSize: Int = 20,
     val themeMode: ThemeMode = ThemeMode.AUTO,
+    val monetEnable: Boolean = false,
+    val keyColor: KeyColor = KeyColors.first(),
     val onlyTranslationIfAvailable: Boolean = false,
     val removeEmptyLines: Boolean = true,
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
@@ -53,6 +57,8 @@ class SettingsViewModel(
             themeMode = settings.themeMode,
             ignoreShortAudio = settings.ignoreShortAudio,
             categorizedCacheSize = cacheMap,
+            monetEnable = settings.monetEnable,
+            keyColor = settings.keyColor,
             onlyTranslationIfAvailable = settings.onlyTranslationIfAvailable,
             totalCacheSize = cacheMap.values.sum(),
             removeEmptyLines = settings.removeEmptyLines
@@ -89,6 +95,9 @@ class SettingsViewModel(
     fun setTranslationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveTranslationEnabled(enabled)
+            if (!enabled && uiState.value.onlyTranslationIfAvailable){
+                setOnlyTranslationIfAvailable(false)
+            }
         }
     }
     fun setOnlyTranslationIfAvailable(enabled: Boolean) {
@@ -96,7 +105,17 @@ class SettingsViewModel(
             settingsRepository.saveOnlyTranslationIfAvailable(enabled)
         }
     }
+    fun setMonetEnable(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveMonetEnable(enabled)
+        }
+    }
 
+    fun setKeyColor(selectedMode: KeyColor) {
+        viewModelScope.launch {
+            settingsRepository.saveKeyColor(selectedMode)
+        }
+    }
     fun setRemoveEmptyLines(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveRemoveEmptyLines(enabled)

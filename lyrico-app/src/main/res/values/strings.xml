@@ -113,7 +113,17 @@
     <string name="theme_mode_auto">Follow system</string>
     <string name="theme_mode_light">Light mode</string>
     <string name="theme_mode_dark">Dark mode</string>
-
+    <string name="color_blue">Blue</string>
+    <string name="color_green">Green</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_pink">Pink</string>
+    <string name="color_teal">Teal</string>
+    <string name="color_default">Default</string>
+    <string name="cd_back">Back</string>
+    <string name="monet">Monet palette</string>
+    <string name="key_color">Key Color</string>
     <!-- Page -->
     <string name="batch_match_history_title">Batch match history</string>
     <string name="batch_match_history_empty">No history yet</string>
@@ -267,5 +277,6 @@
     <string name="only_translation_if_available_hint">Downloads only translated lyrics when available. \nRequires translation download to be enabled.</string>
     <string name="remove_empty_lines">Remove Empty Lines</string>
     <string name="remove_empty_lines_hint">Remove lines that are empty or contain only placeholders</string>
+    <string name="batch_matching_progress_label">Progress</string>
 
 </resources>

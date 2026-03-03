@@ -11,6 +11,7 @@
     <string name="search_no_results">No results found</string>
     <string name="fetch_lyrics_failed">Failed to fetch lyrics. Please try again.</string>
     <string name="apply_action">Apply</string>
+    <string name="apply_lyrics_action">Apply lyrics</string>
     <string name="preview_action">Preview</string>
     <string name="cd_no_results">No Result</string>
     <string name="search_limit">Search limit</string>

@@ -2,6 +2,7 @@ package com.lonx.lyrico.data.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import org.jetbrains.annotations.TestOnly
 
 @Parcelize
 data class LyricsSearchResult(

@@ -10,6 +10,7 @@
     <string name="search_no_results">未找到相关结果</string>
     <string name="fetch_lyrics_failed">获取歌词失败，请重试</string>
     <string name="apply_action">应用</string>
+    <string name="apply_lyrics_action">仅应用歌词</string>
     <string name="preview_action">预览</string>
     <string name="cd_no_results">搜索结果为空</string>
     <string name="local_search_hint">搜索标题/歌手/专辑</string>

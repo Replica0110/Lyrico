@@ -2,6 +2,7 @@ package com.lonx.lyrico.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
@@ -29,11 +30,8 @@ data class EditMetadataUiState(
 
     val isEditing: Boolean = false,
 
-    /**
-     * 编辑态封面（只要不为 null，就代表用户替换过封面）
-     */
     val coverUri: Any? = null,
-
+    val isCoverModified: Boolean = false,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean? = null,
     val originalCover: Any? = null,
@@ -61,6 +59,7 @@ class EditMetadataViewModel(
             try {
                 val song = songRepository.getSongByFilePath(filePath)
                 currentSong = song
+
                 val audioTagData = songRepository.readAudioTagData(filePath)
                 val firstPicture = audioTagData.pictures.firstOrNull()?.data
 
@@ -72,15 +71,16 @@ class EditMetadataViewModel(
                         ),
                         originalTagData = audioTagData,
 
-                        // 初始化 editingTagData 只有未编辑时才设置
-                        editingTagData = if (state.isEditing) state.editingTagData else audioTagData,
+                        editingTagData =
+                            if (state.isEditing) state.editingTagData else audioTagData,
 
                         picture = audioTagData.pictures.firstOrNull(),
 
                         originalCover = firstPicture,
 
-                        // coverUri 初始化为原始封面（未编辑时）
-                        coverUri = if (state.isEditing) state.coverUri else firstPicture
+                        coverUri = if (state.isEditing) state.coverUri else firstPicture,
+
+                        isCoverModified = if (state.isEditing) state.isCoverModified else false
                     )
                 }
             } catch (e: Exception) {
@@ -104,6 +104,8 @@ class EditMetadataViewModel(
         _uiState.update { state ->
             val current = state.editingTagData ?: AudioTagData()
 
+            val newPicUrl = result.picUrl?.takeIf { it.isNotBlank() }
+
             state.copy(
                 isEditing = true,
 
@@ -115,11 +117,20 @@ class EditMetadataViewModel(
                     date = result.date?.takeIf { it.isNotBlank() } ?: current.date,
                     trackerNumber = result.trackerNumber?.takeIf { it.isNotBlank() }
                         ?: current.trackerNumber,
-                    picUrl = result.picUrl?.takeIf { it.isNotBlank() } ?: current.picUrl
+                    picUrl = newPicUrl ?: current.picUrl
                 ),
 
-                // 只要 picUrl 存在，就认为封面被修改
-                coverUri = result.picUrl?.takeIf { it.isNotBlank() }?.toUri()
+                coverUri = newPicUrl?.toUri() ?: state.coverUri,
+                isCoverModified = if (newPicUrl != null) true else state.isCoverModified
+            )
+        }
+    }
+    fun updateCover(uri: Uri) {
+        _uiState.update {
+            it.copy(
+                coverUri = uri,
+                isCoverModified = true,
+                isEditing = true
             )
         }
     }
@@ -127,6 +138,7 @@ class EditMetadataViewModel(
         _uiState.update {
             it.copy(
                 coverUri = it.originalCover,
+                isCoverModified = false,
                 editingTagData = it.editingTagData?.copy(picUrl = null)
             )
         }
@@ -148,21 +160,21 @@ class EditMetadataViewModel(
                 )
 
                 if (success) {
-                    val lastModified = getFileLastModified(songInfo.filePath)
-
-                    songRepository.updateSongMetadata(
-                        audioTagData,
-                        songInfo.filePath,
-                        lastModified
-                    )
 
                     _uiState.update {
                         it.copy(
                             isSaving = false,
                             saveSuccess = true,
 
-                            // 编辑会话结束
-                            isEditing = false
+                            // 会话结束
+                            isEditing = false,
+
+                            // 同步原始数据
+                            originalTagData = audioTagData,
+                            originalCover = it.coverUri,
+
+                            // 清理修改标记
+                            isCoverModified = false
                         )
                     }
                 } else {

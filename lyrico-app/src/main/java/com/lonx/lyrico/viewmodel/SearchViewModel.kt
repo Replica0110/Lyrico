@@ -1,5 +1,6 @@
 package com.lonx.lyrico.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.repository.SettingsRepository
@@ -31,7 +32,7 @@ data class LyricsUiState(
 
 data class SearchUiState(
     val searchKeyword: String = "",
-    val searchResults: List<SongSearchResult> = emptyList(),
+    val searchResultsBySource: Map<String, List<SongSearchResult>> = emptyMap(),
     val selectedSearchSource: Source? = null,
     val availableSources: List<Source> = emptyList(),
     val isSearching: Boolean = false,
@@ -106,9 +107,18 @@ class SearchViewModel(
 
         val keyword = _uiState.value.searchKeyword
         if (keyword.isNotBlank()) {
-            getCachedResults(keyword, source)?.let { cached ->
-                _uiState.update { it.copy(searchResults = cached, searchError = null) }
-            } ?: performSearch()
+            val cached = getCachedResults(keyword, source)
+            if (cached != null) {
+                // 已有缓存，将其合并到 map 中
+                _uiState.update {
+                    it.copy(
+                        searchResultsBySource = it.searchResultsBySource + (source.name to cached),
+                        searchError = null
+                    )
+                }
+            } else {
+                performSearch()
+            }
         }
     }
 
@@ -123,6 +133,8 @@ class SearchViewModel(
         val keyword = keywordOverride ?: uiState.value.searchKeyword
         if (keyword.isBlank()) return
 
+        Log.d("SearchViewModel", "performSearch: $keyword")
+        Log.d("SearchViewModel", "performSearch: ${uiState.value.selectedSearchSource}")
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             if (_uiState.value.isInitializing) {
@@ -154,7 +166,10 @@ class SearchViewModel(
             cacheSearchResults(keyword, source, results)
 
             _uiState.update {
-                it.copy(searchResults = results, isSearching = false)
+                it.copy(
+                    searchResultsBySource = it.searchResultsBySource + (source.name to results),
+                    isSearching = false
+                )
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -188,7 +203,7 @@ class SearchViewModel(
     private fun clearSearchResults() {
         _uiState.update {
             it.copy(
-                searchResults = emptyList(),
+                searchResultsBySource = emptyMap(),
                 isSearching = false,
                 searchError = null
             )

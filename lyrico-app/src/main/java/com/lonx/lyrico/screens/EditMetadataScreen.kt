@@ -1,6 +1,8 @@
 package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -76,7 +78,13 @@ fun EditMetadataScreen(
     onLyricsResult.onResult { result ->
         viewModel.updateMetadataFromSearchResult(result)
     }
-
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            viewModel.updateCover(it)
+        }
+    }
     LaunchedEffect(songFilePath) {
         viewModel.readMetadata(songFilePath)
     }
@@ -223,8 +231,10 @@ fun EditMetadataScreen(
         ) {
             CoverEditor(
                 coverUri = uiState.coverUri,
-                isModified = uiState.coverUri != uiState.originalCover,
-                onCoverClick = { /* 弹出选择图片 */ },
+                isModified = uiState.isCoverModified,
+                onCoverClick = {
+                    launcher.launch("image/*")
+                },
                 onRevertClick = { viewModel.revertCover() }, // 撤销
                 modifier = Modifier
                     .fillMaxWidth()

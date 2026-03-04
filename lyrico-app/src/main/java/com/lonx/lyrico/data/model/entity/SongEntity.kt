@@ -11,36 +11,63 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * 数据库中存储的歌曲实体
+ * 数据库中存储的歌曲实体（Song Entity）
  *
- * @param id 主键 ID，自动生成
- * @param folderId 关联的文件夹 ID，用于归类歌曲
- * @param filePath 文件 URI 路径
- * @param fileName 文件名称
- * @param title 歌曲标题
- * @param artist 艺术家名称
- * @param album 专辑名称
- * @param genre 流派
- * @param trackerNumber 音轨号（通常用于专辑排序）
- * @param date 歌曲发行或录制日期
- * @param lyrics 歌词文本
- * @param durationMilliseconds 歌曲时长（毫秒）
- * @param bitrate 比特率（kbps）
- * @param sampleRate 采样率（Hz）
- * @param channels 声道数（1=单声道，2=立体声）
- * @param rawProperties 原始音频属性 JSON 字符串（用于调试或扩展）
- * @param fileLastModified 文件最后修改时间戳（毫秒），用于增量更新
- * @param fileAdded 文件添加时间戳（毫秒），用于排序
- * @param dbUpdateTime 数据库更新时间戳（毫秒），用于排序或同步记录
- * @param titleGroupKey 标题分组索引（A-Z 或 #），用于列表分组
- * @param titleSortKey 标题排序索引（拼音首字母或英文首字母），用于组内排序
- * @param artistGroupKey 艺术家分组索引（A-Z 或 #）
- * @param artistSortKey 艺术家排序索引（拼音首字母或英文首字母）
+ * 设计说明：
+ * - uri 是歌曲的唯一资源标识，推荐为 content:// 形式（MediaStore 或 SAF）。
+ * - filePath 仅作为兼容字段与展示用途，不应用于文件写入。
+ * - mediaId 通常对应 MediaStore.Audio.Media._ID。
+ *
+ * 字段说明：
+ *
+ * @property id 主键 ID（自增）
+ *
+ * —— 资源定位相关 ——
+ * @property uri 歌曲的唯一资源 URI（推荐 content:// 形式，用于实际读写）
+ * @property mediaId MediaStore 中的音频 ID（对应 _ID，可用于快速构建 contentUri）
+ * @property filePath 文件的绝对路径（仅用于展示或兼容旧数据，不保证可写）
+ * @property fileName 文件名（不含路径）
+ * @property folderId 所属文件夹 ID（用于分组展示）
+ *
+ * —— 标签元数据（Tag Metadata） ——
+ * @property title 标题
+ * @property artist 艺术家
+ * @property albumArtist 专辑艺术家
+ * @property album 专辑名
+ * @property genre 流派
+ * @property composer 作曲
+ * @property lyricist 作词
+ * @property comment 备注
+ * @property discNumber 碟号（多碟专辑排序用）
+ * @property trackerNumber 音轨号（专辑内排序）
+ * @property date 发行或录制日期（字符串形式，保留原始格式）
+ * @property lyrics 歌词文本
+ *
+ * —— 音频技术参数（Audio Technical Info） ——
+ * @property durationMilliseconds 时长（毫秒）
+ * @property bitrate 比特率（kbps）
+ * @property sampleRate 采样率（Hz）
+ * @property channels 声道数（1=单声道，2=立体声）
+ *
+ * —— 原始与扩展数据 ——
+ * @property rawProperties 原始音频属性 JSON（用于调试或扩展字段存储）
+ *
+ * —— 文件与数据库状态 ——
+ * @property fileLastModified 文件最后修改时间（毫秒，用于增量扫描）
+ * @property fileAdded 文件添加时间（毫秒，用于排序）
+ * @property dbUpdateTime 数据库更新时间（毫秒，用于同步与刷新判断）
+ *
+ * —— 排序与分组索引 ——
+ * @property titleGroupKey 标题分组键（A–Z 或 #）
+ * @property titleSortKey 标题排序键（拼音或英文首字母）
+ * @property artistGroupKey 艺术家分组键（A–Z 或 #）
+ * @property artistSortKey 艺术家排序键（拼音或英文首字母）
  */
 @Entity(
     tableName = "songs",
     indices = [
-        Index(value = ["filePath"], unique = true),
+        Index(value = ["uri"], unique = true),
+        Index(value = ["filePath"]),
         Index(value = ["folderId"]),
         Index(value = ["titleGroupKey", "titleSortKey"]),
         Index(value = ["artistGroupKey", "artistSortKey"]),
@@ -59,10 +86,13 @@ import androidx.room.PrimaryKey
 data class SongEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+
     val folderId: Long,
     val mediaId: Long,
+
     val filePath: String,
     val fileName: String,
+
     val title: String? = null,
     val artist: String? = null,
     val albumArtist: String? = null,
@@ -75,21 +105,28 @@ data class SongEntity(
     val trackerNumber: String? = null,
     val date: String? = null,
     val lyrics: String? = null,
+
     val durationMilliseconds: Int = 0,
     val bitrate: Int = 0,
     val sampleRate: Int = 0,
     val channels: Int = 0,
+
     val rawProperties: String? = null,
+
     val fileLastModified: Long = 0,
+
     @ColumnInfo(defaultValue = "0")
     val fileAdded: Long = 0,
+
     val dbUpdateTime: Long = System.currentTimeMillis(),
+
     val titleGroupKey: String = "#",
     val titleSortKey: String = "#",
     val artistGroupKey: String = "#",
     val artistSortKey: String = "#",
+
     @ColumnInfo(defaultValue = "0")
-    val uri: String = filePath.toUri().toString(),
+    val uri: String = "",
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

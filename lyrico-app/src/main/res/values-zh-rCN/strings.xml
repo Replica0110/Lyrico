@@ -276,4 +276,5 @@
     <string name="remove_empty_lines">移除空行</string>
     <string name="remove_empty_lines_hint">删除内容为空或仅包含占位符的行</string>
 
+    <string name="permission_denied_cannot_save">权限已拒绝，无法保存更改</string>
 </resources>

@@ -1,6 +1,10 @@
 package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -68,7 +72,33 @@ fun EditMetadataScreen(
     onLyricsResult.onResult { result ->
         viewModel.updateMetadataFromSearchResult(result)
     }
+    val intentSenderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // 用户点击了“允许”，重试保存
+            viewModel.saveMetadata()
+        } else {
+            // 用户点击了“拒绝”
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    context.getString(R.string.permission_denied_cannot_save)
+                )
+            }
+        }
+    }
 
+    // 监听 permissionIntentSender 状态变化
+    LaunchedEffect(uiState.permissionIntentSender) {
+        uiState.permissionIntentSender?.let { intentSender ->
+            // 构建请求
+            val request = IntentSenderRequest.Builder(intentSender).build()
+            // 启动系统弹窗
+            intentSenderLauncher.launch(request)
+            // 通知 ViewModel 已消费该事件，避免重组时重复弹窗
+            viewModel.consumePermissionRequest()
+        }
+    }
     LaunchedEffect(songFileUri) {
         viewModel.readMetadata(songFileUri)
     }

@@ -13,6 +13,7 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
 import com.lonx.lyrico.data.LyricoDatabase
+import com.lonx.lyrico.data.exception.RequiresUserPermissionException
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.data.utils.SortKeyUtils
@@ -292,60 +293,68 @@ class SongRepositoryImpl(
             false
         }
     }
-
     override suspend fun writeAudioTagData(contentUri: String, audioTagData: AudioTagData): Boolean {
-        return try {
-            val uri = contentUri.toUri()
-            context.contentResolver.openFileDescriptor(uri, "rw")?.use { pfdDescriptor ->
-
-                val updates = mutableMapOf<String, String>()
-
-                audioTagData.title?.let { updates["TITLE"] = it }
-                audioTagData.artist?.let { updates["ARTIST"] = it }
-                audioTagData.album?.let { updates["ALBUM"] = it }
-                audioTagData.genre?.let { updates["GENRE"] = it }
-                audioTagData.date?.let { updates["DATE"] = it }
-                audioTagData.trackerNumber?.let { updates["TRACKNUMBER"] = it }
-                audioTagData.albumArtist?.let {
-                    updates["ALBUMARTIST"] = it
-                    updates["TPE2"] = it
-                }
-                audioTagData.discNumber?.let {
-                    updates["DISCNUMBER"] = it.toString()
-                    updates["TPOS"] = it.toString()
-                }
-                audioTagData.composer?.let {
-                    updates["COMPOSER"] = it
-                    updates["TCOM"] = it
-                }
-                audioTagData.lyricist?.let {
-                    updates["LYRICIST"] = it
-                    updates["TEXT"] = it
-                }
-                audioTagData.comment?.let {
-                    updates["COMMENT"] = it
-                    updates["COMM"] = it
-                }
-
-                AudioTagWriter.writeTags(pfdDescriptor, updates)
-
-                audioTagData.lyrics?.let { lyricsString ->
-                    AudioTagWriter.writeLyrics(pfdDescriptor, lyricsString)
-                }
-                audioTagData.picUrl?.let { picUrl ->
-                    val imageBytes = downloadImageBytes(picUrl)
-                    val pictures = AudioPicture(
-                        data = imageBytes
-                    )
-                    AudioTagWriter.writePictures(pfdDescriptor, listOf(pictures))
-                }
-
-                true
-            } ?: false
+        try {
+            return writeInternal(contentUri, audioTagData)
         } catch (e: Exception) {
-            Log.e(TAG, "写入文件失败: $contentUri", e)
-            false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && e is RecoverableSecurityException) {
+                throw RequiresUserPermissionException(e.userAction.actionIntent.intentSender)
+            }
+
+            if (e is SecurityException) {
+                Log.e("SongRepository", "权限不足无法写入: $contentUri", e)
+                return false
+            }
+
+            Log.e("SongRepository", "写入失败: $contentUri", e)
+            return false
         }
+    }
+    private suspend fun writeInternal(uriString: String, audioTagData: AudioTagData): Boolean {
+        val contentUri = uriString.toUri()
+
+        context.contentResolver.openFileDescriptor(contentUri, "rw")?.use { pfdDescriptor ->
+
+            val updates = mutableMapOf<String, String>()
+            audioTagData.title?.let { updates["TITLE"] = it }
+            audioTagData.artist?.let { updates["ARTIST"] = it }
+            audioTagData.album?.let { updates["ALBUM"] = it }
+            audioTagData.genre?.let { updates["GENRE"] = it }
+            audioTagData.date?.let { updates["DATE"] = it }
+            audioTagData.trackerNumber?.let { updates["TRACKNUMBER"] = it }
+            audioTagData.albumArtist?.let {
+                updates["ALBUMARTIST"] = it
+                updates["TPE2"] = it
+            }
+            audioTagData.discNumber?.let {
+                updates["DISCNUMBER"] = it.toString()
+                updates["TPOS"] = it.toString()
+            }
+            audioTagData.composer?.let {
+                updates["COMPOSER"] = it
+                updates["TCOM"] = it
+            }
+            audioTagData.lyricist?.let {
+                updates["LYRICIST"] = it
+                updates["TEXT"] = it
+            }
+            audioTagData.comment?.let {
+                updates["COMMENT"] = it
+                updates["COMM"] = it
+            }
+
+            AudioTagWriter.writeTags(pfdDescriptor, updates)
+
+            // 图片写入
+            audioTagData.picUrl?.let { picUrl ->
+                val imageBytes = downloadImageBytes(picUrl)
+                val pictures = AudioPicture(data = imageBytes)
+                AudioTagWriter.writePictures(pfdDescriptor, listOf(pictures))
+            }
+
+            return true
+        }
+        return false
     }
 
     override suspend fun readAudioTagData(contentUri: String): AudioTagData {

@@ -1,7 +1,10 @@
 package com.lonx.lyrico.viewmodel
 
 import android.app.Application
+import android.app.RecoverableSecurityException
 import android.content.Context
+import android.content.IntentSender
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
@@ -38,6 +41,7 @@ data class EditMetadataUiState(
     val saveSuccess: Boolean? = null,
     val originalCover: Any? = null,
     val picture: AudioPicture? = null,
+    val permissionIntentSender: IntentSender? = null
 )
 
 class EditMetadataViewModel(
@@ -45,50 +49,53 @@ class EditMetadataViewModel(
     private val playbackRepository: PlaybackRepository,
     application: Application
 ) : ViewModel() {
+
     private val contentResolver = application.contentResolver
-    private val TAG = "EditMetadataViewModel"
+    private val TAG = "EditMetadataVM"
+
     private var currentSong: SongEntity? = null
+
+    // 存储当前正在操作的 URI 字符串
+    private var currentSongUri: String? = null
+
     private val _uiState = MutableStateFlow(EditMetadataUiState())
     val uiState: StateFlow<EditMetadataUiState> = _uiState.asStateFlow()
 
-    private var currentSongPath: String? = null
-
-
-    fun readMetadata(contentUri: String) {
-        currentSongPath = contentUri
+    fun readMetadata(uriString: String) {
+        currentSongUri = uriString
 
         viewModelScope.launch {
             try {
-                val song = songRepository.getSongByUri(contentUri)
+                // 1. 获取数据库实体
+                val song = songRepository.getSongByUri(uriString)
                 currentSong = song
-                val audioTagData = songRepository.readAudioTagData(contentUri)
+
+                // 2. 读取文件标签
+                val audioTagData = songRepository.readAudioTagData(uriString)
                 val firstPicture = audioTagData.pictures.firstOrNull()?.data
 
                 _uiState.update { state ->
                     state.copy(
                         songInfo = SongInfo(
-                            filePath = contentUri,
+                            filePath = uriString, // 这里的 filePath 字段实际存的是 URI
                             tagData = audioTagData
                         ),
                         originalTagData = audioTagData,
 
-                        // 初始化 editingTagData 只有未编辑时才设置
+                        // 如果当前没有在编辑，才重置 editingTagData
                         editingTagData = if (state.isEditing) state.editingTagData else audioTagData,
 
                         picture = audioTagData.pictures.firstOrNull(),
-
                         originalCover = if (state.isEditing) state.originalCover else firstPicture,
-
-                        // coverUri 初始化为原始封面（未编辑时）
                         coverUri = if (state.isEditing) state.coverUri else firstPicture
                     )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "读取音频元数据失败", e)
+                Log.e(TAG, "读取音频元数据失败: $uriString", e)
+                // 这里可以考虑加一个 error message 状态
             }
         }
     }
-
 
     fun updateTag(block: AudioTagData.() -> AudioTagData) {
         _uiState.update { state ->
@@ -100,11 +107,11 @@ class EditMetadataViewModel(
         }
     }
 
+    // ... updateMetadataFromSearchResult 保持不变 ...
     fun updateMetadataFromSearchResult(result: LyricsSearchResult) {
         _uiState.update { state ->
             val current = state.editingTagData ?: AudioTagData()
 
-            // 仅应用歌词
             if (result.lyricsOnly) {
                 return@update state.copy(
                     isEditing = true,
@@ -116,7 +123,6 @@ class EditMetadataViewModel(
 
             state.copy(
                 isEditing = true,
-
                 editingTagData = current.copy(
                     title = result.title?.takeIf { it.isNotBlank() } ?: current.title,
                     artist = result.artist?.takeIf { it.isNotBlank() } ?: current.artist,
@@ -127,12 +133,11 @@ class EditMetadataViewModel(
                         ?: current.trackerNumber,
                     picUrl = result.picUrl?.takeIf { it.isNotBlank() } ?: current.picUrl
                 ),
-
-                // 只要 picUrl 存在，就认为封面被修改
                 coverUri = result.picUrl?.takeIf { it.isNotBlank() }?.toUri()
             )
         }
     }
+
     fun revertCover() {
         _uiState.update {
             it.copy(
@@ -142,87 +147,78 @@ class EditMetadataViewModel(
         }
     }
 
-
+    /**
+     * 保存元数据
+     * 核心修改：处理 RecoverableSecurityException
+     */
     fun saveMetadata() {
-        val songInfo = _uiState.value.songInfo ?: return
+        // 从 State 中获取 SongInfo (其中 filePath 存的是 uri)
+        val uriString = _uiState.value.songInfo?.filePath ?: return
         val audioTagData = _uiState.value.editingTagData ?: return
+
         if (_uiState.value.isSaving) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true, saveSuccess = null) }
+            _uiState.update { it.copy(isSaving = true, saveSuccess = null, permissionIntentSender = null) }
 
             try {
-                val success = songRepository.writeAudioTagData(
-                    songInfo.filePath,
-                    audioTagData
-                )
+                // 1. 尝试写入文件
+                // 注意：Repository 需要抛出异常，而不是只返回 false，否则无法捕获权限请求
+                val success = songRepository.writeAudioTagData(uriString, audioTagData)
 
                 if (success) {
-                    val lastModified = getFileLastModified(songInfo.filePath)
+                    // 2. 写入成功，使用当前时间作为最后修改时间
+                    val newModifiedTime = System.currentTimeMillis()
 
+                    // 3. 更新数据库
                     songRepository.updateSongMetadata(
                         audioTagData,
-                        songInfo.filePath,
-                        lastModified
+                        uriString, // 传入 URI
+                        newModifiedTime
                     )
 
                     _uiState.update {
                         it.copy(
                             isSaving = false,
                             saveSuccess = true,
-
-                            // 编辑会话结束
                             isEditing = false
                         )
                     }
                 } else {
+                    // 逻辑上的写入失败（非权限问题）
                     _uiState.update { it.copy(isSaving = false, saveSuccess = false) }
                 }
+
             } catch (e: Exception) {
-                Log.e(TAG, "保存失败", e)
-                _uiState.update { it.copy(isSaving = false, saveSuccess = false) }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && e is RecoverableSecurityException) {
+                    Log.w(TAG, "需要用户授权修改文件: $uriString")
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false, // 暂停保存状态
+                            permissionIntentSender = e.userAction.actionIntent.intentSender
+                        )
+                    }
+                } else {
+                    Log.e(TAG, "保存元数据发生未知错误", e)
+                    _uiState.update { it.copy(isSaving = false, saveSuccess = false) }
+                }
             }
         }
+    }
+
+    /**
+     * UI层在成功发起弹窗或处理完权限请求后调用此方法清理状态
+     */
+    fun consumePermissionRequest() {
+        _uiState.update { it.copy(permissionIntentSender = null) }
     }
 
     fun clearSaveStatus() {
         _uiState.update { it.copy(saveSuccess = null) }
     }
 
-
-    private fun getFileLastModified(filePath: String): Long {
-        val uri = filePath.toUri()
-
-        return try {
-            if (uri.scheme == "content") {
-                contentResolver.query(
-                    uri,
-                    arrayOf(MediaStore.MediaColumns.DATE_MODIFIED),
-                    null,
-                    null,
-                    null
-                )?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val idx = cursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
-                        if (idx != -1) cursor.getLong(idx) * 1000
-                        else System.currentTimeMillis()
-                    } else System.currentTimeMillis()
-                } ?: System.currentTimeMillis()
-            } else {
-                val file = File(uri.path ?: "")
-                if (file.exists()) file.lastModified()
-                else System.currentTimeMillis()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "获取修改时间失败", e)
-            System.currentTimeMillis()
-        }
-    }
-
     fun play(context: Context) {
-        val song = currentSong ?: return
-        playbackRepository.play(context, song.getUri)
+        val uriStr = currentSong?.uri ?: currentSongUri ?: return
+        playbackRepository.play(context, uriStr.toUri())
     }
-
 }
-

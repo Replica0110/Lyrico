@@ -56,13 +56,10 @@ import com.lonx.lyrico.ui.components.DropdownItem
 import com.lonx.lyrico.ui.dialog.BatchMatchConfigDialog
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.coil.CoverRequest
-import com.lonx.lyrico.viewmodel.SongListUiState
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
-import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.dialog.YesNoDialog
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.BatchMatchHistoryDetailDestination
@@ -95,11 +92,9 @@ import top.yukonga.miuix.kmp.extra.SuperBottomSheet
 import top.yukonga.miuix.kmp.extra.SuperDialog
 import top.yukonga.miuix.kmp.extra.SuperListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.More
-import top.yukonga.miuix.kmp.icon.extended.Pause
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Share
@@ -119,7 +114,7 @@ private val SECTIONS_DESC = SECTIONS_ASC.asReversed()
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(
-    ExperimentalMaterial3Api::class, UnstableSaltUiApi::class
+    ExperimentalMaterial3Api::class
 )
 @Composable
 @Destination<RootGraph>(start = true, route = "song_list")
@@ -401,7 +396,6 @@ fun SongListScreen(
                                 }
                             }
                         )
-                        HorizontalDivider()
                     }
                 }
 
@@ -474,40 +468,73 @@ fun SongListScreen(
         }
 
 
-        if (uiState.showDeleteDialog && sheetUiState.menuSong != null) {
-            YesNoDialog(
-                onDismissRequest = { viewModel.dismissDeleteDialog() },
-                onConfirm = {
-                    viewModel.dismissDeleteDialog()
-                    viewModel.dismissAll()
-                    viewModel.delete(sheetUiState.menuSong!!)
-                },
-                title = stringResource(R.string.dialog_delete_file_title),
-                content = stringResource(
-                    R.string.dialog_delete_file_content,
-                    sheetUiState.menuSong!!.fileName
-                ),
-                cancelText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.confirm)
-            )
-
+        SuperDialog(
+            title = stringResource(R.string.dialog_delete_file_title),
+            show = showDeleteDialog,
+            summary = stringResource(R.string.dialog_delete_file_content, sheetUiState.menuSong?.fileName?: ""),
+            onDismissRequest = { viewModel.dismissDeleteDialog() },
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        text = stringResource(R.string.cancel),
+                        onClick = {
+                            viewModel.dismissDeleteDialog()
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        text = stringResource(R.string.confirm),
+                        onClick = {
+                            viewModel.dismissDeleteDialog()
+                            viewModel.dismissAll()
+                            viewModel.delete(sheetUiState.menuSong!!)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary()
+                    )
+                }
+            }
         }
         // 批量删除确认对话框
-        if (uiState.showBatchDeleteDialog) {
-            YesNoDialog(
-                onDismissRequest = { viewModel.dismissBatchDeleteDialog() },
-                onConfirm = {
-                    viewModel.dismissBatchDeleteDialog()
-                    viewModel.batchDelete(songs)
-                },
-                title = stringResource(R.string.dialog_batch_delete_title),
-                content = stringResource(
-                    R.string.dialog_batch_delete_content,
-                    selectedPaths.size
-                ),
-                cancelText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.confirm)
+        SuperDialog(
+            show = showBatchDeleteDialog,
+            onDismissRequest = { viewModel.dismissDeleteDialog() },
+            summary = stringResource(
+                R.string.dialog_batch_delete_content,
+                selectedPaths.size
             )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        text = stringResource(R.string.cancel),
+                        onClick = {
+                            viewModel.dismissBatchDeleteDialog()
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    top.yukonga.miuix.kmp.basic.TextButton(
+                        text = stringResource(R.string.confirm),
+                        onClick = {
+                            viewModel.dismissBatchDeleteDialog()
+                            viewModel.batchDelete(songs)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary()
+                    )
+                }
+            }
         }
         // 批量匹配配置对话框
         BatchMatchConfigDialog(
@@ -534,10 +561,12 @@ fun SongListScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 Column(
+                    modifier = Modifier.padding(bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     uiState.batchProgress?.let { (current, total) ->
-                        val progress = if (total > 0) current.toFloat() / total.toFloat() else 0f
+                        val progress =
+                            if (total > 0) current.toFloat() / total.toFloat() else 0f
 
                         // 进度文字
                         Row(
@@ -574,7 +603,7 @@ fun SongListScreen(
 
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(

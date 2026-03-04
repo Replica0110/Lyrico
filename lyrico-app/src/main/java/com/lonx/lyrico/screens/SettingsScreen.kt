@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,19 +36,6 @@ import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.utils.formatSize
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
-import com.moriafly.salt.ui.Item
-import com.moriafly.salt.ui.ItemCheck
-import com.moriafly.salt.ui.ItemDropdown
-import com.moriafly.salt.ui.ItemOuterTitle
-import com.moriafly.salt.ui.ItemSlider
-import com.moriafly.salt.ui.ItemSwitcher
-import com.moriafly.salt.ui.ItemTip
-import com.moriafly.salt.ui.RoundedColumn
-import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.dialog.YesNoDialog
-import com.moriafly.salt.ui.rememberScrollState
-import com.moriafly.salt.ui.verticalScroll
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AboutDestination
@@ -61,6 +47,7 @@ import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -85,7 +72,6 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import kotlin.math.roundToInt
 
 @SuppressLint("LocalContextGetResourceValueCall")
-@OptIn(UnstableSaltUiApi::class)
 @Composable
 @Destination<RootGraph>(route = "settings")
 fun SettingsScreen(
@@ -108,7 +94,6 @@ fun SettingsScreen(
     val themeMode = settingsUiState.themeMode
     val monetEnable = settingsUiState.monetEnable
     val currentKeyColor = settingsUiState.keyColor
-    val scrollState = rememberScrollState()
     val folders = folderUiState.folders
     val totalFolders = folders.size
     val ignoredFolders = folders.count { it.isIgnored }
@@ -181,13 +166,12 @@ fun SettingsScreen(
         SuperDialog(
             show = showClearCacheDialog,
             title = stringResource(R.string.clear_cache),
+            summary = cacheContent,
             onDismissRequest = {
                 showClearCacheDialog.value = false
             }
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text(text = cacheContent)
-                Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -221,27 +205,33 @@ fun SettingsScreen(
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = stringResource(R.string.search_limit_tip),
-                    fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSecondaryContainer,
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+
                 var text by remember { mutableStateOf(searchPageSize.toString()) }
-                TextField(
-                    value = text,
-                    maxLines = 1,
-                    onValueChange = { newValue ->
-                        val digits = newValue.filter { it.isDigit() }
-                        if (digits.isEmpty()) {
-                            text = ""
-                        } else {
-                            val limited = digits.take(3)
-                            val num = limited.toIntOrNull()
-                            val clamped = num?.coerceIn(minSearchSize, maxSearchSize)
-                            text = clamped.toString()
+                Card(
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.secondaryContainer,
+                    )
+                ) {
+                    TextField(
+                        value = text,
+                        maxLines = 1,
+                        onValueChange = { newValue ->
+                            val digits = newValue.filter { it.isDigit() }
+                            if (digits.isEmpty()) {
+                                text = ""
+                            } else {
+                                val limited = digits.take(3)
+                                val num = limited.toIntOrNull()
+                                val clamped = num?.coerceIn(minSearchSize, maxSearchSize)
+                                text = clamped.toString()
+                            }
                         }
-                    }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                    )
+                }
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -277,7 +267,7 @@ fun SettingsScreen(
                 bottom = paddingValues.calculateBottomPadding() + 12.dp,
             ),
             overscrollEffect = null,
-        ){
+        ) {
             item(
                 key = "appearance"
             ) {
@@ -471,7 +461,7 @@ fun SettingsScreen(
                             settingsViewModel.setTranslationEnabled(!translationEnabled)
                         }
                     )
-                    AnimatedVisibility(visible = translationEnabled){
+                    AnimatedVisibility(visible = translationEnabled) {
                         SuperSwitch(
                             title = stringResource(R.string.only_translation_if_available),
                             summary = stringResource(R.string.only_translation_if_available_hint),

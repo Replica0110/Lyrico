@@ -50,7 +50,7 @@ fun BatchMatchHistoryDetailScreen(
 
     BasicScreenBox(
         title = stringResource(R.string.batch_match_history_detail),
-        onBack = { navigator.popBackStack() }
+        onBack = { navigator.navigateUp() }
     ) {
 
         Column(modifier = Modifier.fillMaxSize()) {

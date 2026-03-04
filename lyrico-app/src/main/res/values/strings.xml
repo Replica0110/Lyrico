@@ -280,4 +280,8 @@
     <string name="remove_empty_lines_hint">Remove lines that are empty or contain only placeholders</string>
     <string name="batch_matching_progress_label">Progress</string>
 
+    <string name="category_basic_info">Basic Info</string>
+    <string name="category_details">Details</string>
+    <string name="category_creators">Creators</string>
+    <string name="category_lyrics">Lyrics</string>
 </resources>

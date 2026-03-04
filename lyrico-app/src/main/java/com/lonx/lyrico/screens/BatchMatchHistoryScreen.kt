@@ -59,7 +59,7 @@ fun BatchMatchHistoryScreen(
     }
     BasicScreenBox(
         title = stringResource(R.string.batch_match_history_title),
-        onBack = { navigator.popBackStack() }
+        onBack = { navigator.navigateUp() }
     ) {
 
         LazyColumn(

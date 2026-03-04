@@ -126,6 +126,7 @@
     <string name="color_orange">橙色</string>
     <string name="color_pink">粉色</string>
     <string name="color_default">系统默认</string>
+    <string name="cd_back">返回</string>
     <string name="monet">莫奈取色</string>
     <string name="key_color">种子色</string>
     <!-- 页面 -->
@@ -286,4 +287,8 @@
     <string name="remove_empty_lines_hint">删除内容为空或仅包含占位符的行</string>
     <string name="batch_matching_progress_label">Progress</string>
 
+    <string name="category_basic_info">基本信息</string>
+    <string name="category_details">详情信息</string>
+    <string name="category_creators">创作者信息</string>
+    <string name="category_lyrics">歌词</string>
 </resources>

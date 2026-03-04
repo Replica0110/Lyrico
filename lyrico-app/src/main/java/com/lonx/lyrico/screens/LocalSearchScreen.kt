@@ -30,7 +30,6 @@ fun LocalSearchScreen(
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    var expanded by remember { mutableStateOf(true) }
 
     // 初始化关键词
     LaunchedEffect(keyword) {
@@ -56,7 +55,7 @@ fun LocalSearchScreen(
                     actionText = stringResource(R.string.cancel),
                     onActionClick = {
                         keyboardController?.hide()
-                        navigator.popBackStack()
+                        navigator.navigateUp()
                     },
                     onSearch = {
                         keyboardController?.hide()
@@ -69,8 +68,7 @@ fun LocalSearchScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-        )
-        {
+        ) {
             // Results
             if (uiState.isSearching) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

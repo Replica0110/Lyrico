@@ -66,7 +66,7 @@ fun AboutScreen(
 
     BasicScreenBox(
         title = stringResource(R.string.about_title),
-        onBack = { navigator.popBackStack() }
+        onBack = { navigator.navigateUp() }
     ) {
 
         LazyColumn(

@@ -180,7 +180,7 @@ fun EditMetadataScreen(
                                 "${editingTagData.title} ${editingTagData.artist}"
                             }
                         } else {
-                            uiState.songInfo?.tagData?.fileName ?: ""
+                            uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
                         }
                         navigator.navigate(SearchResultsDestination(keyword))
                     }) {

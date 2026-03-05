@@ -11,7 +11,8 @@ enum class SortBy(
     ARTISTS(R.string.label_artists, true),
     DATE_MODIFIED(R.string.label_date_modified, false),
     DATE_ADDED(R.string.label_date_added, false),
-    FILE_SIZE(R.string.label_file_size, false)
+    FILE_SIZE(R.string.label_file_size, false),
+    DURATION(R.string.label_duration, false)
 }
 
 enum class SortOrder {

@@ -19,6 +19,8 @@
 #include <jni.h>
 #include <string>
 #include <taglib/unsynchronizedlyricsframe.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include "JInputStream.h"
 #include "JClassRef.h"
 #include "JMetadataBuilder.h"
@@ -34,7 +36,97 @@
 #include "taglib/vorbisfile.h"
 #include "taglib/wavfile.h"
 #include "taglib/tpropertymap.h"
+class FdIOStream : public TagLib::IOStream {
+public:
+    explicit FdIOStream(int fd)
+            : m_fd(dup(fd)), m_position(0), m_size(0) {
 
+        if (m_fd == -1)
+            throw std::runtime_error("dup failed");
+
+        struct stat st{};
+        if (fstat(m_fd, &st) == 0)
+            m_size = st.st_size;
+    }
+
+    ~FdIOStream() override {
+        if (m_fd != -1)
+            close(m_fd);
+    }
+
+    [[nodiscard]] TagLib::FileName name() const override {
+        return "fd_stream";
+    }
+
+    TagLib::ByteVector readBlock(size_t length) override {
+
+        TagLib::ByteVector data((unsigned int)length);
+
+        ssize_t bytes = pread(m_fd, data.data(), length, m_position);
+
+        if (bytes <= 0)
+            return TagLib::ByteVector();
+
+        m_position += bytes;
+        data.resize(bytes);
+
+        return data;
+    }
+
+    void writeBlock(const TagLib::ByteVector &) override {}
+
+    void insert(const TagLib::ByteVector &,
+                TagLib::offset_t,
+                size_t) override {}
+
+    void removeBlock(TagLib::offset_t,
+                     size_t) override {}
+
+    bool readOnly() const override {
+        return true;
+    }
+
+    bool isOpen() const override {
+        return m_fd != -1;
+    }
+
+    void seek(TagLib::offset_t offset,
+              TagLib::IOStream::Position p) override {
+
+        switch (p) {
+            case Beginning:
+                m_position = offset;
+                break;
+            case Current:
+                m_position += offset;
+                break;
+            case End:
+                m_position = m_size + offset;
+                break;
+        }
+
+        if (m_position < 0)
+            m_position = 0;
+
+        if (m_position > m_size)
+            m_position = m_size;
+    }
+
+    TagLib::offset_t tell() const override {
+        return m_position;
+    }
+
+    TagLib::offset_t length() override {
+        return m_size;
+    }
+
+    void truncate(TagLib::offset_t) override {}
+
+private:
+    int m_fd;
+    TagLib::offset_t m_position;
+    TagLib::offset_t m_size;
+};
 bool parseMpeg(const std::string &name, TagLib::MPEG::File *mpegFile,
                JMetadataBuilder &jBuilder) {
 
@@ -292,58 +384,39 @@ extern "C" JNIEXPORT jobject JNICALL
 Java_com_lonx_audiotag_internal_TagLibJNI_openNative(
         JNIEnv *env,
         jobject /* this */,
-        jobject inputStream) {
-    std::string name = "unknown file";
-    TagLib::File *overriddenFile = nullptr;
+        jint fd) {
+
+    std::string name = "fd_stream";
+    TagLib::File *fileToUse = nullptr;
+    FdIOStream *fdStream = nullptr;
 
     try {
 
-        JInputStream jStream {env, inputStream};
+        // 创建文件描述符流
+        fdStream = new FdIOStream(fd);
 
-        name = jStream.name();
-
-        TagLib::FileRef fileRef {
-                &jStream,
+        // 根据文件内容创建 TagLib File
+        fileToUse = createFileFromContent(
+                fdStream,
                 true,
                 TagLib::AudioProperties::Average
-        };
-
-        TagLib::File *fileToUse = fileRef.file();
-
-        bool needsOverride =
-                (fileToUse != nullptr &&
-                 fileToUse->audioProperties() != nullptr &&
-                 fileToUse->audioProperties()->lengthInSeconds() == 0);
-
-        if (needsOverride) {
-
-            LOGD("FileRef result for %s is suspicious (duration=0). Forcing content scan.", name.c_str());
-
-            jStream.seek(0, TagLib::IOStream::Beginning);
-
-            overriddenFile = createFileFromContent(
-                    &jStream,
-                    true,
-                    TagLib::AudioProperties::Average
-            );
-
-            if (overriddenFile != nullptr &&
-                overriddenFile->audioProperties() != nullptr &&
-                overriddenFile->audioProperties()->lengthInSeconds() > 0) {
-
-                LOGD("Content scan successful. Overriding FileRef result for %s.", name.c_str());
-
-                fileToUse = overriddenFile;
-
-            } else {
-
-                delete overriddenFile;
-                overriddenFile = nullptr;
-            }
-        }
+        );
 
         if (fileToUse == nullptr) {
-            delete overriddenFile;
+
+            LOGE("File format in %s is not supported.", name.c_str());
+
+            delete fdStream;
+            return metadataResultNotAudio(env);
+        }
+
+        if (!fileToUse->isValid()) {
+
+            LOGE("File in %s is not valid.", name.c_str());
+
+            delete fileToUse;
+            delete fdStream;
+
             return metadataResultNotAudio(env);
         }
 
@@ -351,27 +424,32 @@ Java_com_lonx_audiotag_internal_TagLibJNI_openNative(
 
             LOGE("No audio properties for %s", name.c_str());
 
-            delete overriddenFile;
+            delete fileToUse;
+            delete fdStream;
 
             return metadataResultNoMetadata(env);
         }
 
-        JMetadataBuilder jBuilder {env};
+        JMetadataBuilder jBuilder{env};
 
+        // 设置音频属性
         jBuilder.setProperties(fileToUse->audioProperties());
 
+        // 分发到对应解析器
         if (!dispatchAndParse(name, fileToUse, jBuilder)) {
 
             LOGE("File format in %s is not supported by any parser.", name.c_str());
 
-            delete overriddenFile;
+            delete fileToUse;
+            delete fdStream;
 
             return metadataResultNotAudio(env);
         }
 
-        JObjectRef jMetadata {env, jBuilder.build()};
+        JObjectRef jMetadata{env, jBuilder.build()};
 
-        delete overriddenFile;
+        delete fileToUse;
+        delete fdStream;
 
         return metadataResultSuccess(env, *jMetadata);
 
@@ -379,7 +457,11 @@ Java_com_lonx_audiotag_internal_TagLibJNI_openNative(
 
         LOGE("Unable to parse metadata in %s: %s", name.c_str(), e.what());
 
-        delete overriddenFile;
+        if (fileToUse)
+            delete fileToUse;
+
+        if (fdStream)
+            delete fdStream;
 
         return metadataResultProviderFailed(env);
     }

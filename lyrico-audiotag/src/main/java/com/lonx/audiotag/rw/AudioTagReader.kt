@@ -1,9 +1,8 @@
 package com.lonx.audiotag.rw
 
-import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
-import com.lonx.audiotag.internal.AudioFile
+import com.lonx.audiotag.internal.FdUtils
 import com.lonx.audiotag.internal.Metadata
 import com.lonx.audiotag.internal.MetadataResult
 import com.lonx.audiotag.internal.TagLibJNI
@@ -11,8 +10,6 @@ import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.FileInputStream
-import java.nio.file.Paths
 
 object AudioTagReader {
 
@@ -22,22 +19,23 @@ object AudioTagReader {
         return withContext(Dispatchers.IO) {
             try {
 
-                val dup = ParcelFileDescriptor.dup(pfd.fileDescriptor)
-                val fis = FileInputStream(dup.fileDescriptor)
+//                val dup = ParcelFileDescriptor.dup(pfd.fileDescriptor)
+//                val fis = FileInputStream(dup.fileDescriptor)
 
-                val audioFile = AudioFile(
-                    uri = Uri.EMPTY,
-                    path = Paths.get(""),
-                    modifiedMs = 0,
-                    mimeType = "",
-                    size = 0,
-                    parent = null
-                )
+                val fd = FdUtils.getNativeFd(pfd)
+//                val audioFile = AudioFile(
+//                    uri = Uri.EMPTY,
+//                    path = Paths.get(""),
+//                    modifiedMs = 0,
+//                    mimeType = "",
+//                    size = 0,
+//                    parent = null
+//                )
 
-                val result = TagLibJNI.open(audioFile, fis)
+                val result = TagLibJNI.open(fd)
 
-                fis.close()
-                dup.close()
+//                fis.close()
+//                dup.close()
 
                 val metadata = when (result) {
                     is MetadataResult.Success -> result.metadata

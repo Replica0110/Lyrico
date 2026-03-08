@@ -16,7 +16,8 @@ data class SettingsSnapshot(
     val ignoreShortAudio: Boolean,
     val translationEnabled: Boolean,
     val onlyTranslationIfAvailable: Boolean,
-    val removeEmptyLines: Boolean
+    val removeEmptyLines: Boolean,
+    val showScrollTopButton: Boolean
 )
 
 interface SettingsRepository {
@@ -35,6 +36,7 @@ interface SettingsRepository {
     val onlyTranslationIfAvailable: Flow<Boolean>
     val removeEmptyLines: Flow<Boolean>
     val settingsFlow: Flow<SettingsSnapshot>
+    val showScrollTopButton : Flow<Boolean>
     // Suspend functions for operations that might block or are one-off
     suspend fun getLastScanTime(): Long
     
@@ -52,6 +54,7 @@ interface SettingsRepository {
     suspend fun saveThemeMode(mode: ThemeMode)
     suspend fun saveOnlyTranslationIfAvailable(enabled: Boolean)
     suspend fun saveRemoveEmptyLines(enabled: Boolean)
+    suspend fun saveShowScrollTopButton(enabled: Boolean)
     suspend fun getLyricRenderConfig(): LyricRenderConfig
     suspend fun exportSettings(): String
     suspend fun importSettings(jsonString: String): Boolean

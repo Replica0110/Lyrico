@@ -107,7 +107,8 @@ interface SongDao {
                 WHEN s.title LIKE '%' || :query || '%' THEN 2 -- 其次：标题包含
                 WHEN s.artist LIKE '%' || :query || '%' THEN 3 -- 再次：艺术家包含
                 WHEN s.album LIKE '%' || :query || '%' THEN 4  -- 最后：专辑包含
-                ELSE 5 
+                WHEN s.fileName LIKE '%' || :query || '%' THEN 5
+                ELSE 6 
             END
     """)
     fun searchSongsByAll(query: String): Flow<List<SongEntity>>

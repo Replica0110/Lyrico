@@ -129,4 +129,15 @@ interface FolderDao {
      */
     @Query("DELETE FROM folders WHERE id = :folderId")
     suspend fun deleteFolderPermanently(folderId: Long)
+
+    /**
+     * 彻底删除所有文件夹记录 (用于用户在 UI 上点击“彻底移除”按钮)
+     */
+    @Query("DELETE FROM folders")
+    suspend fun clearAllFolders()
+
+    @Query("""
+        SELECT COUNT(*) FROM folders 
+    """)
+    suspend fun getFoldersCount(): Int
 }

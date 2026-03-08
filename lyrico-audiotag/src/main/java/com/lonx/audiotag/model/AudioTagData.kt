@@ -18,7 +18,7 @@ data class AudioTagData(
     val lyricist: String? = null,
     val comment: String? = null,
     val lyrics: String? = null,
-    val fileName: String? = null,
+    val fileName: String = "",
     val durationMilliseconds: Int = 0,
     val bitrate: Int = 0,
     val sampleRate: Int = 0,

@@ -257,7 +257,6 @@
     <string name="cd_play">播放</string>
 
     <!-- 歌曲菜单 -->
-    <string name="menu_song_tip_format">%1$s - %2$s</string>
     <string name="menu_action_play">播放音乐</string>
     <string name="menu_action_play_sub">调用系统播放器播放音频</string>
     <string name="menu_action_info">歌曲信息</string>
@@ -294,4 +293,11 @@
     <string name="choose_player">选择播放器</string>
     <string name="no_player_found">未找到可用播放器</string>
     <string name="unknown_error">发生未知错误: %1$s</string>
+    <string name="clear_songs">清空歌曲</string>
+
+
+
+
+    <string name="show_scroll_top_button">快速回到顶部</string>
+    <string name="show_scroll_top_button_hint">列表滚动时显示浮动按钮</string>
 </resources>

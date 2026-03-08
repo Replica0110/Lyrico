@@ -1,0 +1,1 @@
+-keep class com.lonx.audiotag.internal.** { *; }

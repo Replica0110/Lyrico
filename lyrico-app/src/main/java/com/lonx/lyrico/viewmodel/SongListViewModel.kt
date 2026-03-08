@@ -75,6 +75,7 @@ data class SongListUiState(
     val successCount: Int = 0,
     val failureCount: Int = 0,
     val skippedCount: Int = 0,
+    val showScrollTopButton: Boolean = false,
     val currentFile: String = "",
     val batchHistoryId: Long = 0,
     val batchTimeMillis: Long = 0  // 批量匹配总用时（毫秒）
@@ -114,6 +115,8 @@ class SongListViewModel(
     private val romaEnabled = settingsRepository.romaEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val showScrollTopButton = settingsRepository.showScrollTopButton
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
     private val translationEnabled = settingsRepository.translationEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
@@ -265,7 +268,8 @@ class SongListViewModel(
                             BatchMatchRecordEntity(
                                 historyId = 0, // Pending
                                 filePath = song.filePath,
-                                status = result.status
+                                status = result.status,
+                                uri = song.uri
                             )
                         )
 
@@ -448,6 +452,11 @@ class SongListViewModel(
         return currentValue.isNullOrBlank()
     }
 
+    fun setScrollToTopButtonEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveShowScrollTopButton(enabled)
+        }
+    }
 
     fun onSortChange(newSortInfo: SortInfo) {
         viewModelScope.launch {

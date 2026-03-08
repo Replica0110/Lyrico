@@ -25,6 +25,7 @@ import kotlinx.serialization.json.Json
 private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
 object SettingsDefaults {
+    const val SHOW_SCROLL_TOP_BUTTON = true
     val LYRIC_FORMAT = LyricFormat.VERBATIM_LRC
     val SORT_BY = SortBy.TITLE
     val SORT_ORDER = SortOrder.ASC
@@ -52,6 +53,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private object PreferencesKeys {
         val REMOVE_EMPTY_LINES = booleanPreferencesKey("remove_empty_lines")
+        val SHOW_SCROLL_TOP_BUTTON = booleanPreferencesKey("show_scroll_top_button")
         val LYRIC_FORMAT = stringPreferencesKey("lyric_display_mode")
         val LAST_SCAN_TIME = longPreferencesKey("last_scan_time")
         val SORT_BY = stringPreferencesKey("sort_by")
@@ -175,6 +177,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.REMOVE_EMPTY_LINES] ?: SettingsDefaults.REMOVE_EMPTY_LINES
         }
+    override val showScrollTopButton: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SHOW_SCROLL_TOP_BUTTON] ?: SettingsDefaults.SHOW_SCROLL_TOP_BUTTON
+        }
 
     override suspend fun getLastScanTime(): Long {
         return context.settingsDataStore.data.map { preferences ->
@@ -220,14 +226,16 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private data class UiPart(
         val themeMode: ThemeMode,
-        val ignoreShortAudio: Boolean
+        val ignoreShortAudio: Boolean,
+        val showScrollTopButton: Boolean
     )
 
     private val uiPartFlow =
-        combine(themeMode, ignoreShortAudio) { theme, ignore ->
+        combine(themeMode, ignoreShortAudio, showScrollTopButton) { theme, ignore, showScrollTop ->
             UiPart(
                 themeMode = theme,
-                ignoreShortAudio = ignore
+                ignoreShortAudio = ignore,
+                showScrollTopButton = showScrollTop
             )
         }
     override val settingsFlow: Flow<SettingsSnapshot> =
@@ -246,7 +254,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 searchPageSize = search.searchPageSize,
                 themeMode = ui.themeMode,
                 ignoreShortAudio = ui.ignoreShortAudio,
-                removeEmptyLines = lyric.removeEmptyLines
+                removeEmptyLines = lyric.removeEmptyLines,
+                showScrollTopButton = ui.showScrollTopButton
             )
         }
 
@@ -326,6 +335,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun saveRemoveEmptyLines(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.REMOVE_EMPTY_LINES] = enabled
+        }
+    }
+
+    override suspend fun saveShowScrollTopButton(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.SHOW_SCROLL_TOP_BUTTON] = enabled
         }
     }
 

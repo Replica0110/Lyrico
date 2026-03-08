@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.MediaStore
 import android.text.format.Formatter
 import android.view.HapticFeedbackConstants
@@ -54,6 +55,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.entity.SongEntity
@@ -65,14 +67,13 @@ import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
-import com.moriafly.salt.ui.BottomBar
-import com.moriafly.salt.ui.BottomBarItem
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonType
 import com.moriafly.salt.ui.Icon
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemArrowType
 import com.moriafly.salt.ui.ItemDivider
+import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.ItemTip
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -121,6 +122,7 @@ fun SongListScreen(
     val songs by viewModel.songs.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState(initial = false)
     val selectedPaths by viewModel.selectedSongIds.collectAsState()
+    val showScrollTopButton by viewModel.showScrollTopButton.collectAsStateWithLifecycle()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
@@ -128,7 +130,11 @@ fun SongListScreen(
 
     val menuSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val detailSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
+    val showFab by remember {
+        derivedStateOf {
+            showScrollTopButton && listState.firstVisibleItemIndex > 0
+        }
+    }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val sectionIndexMap = remember(songs, sortInfo) {
@@ -160,6 +166,37 @@ fun SongListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SaltTheme.colors.background),
+            floatingActionButton = {
+                AnimatedVisibility(
+                    visible = showFab,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            end = 24.dp,
+                            // 如果处于选择模式，底部会有 NavigationBar，需要增加底部边距以避让
+                            bottom = if (isSelectionMode) 96.dp else 24.dp
+                        ),
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    FloatingActionButton(
+                        onClick = {
+                            scope.launch {
+                                listState.animateScrollToItem(0)
+                            }
+                        },
+                        shape = CircleShape,
+                        containerColor = SaltTheme.colors.highlight,
+                        contentColor = SaltTheme.colors.background,
+                        elevation = FloatingActionButtonDefaults.elevation(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_arrow_up_24dp),
+                            contentDescription = stringResource(R.string.cd_sort) // 或者 "Scroll to top"
+                        )
+                    }
+                }
+            },
             topBar = {
                 if (isSelectionMode) {
                     SelectionModeTopAppBar(
@@ -279,6 +316,15 @@ fun SongListScreen(
                                             }
                                         )
                                     }
+                                    ItemDivider()
+                                    ItemSwitcher(
+                                        text = stringResource(R.string.show_scroll_top_button),
+                                        state = showScrollTopButton,
+                                        sub = stringResource(R.string.show_scroll_top_button_hint),
+                                        onChange = {
+                                            viewModel.setScrollToTopButtonEnabled(!showScrollTopButton)
+                                        }
+                                    )
                                 }
                             }
                         },
@@ -998,13 +1044,10 @@ fun SongMenuBottomSheetContent(
     ) {
         // 操作列表
         RoundedColumn {
+            val songTitle = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName
+            val text = song.artist.takeIf { !it.isNullOrBlank() }?.let { "$songTitle - $it" } ?: songTitle
             ItemTip(
-                text = stringResource(
-                    R.string.menu_song_tip_format,
-                    song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
-                    song.artist.takeIf { !it.isNullOrBlank() }
-                        ?: stringResource(R.string.unknown_artist)
-                )
+                text = text
             )
             Item(
                 onClick = { onPlay() },
@@ -1156,6 +1199,14 @@ fun SongDetailBottomSheetContent(context: Context, song: SongEntity) {
                     Formatter.formatFileSize(context, song.fileSize)
                 else null
             )
+        }
+        if (BuildConfig.DEBUG){
+            item {
+                SongDetailItem(
+                    label = "文件URI",
+                    value = song.uri
+                )
+            }
         }
 
     }

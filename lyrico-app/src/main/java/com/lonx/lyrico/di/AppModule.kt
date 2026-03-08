@@ -165,7 +165,7 @@ val appModule = module {
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
     viewModel { SongListViewModel(get(), get(), get(),get(), get(), get(), get()) }
-    viewModel { SettingsViewModel(get()) }
+    viewModel { SettingsViewModel(get(),get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), get(), get()) }
     viewModel { LocalSearchViewModel(get()) }

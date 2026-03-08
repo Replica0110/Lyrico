@@ -110,9 +110,11 @@ fun BatchMatchHistoryDetailScreen(
                             text = record.filePath.substringAfterLast("/"),
                             sub = record.filePath,
                             onClick = {
-                                navigator.navigate(
-                                    EditMetadataDestination(record.filePath)
-                                )
+                                record.uri?.let {
+                                    navigator.navigate(
+                                        EditMetadataDestination(it)
+                                    )
+                                }
                             }
                         )
                     }

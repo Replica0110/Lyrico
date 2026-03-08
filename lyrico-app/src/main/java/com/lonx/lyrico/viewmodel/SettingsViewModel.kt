@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.CacheCategory
 import com.lonx.lyrico.data.model.ThemeMode
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
     val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
@@ -42,8 +44,10 @@ sealed class SettingsEvent {
     data class ShowToast(val message: UiMessage) : SettingsEvent()
 }
 class SettingsViewModel(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val database: LyricoDatabase
 ) : ViewModel() {
+    private val folder = database.folderDao()
     private val _categorizedCacheSize = MutableStateFlow<Map<CacheCategory, Long>>(emptyMap())
 
     // 使用 combine 合并设置流和缓存流
@@ -94,6 +98,11 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.saveRomaEnabled(enabled)
         }
+    }
+    suspend fun clearSongs(): Boolean = withContext(Dispatchers.IO) {
+        folder.clearAllFolders()
+        val counts = folder.getFoldersCount()
+        counts == 0
     }
     fun setTranslationEnabled(enabled: Boolean) {
         viewModelScope.launch {

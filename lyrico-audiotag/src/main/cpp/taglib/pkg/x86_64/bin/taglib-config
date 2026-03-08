@@ -1,0 +1,65 @@
+#!/bin/sh
+
+usage()
+{
+  echo "usage: $0 [OPTIONS]"
+cat << EOH
+
+options:
+  [--libs]
+  [--cflags]
+  [--version]
+  [--prefix]
+EOH
+  exit 1
+}
+
+# Looks useless as it is, but could be replaced with a "pcfiledir" by Buildroot.
+prefix=
+exec_prefix=
+
+if test -z "$prefix"; then
+  includedir=C:/Program Files (x86)/taglib/include
+else
+  includedir=${prefix}/include
+fi
+if test -z "$exec_prefix"; then
+  libdir=C:/Program Files (x86)/taglib/lib
+else
+  libdir=${exec_prefix}/lib
+fi
+
+flags=""
+
+if test $# -eq 0 ; then
+  usage
+fi
+
+while test $# -gt 0
+do
+  case $1 in
+    --libs)
+      flags="$flags -L$libdir -ltag "
+      ;;
+    --cflags)
+      flags="$flags -I$includedir -I$includedir/taglib"
+      ;;
+    --version)
+      echo 2.1.1
+      ;;
+    --prefix)
+      echo ${prefix:-C:/Program Files (x86)/taglib}
+      ;;
+    *)
+      echo "$0: unknown option $1"
+      echo
+      usage
+      ;;
+  esac
+  shift
+done
+
+if test -n "$flags"
+then
+  echo $flags
+fi

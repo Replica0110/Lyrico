@@ -14,7 +14,7 @@ import com.lonx.lyrico.data.model.BatchMatchResult
             entity = BatchMatchHistory::class,
             parentColumns = ["id"],
             childColumns = ["historyId"],
-            onDelete = ForeignKey.Companion.CASCADE
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [Index(value = ["historyId"])]
@@ -24,5 +24,6 @@ data class BatchMatchRecordEntity(
     val id: Long = 0,
     val historyId: Long,
     val filePath: String,
+    val uri: String? = null,
     val status: BatchMatchResult
 )

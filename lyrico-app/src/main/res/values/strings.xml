@@ -249,7 +249,6 @@
     <string name="cd_cover">Cover Art</string>
     <string name="cd_play">Play</string>
     <!-- Song Menu -->
-    <string name="menu_song_tip_format">%1$s - %2$s</string>
     <string name="menu_action_play">Play Music</string>
     <string name="menu_action_play_sub">Play audio using system player</string>
     <string name="menu_action_info">Song Info</string>
@@ -286,4 +285,11 @@
     <string name="choose_player">Choose Player</string>
     <string name="no_player_found">No available player found</string>
     <string name="unknown_error">An unknown error occurred: %1$s</string>
+    <string name="clear_songs">Clear All Songs</string>
+
+
+
+
+    <string name="show_scroll_top_button">Quick back to top</string>
+    <string name="show_scroll_top_button_hint">Shows a floating button when scrolling</string>
 </resources>

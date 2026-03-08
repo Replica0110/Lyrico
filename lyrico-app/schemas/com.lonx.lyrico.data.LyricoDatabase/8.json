@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 8,
-    "identityHash": "1b88fd703de3d94ed5aa7691ccf812e9",
+    "identityHash": "f3bdfb31757fa8d8b4d6c0c1733fd11c",
     "entities": [
       {
         "tableName": "songs",
@@ -405,7 +405,7 @@
       },
       {
         "tableName": "batch_match_records",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `historyId` INTEGER NOT NULL, `filePath` TEXT NOT NULL, `status` TEXT NOT NULL, FOREIGN KEY(`historyId`) REFERENCES `batch_match_history`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `historyId` INTEGER NOT NULL, `filePath` TEXT NOT NULL, `uri` TEXT, `status` TEXT NOT NULL, FOREIGN KEY(`historyId`) REFERENCES `batch_match_history`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -424,6 +424,11 @@
             "columnName": "filePath",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "uri",
+            "columnName": "uri",
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "status",
@@ -466,7 +471,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1b88fd703de3d94ed5aa7691ccf812e9')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f3bdfb31757fa8d8b4d6c0c1733fd11c')"
     ]
   }
 }

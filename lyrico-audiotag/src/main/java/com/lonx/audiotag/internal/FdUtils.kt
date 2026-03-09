@@ -12,3 +12,6 @@ internal object FdUtils {
         return pfd.dup().detachFd()
     }
 }
+fun Map<String, List<String>>.toArrayMap(): Map<String, Array<String>> {
+    return mapValues { it.value.toTypedArray() }
+}

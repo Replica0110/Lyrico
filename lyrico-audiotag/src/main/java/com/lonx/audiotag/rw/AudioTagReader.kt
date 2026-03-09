@@ -19,23 +19,11 @@ object AudioTagReader {
         return withContext(Dispatchers.IO) {
             try {
 
-//                val dup = ParcelFileDescriptor.dup(pfd.fileDescriptor)
-//                val fis = FileInputStream(dup.fileDescriptor)
 
                 val fd = FdUtils.getNativeFd(pfd)
-//                val audioFile = AudioFile(
-//                    uri = Uri.EMPTY,
-//                    path = Paths.get(""),
-//                    modifiedMs = 0,
-//                    mimeType = "",
-//                    size = 0,
-//                    parent = null
-//                )
 
-                val result = TagLibJNI.open(fd)
+                val result = TagLibJNI.read(fd)
 
-//                fis.close()
-//                dup.close()
 
                 val metadata = when (result) {
                     is MetadataResult.Success -> result.metadata
@@ -48,6 +36,19 @@ object AudioTagReader {
                 Log.e(TAG, "Read error", e)
                 AudioTagData()
             }
+        }
+    }
+    suspend fun readPicture(pfd: ParcelFileDescriptor): ByteArray? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val fd = FdUtils.getNativeFd(pfd)
+                val result = TagLibJNI.readPicture(fd)
+                    return@withContext result
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Read error", e)
+            }
+            return@withContext null
         }
     }
 
@@ -77,7 +78,7 @@ object AudioTagReader {
         fun firstIntOf(vararg keys: String): Int? = firstOf(*keys)?.substringBefore('/')?.toIntOrNull()
 
         // 常用可选字段
-        val lyrics = firstOf("LYRICS", "UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG")
+        val lyrics = firstOf("LYRICS", "UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG","TXXX:USLT")
         val albumArtist = firstOf("ALBUMARTIST", "ALBUM ARTIST", "TPE2", "aART", "ALBUMARTISTSORT")
         val discNumber = firstIntOf("DISCNUMBER", "DISC", "TPOS", "DISKNUMBER")
         val composer = firstOf("COMPOSER", "TCOM", "©wrt")

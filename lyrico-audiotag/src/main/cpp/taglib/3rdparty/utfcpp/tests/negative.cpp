@@ -13,7 +13,7 @@ const unsigned* INVALID_LINES_END = INVALID_LINES + sizeof(INVALID_LINES)/sizeof
 int main(int argc, char** argv)
 {
     string test_file_path;
-    if (argc == 2) 
+    if (argc == 2)
         test_file_path = argv[1];
     else {
         cout << "Wrong number of arguments" << endl;
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     // Open the test file
     ifstream fs8(test_file_path.c_str());
     if (!fs8.is_open()) {
-        cout << "Could not open " << test_file_path << endl;
+        cout << "Could not read " << test_file_path << endl;
         return 1;
     }
 

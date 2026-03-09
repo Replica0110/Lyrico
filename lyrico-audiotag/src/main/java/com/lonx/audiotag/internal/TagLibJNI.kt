@@ -1,7 +1,5 @@
 package com.lonx.audiotag.internal
 
-import java.io.FileInputStream
-
 sealed interface MetadataResult {
     data class Success(val metadata: Metadata?) : MetadataResult
 
@@ -17,14 +15,22 @@ internal object TagLibJNI {
         System.loadLibrary("tagJNI")
     }
 
-    /**
-     * Open a file and extract a tag.
-     *
-     * Note: This method is blocking and should be handled as such if calling from a coroutine.
-     */
-    fun open(fd:Int): MetadataResult {
-        return openNative(fd)
+
+    fun read(fd:Int): MetadataResult {
+        return readNative(fd)
+    }
+    fun readPicture(fd:Int): ByteArray? {
+        return readPictureNative(fd)
+    }
+    fun write(fd:Int, map: HashMap<String, List<String>>): Boolean {
+        return writeNative(fd, map)
+    }
+    fun writePictures(fd:Int, picturesData: Array<ByteArray>): Boolean {
+        return writePicturesNative(fd, picturesData)
     }
 
-    private external fun openNative(fd: Int): MetadataResult
+    private external fun readNative(fd: Int): MetadataResult
+    private external fun readPictureNative(fd: Int): ByteArray?
+    private external fun writeNative(pfd: Int, map: HashMap<String, List<String>>): Boolean
+    private external fun writePicturesNative(fd: Int, picturesData: Array<ByteArray>): Boolean
 }

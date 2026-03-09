@@ -247,12 +247,12 @@ namespace TagLib {
 
     /*!
      * Since the file can currently only be opened as an argument to the
-     * constructor (sort-of by design), this returns if that open succeeded.
+     * constructor (sort-of by design), this returns if that read succeeded.
      */
     bool isOpen() const;
 
     /*!
-     * Returns \c true if the file is open and readable.
+     * Returns \c true if the file is read and readable.
      */
     bool isValid() const;
 
@@ -281,7 +281,7 @@ namespace TagLib {
 
   protected:
     /*!
-     * Construct a File object and open the \a fileName.  \a fileName should be a
+     * Construct a File object and read the \a fileName.  \a fileName should be a
      * C-string in the local file system encoding.
      *
      * \note Constructor is protected since this class should only be

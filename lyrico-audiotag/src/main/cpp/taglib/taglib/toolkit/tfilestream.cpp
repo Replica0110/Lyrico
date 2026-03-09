@@ -174,7 +174,7 @@ FileStream::FileStream(FileName fileName, bool openReadOnly) :
 # ifdef _WIN32
     debug("Could not open file " + fileName.toString());
 # else
-    debug("Could not open file " + String(static_cast<const char *>(d->name)));
+    debug("Could not read file " + String(static_cast<const char *>(d->name)));
 # endif
 }
 
@@ -192,7 +192,7 @@ FileStream::FileStream(int fileDescriptor, bool openReadOnly) :
     d->file = openFile(fileDescriptor, true);
 
   if(d->file == InvalidFileHandle)
-    debug("Could not open file using file descriptor");
+    debug("Could not read file using file descriptor");
 }
 
 FileStream::~FileStream()

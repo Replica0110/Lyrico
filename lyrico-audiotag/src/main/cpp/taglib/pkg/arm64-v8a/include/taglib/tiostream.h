@@ -133,7 +133,7 @@ namespace TagLib {
 
     /*!
      * Since the file can currently only be opened as an argument to the
-     * constructor (sort-of by design), this returns if that open succeeded.
+     * constructor (sort-of by design), this returns if that read succeeded.
      */
     virtual bool isOpen() const = 0;
 

@@ -43,7 +43,7 @@ namespace TagLib {
   {
   public:
     /*!
-     * Construct a FileStream object and open the \a fileName.  \a fileName should be a
+     * Construct a FileStream object and read the \a fileName.  \a fileName should be a
      * C-string in the local file system encoding.
      */
     FileStream(FileName fileName, bool openReadOnly = false);
@@ -107,7 +107,7 @@ namespace TagLib {
 
     /*!
      * Since the file can currently only be opened as an argument to the
-     * constructor (sort-of by design), this returns if that open succeeded.
+     * constructor (sort-of by design), this returns if that read succeeded.
      */
     bool isOpen() const override;
 

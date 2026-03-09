@@ -317,31 +317,25 @@ class SongRepositoryImpl(
         context.contentResolver.openFileDescriptor(contentUri, "rw")?.use { pfdDescriptor ->
 
             val updates = mutableMapOf<String, String>()
+
             audioTagData.title?.let { updates["TITLE"] = it }
             audioTagData.artist?.let { updates["ARTIST"] = it }
             audioTagData.album?.let { updates["ALBUM"] = it }
             audioTagData.genre?.let { updates["GENRE"] = it }
             audioTagData.date?.let { updates["DATE"] = it }
             audioTagData.trackerNumber?.let { updates["TRACKNUMBER"] = it }
-            audioTagData.albumArtist?.let {
-                updates["ALBUMARTIST"] = it
-                updates["TPE2"] = it
-            }
-            audioTagData.discNumber?.let {
-                updates["DISCNUMBER"] = it.toString()
-                updates["TPOS"] = it.toString()
-            }
-            audioTagData.composer?.let {
-                updates["COMPOSER"] = it
-                updates["TCOM"] = it
-            }
+
+            audioTagData.albumArtist?.let { updates["ALBUMARTIST"] = it }
+            audioTagData.discNumber?.let { updates["DISCNUMBER"] = it.toString() }
+            audioTagData.composer?.let { updates["COMPOSER"] = it }
+            audioTagData.comment?.let { updates["COMMENT"] = it }
+
             audioTagData.lyricist?.let {
                 updates["LYRICIST"] = it
-                updates["TEXT"] = it
             }
-            audioTagData.comment?.let {
-                updates["COMMENT"] = it
-                updates["COMM"] = it
+
+            audioTagData.lyrics?.let {
+                updates["LYRICS"] = it
             }
 
             AudioTagWriter.writeTags(pfdDescriptor, updates)

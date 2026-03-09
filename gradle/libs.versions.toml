@@ -21,7 +21,6 @@ reorderable = "3.0.0"
 retrofit = "3.0.0"
 retrofit2KotlinxSerializationConverter = "1.0.0"
 saltui = "2.9.0-alpha06"
-taglib = "1.0.5"
 datastorePreferences = "1.2.0"
 room = "2.8.4"
 tinypinyin = "2.0.3"
@@ -57,7 +56,6 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 retrofit2-kotlinx-serialization-converter = { module = "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter", version.ref = "retrofit2KotlinxSerializationConverter" }
-taglib = { module = "io.github.kyant0:taglib", version.ref = "taglib" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koinAndroid" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koinAndroidxCompose" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }

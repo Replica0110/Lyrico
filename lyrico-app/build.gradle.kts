@@ -115,7 +115,6 @@ dependencies {
     implementation(libs.tinypinyin)
 
     // KSP
-    implementation("com.github.RouHim:jaudiotagger:2.0.16")
     ksp(libs.compose.destinations.ksp)
     ksp(libs.androidx.room.compiler)
 

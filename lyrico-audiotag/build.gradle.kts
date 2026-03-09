@@ -52,8 +52,6 @@ android {
 }
 
 dependencies {
-    implementation(libs.taglib)
-    implementation("com.github.RouHim:jaudiotagger:2.0.16")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.monitor)
     testImplementation(libs.junit)

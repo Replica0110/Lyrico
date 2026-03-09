@@ -1,53 +1,56 @@
 #!/bin/bash
 set -e
 
+# --------------------------------------
+# 参数处理
+# --------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKING_DIR=${1:-$SCRIPT_DIR}
-
-# 获取NDK路径：参数优先，其次环境变量ANDROID_NDK_HOME
+PROJECT_ROOT=${1:-"$SCRIPT_DIR/../.."}   # 默认项目根目录为脚本上两级
 NDK_PATH=${2:-${ANDROID_NDK_HOME:-""}}
+
 if [ -z "$NDK_PATH" ]; then
     echo "Error: NDK path not specified and ANDROID_NDK_HOME is not set."
     exit 1
 fi
 
-echo "Working directory is at $WORKING_DIR"
-echo "NDK path is at $NDK_PATH"
+echo "Project root: $PROJECT_ROOT"
+echo "NDK path: $NDK_PATH"
 
-cd "$WORKING_DIR"
+# --------------------------------------
+# 目录设置
+# --------------------------------------
+TAGLIB_SRC_DIR="$PROJECT_ROOT/src/main/cpp/taglib"
+TAGLIB_BUILD_DIR="$PROJECT_ROOT/build/taglib"
+TAGLIB_PKG_DIR="$PROJECT_ROOT/pkg/taglib"
+NDK_TOOLCHAIN="$PROJECT_ROOT/src/main/cpp/android.toolchain.cmake"
 
-TAGLIB_SRC_DIR="${WORKING_DIR}/taglib"
-TAGLIB_DST_DIR="${WORKING_DIR}/taglib/build"
-TAGLIB_PKG_DIR="${WORKING_DIR}/taglib/pkg"
-NDK_TOOLCHAIN="${WORKING_DIR}/android.toolchain.cmake"
-
-echo "Taglib source is at $TAGLIB_SRC_DIR"
-echo "Taglib build is at $TAGLIB_DST_DIR"
-echo "Taglib package is at $TAGLIB_PKG_DIR"
-echo "NDK toolchain is at $NDK_TOOLCHAIN"
+echo "Taglib source: $TAGLIB_SRC_DIR"
+echo "Build dir: $TAGLIB_BUILD_DIR"
+echo "Install dir: $TAGLIB_PKG_DIR"
+echo "NDK toolchain: $NDK_TOOLCHAIN"
 
 [ -d "$TAGLIB_SRC_DIR" ] || { echo "Error: Taglib source directory not found"; exit 1; }
 [ -f "$NDK_TOOLCHAIN" ] || { echo "Error: NDK toolchain not found"; exit 1; }
 
-if [ ! -f "$NDK_TOOLCHAIN" ]; then
-    echo "Error: NDK toolchain not found at $NDK_TOOLCHAIN"
-    exit 1
-fi
-
-# 创建必要的目录
-mkdir -p "$TAGLIB_DST_DIR"
+# --------------------------------------
+# 创建必要目录
+# --------------------------------------
+mkdir -p "$TAGLIB_BUILD_DIR"
 mkdir -p "$TAGLIB_PKG_DIR"
 
-# 定义架构
+# --------------------------------------
+# 架构定义
+# --------------------------------------
 X86_ARCH=x86
 X86_64_ARCH=x86_64
 ARMV7_ARCH=armeabi-v7a
 ARMV8_ARCH=arm64-v8a
 
-# 检查是否安装了Ninja
+# --------------------------------------
+# 生成器检查
+# --------------------------------------
 if ! command -v ninja &> /dev/null; then
-    echo "Warning: Ninja not found, trying to use mingw32-make or make"
-    # 尝试检测可用的生成器
+    echo "Warning: Ninja not found, trying make or mingw32-make"
     if command -v mingw32-make &> /dev/null; then
         GENERATOR="MinGW Makefiles"
     elif command -v make &> /dev/null; then
@@ -62,25 +65,24 @@ fi
 
 echo "Using CMake generator: $GENERATOR"
 
+# --------------------------------------
+# 构建函数
+# --------------------------------------
 build_for_arch() {
     local ARCH=$1
-    local DST_DIR="$TAGLIB_DST_DIR/$ARCH"
+    local DST_DIR="$TAGLIB_BUILD_DIR/$ARCH"
     local PKG_DIR="$TAGLIB_PKG_DIR/$ARCH"
-    
+
     echo "=========================================="
-    echo "Building for ABI: $ARCH"
-    echo "Build directory: $DST_DIR"
-    echo "Install directory: $PKG_DIR"
+    echo "Building ABI: $ARCH"
+    echo "Build dir: $DST_DIR"
+    echo "Install dir: $PKG_DIR"
     echo "=========================================="
-    
-    # 清理旧的构建目录
+
     rm -rf "$DST_DIR"
     mkdir -p "$DST_DIR"
-    
-    # 进入源目录
-    cd "$TAGLIB_SRC_DIR"
-    
-    # CMake配置
+    mkdir -p "$PKG_DIR"
+
     cmake -B "$DST_DIR" \
         -G "$GENERATOR" \
         -DCMAKE_TOOLCHAIN_FILE="$NDK_TOOLCHAIN" \
@@ -101,45 +103,30 @@ build_for_arch() {
         -DWITH_TRUEAUDIO=OFF \
         -DCMAKE_CXX_FLAGS="-fPIC" \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -DCMAKE_SYSTEM_NAME=Android
-    
-    # 检查CMake配置是否成功
-    if [ $? -ne 0 ]; then
-        echo "CMake configuration failed for $ARCH"
-        exit 1
-    fi
-    
-    # 编译 - 根据生成器选择并行编译参数
+        -DCMAKE_SYSTEM_NAME=Android \
+        "$TAGLIB_SRC_DIR"
+
+    # 编译
     echo "Building for $ARCH..."
     if [ "$GENERATOR" = "Ninja" ]; then
         cmake --build "$DST_DIR" --config Release -j$(nproc 2>/dev/null || echo 4)
     else
-        # 对于Makefiles，直接调用make
         cd "$DST_DIR"
         make -j$(nproc 2>/dev/null || echo 4)
-        cd "$TAGLIB_SRC_DIR"
     fi
-    
-    if [ $? -ne 0 ]; then
-        echo "Build failed for $ARCH"
-        exit 1
-    fi
-    
+
     # 安装
-    echo "Installing for $ARCH to $PKG_DIR"
+    echo "Installing to $PKG_DIR"
     cmake --install "$DST_DIR" --config Release --prefix "$PKG_DIR" --strip
-    
-    if [ $? -ne 0 ]; then
-        echo "Install failed for $ARCH"
-        exit 1
-    fi
-    
-    echo "Finished building for $ARCH"
+
+    echo "Finished building $ARCH"
     echo ""
 }
 
-# 为所有架构构建
-echo "Starting builds for all architectures..."
+# --------------------------------------
+# 构建所有架构
+# --------------------------------------
+echo "Building all architectures..."
 build_for_arch "$X86_ARCH"
 build_for_arch "$X86_64_ARCH"
 build_for_arch "$ARMV7_ARCH"
@@ -147,8 +134,6 @@ build_for_arch "$ARMV8_ARCH"
 
 echo "=========================================="
 echo "All builds completed successfully!"
-echo "Libraries are installed in: $TAGLIB_PKG_DIR"
-
-# 显示构建结果
+echo "Libraries installed at: $TAGLIB_PKG_DIR"
 echo "Build results:"
 ls -la "$TAGLIB_PKG_DIR"/*/lib/*.a 2>/dev/null || echo "No static libraries found"

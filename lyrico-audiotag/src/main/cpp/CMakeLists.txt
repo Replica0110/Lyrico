@@ -11,60 +11,40 @@ cmake_minimum_required(VERSION 3.22.1)
 # build script scope).
 project("tagJNI") # becomes "libtagJNI.so"
 
-# Creates and names a library, sets it as either STATIC
-# or SHARED, and provides the relative paths to its source code.
-# You can define multiple libraries, and CMake builds them for you.
-# Gradle automatically packages shared libraries with your APK.
-#
-# In this top level CMakeLists.txt, ${CMAKE_PROJECT_NAME} is used to define
-# the target library name; in the sub-module's CMakeLists.txt, ${PROJECT_NAME}
-# is preferred for the same purpose.
-#
-# In order to load a library into your app from Java/Kotlin, you must call
-# System.loadLibrary() and pass the name of the library defined here;
-# for GameActivity/NativeActivity derived applications, the same library name must be
-# used in the AndroidManifest.xml file.
-set(taglib_location "${CMAKE_CURRENT_SOURCE_DIR}/taglib")
-set(taglib_pkg "${taglib_location}/pkg/${ANDROID_ABI}")
-set(taglib_lib "${taglib_pkg}/lib")
-set(taglib_include "${taglib_pkg}/include")
+message(STATUS "TagLib lib path: ${TAGLIB_FILE_PATH}")
+message(STATUS "TagLib include path: ${TAGLIB_INCLUDE_DIR}")
 
-set(taglib_file_name libtag.a)
-set(taglib_file_path ${taglib_lib}/${taglib_file_name})
-set(taglib_lib_name, "taglib")
-add_library(
-        "taglib"
-        STATIC
-        IMPORTED)
-set_target_properties(
-        "taglib" PROPERTIES
-        IMPORTED_LOCATION
-        ${taglib_file_path}
-        INTERFACE_INCLUDE_DIRECTORIES
-        ${taglib_include})
-add_library(${CMAKE_PROJECT_NAME} SHARED
-        # List C/C++ source files with relative paths to this CMakeLists.txt.
-        taglib_jni.cpp
-        JTagMap.cpp
-        JMetadataBuilder.cpp
-        JClassRef.cpp
-        JObjectRef.cpp
-        JStringRef.cpp
-        JByteArrayRef.cpp
+# -----------------------------
+# 导入静态库
+# -----------------------------
+add_library(taglib STATIC IMPORTED)
+set_target_properties(taglib PROPERTIES
+    IMPORTED_LOCATION "${TAGLIB_FILE_PATH}"
+    INTERFACE_INCLUDE_DIRECTORIES "${TAGLIB_INCLUDE_DIR}"
 )
-target_link_options(${CMAKE_PROJECT_NAME}
-        # @Tolriq found that these flags can reduce the size of the linked
-        # taglib + jni shim shared library. Kudos to them.
-        # https://github.com/taglib/taglib/issues/1212#issuecomment-2326456903
-        # Additionally, enable 16kb page size. I believe taglib can support this fine,
-        # as a cursory glance indicates that it doesn't hardcode any page sizes.
-        PRIVATE "-Wl,--exclude-libs,ALL,-z,max-page-size=16384")
 
-# Specifies libraries CMake should link to your target library. You
-# can link libraries from various origins, such as libraries defined in this
-# build script, prebuilt third-party libraries, or Android system libraries.
-target_link_libraries(${CMAKE_PROJECT_NAME}
-        # List libraries link to the target library
-        PRIVATE android
-        PRIVATE log
-        PRIVATE taglib)
+# -----------------------------
+# 创建 JNI Shared Library
+# -----------------------------
+add_library(${PROJECT_NAME} SHARED
+    taglib_jni.cpp
+    JTagMap.cpp
+    JMetadataBuilder.cpp
+    JClassRef.cpp
+    JObjectRef.cpp
+    JStringRef.cpp
+    JByteArrayRef.cpp
+)
+
+target_link_options(${PROJECT_NAME} PRIVATE
+    "-Wl,--exclude-libs,ALL,-z,max-page-size=16384"
+)
+
+# -----------------------------
+# 链接库
+# -----------------------------
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE android
+    PRIVATE log
+    PRIVATE taglib
+)

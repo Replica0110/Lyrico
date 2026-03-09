@@ -47,8 +47,8 @@ jobs:
 
       - name: 🔨 构建 TagLib
         run: |
-          chmod +x lyrico-audiotag/src/main/cpp/build_taglib.sh
-          ./lyrico-audiotag/src/main/cpp/build_taglib.sh
+          chmod +x lyrico-audiotag/scripts/build_taglib.sh
+          ./lyrico-audiotag/scripts/build_taglib.sh
 
       - name: 🔐 赋予 gradlew 执行权限
         run: chmod +x gradlew

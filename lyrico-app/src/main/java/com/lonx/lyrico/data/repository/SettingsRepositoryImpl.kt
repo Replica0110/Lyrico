@@ -14,11 +14,15 @@ import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
+import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.toSourceCsv
+import com.lonx.lyrics.model.toSourceList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toSet
 import kotlinx.serialization.json.Json
 
 
@@ -130,22 +134,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val searchSourceOrder: Flow<List<Source>>
         get() = context.settingsDataStore.data.map { preferences ->
-            val orderString = preferences[PreferencesKeys.SEARCH_SOURCE_ORDER]
-            if (orderString.isNullOrBlank()) {
-                SettingsDefaults.SEARCH_SOURCE_ORDER
-            } else {
-                try {
-                    orderString.split(",").mapNotNull { name ->
-                        try {
-                            Source.valueOf(name.trim())
-                        } catch (e: IllegalArgumentException) {
-                            null
-                        }
-                    }.ifEmpty { SettingsDefaults.SEARCH_SOURCE_ORDER }
-                } catch (e: Exception) {
-                    SettingsDefaults.SEARCH_SOURCE_ORDER
-                }
-            }
+            preferences[PreferencesKeys.SEARCH_SOURCE_ORDER].toSourceList()
         }
 
     override val searchPageSize: Flow<Int>
@@ -316,7 +305,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun saveSearchSourceOrder(sources: List<Source>) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.SEARCH_SOURCE_ORDER] = sources.joinToString(",") { it.name }
+            preferences[PreferencesKeys.SEARCH_SOURCE_ORDER] =
+                sources.toSourceCsv()
         }
     }
 
@@ -398,8 +388,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             ignoreShortAudio = prefs[PreferencesKeys.IGNORE_SHORT_AUDIO]
                 ?: SettingsDefaults.IGNORE_SHORT_AUDIO,
 
-            searchSourceOrder = prefs[PreferencesKeys.SEARCH_SOURCE_ORDER]
-                ?: SettingsDefaults.SEARCH_SOURCE_ORDER.joinToString(",") { it.name },
+            searchSourceOrder = SettingsDefaults.SEARCH_SOURCE_ORDER.map { it.name },
 
             searchPageSize = prefs[PreferencesKeys.SEARCH_PAGE_SIZE]
                 ?: SettingsDefaults.SEARCH_PAGE_SIZE,
@@ -408,7 +397,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 ?: SettingsDefaults.THEME_MODE.name,
 
             onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE]
-                ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE
+                ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE,
+
+            showScrollTopButton = prefs[PreferencesKeys.SHOW_SCROLL_TOP_BUTTON]
+                ?: SettingsDefaults.SHOW_SCROLL_TOP_BUTTON
         )
 
         return jsonFormatter.encodeToString(backup)
@@ -429,11 +421,17 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.checkUpdateEnabled?.let { prefs[PreferencesKeys.CHECK_UPDATE_ENABLED] = it }
                 backup.translationEnabled?.let { prefs[PreferencesKeys.TRANSLATION_ENABLED] = it }
                 backup.ignoreShortAudio?.let { prefs[PreferencesKeys.IGNORE_SHORT_AUDIO] = it }
-                backup.searchSourceOrder?.let { prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] = it }
+                backup.searchSourceOrder?.let { list ->
+                    prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] =
+                        list.toSourceList().toSourceCsv()
+                }
                 backup.searchPageSize?.let { prefs[PreferencesKeys.SEARCH_PAGE_SIZE] = it }
                 backup.themeMode?.let { prefs[PreferencesKeys.THEME_MODE] = it }
                 backup.onlyTranslationIfAvailable?.let {
                     prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] = it
+                }
+                backup.showScrollTopButton?.let {
+                    prefs[PreferencesKeys.SHOW_SCROLL_TOP_BUTTON] = it
                 }
             }
             true

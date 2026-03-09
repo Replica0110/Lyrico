@@ -15,8 +15,9 @@ data class SettingsBackup(
     @SerialName("check_update_enabled") val checkUpdateEnabled: Boolean? = null,
     @SerialName("translation_enabled") val translationEnabled: Boolean? = null,
     @SerialName("ignore_short_audio") val ignoreShortAudio: Boolean? = null,
-    @SerialName("search_source_order") val searchSourceOrder: String? = null,
+    @SerialName("search_source_order") val searchSourceOrder: List<String>? = null,
     @SerialName("search_page_size") val searchPageSize: Int? = null,
     @SerialName("theme_mode") val themeMode: String? = null,
-    @SerialName("only_translation_if_available") val onlyTranslationIfAvailable: Boolean? = null
+    @SerialName("only_translation_if_available") val onlyTranslationIfAvailable: Boolean? = null,
+    @SerialName("show_scroll_top_button") val showScrollTopButton: Boolean? = null
 )

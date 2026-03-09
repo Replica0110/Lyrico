@@ -45,6 +45,11 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
+      - name: 🔨 构建 TagLib
+        run: |
+          chmod +x lyrico-audiotag/build_taglib.sh
+          ./lyrico-audiotag/build_taglib.sh
+
       - name: 🔐 赋予 gradlew 执行权限
         run: chmod +x gradlew
 

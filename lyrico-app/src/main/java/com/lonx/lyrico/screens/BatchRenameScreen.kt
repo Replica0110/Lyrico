@@ -2,36 +2,41 @@ package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lonx.lyrico.viewmodel.BatchRenameViewModel
-import com.lonx.lyrico.viewmodel.SongForBatchRename
-import com.moriafly.salt.ui.RoundedColumn
-import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.Text
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.annotation.RootGraph
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import org.koin.androidx.compose.koinViewModel
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
+import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.RenamePreview
-import com.lonx.lyrico.ui.components.ItemExt
 import com.lonx.lyrico.ui.theme.LyricoColors.modifiedBorder
 import com.lonx.lyrico.utils.RenameEngine
 import com.lonx.lyrico.utils.TagField
-import com.moriafly.salt.ui.Icon
+import com.lonx.lyrico.viewmodel.BatchRenameViewModel
+import com.lonx.lyrico.viewmodel.SongForBatchRename
 import com.moriafly.salt.ui.ItemButton
 import com.moriafly.salt.ui.ItemCheck
 import com.moriafly.salt.ui.ItemDivider
@@ -41,12 +46,15 @@ import com.moriafly.salt.ui.ItemInfoType
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.ItemTip
+import com.moriafly.salt.ui.RoundedColumn
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.dialog.YesNoDialog
-import com.moriafly.salt.ui.icons.Check
-import com.moriafly.salt.ui.icons.SaltIcons
-import com.moriafly.salt.ui.rememberScrollState
-import com.moriafly.salt.ui.verticalScroll
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(UnstableSaltUiApi::class)
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -59,17 +67,11 @@ fun BatchRenameScreen(
     val viewModel: BatchRenameViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val scrollState = rememberScrollState()
 
-    // 解析传入的文件路径
     LaunchedEffect(filePaths) {
         if (filePaths.isNotEmpty()) {
             val songList = filePaths.map { path ->
-                SongForBatchRename(
-                    filePath = path,
-                    fileName = path.substringAfterLast('/'),
-                    tagData = null
-                )
+                SongForBatchRename(path, path.substringAfterLast('/'), null)
             }
             viewModel.setSongs(context, songList)
         }
@@ -78,117 +80,98 @@ fun BatchRenameScreen(
     var showPlaceholderInfo by remember { mutableStateOf(false) }
 
     BasicScreenBox(
-        title = "批量重命名",
-        onBack = {
-            if (!uiState.isRenamingInProgress) {
-                navigator.popBackStack()
-            }
-        },
-        toolbar = {
-//            IconButton(
-//                onClick = {
-//                    viewModel.executeRename()
-//                },
-//                modifier = Modifier
-//                    .size(56.dp)
-//            ) {
-//                Icon(
-//                    imageVector = SaltIcons.Check,
-//                    contentDescription = null,
-//                    modifier = Modifier
-//                        .size(SaltTheme.dimens.itemIcon)
-//                )
-//            }
-        }
+        title = stringResource(id = R.string.batch_rename_title),
+        onBack = { if (!uiState.isRenamingInProgress) navigator.popBackStack() }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            // 1. 命名格式设置区
-            ItemOuterTitle(text = "命名格式")
-            RoundedColumn {
-                // 输入框 Item
-                ItemEdit(
-                    value = uiState.format,
-                    onValueChange = { viewModel.setFormat(context, it) },
-                    placeholder = "{@1} - {@4}",
-                    hintText = "输入命名规则，例如 {@1} - {@4}"
-                )
-
-                ItemDropdown(
-                    text = "重命名预设",
-                    value = uiState.format,
-                    content = {
-                        uiState.presetFormats.forEach { format ->
-                            ItemCheck(
-                                text = format,
-                                state = uiState.format == format,
-                                onChange = {
-                                    viewModel.setFormat(context, format)
-                                    state.dismiss()
-                                }
-                            )
-                        }
-                    }
-                )
-
-                // 占位符说明开关
-                ItemSwitcher(
-                    text = "查看占位符说明",
-                    state = showPlaceholderInfo,
-                    onChange = { showPlaceholderInfo = it }
-                )
-                AnimatedVisibility(visible = showPlaceholderInfo) {
-                    PlaceholderInfoContent()
-                }
-                ItemButton(
-                    onClick = {
-                        viewModel.executeRename()
-                    },
-                    enabled = uiState.previews.isNotEmpty() && !uiState.isRenamingInProgress,
-                    text = "执行重命名",
-                )
-            }
-
-            ItemOuterTitle(
-                text = "预览 (${uiState.previews.size})" + if (uiState.isGeneratingPreview) " (生成中...)" else ""
-            )
-
-            RoundedColumn {
-                if (uiState.previews.isEmpty()) {
-                    ItemTip(text = "没有可预览的文件")
-                } else {
-                    uiState.previews.forEachIndexed { index, preview ->
-                        PreviewItem(preview = preview)
-                        if (index < uiState.previews.size - 1) {
-                            ItemDivider()
-                        }
-                    }
-                }
-                if (uiState.errorMessage != null) {
-                    ItemInfo(
-                        text = uiState.errorMessage!!,
-                        infoType = ItemInfoType.Error
+            item {
+                ItemOuterTitle(text = stringResource(id = R.string.rename_format))
+                RoundedColumn {
+                    ItemEdit(
+                        value = uiState.format,
+                        onValueChange = { viewModel.setFormat(context, it) },
+                        placeholder = stringResource(id = R.string.format_placeholder),
+                        hintText = stringResource(id = R.string.format_hint)
                     )
-
+                    ItemDropdown(
+                        text = stringResource(id = R.string.format_preset),
+                        value = if (uiState.presetFormats.contains(uiState.format)) uiState.format else "",
+                        content = {
+                            uiState.presetFormats.forEach { format ->
+                                ItemCheck(
+                                    text = format,
+                                    state = uiState.format == format,
+                                    onChange = {
+                                        viewModel.setFormat(
+                                            context,
+                                            format
+                                        ); state.dismiss()
+                                    }
+                                )
+                            }
+                        }
+                    )
+                    ItemSwitcher(
+                        text = stringResource(id = R.string.format_preset_show_placeholders),
+                        state = showPlaceholderInfo,
+                        onChange = { showPlaceholderInfo = it }
+                    )
+                    AnimatedVisibility(visible = showPlaceholderInfo) {
+                        PlaceholderInfoContent()
+                    }
+                    ItemButton(
+                        onClick = { viewModel.executeRename() },
+                        enabled = uiState.previews.isNotEmpty() && !uiState.isRenamingInProgress,
+                        text = stringResource(id = R.string.action_rename),
+                    )
                 }
             }
 
+            item {
+                ItemOuterTitle(
+                    text = stringResource(
+                        if (uiState.isGeneratingPreview)
+                            R.string.preview_title_generating
+                        else
+                            R.string.preview_title,
+                        uiState.previews.size
+                    )
+                )
+            }
 
-            Spacer(modifier = Modifier.height(SaltTheme.dimens.padding))
+            if (uiState.previews.isEmpty()) {
+                item {
+                    RoundedColumn { ItemTip(text =stringResource(id = R.string.preview_empty_tip)) }
+                }
+            } else {
+                item {
+                    RoundedColumn {
+                        uiState.previews.forEachIndexed { index, preview ->
+                            PreviewItem(preview = preview)
+                            if (index < uiState.previews.size - 1) {
+                                ItemDivider()
+                            }
+                        }
+                    }
+                }
+            }
 
+            uiState.errorMessage?.let {
+                item {
+                    RoundedColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        it.asString(context)?.let { text -> ItemInfo(text = text, infoType = ItemInfoType.Error) }
+                    }
+                }
+            }
         }
 
-        // 结果弹窗
         if (uiState.renameResult != null) {
             RenameResultDialog(
                 result = uiState.renameResult!!,
-                onDismiss = {
-                    viewModel.clearResult()
-                    navigator.popBackStack()
-                }
+                onDismiss = { viewModel.clearResult(); navigator.popBackStack() }
             )
         }
     }
@@ -202,24 +185,31 @@ private fun PreviewItem(preview: RenamePreview) {
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Text(
-            text = "旧: ${preview.originalPath.substringAfterLast('/')}",
+            text = stringResource(
+                R.string.label_old_name,
+                preview.originalPath.substringAfterLast('/')
+            ),
             fontSize = 13.sp,
             color = SaltTheme.colors.subText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.height(4.dp))
+
         Text(
-            text = "新: ${preview.newPath.substringAfterLast('/')}",
+            text = stringResource(
+                R.string.label_new_name,
+                preview.newPath.substringAfterLast('/')
+            ),
             fontSize = 14.sp,
             color = if (preview.conflict) modifiedBorder else SaltTheme.colors.highlight,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+
         if (preview.conflict) {
             Text(
-                text = "⚠️ 名称冲突，将自动加数字后缀",
+                text = stringResource(R.string.rename_conflict_warning),
                 fontSize = 11.sp,
                 color = modifiedBorder,
                 modifier = Modifier.padding(top = 2.dp)
@@ -268,15 +258,36 @@ private fun RenameResultDialog(
     YesNoDialog(
         onDismissRequest = onDismiss,
         onConfirm = onDismiss,
-        title = if (result.isSuccessful) "重命名成功" else "重命名结束",
-        confirmText = "确定",
+        title = stringResource(
+            if (result.isSuccessful)
+                R.string.rename_success_title
+            else
+                R.string.rename_finished_title
+        ),
+        confirmText = stringResource(R.string.confirm),
         content = buildString {
-            append("成功: ${result.successCount} / 总数: ${result.totalCount}\n")
+            append(
+                stringResource(
+                    R.string.rename_result_summary,
+                    result.successCount,
+                    result.totalCount
+                )
+            )
+            append("\n")
+
             if (result.failureCount > 0) {
-                append("失败: ${result.failureCount}\n")
+                append(
+                    stringResource(
+                        R.string.rename_result_failure,
+                        result.failureCount
+                    )
+                )
+                append("\n")
+
                 result.failed.take(3).forEach { (_, error) ->
                     append("• $error\n")
                 }
+
                 if (result.failed.size > 3) {
                     append("...")
                 }
@@ -302,7 +313,13 @@ private fun ItemEdit(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(text = placeholder, color = SaltTheme.colors.subText, fontSize = 14.sp) },
+            placeholder = {
+                Text(
+                    text = placeholder,
+                    color = SaltTheme.colors.subText,
+                    fontSize = 14.sp
+                )
+            },
             readOnly = readOnly,
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(

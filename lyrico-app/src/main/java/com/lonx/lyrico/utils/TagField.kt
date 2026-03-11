@@ -7,10 +7,10 @@ enum class TagField(
     val index: Int,
     @field:StringRes val description: Int
 ) {
-    ARTIST(1, R.string.label_artists),
-    ALBUM_ARTIST(2, R.string.label_album_artist),
-    ALBUM(3, R.string.label_album),
-    TITLE(4, R.string.label_title),
+    TITLE(1, R.string.label_title),
+    ARTIST(2, R.string.label_artists),
+    ALBUM_ARTIST(3, R.string.label_album_artist),
+    ALBUM(4, R.string.label_album),
     TRACK(5, R.string.label_track_number),
     DISC(6, R.string.label_disc_number),
     YEAR(7, R.string.label_date),

@@ -295,5 +295,25 @@
     <string name="show_scroll_top_button_hint">Shows a floating button when scrolling</string>
     <string name="action_reset">Reset</string>
     <string name="action_batch_rename">Batch Rename</string>
+    <string name="no_tag_data">Failed to load tag data for selected songs</string>
+    <string name="batch_rename_title">Batch Rename</string>
+    <string name="rename_format">Rename Format</string>
+    <string name="format_hint">Enter the naming format, for example @1 - @2</string>
+    <string name="format_placeholder">\@1 - @2</string>
+    <string name="format_preset">Preset Template</string>
+    <string name="format_preset_show_placeholders">View placeholder instructions</string>
+    <string name="action_rename">Rename</string>
+    <string name="preview_title">Preview(%1$d)</string>
+    <string name="preview_title_generating">Preview(%1$d)(Generating…)</string>
+    <string name="preview_empty_tip">No files available for preview</string>
+    <string name="label_old_name">Old: %1$s</string>
+    <string name="label_new_name">New: %1$s</string>
 
+    <string name="rename_conflict_warning">⚠️ Name conflict, numeric suffix will be added automatically</string>
+
+    <string name="rename_success_title">Rename Successful</string>
+    <string name="rename_finished_title">Rename Completed</string>
+
+    <string name="rename_result_summary">Success: %1$d / Total: %2$d</string>
+    <string name="rename_result_failure">Failed: %1$d</string>
 </resources>

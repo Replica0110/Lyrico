@@ -101,11 +101,11 @@ object RenameEngine {
 
     fun getPresetFormats(): List<String> {
         return listOf(
-            "${TagField.placeholder(TagField.ARTIST)} - ${TagField.placeholder(TagField.TITLE)}",
             "${TagField.placeholder(TagField.TITLE)} - ${TagField.placeholder(TagField.ARTIST)}",
+            "${TagField.placeholder(TagField.ARTIST)} - ${TagField.placeholder(TagField.TITLE)}",
             "${TagField.placeholder(TagField.TRACK)} - ${TagField.placeholder(TagField.TITLE)}",
             "${TagField.placeholder(TagField.ALBUM)} - ${TagField.placeholder(TagField.TITLE)}",
-            "${TagField.placeholder(TagField.ARTIST)}/${TagField.placeholder(TagField.ALBUM)}/${TagField.placeholder(TagField.TRACK)} - ${TagField.placeholder(TagField.TITLE)}"
+            "${TagField.placeholder(TagField.ARTIST)} - ${TagField.placeholder(TagField.ALBUM)} - ${TagField.placeholder(TagField.TRACK)} - ${TagField.placeholder(TagField.TITLE)}"
         )
     }
 }

@@ -301,6 +301,30 @@
 
     <string name="show_scroll_top_button">快速回到顶部</string>
     <string name="show_scroll_top_button_hint">列表滚动时显示浮动按钮</string>
+
+
     <string name="action_reset">点击重置</string>
     <string name="action_batch_rename">批量重命名</string>
+    <string name="no_tag_data">音频标签加载失败</string>
+    <string name="batch_rename_title">批量重命名</string>
+    <string name="rename_format">命名格式</string>
+    <string name="format_hint">输入命名格式，例如 @1 - @2</string>
+    <string name="format_placeholder">\@1 - @2</string>
+    <string name="format_preset">预设模板</string>
+    <string name="format_preset_show_placeholders">查看占位符说明</string>
+    <string name="action_rename">执行重命名</string>
+    <string name="preview_title">预览 (%1$d)</string>
+    <string name="preview_title_generating">预览 (%1$d) (生成中…)</string>
+    <string name="preview_empty_tip">没有可预览的文件</string>
+
+    <string name="label_old_name">旧: %1$s</string>
+    <string name="label_new_name">新: %1$s</string>
+
+    <string name="rename_conflict_warning">⚠️ 名称冲突，将自动加数字后缀</string>
+
+    <string name="rename_success_title">重命名成功</string>
+    <string name="rename_finished_title">重命名结束</string>
+
+    <string name="rename_result_summary">成功: %1$d / 总数: %2$d</string>
+    <string name="rename_result_failure">失败: %1$d</string>
 </resources>

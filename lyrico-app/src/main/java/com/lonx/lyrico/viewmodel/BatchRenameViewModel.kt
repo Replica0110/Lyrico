@@ -12,18 +12,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import android.net.Uri
+import com.lonx.lyrico.R
 import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.utils.UiMessage
 import java.io.File
 
 data class BatchRenameUiState(
     val songs: List<SongForBatchRename> = emptyList(),
-    val format: String = "@1 - @4",
+    val format: String = "@1 - @2",
     val presetFormats: List<String> = emptyList(),
     val previews: List<RenamePreview> = emptyList(),
     val isGeneratingPreview: Boolean = false,
     val isRenamingInProgress: Boolean = false,
     val renameResult: RenameEngine.Result? = null,
-    val errorMessage: String? = null
+    val errorMessage: UiMessage? = null
 )
 
 data class SongForBatchRename(
@@ -86,7 +88,7 @@ class BatchRenameViewModel(
                 if (songsForRename.isEmpty()) {
                     _uiState.value = _uiState.value.copy(
                         isGeneratingPreview = false,
-                        errorMessage = "Failed to load tag data for selected songs"
+                        errorMessage = UiMessage.StringResource(R.string.no_tag_data)
                     )
                     return@launch
                 }
@@ -105,7 +107,7 @@ class BatchRenameViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isGeneratingPreview = false,
-                    errorMessage = e.message ?: "Unknown error occurred"
+                    errorMessage = UiMessage.DynamicString(e.message)
                 )
             }
         }
@@ -138,7 +140,7 @@ class BatchRenameViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isRenamingInProgress = false,
-                    errorMessage = e.message ?: "Rename failed"
+                    errorMessage = UiMessage.DynamicString(e.message)
                 )
             }
         }

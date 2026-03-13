@@ -141,7 +141,4 @@ interface SongDao {
      */
     @RawQuery(observedEntities = [SongEntity::class])
     fun getSongs(query: SupportSQLiteQuery): Flow<List<SongEntity>>
-
-    @Query("UPDATE songs SET filePath = :newPath, fileName = :newFileName, uri = :newUri WHERE filePath = :oldPath")
-    suspend fun updatePathInfo(oldPath: String, newPath: String, newFileName: String, newUri: String)
 }

@@ -2,8 +2,6 @@ package com.lonx.lyrico.data.repository
 
 import android.app.RecoverableSecurityException
 import android.content.Context
-import android.media.MediaScannerConnection
-import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.OpenableColumns
@@ -16,7 +14,6 @@ import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.exception.RequiresUserPermissionException
-import com.lonx.lyrico.data.model.RenamePreview
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.data.utils.SongQueryBuilder
@@ -28,13 +25,11 @@ import com.lonx.lyrico.viewmodel.SortOrder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import kotlin.coroutines.resume
 
 /**
  * 歌曲数据存储库实现类 (基于 Uri 版本)
@@ -143,7 +138,7 @@ class SongRepositoryImpl(
 
                 val dbInfo = dbSongMap[deviceUriString]
                 // 判断是否更新：全量扫描 OR 数据库无此记录 OR 文件修改时间变了
-                val needsUpdate = fullRescan || dbInfo == null || dbInfo.fileLastModified != deviceSong.lastModified
+                val needsUpdate = fullRescan || dbInfo == null || dbInfo.fileLastModified != deviceSong.lastModified || dbInfo.filePath != deviceSong.filePath
 
                 if (needsUpdate) {
                     // 仍然使用 filePath 来归类文件夹
@@ -327,25 +322,29 @@ class SongRepositoryImpl(
 
             val updates = mutableMapOf<String, String>()
 
-            audioTagData.title?.let { updates["TITLE"] = it }
-            audioTagData.artist?.let { updates["ARTIST"] = it }
-            audioTagData.album?.let { updates["ALBUM"] = it }
-            audioTagData.genre?.let { updates["GENRE"] = it }
-            audioTagData.date?.let { updates["DATE"] = it }
-            audioTagData.trackNumber?.let { updates["TRACKNUMBER"] = it }
+            fun updateTag(standardKey: String, value: String?, aliases: List<String>) {
+                if (value != null) {
+                    updates[standardKey] = value
 
-            audioTagData.albumArtist?.let { updates["ALBUMARTIST"] = it }
-            audioTagData.discNumber?.let { updates["DISCNUMBER"] = it.toString() }
-            audioTagData.composer?.let { updates["COMPOSER"] = it }
-            audioTagData.comment?.let { updates["COMMENT"] = it }
-
-            audioTagData.lyricist?.let {
-                updates["LYRICIST"] = it
+                    aliases.forEach { aliasKey ->
+                        updates[aliasKey] = ""
+                    }
+                }
             }
 
-            audioTagData.lyrics?.let {
-                updates["LYRICS"] = it
-            }
+            updateTag("TITLE", audioTagData.title, listOf("TIT2", "TIT1"))
+            updateTag("ARTIST", audioTagData.artist, listOf("TPE1"))
+            updateTag("ALBUM", audioTagData.album, listOf("TALB"))
+            updateTag("GENRE", audioTagData.genre, listOf("TCON", "STYLE", "SUBGENRE", "MOOD"))
+            updateTag("DATE", audioTagData.date, listOf("YEAR", "TYER", "TDAT"))
+            updateTag("TRACKNUMBER", audioTagData.trackNumber, listOf("TRACK", "TRCK"))
+
+            updateTag("ALBUMARTIST", audioTagData.albumArtist, listOf("TPE2", "ALBUM ARTIST", "aART", "ALBUMARTISTSORT"))
+            updateTag("DISCNUMBER", audioTagData.discNumber?.toString(), listOf("DISC", "TPOS", "DISKNUMBER"))
+            updateTag("COMPOSER", audioTagData.composer, listOf("TCOM", "©wrt"))
+            updateTag("COMMENT", audioTagData.comment, listOf("COMM", "DESCRIPTION"))
+            updateTag("LYRICIST", audioTagData.lyricist, listOf("TEXT", "WRITER", "LYRICS BY"))
+            updateTag("LYRICS", audioTagData.lyrics, listOf("UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG"))
 
             AudioTagWriter.writeTags(pfdDescriptor, updates)
 
@@ -451,38 +450,5 @@ class SongRepositoryImpl(
         }
         // 最后的 fallback
         return contentUri.substringAfterLast("/")
-    }
-    override suspend fun handleRenameSuccess(previews: List<RenamePreview>) {
-        withContext(Dispatchers.IO) {
-            previews.forEach { preview ->
-                val newUri = suspendCancellableCoroutine<Uri?> { continuation ->
-                    MediaScannerConnection.scanFile(
-                        context,
-                        arrayOf(preview.newPath),
-                        null
-                    ) { _, uri ->
-                        continuation.resume(uri)
-                    }
-                }
-
-                if (newUri != null) {
-                    val oldPath = preview.originalPath
-                    val newPath = preview.newPath
-                    val newFileName = newPath.substringAfterLast('/')
-
-                    songDao.updatePathInfo(
-                        oldPath = oldPath,
-                        newPath = newPath,
-                        newFileName = newFileName,
-                        newUri = newUri.toString()
-                    )
-
-                    val song = songDao.getSongByUri(newUri.toString())
-                    song?.let {
-                        folderDao.refreshSongCount(it.folderId)
-                    }
-                }
-            }
-        }
     }
 }

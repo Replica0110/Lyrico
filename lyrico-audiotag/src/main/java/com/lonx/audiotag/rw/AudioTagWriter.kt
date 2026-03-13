@@ -2,14 +2,15 @@ package com.lonx.audiotag.rw
 
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import com.kyant.taglib.Picture
+import com.kyant.taglib.TagLib
 import com.lonx.audiotag.internal.FdUtils
-import com.lonx.audiotag.internal.MetadataResult
-import com.lonx.audiotag.internal.TagLibJNI
 import com.lonx.audiotag.model.AudioPicture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.HashMap
 import kotlin.collections.iterator
+
 object AudioTagWriter {
     private const val TAG = "AudioTagWriter"
 
@@ -17,35 +18,32 @@ object AudioTagWriter {
         pfd: ParcelFileDescriptor,
         updates: Map<String, String>,
         preserveOldTags: Boolean = true
-    ): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val fd = FdUtils.getNativeFd(pfd)
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val fd = FdUtils.getNativeFd(pfd)
+                val mapToSave = HashMap<String, Array<String>>()
 
-            val finalMap = HashMap<String, MutableList<String>>()
-
-            Log.d(TAG, "Reading properties: $updates")
-            if (preserveOldTags) {
-                (TagLibJNI.read(fd) as? MetadataResult.Success)
-                    ?.metadata
-                    ?.let { meta ->
-                        (meta.id3v2 + meta.xiph + meta.mp4).forEach { (k, v) ->
-                            finalMap.getOrPut(k) { mutableListOf() }.addAll(v)
-                        }
+                if (preserveOldTags) {
+                    val oldFd = FdUtils.getNativeFd(pfd)
+                    val oldMeta = TagLib.getMetadata(oldFd, false)
+                    if (oldMeta != null) {
+                        mapToSave.putAll(oldMeta.propertyMap)
                     }
+                }
+
+                for ((k, v) in updates) {
+                    mapToSave[k] = arrayOf(v)
+                }
+
+                mapToSave.forEach { (string, strings) ->
+                    Log.d(TAG, "Write tag: $string = $strings")
+                }
+                return@withContext TagLib.savePropertyMap(fd, mapToSave)
+            } catch (e: Exception) {
+                Log.e(TAG, "Write tags error", e)
+                return@withContext false
             }
-
-            updates.forEach { (k, v) ->
-                finalMap[k] = mutableListOf(v)
-            }
-
-            val jniMap = HashMap(finalMap.mapValues { it.value.distinct() })
-
-            Log.d(TAG, "Final map to JNI: $jniMap")
-            TagLibJNI.write(fd, jniMap)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Write tags error", e)
-            false
         }
     }
 
@@ -54,11 +52,20 @@ object AudioTagWriter {
         return withContext(Dispatchers.IO) {
             try {
                 val fd = FdUtils.getNativeFd(pfd)
-                val data = pictures.map { it.data }.toTypedArray()
-                TagLibJNI.writePictures(fd, data)
+                val libPics = ArrayList<Picture>()
+                for (p in pictures) {
+                    libPics.add(Picture(
+                        data = p.data,
+                        mimeType = p.mimeType,
+                        description = p.description,
+                        pictureType = p.pictureType
+                    ))
+                }
+                val arr = libPics.toTypedArray()
+                return@withContext TagLib.savePictures(fd, arr)
             } catch (e: Exception) {
                 Log.e(TAG, "Write pictures error", e)
-                false
+                return@withContext false
             }
         }
     }

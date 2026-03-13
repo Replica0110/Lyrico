@@ -107,11 +107,4 @@ interface SongRepository {
      */
     fun resolveDisplayName(contentUri: String): String
 
-
-    /**
-     * 处理重命名成功
-     *
-     * @param previews 重命名预览列表
-     */
-    suspend fun handleRenameSuccess(previews: List<RenamePreview>)
 }

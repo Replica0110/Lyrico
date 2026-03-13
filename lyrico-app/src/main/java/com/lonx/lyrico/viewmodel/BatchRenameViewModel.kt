@@ -126,13 +126,6 @@ class BatchRenameViewModel(
 
                 val result = RenameEngine.renameFiles(previews)
 
-                if (result.successCount > 0) {
-                    val successfulPreviews = previews.filter { p ->
-                        result.failed.none { it.first.originalPath == p.originalPath }
-                    }
-                    songRepository.handleRenameSuccess(successfulPreviews)
-                }
-
                 _uiState.value = _uiState.value.copy(
                     renameResult = result,
                     isRenamingInProgress = false

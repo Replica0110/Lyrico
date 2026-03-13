@@ -2,10 +2,8 @@ package com.lonx.audiotag.rw
 
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import com.kyant.taglib.TagLib
 import com.lonx.audiotag.internal.FdUtils
-import com.lonx.audiotag.internal.Metadata
-import com.lonx.audiotag.internal.MetadataResult
-import com.lonx.audiotag.internal.TagLibJNI
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
 import kotlinx.coroutines.Dispatchers
@@ -18,14 +16,124 @@ object AudioTagReader {
     suspend fun read(pfd: ParcelFileDescriptor, readPictures: Boolean = true): AudioTagData {
         return withContext(Dispatchers.IO) {
             try {
+                val nativeFd = FdUtils.getNativeFd(pfd)
+
+                // 读取音频属性
+                val audioProps = TagLib.getAudioProperties(nativeFd)
+
+                // 读取 Metadata
+                val metaFd = FdUtils.getNativeFd(pfd)
+                val metadata = TagLib.getMetadata(metaFd, readPictures) ?: return@withContext AudioTagData()
+
+                // 处理图片
+                val picList = ArrayList<AudioPicture>()
+                if (readPictures) {
+                    for (pic in metadata.pictures) {
+                        picList.add(AudioPicture(
+                            data = pic.data,
+                            mimeType = pic.mimeType,
+                            description = pic.description,
+                            pictureType = pic.pictureType
+                        ))
+                    }
+                }
+
+                // 处理属性 Map
+                val props = metadata.propertyMap
+
+                props.forEach{(key, value) ->
+                    Log.d(TAG, "Read tag: $key = ${value.joinToString()}")
+                }
+
+                fun firstOf(vararg keys: String): String? {
+                    for (key in keys) {
+                        val arr = props[key]
+                        if (!arr.isNullOrEmpty()) {
+                            val value = arr[0].trim()
+                            if (value.isNotEmpty()) return value
+                        }
+                    }
+                    return null
+                }
+
+                fun firstIntOf(vararg keys: String): Int? {
+                    val raw = firstOf(*keys) ?: return null
+                    return raw.substringBefore('/').toIntOrNull()
+                }
+
+                val lyrics = firstOf(
+                    "LYRICS",
+                    "UNSYNCED LYRICS",
+                    "USLT",
+                    "LYRIC",
+                    "LYRICSENG"
+
+                )
 
 
-                val fd = FdUtils.getNativeFd(pfd)
 
-                val result = TagLibJNI.read(fd)
-                val metadata = (result as? MetadataResult.Success)?.metadata ?: return@withContext AudioTagData()
+                val albumArtist = firstOf(
+                    "ALBUMARTIST",     // FLAC/Vorbis
+                    "ALBUM ARTIST",
+                    "TPE2",            // ID3v2
+                    "aART",            // MP4
+                    "ALBUMARTISTSORT"
+                )
 
-                buildAudioTagData(metadata, readPictures)
+                val discNumber = firstIntOf(
+                    "DISCNUMBER",
+                    "DISC",
+                    "TPOS",           // ID3v2
+                    "DISKNUMBER"
+                )
+
+                val composer = firstOf(
+                    "COMPOSER",
+                    "TCOM",           // ID3v2
+                    "©wrt"            // MP4
+                )
+
+                val lyricist = firstOf(
+                    "LYRICIST",
+                    "TEXT",           // ID3v2 作词
+                    "WRITER",
+                    "LYRICS BY"
+                )
+
+                val comment = firstOf(
+                    "COMMENT",
+                    "COMM",           // ID3
+                    "DESCRIPTION"
+                )
+
+                val style = firstOf(
+                    "STYLE",
+                    "SUBGENRE",
+                    "MOOD"
+                )
+
+                return@withContext AudioTagData(
+                    title = firstOf("TITLE"),
+                    artist = firstOf("ARTIST"),
+                    album = firstOf("ALBUM"),
+                    genre = firstOf("GENRE") ?: style, // fallback 到 style
+                    date = firstOf("DATE", "YEAR"),
+                    trackNumber = firstIntOf("TRACKNUMBER", "TRACK", "TRCK")?.toString(),
+
+                    albumArtist = albumArtist,
+                    discNumber = discNumber,
+                    composer = composer,
+                    lyricist = lyricist,
+                    comment = comment,
+                    lyrics = lyrics,
+
+                    durationMilliseconds = audioProps?.length ?: 0,
+                    bitrate = audioProps?.bitrate ?: 0,
+                    sampleRate = audioProps?.sampleRate ?: 0,
+                    channels = audioProps?.channels ?: 0,
+                    rawProperties = props,
+                    pictures = picList
+                )
 
             } catch (e: Exception) {
                 Log.e(TAG, "Read error", e)
@@ -33,76 +141,17 @@ object AudioTagReader {
             }
         }
     }
-    suspend fun readPicture(pfd: ParcelFileDescriptor): ByteArray? {
+    suspend fun readPicture(pfd: ParcelFileDescriptor): ByteArray {
         return withContext(Dispatchers.IO) {
             try {
-                val fd = FdUtils.getNativeFd(pfd)
-                val result = TagLibJNI.readPicture(fd)
-                return@withContext result
-
+                val metaFd = FdUtils.getNativeFd(pfd)
+                val metadata = TagLib.getFrontCover(metaFd)
+                val pic = metadata?.data
+                return@withContext pic ?: byteArrayOf()
             } catch (e: Exception) {
                 Log.e(TAG, "Read error", e)
+                byteArrayOf()
             }
-            return@withContext null
         }
-    }
-
-    private fun buildAudioTagData(metadata: Metadata, readPictures: Boolean): AudioTagData {
-        // 合并所有 tag map
-        val props = LinkedHashMap<String, List<String>>().apply {
-            putAll(metadata.xiph)
-            putAll(metadata.mp4)
-            putAll(metadata.id3v2)
-        }
-
-        Log.d(TAG, "Reading tags: $props")
-        fun getFirst(vararg keys: String): String? =
-            keys.asSequence()
-                .mapNotNull { props[it]?.firstOrNull()?.trim() }
-                .firstOrNull { it.isNotEmpty() }
-
-        fun getInt(vararg keys: String): Int? =
-            getFirst(*keys)
-                ?.substringBefore("/")
-                ?.toIntOrNull()
-
-        val audioProps = metadata.properties
-
-        Log.d(TAG, "Reading properties: $audioProps")
-        // 返回 AudioTagData
-        return AudioTagData(
-            title = getFirst("TIT2", "©nam", "TITLE", "sonm"),
-
-            artist = getFirst("TPE1", "©ART", "ARTIST", "----:COM.APPLE.ITUNES:PERFORMER"),
-
-            album = getFirst("TALB", "©alb", "ALBUM"),
-
-            albumArtist = getFirst("TPE2", "aART", "ALBUMARTIST", "soaa"),
-
-            date = getFirst("TDRC", "TDRL", "©day", "DATE", "----:COM.APPLE.ITUNES:RELEASETIME"),
-
-            genre = getFirst("TCON", "©gen", "GENRE"),
-
-            trackNumber = getFirst("TRCK", "trkn", "TRACKNUMBER", "©trk"),
-
-            discNumber = getInt("TPOS", "disk", "DISCNUMBER"),
-
-            composer = getFirst("TCOM", "©wrt", "COMPOSER", "soco"),
-
-            lyricist = getFirst("TEXT", "LYRICIST", "----:COM.APPLE.ITUNES:LYRICIST"),
-
-            lyrics = getFirst("USLT", "©lyr", "LYRICS", "UNSYNCEDLYRICS"),
-
-            comment = getFirst("COMM", "©cmt", "COMMENT"),
-
-            durationMilliseconds = metadata.properties.durationMs.toInt(),
-            bitrate = metadata.properties.bitrateKbps,
-            sampleRate = metadata.properties.sampleRateHz,
-            channels = metadata.properties.channels,
-
-            pictures = if (readPictures && metadata.cover != null) {
-                listOf(AudioPicture(data = metadata.cover, mimeType = "image/*", pictureType = "3"))
-            } else emptyList()
-        )
     }
 }

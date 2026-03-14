@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package lyrico.settings;
+
+option java_package = "com.lonx.lyrico.proto";
+option java_multiple_files = true;
+
+
+enum LyricFormat {
+  PLAIN_LRC = 0;
+  VERBATIM_LRC = 1;
+  ENHANCED_LRC = 2;
+}
+
+enum SortBy {
+  TITLE = 0;
+  ARTISTS = 1;
+  DATE_MODIFIED = 2;
+  DATE_ADDED = 3;
+  FILE_SIZE = 4;
+  DURATION = 5;
+  EXTENSION = 6;
+}
+
+enum SortOrder {
+  ASC = 0;
+  DESC = 1;
+}
+
+enum Source {
+  QM = 0;
+  KG = 1;
+  NE = 2;
+}
+
+enum ThemeMode {
+  AUTO = 0;
+  LIGHT = 1;
+  DARK = 2;
+}
+
+
+message LyricSettings {
+  LyricFormat lyric_format = 1;
+
+  bool roma_enabled = 2;
+
+  bool translation_enabled = 3;
+
+  bool only_translation_if_available = 4;
+
+  bool remove_empty_lines = 5;
+}
+
+message SearchSettings {
+
+  string separator = 1;
+
+  repeated Source search_source_order = 2;
+
+  int32 search_page_size = 3;
+}
+
+message UiSettings {
+
+  ThemeMode theme_mode = 1;
+
+  bool ignore_short_audio = 2;
+
+  bool show_scroll_top_button = 3;
+}
+
+message LibrarySettings {
+
+  SortBy sort_by = 1;
+
+  SortOrder sort_order = 2;
+
+  int64 last_scan_time = 3;
+}
+
+message AppSettings {
+
+  bool check_update_enabled = 1;
+
+  LyricSettings lyric = 2;
+
+  SearchSettings search = 3;
+
+  UiSettings ui = 4;
+
+  LibrarySettings library = 5;
+}

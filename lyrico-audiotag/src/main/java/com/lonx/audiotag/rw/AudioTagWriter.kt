@@ -2,8 +2,8 @@ package com.lonx.audiotag.rw
 
 import android.os.ParcelFileDescriptor
 import android.util.Log
-import com.kyant.taglib.Picture
-import com.kyant.taglib.TagLib
+import com.lonx.audiotag.model.Picture
+import com.lonx.audiotag.TagLib
 import com.lonx.audiotag.internal.FdUtils
 import com.lonx.audiotag.model.AudioPicture
 import kotlinx.coroutines.Dispatchers

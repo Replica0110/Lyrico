@@ -1,0 +1,3 @@
+[submodule "lyrico-audiotag/src/main/cpp/taglib"]
+	path = lyrico-audiotag/src/main/cpp/taglib
+	url = https://github.com/taglib/taglib.git

@@ -40,9 +40,10 @@ android {
 }
 
 dependencies {
-    implementation(libs.taglib)
+//    implementation(libs.taglib)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.monitor)
+    implementation(files("libs/taglib.aar"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

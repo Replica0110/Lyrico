@@ -115,6 +115,7 @@
     <string name="lyric_format_ttml">TTML (实验性)</string>
 
     <!-- 主题模式 -->
+    <string name="lyric_format_ttml">TTML (实验性)</string>
     <string name="theme_mode_auto">跟随系统</string>
     <string name="theme_mode_light">浅色模式</string>
     <string name="theme_mode_dark">深色模式</string>

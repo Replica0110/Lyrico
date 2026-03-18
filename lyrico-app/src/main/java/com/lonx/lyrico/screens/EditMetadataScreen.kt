@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -36,11 +37,16 @@ import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.data.model.LyricsSearchResult
+import com.moriafly.salt.ui.Button
+import com.moriafly.salt.ui.Item
+import com.moriafly.salt.ui.ItemEdit
+import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.icons.ArrowBack
 import com.moriafly.salt.ui.icons.SaltIcons
+import com.moriafly.salt.ui.verticalScroll
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.SearchResultsDestination
@@ -71,6 +77,20 @@ fun EditMetadataScreen(
     // 控制 BottomSheet 显示的 State
     var showOffsetSheet by remember { mutableStateOf(false) }
     val currentShiftOffset by viewModel.currentShiftOffset.collectAsState()
+    val offsetBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coverOptinsBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // 控制封面操作弹窗的 State
+    var showCoverOptionsSheet by remember { mutableStateOf(false) }
+
+    // 照片选择器 Launcher
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.updateCover(uri)
+        }
+    }
+
     onLyricsResult.onResult { result ->
         viewModel.updateMetadataFromSearchResult(result)
     }
@@ -78,10 +98,8 @@ fun EditMetadataScreen(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            // 用户点击了“允许”，重试保存
             viewModel.saveMetadata()
         } else {
-            // 用户点击了“拒绝”
             scope.launch {
                 snackbarHostState.showSnackbar(
                     context.getString(R.string.permission_denied_cannot_save)
@@ -90,45 +108,37 @@ fun EditMetadataScreen(
         }
     }
 
-    // 监听 permissionIntentSender 状态变化
     LaunchedEffect(uiState.permissionIntentSender) {
         uiState.permissionIntentSender?.let { intentSender ->
-            // 构建请求
             val request = IntentSenderRequest.Builder(intentSender).build()
-            // 启动系统弹窗
             intentSenderLauncher.launch(request)
-            // 通知 ViewModel 已消费该事件，避免重组时重复弹窗
             viewModel.consumePermissionRequest()
         }
     }
+
     LaunchedEffect(songFileUri) {
         viewModel.readMetadata(songFileUri)
     }
 
-
-
     LaunchedEffect(uiState.saveSuccess) {
         when (uiState.saveSuccess) {
-            true -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.msg_save_success))
-//                    onSaveSuccess()
-                }
-            }
-
-            false -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.msg_save_failed))
-                }
-            }
-
-            null -> {
-                // Do nothing
-            }
+            true -> scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.msg_save_success)) }
+            false -> scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.msg_save_failed)) }
+            null -> {}
         }
-        // Consume the event
         if (uiState.saveSuccess != null) {
             viewModel.clearSaveStatus()
+        }
+    }
+
+    LaunchedEffect(uiState.exportCoverResult) {
+        when (uiState.exportCoverResult) {
+            true -> scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.msg_cover_saved_to_gallery)) }
+            false -> scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.msg_cover_save_failed)) }
+            null -> {}
+        }
+        if (uiState.exportCoverResult != null) {
+            viewModel.clearExportCoverStatus()
         }
     }
 
@@ -175,7 +185,8 @@ fun EditMetadataScreen(
             val titleText = if (uiState.songInfo?.tagData?.title != null) {
                 "${uiState.songInfo!!.tagData!!.title}"
             } else {
-                uiState.songInfo?.tagData?.fileName ?: stringResource(R.string.edit_metadata_default_title)
+                uiState.songInfo?.tagData?.fileName
+                    ?: stringResource(R.string.edit_metadata_default_title)
             }
 
             CenterAlignedTopAppBar(
@@ -199,7 +210,10 @@ fun EditMetadataScreen(
                     IconButton(onClick = {
                         navigator.popBackStack()
                     }) {
-                        Icon(SaltIcons.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                        Icon(
+                            SaltIcons.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
+                        )
                     }
                 },
                 actions = {
@@ -255,7 +269,7 @@ fun EditMetadataScreen(
             CoverEditor(
                 coverUri = uiState.coverUri,
                 isModified = uiState.coverUri != uiState.originalCover,
-                onCoverClick = { /* 弹出选择图片 */ },
+                onCoverClick = { showCoverOptionsSheet = true },
                 onRevertClick = { viewModel.revertCover() }, // 撤销
                 modifier = Modifier
                     .fillMaxWidth()
@@ -282,7 +296,8 @@ fun EditMetadataScreen(
                 label = stringResource(R.string.label_artists),
                 value = editingTagData?.artist ?: "",
                 onValueChange = {
-                    viewModel.updateTag { copy(artist = it)
+                    viewModel.updateTag {
+                        copy(artist = it)
                     }
                 },
                 isModified = editingTagData?.artist != originalTagData?.artist,
@@ -445,34 +460,65 @@ fun EditMetadataScreen(
             Spacer(modifier = Modifier.height(200.dp))
         }
     }
-    if (showOffsetSheet) {
-        val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    if (showCoverOptionsSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showOffsetSheet = false },
-            sheetState = bottomSheetState,
+            onDismissRequest = { showCoverOptionsSheet = false },
+            sheetState = coverOptinsBottomSheetState,
             containerColor = SaltTheme.colors.background
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                RoundedColumn {
+                    Item(
+                        text = stringResource(R.string.label_change_cover),
+                        onClick = {
+                            showCoverOptionsSheet = false
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                    )
+                    Item(
+                        text = stringResource(R.string.label_remove_cover),
+                        onClick = {
+                            showCoverOptionsSheet = false
+                            viewModel.removeCover()
+                        }
+                    )
+
+                    if (uiState.coverUri != null || uiState.originalCover != null) {
+                        Item(
+                            text = stringResource(R.string.label_save_cover),
+                            onClick = {
+                                showCoverOptionsSheet = false
+                                viewModel.exportCover(context)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+    if (showOffsetSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showOffsetSheet = false },
+            sheetState = offsetBottomSheetState,
+            containerColor = SaltTheme.colors.background
+        ) {
+            Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 歌词预览窗口
-                Box(
+                RoundedColumn(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
                         .heightIn(min = 150.dp, max = 350.dp)
-                        .padding(horizontal = 16.dp)
-                        .background(SaltTheme.colors.subBackground, RoundedCornerShape(8.dp)) // 使用主题色
-                        .padding(12.dp)
                 ) {
-                    val previewScrollState = rememberScrollState()
-                    Text(
+                    ItemEdit(
                         text = editingTagData?.lyrics ?: "",
-                        color = SaltTheme.colors.text,
-                        fontSize = 13.sp,
-                        modifier = Modifier.verticalScroll(previewScrollState)
+                        onChange = {},
+                        readOnly = true
                     )
                 }
 

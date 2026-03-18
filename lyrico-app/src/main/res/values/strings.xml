@@ -332,4 +332,11 @@
     <string name="replacement_ampersand">Ampersand (&amp;)</string>
     <string name="replacement_not_selected">Not selected</string>
     <string name="message_saving_tags">Saving Tags…</string>
+
+
+    <string name="label_change_cover">Change Cover</string>
+    <string name="label_remove_cover">Remove Cover</string>
+    <string name="label_save_cover">Save Cover</string>
+    <string name="msg_cover_saved_to_gallery">Cover saved to gallery</string>
+    <string name="msg_cover_save_failed">Failed to save cover</string>
 </resources>

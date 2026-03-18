@@ -344,4 +344,11 @@
     <string name="replacement_ampersand">与符号（&amp;）</string>
     <string name="replacement_not_selected">未选择</string>
     <string name="message_saving_tags">正在写入标签…</string>
+
+
+    <string name="label_change_cover">更换封面</string>
+    <string name="label_remove_cover">移除封面</string>
+    <string name="label_save_cover">保存封面</string>
+    <string name="msg_cover_saved_to_gallery">封面已保存到相册</string>
+    <string name="msg_cover_save_failed">封面保存失败</string>
 </resources>

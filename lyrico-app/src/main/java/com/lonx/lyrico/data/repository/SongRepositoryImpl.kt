@@ -141,7 +141,7 @@ class SongRepositoryImpl(
                 val needsUpdate = fullRescan || dbInfo == null || dbInfo.fileLastModified != deviceSong.lastModified || dbInfo.filePath != deviceSong.filePath
 
                 if (needsUpdate) {
-                    // 仍然使用 filePath 来归类文件夹
+                    // 仍然使用 uriString 来归类文件夹
                     val folderId = resolveFolderId(deviceSong.filePath)
                     val entity = extractSongMetadata(
                         deviceSong, // 传入 SongFile 对象
@@ -349,10 +349,17 @@ class SongRepositoryImpl(
             AudioTagWriter.writeTags(pfdDescriptor, updates)
 
             // 图片写入
-            audioTagData.picUrl?.let { picUrl ->
-                val imageBytes = downloadImageBytes(picUrl)
-                val pictures = AudioPicture(data = imageBytes)
-                AudioTagWriter.writePictures(pfdDescriptor, listOf(pictures))
+            val picUrl = audioTagData.picUrl
+            if (picUrl != null) {
+                if (picUrl.isEmpty()) {
+                    AudioTagWriter.writePictures(pfdDescriptor, emptyList())
+                } else {
+                    val imageBytes = getImageBytes(picUrl)
+                    if (imageBytes != null) {
+                        val picture = AudioPicture(data = imageBytes)
+                        AudioTagWriter.writePictures(pfdDescriptor, listOf(picture))
+                    }
+                }
             }
 
             return true
@@ -410,17 +417,21 @@ class SongRepositoryImpl(
         return songDao.getSongs(query)
     }
 
-    private suspend fun downloadImageBytes(url: String): ByteArray =
-        withContext(Dispatchers.IO) {
-            // 保持不变
-            val request = Request.Builder().url(url).build()
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw IOException("图片下载失败: $url, 响应码: ${response.code}")
+    private suspend fun getImageBytes(path: String): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            if (path.startsWith("http")) {
+                val request = Request.Builder().url(path).build()
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) response.body.bytes() else null
                 }
-                response.body.bytes()
+            } else {
+                context.contentResolver.openInputStream(path.toUri())?.use { it.readBytes() }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "获取图片字节流失败: $path", e)
+            null
         }
+    }
 
 
     override fun resolveDisplayName(contentUri: String): String {

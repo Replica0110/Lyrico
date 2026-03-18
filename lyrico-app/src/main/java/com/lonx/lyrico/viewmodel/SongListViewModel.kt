@@ -29,7 +29,6 @@ import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.utils.LyricsUtils
 import com.lonx.lyrico.utils.MusicContentObserver
 import com.lonx.lyrico.utils.MusicMatchUtils
-import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
@@ -65,7 +64,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @Parcelize
 data class SongInfo(
-    val filePath: String,
+    val uriString: String,
     val tagData: AudioTagData?
 ): Parcelable
 

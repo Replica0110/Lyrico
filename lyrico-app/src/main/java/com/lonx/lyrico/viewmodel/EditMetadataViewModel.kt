@@ -1,9 +1,13 @@
 package com.lonx.lyrico.viewmodel
 
 import android.app.RecoverableSecurityException
+import android.content.ContentValues
 import android.content.Context
 import android.content.IntentSender
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
@@ -33,7 +37,7 @@ data class EditMetadataUiState(
      * 编辑态封面（只要不为 null，就代表用户替换过封面）
      */
     val coverUri: Any? = null,
-
+    val exportCoverResult: Boolean? = null,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean? = null,
     val originalCover: Any? = null,
@@ -76,7 +80,7 @@ class EditMetadataViewModel(
                 _uiState.update { state ->
                     state.copy(
                         songInfo = SongInfo(
-                            filePath = uriString, // 这里的 filePath 字段实际存的是 URI
+                            uriString = uriString,
                             tagData = audioTagData
                         ),
                         originalTagData = audioTagData,
@@ -174,7 +178,88 @@ class EditMetadataViewModel(
             )
         }
     }
+    /**
+     * 更新封面（从本地选择）
+     */
+    fun updateCover(uri: Uri) {
+        _uiState.update { state ->
+            state.copy(
+                coverUri = uri,
+                isEditing = true,
+                editingTagData = state.editingTagData?.copy(picUrl = uri.toString())
+            )
+        }
+    }
 
+    /**
+     * 移除封面
+     */
+    fun removeCover() {
+        _uiState.update { state ->
+            state.copy(
+                coverUri = null, // 清空 coverUri 表示被移除
+                isEditing = true,
+                editingTagData = state.editingTagData?.copy(picUrl = "")
+            )
+        }
+    }
+
+    /**
+     * 导出当前封面到本地相册
+     */
+    fun exportCover(context: Context) {
+        viewModelScope.launch {
+            try {
+                val state = _uiState.value
+                val coverSource = state.coverUri ?: state.originalCover ?: state.picture?.data
+
+                if (coverSource == null) {
+                    _uiState.update { it.copy(exportCoverResult = false) }
+                    return@launch
+                }
+
+                val filename = "Cover_${System.currentTimeMillis()}.jpg"
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Covers")
+                }
+
+                val resolver = context.contentResolver
+                val destUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+                if (destUri != null) {
+                    resolver.openOutputStream(destUri)?.use { outputStream ->
+                        when (coverSource) {
+                            is ByteArray -> {
+                                outputStream.write(coverSource)
+                            }
+                            is Uri -> { // 如果是Uri，读取流然后拷贝
+                                resolver.openInputStream(coverSource)?.use { inputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
+                            }
+                            is String -> { // 如果是String(Url/Uri string)
+                                resolver.openInputStream(coverSource.toUri())?.use { inputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
+                            }
+                        }
+                    }
+                    _uiState.update { it.copy(exportCoverResult = true) }
+                } else {
+                    _uiState.update { it.copy(exportCoverResult = false) }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "导出封面失败", e)
+                _uiState.update { it.copy(exportCoverResult = false) }
+            }
+        }
+    }
+
+    fun clearExportCoverStatus() {
+        _uiState.update { it.copy(exportCoverResult = null) }
+    }
     fun revertCover() {
         _uiState.update {
             it.copy(
@@ -189,8 +274,7 @@ class EditMetadataViewModel(
      * 核心修改：处理 RecoverableSecurityException
      */
     fun saveMetadata() {
-        // 从 State 中获取 SongInfo (其中 filePath 存的是 uri)
-        val uriString = _uiState.value.songInfo?.filePath ?: return
+        val uriString = _uiState.value.songInfo?.uriString ?: return
         val audioTagData = _uiState.value.editingTagData ?: return
 
         if (_uiState.value.isSaving) return
@@ -199,15 +283,11 @@ class EditMetadataViewModel(
             _uiState.update { it.copy(isSaving = true, saveSuccess = null, permissionIntentSender = null) }
 
             try {
-                // 1. 尝试写入文件
-                // 注意：Repository 需要抛出异常，而不是只返回 false，否则无法捕获权限请求
                 val success = songRepository.writeAudioTagData(uriString, audioTagData)
 
                 if (success) {
-                    // 2. 写入成功，使用当前时间作为最后修改时间
                     val newModifiedTime = System.currentTimeMillis()
 
-                    // 3. 更新数据库
                     songRepository.updateSongMetadata(
                         audioTagData,
                         uriString, // 传入 URI

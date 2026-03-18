@@ -29,6 +29,7 @@ import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.utils.LyricsUtils
 import com.lonx.lyrico.utils.MusicContentObserver
 import com.lonx.lyrico.utils.MusicMatchUtils
+import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
@@ -73,6 +74,7 @@ data class SongListUiState(
     val lastScanTime: Long = 0,
     val showBatchConfigDialog: Boolean = false, // Add this
     val isBatchMatching: Boolean = false,
+    val isSaving: Boolean = false,
     val showDeleteDialog: Boolean = false,
     val showBatchDeleteDialog: Boolean = false,
     val batchProgress: Pair<Int, Int>? = null, // (当前第几首, 总共几首)
@@ -83,7 +85,6 @@ data class SongListUiState(
     val currentFile: String = "",
     val batchHistoryId: Long = 0,
     val batchTimeMillis: Long = 0,  // 批量匹配总用时（毫秒）
-
     val searchQuery: String = "",
     val isSearching: Boolean = false
 )
@@ -109,8 +110,8 @@ class SongListViewModel(
     private var musicContentObserver: MusicContentObserver? = null
     private val scanRequest = MutableSharedFlow<Unit>(replay = 0)
     private var batchMatchJob: Job? = null
-    private var preDragSelectedIds = emptySet<Long>()
-    private var isDraggingToSelect = true
+
+
     val sortInfo: StateFlow<SortInfo> = settingsRepository.sortInfo
         .stateIn(viewModelScope, SharingStarted.Eagerly, SortInfo())
 
@@ -131,20 +132,15 @@ class SongListViewModel(
     private val lyricFormat = settingsRepository.lyricFormat
         .stateIn(viewModelScope, SharingStarted.Eagerly, LyricFormat.VERBATIM_LRC)
 
-    // 当排序信息改变时，歌曲列表自动重新加载
-//    val songs: StateFlow<List<SongEntity>> = sortInfo
-//        .flatMapLatest { sort ->
-//            songRepository.getAllSongsSorted(sort.sortBy, sort.order)
-//        }
-//        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // UI 交互状态
     private val _uiState = MutableStateFlow(SongListUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _selectedSongIds = MutableStateFlow<Set<Long>>(emptySet())
-    val selectedSongIds = _selectedSongIds.asStateFlow()
+    private var preDragSelectedIds = emptyMap<Long, Long>()
 
+    private val _selectedSongIds = MutableStateFlow<Map<Long, Long>>(emptyMap())
+    val selectedSongIds = _selectedSongIds.asStateFlow()
     private val _isSelectionMode = MutableStateFlow(false)
     val isSelectionMode = _isSelectionMode.asStateFlow()
     private val _sheetState = MutableStateFlow(SheetUiState())
@@ -223,11 +219,15 @@ class SongListViewModel(
         val song = songs.getOrNull(index) ?: return
         preDragSelectedIds = _selectedSongIds.value
 
-        // 起点只包含当前长按的这一个元素
-        val rangeIds = setOf(song.mediaId)
+        // 把当前这首歌的 ID 和 时间 存入
+        val rangeIds = mapOf(song.mediaId to song.fileLastModified)
 
-        // 取对称差集：划过的项状态反转，未划过的保持原样
-        _selectedSongIds.value = (preDragSelectedIds - rangeIds) + (rangeIds - preDragSelectedIds)
+        // 异或操作：原本选中过的剔除，没选中的加入
+        val result = preDragSelectedIds.toMutableMap()
+        for ((k, v) in rangeIds) {
+            if (result.containsKey(k)) result.remove(k) else result[k] = v
+        }
+        _selectedSongIds.value = result
     }
 
     /**
@@ -238,12 +238,14 @@ class SongListViewModel(
         val end = maxOf(startIndex, endIndex).coerceAtMost(songs.size - 1)
         if (start > end) return
 
-        // 获取当前手指划过的所有歌曲 ID
-        val rangeIds = songs.subList(start, end + 1).map { it.mediaId }.toSet()
+        // 一次性把划过的所有歌曲 ID 和 时间 拿出来
+        val rangeIds = songs.subList(start, end + 1).associate { it.mediaId to it.fileLastModified }
 
-        // preDragSelectedIds - rangeIds  -> 找出原本被选中，且没被划过的项保留下来
-        // rangeIds - preDragSelectedIds  -> 找出划过的项中，原本没被选中的项，让它们变成选中
-        _selectedSongIds.value = (preDragSelectedIds - rangeIds) + (rangeIds - preDragSelectedIds)
+        val result = preDragSelectedIds.toMutableMap()
+        for ((k, v) in rangeIds) {
+            if (result.containsKey(k)) result.remove(k) else result[k] = v
+        }
+        _selectedSongIds.value = result
     }
 
     /**
@@ -251,7 +253,7 @@ class SongListViewModel(
      */
     fun endDragSelection() {
         // 滑动结束，清空基准状态
-        preDragSelectedIds = emptySet()
+        preDragSelectedIds = emptyMap()
     }
     fun onStart() {
         viewModelScope.launch {
@@ -287,27 +289,29 @@ class SongListViewModel(
      * @param matchConfig 匹配配置
      */
     fun batchMatch(matchConfig: BatchMatchConfig) {
-        val selectedIds = _selectedSongIds.value
+        val selectedMap = _selectedSongIds.value
+        if (selectedMap.isEmpty()) return
+
         val separator = separator.value
         val lyricConfig = LyricRenderConfig(
             format = lyricFormat.value,
             showRomanization = romaEnabled.value,
             showTranslation = translationEnabled.value
         )
-        if (selectedIds.isEmpty()) return
 
         // 关闭配置对话框
         closeBatchMatchConfig()
 
         batchMatchJob = viewModelScope.launch {
             val startTime = System.currentTimeMillis()
-            val songsToMatch = songs.value.filter { it.mediaId in selectedIds }
+            val songsToMatch = songs.value.filter { selectedMap.containsKey(it.mediaId) }
             val currentOrder = searchSourceOrder.value
             val total = songsToMatch.size
 
             _uiState.update { it.copy(
                 isBatchMatching = true,
                 successCount = 0,
+                isSaving =  false,
                 failureCount = 0,
                 skippedCount = 0,
                 batchProgress = 0 to total,
@@ -349,17 +353,19 @@ class SongListViewModel(
                         )
 
                         when (result.status) {
-                            BatchMatchResult.SUCCESS if result.tagData != null -> {
-                                matchResults.add(song to result.tagData)
-                                val s = successCounter.incrementAndGet()
-                                _uiState.update { it.copy(successCount = s) }
+                            BatchMatchResult.SUCCESS -> {
+                                if (result.tagData != null) {
+                                    matchResults.add(song to result.tagData)
+                                } else {
+                                    val s = skippedCounter.incrementAndGet()
+                                    _uiState.update { it.copy(skippedCount = s) }
+                                }
                             }
                             BatchMatchResult.FAILURE -> {
                                 val f = failureCounter.incrementAndGet()
                                 _uiState.update { it.copy(failureCount = f) }
                             }
                             else -> {
-                                // Skipped
                                 val s = skippedCounter.incrementAndGet()
                                 _uiState.update { it.copy(skippedCount = s) }
                             }
@@ -371,7 +377,32 @@ class SongListViewModel(
             }.joinAll()
 
             if (matchResults.isNotEmpty()) {
-                songRepository.applyBatchMetadata(matchResults)
+                val sortedResults = matchResults.sortedBy {
+                    selectedMap[it.first.mediaId] ?: 0L
+                }
+
+                val finalWrittenResults = mutableListOf<Pair<SongEntity, AudioTagData>>()
+                _uiState.update {
+                    it.copy(isSaving =  true)
+                }
+
+                for ((song, tag) in sortedResults) {
+                    val writeSuccess = songRepository.writeAudioTagData(song.uri, tag)
+                    if (writeSuccess) {
+                        finalWrittenResults.add(song to tag)
+                        delay(50L)
+
+                        val s = successCounter.incrementAndGet()
+                        _uiState.update { it.copy(successCount = s) }
+                    } else {
+                        val f = failureCounter.incrementAndGet()
+                        _uiState.update { it.copy(failureCount = f) }
+                    }
+                }
+
+                if (finalWrittenResults.isNotEmpty()) {
+                    songRepository.applyBatchMetadata(finalWrittenResults)
+                }
             }
 
             // Save History
@@ -385,7 +416,7 @@ class SongListViewModel(
             )
             val historyId = batchMatchHistoryRepository.saveHistory(history, historyRecords)
 
-            _uiState.update { it.copy(batchHistoryId = historyId,isBatchMatching = false, batchTimeMillis = totalTime) }
+            _uiState.update { it.copy(batchHistoryId = historyId, isBatchMatching = false, isSaving =  false, batchTimeMillis = totalTime) }
         }
     }
 
@@ -411,7 +442,7 @@ class SongListViewModel(
                 BatchMatchField.DATE -> song.date.isNullOrBlank()
                 BatchMatchField.TRACK_NUMBER -> song.trackerNumber.isNullOrBlank()
                 BatchMatchField.LYRICS -> song.lyrics.isNullOrBlank()
-                BatchMatchField.COVER -> true // 为了严谨，总是尝试处理 Cover (除非我们读 Tag 确认)
+                BatchMatchField.COVER -> true
             }
         }
 
@@ -458,7 +489,7 @@ class SongListViewModel(
         try {
             val lyricsDeferred = async { finalMatch.source.getLyrics(finalMatch.result) }
             val newLyrics = lyricsDeferred.await()?.let {
-                 LyricsUtils.formatLrcResult(result = it, config = lyricConfig)
+                LyricsUtils.formatLrcResult(result = it, config = lyricConfig)
             }
 
             val newTitle = resolveValue(matchConfig, BatchMatchField.TITLE, song.title, finalMatch.result.title)
@@ -489,13 +520,8 @@ class SongListViewModel(
                     newLyricsResolved == null && picUrl == null
 
             if (isEffectivelyEmpty) return@coroutineScope MatchResult(null, BatchMatchResult.SKIPPED)
-
-            if (songRepository.writeAudioTagData(song.uri, tagDataToWrite)) {
-                MatchResult(tagDataToWrite, BatchMatchResult.SUCCESS)
-            } else {
-                MatchResult(null, BatchMatchResult.FAILURE) // Write failed
-            }
-        } catch (e: Exception) { 
+            return@coroutineScope MatchResult(tagDataToWrite, BatchMatchResult.SUCCESS)
+        } catch (e: Exception) {
             MatchResult(null, BatchMatchResult.FAILURE)
         }
     }
@@ -547,20 +573,28 @@ class SongListViewModel(
             }
         }
     }
-    fun toggleSelection(mediaId: Long) {
+    fun toggleSelection(song: SongEntity)  {
         if (!_isSelectionMode.value) _isSelectionMode.value = true
-        _selectedSongIds.update { if (it.contains(mediaId)) it - mediaId else it + mediaId }
+        _selectedSongIds.update { map ->
+            if (map.containsKey(song.mediaId)) {
+                map - song.mediaId // 取消选中
+            } else {
+                map + (song.mediaId to song.fileLastModified)
+            }
+        }
     }
 
     fun exitSelectionMode() {
         _isSelectionMode.value = false
-        _selectedSongIds.value = emptySet()
+        _selectedSongIds.value = emptyMap()
     }
 
     fun deselectAll() {
-        _selectedSongIds.value = emptySet()
+        _selectedSongIds.value = emptyMap()
     }
-
+    fun selectAll(songs: List<SongEntity>) {
+        _selectedSongIds.value = songs.associate { it.mediaId to it.fileLastModified }
+    }
     fun isAllSelected(songs: List<SongEntity>): Boolean {
         return songs.isNotEmpty() && _selectedSongIds.value.size == songs.size
     }
@@ -574,8 +608,8 @@ class SongListViewModel(
     }
 
     fun batchDelete(songs: List<SongEntity>) {
-        val selectedIds = _selectedSongIds.value
-        val toDelete = songs.filter { it.mediaId in selectedIds }
+        val selectedMap = _selectedSongIds.value
+        val toDelete = songs.filter { selectedMap.containsKey(it.mediaId) }
         viewModelScope.launch {
             toDelete.forEach { song ->
                 songRepository.deleteSong(song)
@@ -585,10 +619,8 @@ class SongListViewModel(
     }
 
     fun batchShare(context: Context, songs: List<SongEntity>) {
-        val selectedIds = _selectedSongIds.value
-        val toShare = songs.filter { it.mediaId in selectedIds }
-        if (toShare.isEmpty()) return
-
+        val selectedMap = _selectedSongIds.value
+        val toShare = songs.filter { selectedMap.containsKey(it.mediaId) }
         val uris = toShare.map { song ->
             ContentUris.withAppendedId(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -646,14 +678,14 @@ class SongListViewModel(
             it.copy(
                 batchProgress = null,
                 currentFile = "",
+                isSaving =  false,
+                isBatchMatching = false,
                 batchTimeMillis = 0
             )
         }
         exitSelectionMode()
     }
-    fun selectAll(songs: List<SongEntity>) {
-        _selectedSongIds.value = songs.map { it.mediaId }.toSet()
-    }
+
     override fun onCleared() {
         musicContentObserver?.let { contentResolver.unregisterContentObserver(it) }
         batchMatchJob?.cancel()

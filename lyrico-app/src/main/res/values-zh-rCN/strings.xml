@@ -343,4 +343,5 @@
     <string name="replacement_full_width_comma">全角逗号（，）</string>
     <string name="replacement_ampersand">与符号（&amp;）</string>
     <string name="replacement_not_selected">未选择</string>
+    <string name="message_saving_tags">正在写入标签…</string>
 </resources>

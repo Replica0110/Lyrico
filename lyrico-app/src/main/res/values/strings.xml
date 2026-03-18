@@ -331,4 +331,5 @@
     <string name="replacement_full_width_comma">Full-width comma (，)</string>
     <string name="replacement_ampersand">Ampersand (&amp;)</string>
     <string name="replacement_not_selected">Not selected</string>
+    <string name="message_saving_tags">Saving Tags…</string>
 </resources>

@@ -130,7 +130,7 @@ fun SongListScreen(
     val sortInfo by viewModel.sortInfo.collectAsState()
     val songs by viewModel.songs.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState(initial = false)
-    val selectedPaths by viewModel.selectedSongIds.collectAsState()
+    val selectedSongIds by viewModel.selectedSongIds.collectAsState()
     val showScrollTopButton by viewModel.showScrollTopButton.collectAsStateWithLifecycle()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
@@ -282,7 +282,7 @@ fun SongListScreen(
             },
             bottomBar = {
                 if(isSelectionMode) {
-                    val hasSelection = selectedPaths.isNotEmpty()
+                    val hasSelection = selectedSongIds.isNotEmpty()
                     NavigationBar(
                         containerColor = SaltTheme.colors.background
                     ) {
@@ -347,7 +347,7 @@ fun SongListScreen(
                             selected = false,
                             enabled = hasSelection,
                             onClick = {
-                                val selectedSongs = songs.filter { selectedPaths.contains(it.mediaId) }
+                                val selectedSongs = songs.filter { selectedSongIds.contains(it.mediaId) }
                                 if (selectedSongs.isNotEmpty()) {
                                     val filePaths = selectedSongs.map { it.filePath }.toTypedArray()
                                     navigator.navigate(BatchRenameDestination(filePaths = filePaths))
@@ -374,7 +374,7 @@ fun SongListScreen(
             topBar = {
                 if (isSelectionMode) {
                     SelectionModeTopAppBar(
-                        selectedCount = selectedPaths.size,
+                        selectedCount = selectedSongIds.size,
                         actions = {
                             val allSelected = viewModel.isAllSelected(songs)
                             TextButton(
@@ -589,8 +589,8 @@ fun SongListScreen(
                                 navigator = navigator,
                                 modifier = Modifier.animateItem(),
                                 isSelectionMode = isSelectionMode,
-                                isSelected = selectedPaths.contains(song.mediaId),
-                                onToggleSelection = { viewModel.toggleSelection(song.mediaId) },
+                                isSelected = selectedSongIds.contains(song.mediaId),
+                                onToggleSelection = { viewModel.toggleSelection(song) },
                                 trailingContent = {
                                     if (!isSelectionMode) {
                                         IconButton(onClick = { viewModel.showMenu(song) }) {
@@ -600,11 +600,11 @@ fun SongListScreen(
                                             )
                                         }
                                     } else {
-                                        IconButton(onClick = { viewModel.toggleSelection(song.mediaId) }) {
+                                        IconButton(onClick = { viewModel.toggleSelection(song) }) {
                                             Icon(
-                                                imageVector = if (selectedPaths.contains(song.mediaId)) SaltIcons.Check else SaltIcons.Uncheck,
+                                                imageVector = if (selectedSongIds.containsKey(song.mediaId)) SaltIcons.Check else SaltIcons.Uncheck,
                                                 contentDescription = null,
-                                                tint = if (selectedPaths.contains(song.mediaId)) SaltTheme.colors.highlight else SaltTheme.colors.text
+                                                tint = if (selectedSongIds.contains(song.mediaId)) SaltTheme.colors.highlight else SaltTheme.colors.text
                                             )
                                         }
                                     }
@@ -719,7 +719,7 @@ fun SongListScreen(
                     title = stringResource(R.string.dialog_batch_delete_title),
                     content = stringResource(
                         R.string.dialog_batch_delete_content,
-                        selectedPaths.size
+                        selectedSongIds.size
                     ),
                     cancelText = stringResource(R.string.cancel),
                     confirmText = stringResource(R.string.confirm)
@@ -741,6 +741,7 @@ fun SongListScreen(
                     successCount = uiState.successCount,
                     failureCount = uiState.failureCount,
                     skippedCount = uiState.skippedCount,
+                    isSaving = uiState.isSaving,
                     isMatching = uiState.isBatchMatching,
                     batchTimeMillis = uiState.batchTimeMillis,
                     onAbort = { viewModel.abortBatchMatch() },
@@ -759,7 +760,7 @@ private fun SongListContent(
     listState: LazyListState,
     navigator: DestinationsNavigator,
     isSelectionMode: Boolean,
-    selectedPaths: Set<Long>,
+    selectedSongIds: Set<Long>,
     modifier: Modifier,
     viewModel: SongListViewModel
 ) {
@@ -779,20 +780,20 @@ private fun SongListContent(
                 navigator = navigator,
                 modifier = Modifier.animateItem(),
                 isSelectionMode = isSelectionMode,
-                isSelected = selectedPaths.contains(song.mediaId),
-                onToggleSelection = { viewModel.toggleSelection(song.mediaId) },
+                isSelected = selectedSongIds.contains(song.mediaId),
+                onToggleSelection = { viewModel.toggleSelection(song) },
                 trailingContent = {
                     if (!isSelectionMode) {
                         IconButton(onClick = { viewModel.showMenu(song) }) {
                             Icon(painterResource(R.drawable.ic_info_24dp), "Info")
                         }
                     } else {
-                        IconButton(onClick = { viewModel.toggleSelection(song.mediaId) }) {
+                        IconButton(onClick = { viewModel.toggleSelection(song) }) {
                             Icon(
-                                imageVector = if (selectedPaths.contains(song.mediaId))
+                                imageVector = if (selectedSongIds.contains(song.mediaId))
                                     SaltIcons.Check else SaltIcons.Uncheck,
                                 contentDescription = null,
-                                tint = if (selectedPaths.contains(song.mediaId))
+                                tint = if (selectedSongIds.contains(song.mediaId))
                                     SaltTheme.colors.highlight else SaltTheme.colors.text
                             )
                         }
@@ -811,6 +812,7 @@ fun BatchMatchingDialog(
     skippedCount: Int,
     failureCount: Int,
     isMatching: Boolean,
+    isSaving: Boolean,
     batchTimeMillis: Long,
     onAbort: () -> Unit,
     onClose: () -> Unit,
@@ -846,8 +848,11 @@ fun BatchMatchingDialog(
                         ) {
 
                             Text(
-                                text = if (isMatching)
+                                text = if (isMatching) {
                                     currentFile
+                                } else if(isSaving) {
+                                    stringResource(R.string.message_saving_tags)
+                                }
                                 else
                                     stringResource(
                                         R.string.batch_matching_total_time,

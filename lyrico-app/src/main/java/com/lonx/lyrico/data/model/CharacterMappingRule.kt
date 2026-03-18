@@ -1,5 +1,9 @@
 package com.lonx.lyrico.data.model
 
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.lonx.lyrico.R
 import kotlinx.serialization.Serializable
 
 /**
@@ -31,33 +35,50 @@ data class CharacterMappingRule(
 data class CharacterMappingConfig(
     val rules: List<CharacterMappingRule> = emptyList()
 )
+enum class ReplacementCharOption(
+    val value: String,
+    @StringRes val labelRes: Int
+) {
+    REMOVE(
+        value = "",
+        labelRes = R.string.replacement_remove
+    ),
 
+    IDEOGRAPHIC_COMMA(
+        value = "、",
+        labelRes = R.string.replacement_ideographic_comma
+    ),
+
+    HALF_WIDTH_COMMA(
+        value = ",",
+        labelRes = R.string.replacement_half_width_comma
+    ),
+
+    FULL_WIDTH_COMMA(
+        value = "，",
+        labelRes = R.string.replacement_full_width_comma
+    ),
+
+    AMPERSAND(
+        value = "&",
+        labelRes = R.string.replacement_ampersand
+    );
+
+    companion object {
+        fun fromValue(value: String?): ReplacementCharOption? {
+            return entries.find { it.value == value }
+        }
+    }
+}
+fun String?.toReplacementOption(): ReplacementCharOption? {
+    return ReplacementCharOption.fromValue(this)
+}
 /**
  * 预定义的替换字符选项
  */
-object ReplacementCharOptions {
-    const val REMOVE = "" // 空字符表示移除
-    const val IDEOGRAPHIC_COMMA = "、" // 顿号
-    const val HALF_WIDTH_COMMA = "," // 半角逗号
-    const val FULL_WIDTH_COMMA = "，" // 全角逗号
-    const val AMPERSAND = "&" // & 符号
-    
-    val ALL_OPTIONS = listOf(
-        REMOVE,
-        IDEOGRAPHIC_COMMA,
-        HALF_WIDTH_COMMA,
-        FULL_WIDTH_COMMA,
-        AMPERSAND
-    )
-    
-    fun getDisplayName(char: String?): String = when(char) {
-        REMOVE -> "移除"
-        IDEOGRAPHIC_COMMA -> "顿号 (、)"
-        HALF_WIDTH_COMMA -> "半角逗号 (,)"
-        FULL_WIDTH_COMMA -> "全角逗号 (，)"
-        AMPERSAND -> "与符号 (&)"
-        else -> "未选择"
-    }
+@Composable
+fun ReplacementCharOption.displayName(): String {
+    return stringResource(id = labelRes)
 }
 
 object CharacterMappingDefaults {

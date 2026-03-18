@@ -336,4 +336,11 @@
     <string name="character_to_replace">字符 %1$s</string>
     <string name="no_character_mappings">暂无字符映射</string>
     <string name="character_replacement_selector_subtitle">选择替换选项</string>
+
+    <string name="replacement_remove">移除</string>
+    <string name="replacement_ideographic_comma">顿号（、）</string>
+    <string name="replacement_half_width_comma">半角逗号（,）</string>
+    <string name="replacement_full_width_comma">全角逗号（，）</string>
+    <string name="replacement_ampersand">与符号（&amp;）</string>
+    <string name="replacement_not_selected">未选择</string>
 </resources>

@@ -35,6 +35,7 @@ import com.lonx.lyrico.utils.RenameEngine
 import com.lonx.lyrico.utils.TagField
 import com.lonx.lyrico.viewmodel.BatchRenameViewModel
 import com.lonx.lyrico.viewmodel.SongForBatchRename
+import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemButton
 import com.moriafly.salt.ui.ItemCheck
 import com.moriafly.salt.ui.ItemDivider
@@ -116,6 +117,10 @@ fun BatchRenameScreen(
                         state = showPlaceholderInfo,
                         onChange = { showPlaceholderInfo = it }
                     )
+                    Item(
+                        onClick = { navigator.navigate(CharacterMappingDestination()) },
+                        text = stringResource(id = R.string.configure_character_mapping)
+                    )
                     AnimatedVisibility(visible = showPlaceholderInfo) {
                         PlaceholderInfoContent()
                     }
@@ -123,11 +128,6 @@ fun BatchRenameScreen(
                         onClick = { viewModel.executeRename() },
                         enabled = uiState.previews.isNotEmpty() && !uiState.isRenamingInProgress,
                         text = stringResource(id = R.string.action_rename),
-                    )
-                    ItemDivider()
-                    ItemButton(
-                        onClick = { navigator.navigate(CharacterMappingDestination()) },
-                        text = stringResource(id = R.string.configure_character_mapping),
                     )
                 }
             }

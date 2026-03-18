@@ -6,8 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.lyrico.data.model.CharacterMappingConfig
-import com.lonx.lyrico.data.model.CharacterMappingRule
-import com.lonx.lyrico.data.model.ReplacementCharOptions
 import com.lonx.lyrico.data.model.RenamePreview
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.utils.RenameEngine

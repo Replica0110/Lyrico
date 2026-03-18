@@ -324,4 +324,11 @@
     <string name="character_to_replace">Character %1$s</string>
     <string name="no_character_mappings">No character mappings</string>
     <string name="character_replacement_selector_subtitle">Select replacement option</string>
+
+    <string name="replacement_remove">Remove</string>
+    <string name="replacement_ideographic_comma">Ideographic comma (、)</string>
+    <string name="replacement_half_width_comma">Half-width comma (,)</string>
+    <string name="replacement_full_width_comma">Full-width comma (，)</string>
+    <string name="replacement_ampersand">Ampersand (&amp;)</string>
+    <string name="replacement_not_selected">Not selected</string>
 </resources>

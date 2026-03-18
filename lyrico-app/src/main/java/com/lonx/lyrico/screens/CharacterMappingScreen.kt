@@ -15,7 +15,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.CharacterMappingRule
-import com.lonx.lyrico.data.model.ReplacementCharOptions
+import com.lonx.lyrico.data.model.ReplacementCharOption
+import com.lonx.lyrico.data.model.toReplacementOption
 import com.lonx.lyrico.viewmodel.BatchRenameViewModel
 import com.moriafly.salt.ui.ItemCheck
 import com.moriafly.salt.ui.ItemDropdown
@@ -81,8 +82,6 @@ private fun CharacterMappingRuleSection(
     rule: CharacterMappingRule,
     onCharacterMappingChanged: (character: String, replacementChar: String?) -> Unit
 ) {
-    ItemOuterTitle(text = rule.name)
-
     if (rule.charMappings.isEmpty()) {
         RoundedColumn {
             Text(
@@ -94,18 +93,34 @@ private fun CharacterMappingRuleSection(
         RoundedColumn(
             type = RoundedColumnType.InList,
         ) {
-            rule.charMappings.entries.forEachIndexed { index, (character, currentReplacement) ->
+            rule.charMappings.entries.forEachIndexed { _, (character, currentReplacement) ->
+
+                val currentOption = currentReplacement.toReplacementOption()
+
                 ItemDropdown(
                     text = stringResource(R.string.character_to_replace, character),
-                    value = ReplacementCharOptions.getDisplayName(currentReplacement),
+
+                    // 🔥 显示
+                    value = currentOption?.let { stringResource(it.labelRes) }
+                        ?: stringResource(R.string.replacement_not_selected),
+
                     sub = stringResource(R.string.character_replacement_selector_subtitle),
+
                     content = {
-                        ReplacementCharOptions.ALL_OPTIONS.forEach { option ->
+                        ReplacementCharOption.entries.forEach { option ->
+
                             ItemCheck(
-                                text = ReplacementCharOptions.getDisplayName(option),
-                                state = currentReplacement == option,
+                                text = stringResource(option.labelRes),
+
+                                // 🔥 判断选中
+                                state = currentOption == option,
+
                                 onChange = {
-                                    onCharacterMappingChanged(character, option)
+                                    // 🔥 Enum → String
+                                    onCharacterMappingChanged(
+                                        character,
+                                        option.value
+                                    )
                                     state.dismiss()
                                 }
                             )

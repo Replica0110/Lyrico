@@ -3,6 +3,7 @@ package com.lonx.lyrico.utils
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.CharacterMappingRule
 import com.lonx.lyrico.data.model.RenamePreview
+import kotlinx.coroutines.delay
 import java.io.File
 
 object RenameEngine {
@@ -65,7 +66,7 @@ object RenameEngine {
         return previews
     }
 
-    fun renameFiles(previews: List<RenamePreview>): Result {
+    suspend fun renameFiles(previews: List<RenamePreview>): Result {
         val result = Result(
             successful = mutableListOf(),
             failed = mutableListOf()
@@ -80,6 +81,7 @@ object RenameEngine {
 
                 if (oldFile.renameTo(newFile)) {
                     result.successful.add(preview)
+                    delay(50L)
                 } else {
                     result.failed.add(preview to "Failed to rename file")
                 }

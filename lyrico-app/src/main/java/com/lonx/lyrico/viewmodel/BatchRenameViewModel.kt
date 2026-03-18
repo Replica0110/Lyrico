@@ -33,7 +33,8 @@ data class BatchRenameUiState(
 data class SongForBatchRename(
     val filePath: String,
     val fileName: String,
-    val tagData: AudioTagData?
+    val tagData: AudioTagData?,
+    val fileLastModified: Long = 0L
 )
 
 class BatchRenameViewModel(
@@ -126,8 +127,11 @@ class BatchRenameViewModel(
     }
 
     fun executeRename() {
-        val previews = _uiState.value.previews
+        val currentState = _uiState.value
+        val previews = currentState.previews
         if (previews.isEmpty()) return
+
+        val timeMap = currentState.songs.associate { it.filePath to it.fileLastModified }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -136,7 +140,10 @@ class BatchRenameViewModel(
                     errorMessage = null
                 )
 
-                val result = RenameEngine.renameFiles(previews)
+                val sortedPreviews = previews.sortedBy { preview ->
+                    timeMap[preview.originalPath] ?: 0L
+                }
+                val result = RenameEngine.renameFiles(sortedPreviews)
 
                 _uiState.value = _uiState.value.copy(
                     renameResult = result,

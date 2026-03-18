@@ -350,7 +350,7 @@ fun SongListScreen(
                                 val selectedSongs = songs.filter { selectedSongIds.contains(it.mediaId) }
                                 if (selectedSongs.isNotEmpty()) {
                                     val filePaths = selectedSongs.map { it.filePath }.toTypedArray()
-                                    navigator.navigate(BatchRenameDestination(filePaths = filePaths))
+                                    navigator.navigate(BatchRenameDestination(filePaths = filePaths,fileLastModifieds = selectedSongs.map { it.fileLastModified }.toLongArray()))
                                 }
                             },
                             icon = {

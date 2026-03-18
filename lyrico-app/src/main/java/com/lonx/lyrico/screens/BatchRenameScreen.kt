@@ -54,6 +54,7 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
+import java.io.File
 
 @OptIn(UnstableSaltUiApi::class)
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -61,15 +62,17 @@ import org.koin.androidx.compose.koinViewModel
 @Destination<RootGraph>(route = "batch_rename")
 fun BatchRenameScreen(
     navigator: DestinationsNavigator,
-    filePaths: Array<String> = arrayOf()
+    filePaths: Array<String> = arrayOf(),
+    fileLastModifieds: LongArray = longArrayOf()
 ) {
     val viewModel: BatchRenameViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    LaunchedEffect(filePaths) {
+    LaunchedEffect(filePaths, fileLastModifieds) {
         if (filePaths.isNotEmpty()) {
-            val songList = filePaths.map { path ->
-                SongForBatchRename(path, path.substringAfterLast('/'), null)
+            val songList = filePaths.mapIndexed { index, path ->
+                val lastModified = fileLastModifieds.getOrNull(index) ?: File(path).lastModified()
+                SongForBatchRename(path, path.substringAfterLast('/'), null, lastModified)
             }
             viewModel.setSongs(context, songList)
         }

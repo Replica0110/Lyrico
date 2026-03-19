@@ -33,14 +33,7 @@ fun LyricoApp(externalUri: Uri?) {
     val songListViewModel: SongListViewModel = koinViewModel()
 
     val navController = rememberNavController()
-    val navigator = navController.rememberDestinationsNavigator()
-    LaunchedEffect(externalUri) {
-        externalUri?.let { uri ->
-            navigator.navigate(EditMetadataDestination(songFileUri = uri.toString())) {
-                launchSingleTop = true
-            }
-        }
-    }
+
     LaunchedEffect(Unit) {
         songListViewModel.initialScanIfEmpty()
     }

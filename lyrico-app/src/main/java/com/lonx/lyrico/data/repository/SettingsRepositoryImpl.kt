@@ -359,7 +359,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun exportSettings(): String {
         val prefs = context.settingsDataStore.data.first()
-
+        val charMapping = getCharacterMappingConfig()
         val backup = SettingsBackup(
             removeEmptyLines = prefs[PreferencesKeys.REMOVE_EMPTY_LINES]
                 ?: SettingsDefaults.REMOVE_EMPTY_LINES,
@@ -388,7 +388,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             ignoreShortAudio = prefs[PreferencesKeys.IGNORE_SHORT_AUDIO]
                 ?: SettingsDefaults.IGNORE_SHORT_AUDIO,
 
-            searchSourceOrder = SettingsDefaults.SEARCH_SOURCE_ORDER.map { it.name },
+            searchSourceOrder = (prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] ?: "").toSourceList().map { it.name },
 
             searchPageSize = prefs[PreferencesKeys.SEARCH_PAGE_SIZE]
                 ?: SettingsDefaults.SEARCH_PAGE_SIZE,
@@ -400,7 +400,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE,
 
             showScrollTopButton = prefs[PreferencesKeys.SHOW_SCROLL_TOP_BUTTON]
-                ?: SettingsDefaults.SHOW_SCROLL_TOP_BUTTON
+                ?: SettingsDefaults.SHOW_SCROLL_TOP_BUTTON,
+            characterMappingConfig = charMapping
         )
 
         return jsonFormatter.encodeToString(backup)
@@ -422,8 +423,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.translationEnabled?.let { prefs[PreferencesKeys.TRANSLATION_ENABLED] = it }
                 backup.ignoreShortAudio?.let { prefs[PreferencesKeys.IGNORE_SHORT_AUDIO] = it }
                 backup.searchSourceOrder?.let { list ->
-                    prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] =
-                        list.toSourceList().toSourceCsv()
+                    prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] = list.toSourceList().toSourceCsv()
                 }
                 backup.searchPageSize?.let { prefs[PreferencesKeys.SEARCH_PAGE_SIZE] = it }
                 backup.themeMode?.let { prefs[PreferencesKeys.THEME_MODE] = it }
@@ -432,6 +432,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
                 backup.showScrollTopButton?.let {
                     prefs[PreferencesKeys.SHOW_SCROLL_TOP_BUTTON] = it
+                }
+                backup.characterMappingConfig?.let { config ->
+                    prefs[PreferencesKeys.CHARACTER_MAPPING_CONFIG] = jsonFormatter.encodeToString(config)
                 }
             }
             true

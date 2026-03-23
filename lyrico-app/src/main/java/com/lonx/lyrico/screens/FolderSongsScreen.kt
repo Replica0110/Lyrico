@@ -1,33 +1,29 @@
 package com.lonx.lyrico.screens
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
-import com.moriafly.salt.ui.ItemOuterTip
-import com.moriafly.salt.ui.ItemTip
-import com.moriafly.salt.ui.RoundedColumn
-import com.moriafly.salt.ui.RoundedColumnType
-import com.moriafly.salt.ui.SaltDimens
-import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.ext.safeMainCompat
-import com.moriafly.salt.ui.lazy.LazyColumn
-import com.moriafly.salt.ui.lazy.items
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-@OptIn(ExperimentalMaterial3Api::class, UnstableSaltUiApi::class)
 @Composable
 @Destination<RootGraph>(route = "folder_songs")
 fun FolderSongsScreen(
@@ -40,46 +36,71 @@ fun FolderSongsScreen(
     )
     val songs by viewModel.songs.collectAsStateWithLifecycle()
 
-
     BasicScreenBox(
         title = folderPath.substringAfterLast("/"),
-        onBack = {
-            navigator.popBackStack()
-        },
-        toolbar = {
-            // TODO
-        }
+        onBack = { navigator.popBackStack() }
     ) {
-        LazyColumn() {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             item {
-                Spacer(Modifier.height(SaltDimens.RoundedColumnInListEdgePadding))
+                FolderSongsOverviewCard(
+                    folderPath = folderPath,
+                    songCount = songs.size
+                )
             }
+
             if (songs.isEmpty()) {
                 item {
-                    RoundedColumn(
-                        type = RoundedColumnType.InList
-                    ) {
-                        ItemOuterTip(stringResource(R.string.no_songs_in_folder))
-                    }
+                    FolderSongsEmptyCard()
                 }
             } else {
                 items(
                     items = songs,
                     key = { song -> song.mediaId }
-                ) {
+                ) { song ->
                     SongListItem(
-                        song = it,
-                        navigator = navigator,
+                        song = song,
+                        navigator = navigator
                     )
                 }
             }
-            item {
-                Spacer(Modifier.height(SaltDimens.RoundedColumnInListEdgePadding))
-            }
-
-            item {
-                Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeMainCompat))
-            }
         }
+    }
+}
+
+@Composable
+private fun FolderSongsOverviewCard(
+    folderPath: String,
+    songCount: Int
+) {
+    Card(
+        modifier = Modifier.padding(horizontal = 12.dp),
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surfaceContainer,
+            contentColor = MiuixTheme.colorScheme.onBackground
+        )
+    ) {
+        BasicComponent(
+            title = stringResource(R.string.folder_song_count_format, songCount),
+            summary = folderPath
+        )
+    }
+}
+
+@Composable
+private fun FolderSongsEmptyCard() {
+    Card(
+        modifier = Modifier.padding(horizontal = 12.dp),
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.surfaceContainer,
+            contentColor = MiuixTheme.colorScheme.onBackground
+        )
+    ) {
+        BasicComponent(
+            title = stringResource(R.string.no_songs_in_folder)
+        )
     }
 }

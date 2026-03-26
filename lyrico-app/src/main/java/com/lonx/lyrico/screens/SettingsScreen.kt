@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ArtistSeparator
+import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
@@ -80,6 +81,7 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val folders = folderUiState.folders
     val totalFolders = folders.size
+    val conversionMode = settingsUiState.conversionMode
     val ignoredFolders = folders.count { it.isIgnored }
     val searchSourceOrder = settingsUiState.searchSourceOrder
     val searchPageSize = settingsUiState.searchPageSize
@@ -334,6 +336,22 @@ fun SettingsScreen(
                     checked = removeEmptyLines,
                     onCheckedChange = { settingsViewModel.setRemoveEmptyLines(it) }
                 )
+                ItemDropdown(
+                    text = stringResource(R.string.conversion_mode),
+                    value = stringResource(conversionMode.labelRes)
+                ) {
+                    val modes = ConversionMode.entries.toList()
+                    modes.forEach { mode ->
+                        ItemCheck(
+                            text = stringResource(mode.labelRes),
+                            state = conversionMode == mode,
+                            onChange = {
+                                settingsViewModel.setConversionMode(mode)
+                                state.dismiss()
+                            }
+                        )
+                    }
+                }
             }
 
             SmallTitle(text = stringResource(R.string.section_metadata))

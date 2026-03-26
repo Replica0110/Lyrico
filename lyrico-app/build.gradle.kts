@@ -36,8 +36,8 @@ android {
         minSdk = 28
         //noinspection ExpiredTargetSdkVersion
         targetSdk = 28
-        versionCode = 13
-        versionName = "1.2.9"
+        versionCode = 14
+        versionName = "1.2.10"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -116,7 +116,7 @@ dependencies {
     // Utilities
     implementation(libs.xxpermissions)
     implementation(libs.tinypinyin)
-
+    implementation(libs.opencc4j)
     // KSP
     ksp(libs.compose.destinations.ksp)
     ksp(libs.androidx.room.compiler)

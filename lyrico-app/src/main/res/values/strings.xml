@@ -339,4 +339,8 @@
     <string name="label_save_cover">Save Cover</string>
     <string name="msg_cover_saved_to_gallery">Cover saved to gallery</string>
     <string name="msg_cover_save_failed">Failed to save cover</string>
+    <string name="chinese_conversion_mode_none">None</string>
+    <string name="chinese_conversion_mode_traditional_to_simplified">CHT -> CHS</string>
+    <string name="chinese_conversion_mode_simplified_to_traditional">CHS -> CHT</string>
+    <string name="conversion_mode">Lyric Conversion Mode</string>
 </resources>

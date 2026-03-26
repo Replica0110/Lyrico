@@ -736,7 +736,9 @@ fun SongListScreen(
                         viewModel.saveBatchMatchConfig(config)
                         viewModel.closeBatchMatchConfig() },
                     onConfirm = {
-                        viewModel.batchMatch()
+                        scope.launch {
+                            viewModel.batchMatch()
+                        }
                     }
                 )
             }

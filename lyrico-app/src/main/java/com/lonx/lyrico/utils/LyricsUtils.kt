@@ -1,6 +1,8 @@
 package com.lonx.lyrico.utils
 
 import android.annotation.SuppressLint
+import com.github.houbb.opencc4j.util.ZhHkConverterUtil
+import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrics.model.LyricsLine
@@ -134,8 +136,19 @@ object LyricsUtils {
         if (isTtml) {
             builder.append("</div>\n</body>\n</tt>")
         }
+        val lyrics = when (config.conversionMode) {
+            ConversionMode.TRADITIONAL_TO_SIMPLIFIED -> {
+                ZhHkConverterUtil.toSimple(builder.toString())
+            }
+            ConversionMode.SIMPLIFIED_TO_TRADITIONAL -> {
+                ZhHkConverterUtil.toTraditional(builder.toString())
+            }
+            else -> {
+                builder.toString()
+            }
+        }
 
-        return builder.toString().trim()
+        return lyrics.trim()
     }
 
     /**

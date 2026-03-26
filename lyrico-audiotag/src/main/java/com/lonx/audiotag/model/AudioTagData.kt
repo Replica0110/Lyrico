@@ -1,8 +1,11 @@
 package com.lonx.audiotag.model
 
 import android.os.Parcelable
+import androidx.annotation.Keep
 import kotlinx.parcelize.Parcelize
 import java.util.ArrayList
+
+@Keep
 @Parcelize
 data class AudioTagData(
     val title: String? = null,
@@ -30,6 +33,7 @@ data class AudioTagData(
     val picUrl: String? = null
 ): Parcelable
 
+@Keep
 @Parcelize
 data class AudioPicture(
     val data: ByteArray,

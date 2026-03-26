@@ -3,6 +3,7 @@ package com.lonx.lyrico.data.repository
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.CharacterMappingConfig
 import com.lonx.lyrico.data.model.CharacterMappingRule
+import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.ThemeMode
@@ -20,7 +21,8 @@ data class SettingsSnapshot(
     val translationEnabled: Boolean,
     val onlyTranslationIfAvailable: Boolean,
     val removeEmptyLines: Boolean,
-    val showScrollTopButton: Boolean
+    val showScrollTopButton: Boolean,
+    val conversionMode: ConversionMode
 )
 
 interface SettingsRepository {
@@ -33,6 +35,8 @@ interface SettingsRepository {
     val sortInfo: Flow<SortInfo>
     val separator: Flow<String>
     val romaEnabled: Flow<Boolean>
+
+    val conversionMode: Flow<ConversionMode>
 
     val translationEnabled: Flow<Boolean>
     val checkUpdateEnabled: Flow<Boolean>
@@ -54,6 +58,7 @@ interface SettingsRepository {
     suspend fun saveSortInfo(sortInfo: SortInfo)
     suspend fun saveSeparator(separator: String)
     suspend fun saveRomaEnabled(enabled: Boolean)
+    suspend fun saveConversionMode(mode: ConversionMode)
     suspend fun saveCheckUpdateEnabled(enabled: Boolean)
     suspend fun saveTranslationEnabled(enabled: Boolean)
     suspend fun saveIgnoreShortAudio(enabled: Boolean)

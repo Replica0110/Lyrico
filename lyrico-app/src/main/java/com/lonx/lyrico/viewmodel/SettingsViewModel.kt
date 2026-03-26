@@ -8,6 +8,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.CacheCategory
+import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.LyricFormat
@@ -39,6 +40,7 @@ data class SettingsUiState(
     val removeEmptyLines: Boolean = true,
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
+    val conversionMode: ConversionMode = ConversionMode.NONE
 )
 sealed class SettingsEvent {
     data class ShowToast(val message: UiMessage) : SettingsEvent()
@@ -67,7 +69,8 @@ class SettingsViewModel(
             categorizedCacheSize = cacheMap,
             onlyTranslationIfAvailable = settings.onlyTranslationIfAvailable,
             totalCacheSize = cacheMap.values.sum(),
-            removeEmptyLines = settings.removeEmptyLines
+            removeEmptyLines = settings.removeEmptyLines,
+            conversionMode = settings.conversionMode
         )
     }.stateIn(
         scope = viewModelScope,
@@ -126,6 +129,11 @@ class SettingsViewModel(
         }
     }
 
+    fun setConversionMode(mode: ConversionMode) {
+        viewModelScope.launch {
+            settingsRepository.saveConversionMode(mode)
+        }
+    }
     fun setIgnoreShortAudio(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveIgnoreShortAudio(enabled)

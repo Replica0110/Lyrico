@@ -351,4 +351,8 @@
     <string name="label_save_cover">保存封面</string>
     <string name="msg_cover_saved_to_gallery">封面已保存到相册</string>
     <string name="msg_cover_save_failed">封面保存失败</string>
+    <string name="chinese_conversion_mode_none">不转换</string>
+    <string name="chinese_conversion_mode_traditional_to_simplified">繁体转简体</string>
+    <string name="chinese_conversion_mode_simplified_to_traditional">简体转繁体</string>
+    <string name="conversion_mode">歌词转换</string>
 </resources>

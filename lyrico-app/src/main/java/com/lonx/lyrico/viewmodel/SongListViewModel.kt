@@ -21,12 +21,14 @@ import com.lonx.lyrico.data.model.BatchMatchField
 import com.lonx.lyrico.data.model.BatchMatchHistory
 import com.lonx.lyrico.data.model.BatchMatchMode
 import com.lonx.lyrico.data.model.BatchMatchResult
+import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.entity.BatchMatchRecordEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.data.repository.PlaybackRepository
+import com.lonx.lyrico.data.repository.SettingsDefaults
 import com.lonx.lyrico.utils.LyricsUtils
 import com.lonx.lyrico.utils.MusicContentObserver
 import com.lonx.lyrico.utils.MusicMatchUtils
@@ -296,17 +298,13 @@ class SongListViewModel(
     /**
      * 批量匹配歌曲（支持并发控制）
      */
-    fun batchMatch() {
+    suspend fun batchMatch() {
         val selectedMap = _selectedSongIds.value
         val matchConfig = batchMatchConfig.value
         if (selectedMap.isEmpty()) return
 
         val separator = separator.value
-        val lyricConfig = LyricRenderConfig(
-            format = lyricFormat.value,
-            showRomanization = romaEnabled.value,
-            showTranslation = translationEnabled.value
-        )
+        val lyricConfig = settingsRepository.getLyricRenderConfig()
 
         // 关闭配置对话框
         closeBatchMatchConfig()

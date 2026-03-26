@@ -1,1 +1,2 @@
 -keep class com.lonx.audiotag.internal.** { *; }
+-keep class com.lonx.audiotag.model.** { *; }

@@ -1,5 +1,6 @@
 package com.lonx.audiotag.model
 
+import androidx.annotation.Keep
 
 /**
  * Picture contains information and data of a picture.
@@ -9,6 +10,7 @@ package com.lonx.audiotag.model
  * @param pictureType String with type as specified for ID3v2, e.g. "Front Cover", "Back Cover", "Band"
  * @param mimeType String with image format, e.g. "image/jpeg"
  */
+@Keep
 public data class Picture(
     val data: ByteArray,
     val description: String,

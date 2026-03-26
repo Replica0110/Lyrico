@@ -35,6 +35,8 @@ import com.lonx.lyrics.source.ne.NeApi
 import com.lonx.lyrics.source.ne.NeSource
 import com.lonx.lyrics.source.qm.QmApi
 import com.lonx.lyrics.source.qm.QmSource
+import com.lonx.lyrics.source.soda.SodaApi
+import com.lonx.lyrics.source.soda.SodaSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -126,6 +128,29 @@ val appModule = module {
             .build()
             .create(QmApi::class.java)
     }
+    single<SodaApi> {
+
+        val sodaClient = get<OkHttpClient>().newBuilder()
+            .addInterceptor { chain ->
+                val req = chain.request().newBuilder()
+                    .header(
+                        "User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/134 Safari/537.36"
+                    )
+                    // .header("Cookie", get<SodaCookieProvider>().cookie)
+                    .build()
+
+                chain.proceed(req)
+            }
+            .build()
+
+        Retrofit.Builder()
+            .baseUrl("https://api.qishui.com/")
+            .client(sodaClient)
+            .addConverterFactory(get<Json>().asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(SodaApi::class.java)
+    }
     // 歌词源
     single<SearchSource>(named("Qm")) { QmSource(
         api = get()
@@ -137,6 +162,9 @@ val appModule = module {
         api = get(),
         json = get(),
         context = androidContext()
+    ) }
+    single<SearchSource>(named("Soda")) { SodaSource(
+        api = get()
     ) }
 
     single { getAll<SearchSource>() }

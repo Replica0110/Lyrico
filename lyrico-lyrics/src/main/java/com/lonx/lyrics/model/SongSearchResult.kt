@@ -10,10 +10,11 @@ enum class Source(
 ) {
     KG(R.string.kg_source_name),
     QM(R.string.qm_source_name),
-    NE(R.string.ne_source_name);
+    NE(R.string.ne_source_name),
+    SODA(R.string.soda_source_name);
 
     companion object {
-        val DEFAULT_ORDER = listOf(QM, KG, NE)
+        val DEFAULT_ORDER = entries.toList()
         private val NAME_MAP = entries.associateBy { it.name }
 
         fun fromNameOrNull(name: String?): Source? = NAME_MAP[name?.trim()]

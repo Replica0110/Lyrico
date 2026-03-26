@@ -11,6 +11,7 @@ import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
 import com.lonx.lyrico.data.model.CharacterMappingConfig
 import com.lonx.lyrico.data.model.CharacterMappingDefaults
+import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.SettingsBackup
@@ -31,6 +32,7 @@ import kotlinx.serialization.json.Json
 private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
 object SettingsDefaults {
+    val CONVERSION_MODE = ConversionMode.NONE
     const val RENAME_FORMAT = "@1 - @2"
     const val SHOW_SCROLL_TOP_BUTTON = true
     val LYRIC_FORMAT = LyricFormat.VERBATIM_LRC
@@ -45,7 +47,7 @@ object SettingsDefaults {
     const val REMOVE_EMPTY_LINES = true
 
     // 搜索源顺序默认值
-    val SEARCH_SOURCE_ORDER = listOf(Source.QM, Source.KG, Source.NE)
+    val SEARCH_SOURCE_ORDER = Source.entries.toList()
     const val SEARCH_PAGE_SIZE = 10
 
     val THEME_MODE = ThemeMode.AUTO
@@ -77,6 +79,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val ONLY_TRANSLATION_IF_AVAILABLE = booleanPreferencesKey("only_translation_if_available")
         val CHARACTER_MAPPING_CONFIG = stringPreferencesKey("character_mapping_config")
         val BATCH_MATCH_CONFIG = stringPreferencesKey("batch_match_config")
+        val CONVERSION_MODE = stringPreferencesKey("conversion_mode")
     }
 
     override val lyricFormat: Flow<LyricFormat>
@@ -160,6 +163,19 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
             }
         }
+    override val conversionMode: Flow<ConversionMode>
+        get() = context.settingsDataStore.data.map { preferences ->
+            val modeName = preferences[PreferencesKeys.CONVERSION_MODE]
+            if (modeName.isNullOrBlank()) {
+                ConversionMode.NONE
+            } else {
+                try {
+                    ConversionMode.valueOf(modeName)
+                } catch (e: IllegalArgumentException) {
+                    ConversionMode.NONE
+                }
+            }
+        }
 
     override val onlyTranslationIfAvailable: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -240,8 +256,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         combine(
             lyricPartFlow,
             searchPartFlow,
-            uiPartFlow
-        ) { lyric, search, ui ->
+            uiPartFlow,
+            conversionMode
+        ) { lyric, search, ui, conversionMode ->
             SettingsSnapshot(
                 lyricFormat = lyric.lyricFormat,
                 romaEnabled = lyric.romaEnabled,
@@ -253,7 +270,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 themeMode = ui.themeMode,
                 ignoreShortAudio = ui.ignoreShortAudio,
                 removeEmptyLines = lyric.removeEmptyLines,
-                showScrollTopButton = ui.showScrollTopButton
+                showScrollTopButton = ui.showScrollTopButton,
+                conversionMode = conversionMode
             )
         }
 
@@ -325,6 +343,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
+    override suspend fun saveConversionMode(mode: ConversionMode) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.CONVERSION_MODE] = mode.name
+        }
+    }
+
     override suspend fun saveThemeMode(mode: ThemeMode) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = mode.name
@@ -357,12 +381,17 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
         val removeEmptyLines = prefs[PreferencesKeys.REMOVE_EMPTY_LINES] ?: SettingsDefaults.REMOVE_EMPTY_LINES
         val onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE
+        val conversionMode = ConversionMode.valueOf(
+            prefs[PreferencesKeys.CONVERSION_MODE]
+                ?: SettingsDefaults.CONVERSION_MODE.name
+        )
         return LyricRenderConfig(
             format = format,
             showRomanization = roma,
             removeEmptyLines = removeEmptyLines,
             showTranslation = showTranslation,
-            onlyTranslationIfAvailable = onlyTranslationIfAvailable
+            onlyTranslationIfAvailable = onlyTranslationIfAvailable,
+            conversionMode = conversionMode
         )
     }
 
@@ -415,6 +444,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             renameFormat = prefs[PreferencesKeys.RENAME_FORMAT]
                 ?: SettingsDefaults.RENAME_FORMAT,
             batchMatchConfig = batchMatchConfig,
+            conversionMode = prefs[PreferencesKeys.CONVERSION_MODE]
+                ?: SettingsDefaults.CONVERSION_MODE.name
         )
 
         return jsonFormatter.encodeToString(backup)
@@ -453,6 +484,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.batchMatchConfig?.let { config ->
                     prefs[PreferencesKeys.BATCH_MATCH_CONFIG] = jsonFormatter.encodeToString(config)
                 }
+                backup.conversionMode?.let { prefs[PreferencesKeys.CONVERSION_MODE] = it }
             }
             true
         } catch (e: Exception) {

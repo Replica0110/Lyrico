@@ -118,7 +118,17 @@
     <string name="theme_mode_auto">跟随系统</string>
     <string name="theme_mode_light">浅色模式</string>
     <string name="theme_mode_dark">深色模式</string>
-
+    <string name="color_teal">青色</string>
+    <string name="color_blue">蓝色</string>
+    <string name="color_green">绿色</string>
+    <string name="color_purple">紫色</string>
+    <string name="color_yellow">黄色</string>
+    <string name="color_orange">橙色</string>
+    <string name="color_pink">粉色</string>
+    <string name="color_default">系统默认</string>
+    <string name="cd_back">返回</string>
+    <string name="monet">莫奈取色</string>
+    <string name="key_color">种子色</string>
     <!-- 页面 -->
     <string name="batch_match_history_title">批量匹配记录</string>
     <string name="batch_match_history_empty">暂无记录</string>
@@ -355,4 +365,5 @@
     <string name="chinese_conversion_mode_traditional_to_simplified">繁体转简体</string>
     <string name="chinese_conversion_mode_simplified_to_traditional">简体转繁体</string>
     <string name="conversion_mode">歌词转换</string>
+    <string name="offset_adjust_hint">调整偏移</string>
 </resources>

@@ -16,6 +16,8 @@ import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
+import com.lonx.lyrico.ui.theme.KeyColor
+import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.utils.CacheManager
 import com.lonx.lyrico.utils.UiMessage
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,8 @@ data class SettingsUiState(
     val searchSourceOrder: List<Source> = emptyList(),
     val searchPageSize: Int = 20,
     val themeMode: ThemeMode = ThemeMode.AUTO,
+    val monetEnable: Boolean = false,
+    val keyColor: KeyColor = KeyColors[1],
     val onlyTranslationIfAvailable: Boolean = false,
     val removeEmptyLines: Boolean = true,
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
@@ -66,6 +70,8 @@ class SettingsViewModel(
             searchPageSize = settings.searchPageSize,
             themeMode = settings.themeMode,
             ignoreShortAudio = settings.ignoreShortAudio,
+            monetEnable = settings.monetEnable,
+            keyColor = settings.keyColor,
             categorizedCacheSize = cacheMap,
             onlyTranslationIfAvailable = settings.onlyTranslationIfAvailable,
             totalCacheSize = cacheMap.values.sum(),
@@ -117,7 +123,16 @@ class SettingsViewModel(
             settingsRepository.saveOnlyTranslationIfAvailable(enabled)
         }
     }
-
+    fun setMonetEnable(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveMonetEnable(enabled)
+        }
+    }
+    fun setKeyColor(selectedMode: KeyColor) {
+        viewModelScope.launch {
+            settingsRepository.saveKeyColor(selectedMode)
+        }
+    }
     fun setRemoveEmptyLines(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveRemoveEmptyLines(enabled)

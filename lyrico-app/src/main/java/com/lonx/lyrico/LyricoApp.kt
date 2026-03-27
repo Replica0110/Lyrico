@@ -8,7 +8,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,43 +16,35 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.rememberNavController
 import com.lonx.lyrico.viewmodel.SongListViewModel
-import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.Surface
 import com.ramcosta.composedestinations.DestinationsNavHost
 import com.ramcosta.composedestinations.animations.NavHostAnimatedDestinationStyle
 import com.ramcosta.composedestinations.generated.NavGraphs
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.spec.Direction
-import com.ramcosta.composedestinations.utils.rememberDestinationsNavigator
 import com.ramcosta.composedestinations.utils.startDestination
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun LyricoApp(externalUri: Uri?) {
-
     val songListViewModel: SongListViewModel = koinViewModel()
-
     val navController = rememberNavController()
 
     LaunchedEffect(Unit) {
         songListViewModel.initialScanIfEmpty()
     }
 
-
-    Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(SaltTheme.colors.background),
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
         val startDirection: Direction =
             externalUri?.let { EditMetadataDestination(it.toString()) }
                 ?: NavGraphs.root.defaultStartDirection
+
         DestinationsNavHost(
             navGraph = NavGraphs.root,
             navController = navController,
             start = startDirection,
             dependenciesContainerBuilder = {
-
             },
             defaultTransitions = object : NavHostAnimatedDestinationStyle() {
                 override val enterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition =
@@ -101,5 +93,4 @@ fun LyricoApp(externalUri: Uri?) {
             }
         )
     }
-
 }

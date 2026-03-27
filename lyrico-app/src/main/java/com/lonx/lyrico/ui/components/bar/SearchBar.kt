@@ -1,17 +1,21 @@
 package com.lonx.lyrico.ui.components.bar
 
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,111 +27,165 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.lonx.lyrico.R
-import com.moriafly.salt.ui.SaltTheme
+import com.kyant.shapes.Capsule
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.basic.Search
+import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 
-/**
- * 搜索栏组件
- *
- * @param value 当前输入的文字
- * @param onValueChange 文字改变时的回调
- * @param placeholder 占位提示文字
- * @param modifier 外部修饰符
- * @param keyboardType 键盘类型
- * @param imeAction 回车键类型
- * @param onSearch 回车键回调
- */
+
+
+
 @Composable
-fun SearchBar(
-    modifier: Modifier = Modifier,
+fun InputField(
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String = "搜索",
-    keyboardType: KeyboardType = KeyboardType.Text,
-    imeAction: ImeAction = ImeAction.Search,
-    onSearch: (() -> Unit)? = null
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    enabled: Boolean = true,
+    onSearch: ((String) -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val textColor = MiuixTheme.colorScheme.onSurface
+    val textStyle = MiuixTheme.textStyles.paragraph.copy(
+        color = textColor
+    )
+
+    val actualLeadingIcon = leadingIcon ?: {
+        Icon(
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp),
+            imageVector = MiuixIcons.Basic.Search,
+            tint = MiuixTheme.colorScheme.onSurfaceContainerHigh,
+            contentDescription = null
+        )
+    }
+
+    val actualTrailingIcon = trailingIcon ?: {
+        AnimatedVisibility(
+            visible = value.isNotEmpty(),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier.padding(start = 8.dp, end = 16.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Icon(
+                    modifier = Modifier
+                        .clip(Capsule())
+                        .clickable(
+                            indication = null,
+                            interactionSource = interactionSource
+                        ) {
+                            onValueChange("")
+                        },
+                    imageVector = MiuixIcons.Basic.SearchCleanup,
+                    tint = MiuixTheme.colorScheme.onSurfaceContainerHighest,
+                    contentDescription = "Clear"
+                )
+            }
+        }
+    }
+
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
-        maxLines = 1,
+        enabled = enabled,
         singleLine = true,
-        textStyle = TextStyle(
-            fontSize = 13.sp,
-            color = SaltTheme.colors.text,
-            fontWeight = FontWeight.Bold
-        ),
-        cursorBrush = SolidColor(SaltTheme.colors.highlight),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = keyboardType,
-            imeAction = imeAction
-        ),
+        textStyle = textStyle,
+        cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(
-            onAny = { onSearch?.invoke() },
+            onSearch = { onSearch?.invoke(value) }
         ),
-        modifier = modifier
-            .height(36.dp)
-            .background(SaltTheme.colors.subBackground, CircleShape)
-            .clip(CircleShape),
+        interactionSource = interactionSource,
+        modifier = modifier,
         decorationBox = { innerTextField ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 8.dp)
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = MiuixTheme.colorScheme.surfaceContainerHigh,
+                        shape = Capsule(),
+                    ),
+                contentAlignment = Alignment.CenterStart,
             ) {
-                // 左侧搜索图标
-                Icon(
-                    painter = painterResource(R.drawable.ic_search_24dp),
-                    contentDescription = "Search",
-                    tint = SaltTheme.colors.subText,
-                    modifier = Modifier.size(20.dp)
-                )
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // 中间输入区域 + 占位符
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.CenterStart
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (value.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            style = TextStyle(
-                                color = SaltTheme.colors.subText,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            maxLines = 1
-                        )
-                    }
-                    innerTextField()
-                }
+                    actualLeadingIcon()
 
-                // 右侧清除按钮
-                if (value.isNotEmpty()) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_clear_24dp),
-                        contentDescription = "Clear",
-                        tint = SaltTheme.colors.subText,
+                    Box(
                         modifier = Modifier
-                            .size(20.dp)
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) {
-                                onValueChange("")
-                            }
-                    )
+                            .weight(1f)
+                            .heightIn(min = 45.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (value.isEmpty() && placeholder.isNotEmpty()) {
+                            Text(
+                                text = placeholder,
+                                style = MiuixTheme.textStyles.main.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MiuixTheme.colorScheme.onSurfaceContainerHigh
+                                )
+                            )
+                        }
+                        innerTextField()
+                    }
+
+                    actualTrailingIcon()
                 }
             }
-        }
+        },
     )
+}
+@Composable
+fun SearchBar(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    actionText: String = "取消",
+    onActionClick: () -> Unit,
+    onSearch: ((String) -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        InputField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = placeholder,
+            onSearch = onSearch,
+            modifier = Modifier.weight(1f)
+        )
+
+        AnimatedVisibility(
+            visible = true,
+            enter = expandHorizontally() + slideInHorizontally { it },
+            exit = shrinkHorizontally() + slideOutHorizontally { it }
+        ) {
+            Text(
+                text = actionText,
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        onActionClick()
+                    },
+                style = MiuixTheme.textStyles.main,
+                color = MiuixTheme.colorScheme.primary
+            )
+        }
+    }
 }

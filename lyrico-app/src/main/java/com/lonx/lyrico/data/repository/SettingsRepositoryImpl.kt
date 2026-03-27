@@ -1,6 +1,9 @@
 package com.lonx.lyrico.data.repository
 
 import android.content.Context
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.toColor
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -16,6 +19,8 @@ import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.SettingsBackup
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.ui.theme.KeyColor
+import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
@@ -27,11 +32,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import kotlin.collections.first
 
 
 private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
 object SettingsDefaults {
+    const val MONET_ENABLE: Boolean = false
+    val KEY_THEME_COLOR = null
     val CONVERSION_MODE = ConversionMode.NONE
     const val RENAME_FORMAT = "@1 - @2"
     const val SHOW_SCROLL_TOP_BUTTON = true
@@ -76,6 +84,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val MONET_ENABLE = booleanPreferencesKey("monet_enable")
+        val KEY_THEME_COLOR = intPreferencesKey("theme_color_argb")
         val ONLY_TRANSLATION_IF_AVAILABLE = booleanPreferencesKey("only_translation_if_available")
         val CHARACTER_MAPPING_CONFIG = stringPreferencesKey("character_mapping_config")
         val BATCH_MATCH_CONFIG = stringPreferencesKey("batch_match_config")
@@ -163,6 +173,23 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
             }
         }
+    override val keyColor: Flow<KeyColor>
+        get() = context.settingsDataStore.data.map { preferences ->
+            // 检查 DataStore 中是否有保存颜色的 Key
+            if (preferences.contains(PreferencesKeys.KEY_THEME_COLOR)) {
+                val savedColorInt = preferences[PreferencesKeys.KEY_THEME_COLOR]!!
+                val savedColor = Color(savedColorInt)
+                // 查找对应的颜色，找不到则返回默认项(第一个)
+                KeyColors.find { it.color == savedColor } ?: KeyColors.first()
+            } else {
+                // 如果没有保存过，说明是“系统默认”
+                KeyColors.first()
+            }
+        }
+    override val monetEnable: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.MONET_ENABLE] ?: false
+        }
     override val conversionMode: Flow<ConversionMode>
         get() = context.settingsDataStore.data.map { preferences ->
             val modeName = preferences[PreferencesKeys.CONVERSION_MODE]
@@ -241,15 +268,21 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     private data class UiPart(
         val themeMode: ThemeMode,
         val ignoreShortAudio: Boolean,
-        val showScrollTopButton: Boolean
+        val showScrollTopButton: Boolean,
+        val monetEnable: Boolean,
+        val keyColor: KeyColor
     )
 
     private val uiPartFlow =
-        combine(themeMode, ignoreShortAudio, showScrollTopButton) { theme, ignore, showScrollTop ->
+        combine(themeMode, ignoreShortAudio, showScrollTopButton,
+            monetEnable, keyColor
+        ) { theme, ignore, showScrollTop ,monet, keyColor ->
             UiPart(
                 themeMode = theme,
                 ignoreShortAudio = ignore,
-                showScrollTopButton = showScrollTop
+                showScrollTopButton = showScrollTop,
+                monetEnable = monet,
+                keyColor = keyColor
             )
         }
     override val settingsFlow: Flow<SettingsSnapshot> =
@@ -268,6 +301,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 searchSourceOrder = search.searchSourceOrder,
                 searchPageSize = search.searchPageSize,
                 themeMode = ui.themeMode,
+                monetEnable = ui.monetEnable,
+                keyColor = ui.keyColor,
                 ignoreShortAudio = ui.ignoreShortAudio,
                 removeEmptyLines = lyric.removeEmptyLines,
                 showScrollTopButton = ui.showScrollTopButton,
@@ -354,7 +389,23 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.THEME_MODE] = mode.name
         }
     }
+    override suspend fun saveMonetEnable(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.MONET_ENABLE] = enabled
+        }
+    }
 
+    override suspend fun saveKeyColor(selectedKeyColor: KeyColor) {
+        context.settingsDataStore.edit { preferences ->
+            if (selectedKeyColor.color == null) {
+                // 如果选了“系统默认”，直接移除保存的值
+                preferences.remove(PreferencesKeys.KEY_THEME_COLOR)
+            } else {
+                // 否则保存颜色具体的 ARGB 值
+                preferences[PreferencesKeys.KEY_THEME_COLOR] = selectedKeyColor.color.toArgb()
+            }
+        }
+    }
     override suspend fun saveRemoveEmptyLines(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.REMOVE_EMPTY_LINES] = enabled
@@ -434,6 +485,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
             themeMode = prefs[PreferencesKeys.THEME_MODE]
                 ?: SettingsDefaults.THEME_MODE.name,
+            monetEnable = prefs[PreferencesKeys.MONET_ENABLE]
+                ?: SettingsDefaults.MONET_ENABLE,
+            keyThemeColor = prefs[PreferencesKeys.KEY_THEME_COLOR] ?: SettingsDefaults.KEY_THEME_COLOR,
 
             onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE]
                 ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE,
@@ -471,6 +525,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
                 backup.searchPageSize?.let { prefs[PreferencesKeys.SEARCH_PAGE_SIZE] = it }
                 backup.themeMode?.let { prefs[PreferencesKeys.THEME_MODE] = it }
+                backup.monetEnable?.let { prefs[PreferencesKeys.MONET_ENABLE] = it }
+                backup.keyThemeColor?.let { prefs[PreferencesKeys.KEY_THEME_COLOR] = it }
                 backup.onlyTranslationIfAvailable?.let {
                     prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] = it
                 }

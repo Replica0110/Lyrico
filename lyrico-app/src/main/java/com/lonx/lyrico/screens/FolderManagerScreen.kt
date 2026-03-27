@@ -3,18 +3,22 @@ package com.lonx.lyrico.screens
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -23,43 +27,39 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.FolderEntity
-import com.lonx.lyrico.ui.components.ItemExt
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
-import com.moriafly.salt.ui.Icon
-import com.moriafly.salt.ui.Item
-import com.moriafly.salt.ui.ItemArrowType
-import com.moriafly.salt.ui.ItemOuterTip
-import com.moriafly.salt.ui.ItemOuterTitle
-import com.moriafly.salt.ui.ItemSwitcher
-import com.moriafly.salt.ui.ItemTip
-import com.moriafly.salt.ui.RoundedColumn
-import com.moriafly.salt.ui.RoundedColumnType
-import com.moriafly.salt.ui.SaltDimens
-import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.Text
-import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.dialog.YesNoDialog
-import com.moriafly.salt.ui.ext.safeMainCompat
-import com.moriafly.salt.ui.lazy.LazyColumn
-import com.moriafly.salt.ui.lazy.items
-import com.moriafly.salt.ui.outerPadding
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.FolderSongsDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.extra.SuperSwitch
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-@OptIn(ExperimentalMaterial3Api::class, UnstableSaltUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Destination<RootGraph>(route = "folder_manager")
 fun FolderManagerScreen(
@@ -68,15 +68,14 @@ fun FolderManagerScreen(
     val viewModel: FolderManagerViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val folders = uiState.folders
+    val context = androidx.compose.ui.platform.LocalContext.current
 
-    val context = LocalContext.current
-
-    // 底部弹窗
     var selectedFolderId by remember { mutableLongStateOf(-1L) }
-    val currentFolder = remember(selectedFolderId, uiState.folders) {
-        uiState.folders.find { it.id == selectedFolderId }
+    val currentFolder = remember(selectedFolderId, folders) {
+        folders.find { it.id == selectedFolderId }
     }
     val sheetState = rememberModalBottomSheetState()
+    val coroutineScope = rememberCoroutineScope()
     var showSheet by remember { mutableStateOf(false) }
     val showConfirmDialog = remember { mutableStateOf(false) }
 
@@ -88,194 +87,349 @@ fun FolderManagerScreen(
             if (path != null) {
                 viewModel.addFolderByPath(path)
             }
-            // 持久化权限
             context.contentResolver.takePersistableUriPermission(
-                it, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
         }
     }
 
     BasicScreenBox(
         title = stringResource(R.string.folder_manager_title),
-        onBack = {
-            navigator.popBackStack()
-        },
+        onBack = { navigator.popBackStack() },
         toolbar = {
-            IconButton(
-                onClick = {
-                    folderPickerLauncher.launch(null)
-                },
-                modifier = Modifier
-                    .size(56.dp)
-            ) {
+            IconButton(onClick = { folderPickerLauncher.launch(null) }) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_addfolder_24dp),
                     contentDescription = null,
-                    modifier = Modifier
-                        .size(SaltTheme.dimens.itemIcon)
+                    modifier = Modifier.size(20.dp),
+                    tint = MiuixTheme.colorScheme.onBackground
                 )
             }
         }
     ) {
-        if (showConfirmDialog.value && currentFolder != null){
-            YesNoDialog(
-                onDismissRequest = { showConfirmDialog.value = false },
-                onConfirm = {
-                    showConfirmDialog.value = false
-                    viewModel.deleteFolder(currentFolder)
-                    showSheet = false
-                },
-                title = stringResource(R.string.dialog_remove_folder_title),
-                content = currentFolder.path,
-                drawContent = {
-                    Column(modifier = Modifier.fillMaxWidth().padding(SaltTheme.dimens.padding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        currentFolder?.let { folder ->
+            if (showConfirmDialog.value) {
+                SuperDialog(
+                    title = stringResource(R.string.dialog_remove_folder_title),
+                    show = showConfirmDialog,
+                    onDismissRequest = { showConfirmDialog.value = false }
+                ) {
+                    Column {
+                        Text(
+                            text = folder.path,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MiuixTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = stringResource(R.string.dialog_remove_folder_content_tip),
-                            style = SaltTheme.textStyles.sub
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            fontSize = MiuixTheme.textStyles.body2.fontSize
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            TextButton(
+                                text = stringResource(R.string.cancel),
+                                onClick = { showConfirmDialog.value = false },
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(
+                                text = stringResource(R.string.confirm),
+                                onClick = {
+                                    showConfirmDialog.value = false
+                                    viewModel.deleteFolder(folder)
+                                    showSheet = false
+                                    selectedFolderId = -1L
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.textButtonColorsPrimary()
+                            )
+                        }
                     }
-                },
-                cancelText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.confirm),
-            )
+                }
+            }
         }
 
-        if (showSheet && currentFolder != null) {
-            ModalBottomSheet(
-                onDismissRequest = {
-                    showSheet = false
-                    selectedFolderId = -1L
-                },
-                sheetState = sheetState,
-                containerColor = SaltTheme.colors.background,
-                contentColor = SaltTheme.colors.text
-            ) {
-                FolderActionSheetContent(
-                    folder = currentFolder,
-                    onIgnoreChange = {
-                        viewModel.toggleFolderIgnore(currentFolder)
+        currentFolder?.let { folder ->
+            if (showSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = {
+                        showSheet = false
+                        selectedFolderId = -1L
                     },
-                    onDelete = {
-                        showConfirmDialog.value = true
-                    }
-                )
+                    sheetState = sheetState,
+                    containerColor = MiuixTheme.colorScheme.background,
+                    contentColor = MiuixTheme.colorScheme.onBackground
+                ) {
+                    FolderActionSheetContent(
+                        folder = folder,
+                        onIgnoreChange = { viewModel.toggleFolderIgnore(folder) },
+                        onDelete = {
+                            coroutineScope.launch {
+                                sheetState.hide()
+                                showSheet = false
+                                showConfirmDialog.value = true
+                            }
+                        }
+                    )
+                }
             }
         }
 
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                ItemOuterTip(
-                    text = stringResource(R.string.folder_tip_disabled_logic)
-                )
+                Card(
+                    modifier = Modifier.padding(12.dp),
+                    insideMargin = PaddingValues(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.folder_tip_disabled_logic),
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    )
+                }
             }
 
-//            item {
-//                ItemOuterTitle(stringResource(R.string.section_folder_discovered))
-//            }
-
             item {
-                Spacer(Modifier.height(SaltDimens.RoundedColumnInListEdgePadding))
+                SmallTitle(text = stringResource(R.string.section_folder_discovered))
             }
 
             if (folders.isEmpty()) {
                 item {
-                    RoundedColumn(
-                        type = RoundedColumnType.InList
+                    Card(
+                        modifier = Modifier.padding(horizontal = 12.dp)
                     ) {
-                        ItemTip(stringResource(R.string.folder_empty_state_tip))
-                    }
-                }
-            } else {
-                items(folders) { folder ->
-                    val ignoredText = if (folder.isIgnored) stringResource(R.string.folder_status_ignored) else ""
-                    val songCountText = stringResource(R.string.folder_song_count_format, folder.songCount)
-                    val songInfo = "$songCountText$ignoredText"
-
-                    val sourceInfo = if (folder.addedBySaf)
-                        stringResource(R.string.folder_source_manual)
-                    else
-                        stringResource(R.string.folder_source_auto)
-                    val folderName = folder.path.substringAfterLast("/").ifBlank { folder.path }
-
-                    RoundedColumn(
-                        type = RoundedColumnType.InList
-                    ) {
-                        ItemExt(
-                            onClick = {
-                                navigator.navigate(FolderSongsDestination(folder.id,folder.path))
-                            },
-                            iconPainter = if (folder.isIgnored)
-                                painterResource(id = R.drawable.ic_invisible_24dp)
-                            else
-                                painterResource(id = R.drawable.ic_visible_24dp),
-                            text = folderName,
-                            sub = "${folder.path}\n$songInfo · $sourceInfo",
-                            iconEnd = {
-                                IconButton(
-                                    onClick = {
-                                        selectedFolderId = folder.id
-                                        showSheet = true
-                                    }
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_info_24dp),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(SaltTheme.dimens.itemIcon)
-                                    )
-                                }
-                            }
+                        Text(
+                            text = stringResource(R.string.folder_empty_state_tip),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                         )
                     }
                 }
-            }
+            } else {
+                item {
+                    Card(
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    ) {
+                        folders.forEachIndexed { index, folder ->
+                            FolderListItem(
+                                folder = folder,
+                                onClick = {
+                                    navigator.navigate(FolderSongsDestination(folder.id, folder.path))
+                                },
+                                onShowActions = {
+                                    selectedFolderId = folder.id
+                                    showSheet = true
+                                }
+                            )
 
-            item {
-                Spacer(Modifier.height(SaltDimens.RoundedColumnInListEdgePadding))
-            }
-
-            item {
-                Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.safeMainCompat))
+                            if (index != folders.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 68.dp, end = 16.dp),
+                                    color = MiuixTheme.colorScheme.dividerLine,
+                                    thickness = 0.5.dp
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
-@OptIn(UnstableSaltUiApi::class)
+
+
+
+@Composable
+private fun FolderListItem(
+    folder: FolderEntity,
+    onClick: () -> Unit,
+    onShowActions: () -> Unit
+) {
+    val folderName = folder.path.substringAfterLast("/").ifBlank { folder.path }
+    val statusText = buildList {
+        add(stringResource(R.string.folder_song_count_format, folder.songCount))
+        add(
+            if (folder.addedBySaf) {
+                stringResource(R.string.folder_source_manual)
+            } else {
+                stringResource(R.string.folder_source_auto)
+            }
+        )
+        if (folder.isIgnored) {
+            add(stringResource(R.string.folder_status_ignored))
+        }
+    }.joinToString(" · ")
+
+    BasicComponent(
+        startAction = {
+            FolderLeadingIcon(folder = folder)
+        },
+        endActions = {
+            IconButton(onClick = onShowActions) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_info_24dp),
+                    contentDescription = stringResource(R.string.cd_info),
+                    modifier = Modifier.size(18.dp),
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantActions
+                )
+            }
+        },
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+        onClick = onClick
+    ) {
+        Text(
+            text = folderName,
+            color = MiuixTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = folder.path,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            fontSize = MiuixTheme.textStyles.body2.fontSize
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = statusText,
+            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+            fontSize = MiuixTheme.textStyles.body2.fontSize
+        )
+    }
+}
+
+@Composable
+private fun FolderLeadingIcon(folder: FolderEntity) {
+    val iconPainter = if (folder.isIgnored) {
+        painterResource(id = R.drawable.ic_invisible_24dp)
+    } else {
+        painterResource(id = R.drawable.ic_visible_24dp)
+    }
+    val iconContainerColor = if (folder.isIgnored) {
+        MiuixTheme.colorScheme.surfaceContainerHighest
+    } else {
+        MiuixTheme.colorScheme.secondaryContainerVariant
+    }
+    val iconTint = if (folder.isIgnored) {
+        MiuixTheme.colorScheme.onSurfaceVariantActions
+    } else {
+        MiuixTheme.colorScheme.onBackground
+    }
+
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .background(
+                color = iconContainerColor,
+                shape = RoundedCornerShape(14.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = iconPainter,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = iconTint
+        )
+    }
+}
+
 @Composable
 fun FolderActionSheetContent(
     folder: FolderEntity,
     onIgnoreChange: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val folderName = folder.path.substringAfterLast("/").ifBlank { folder.path }
+    val statusText = buildList {
+        add(stringResource(R.string.folder_song_count_format, folder.songCount))
+        add(
+            if (folder.addedBySaf) {
+                stringResource(R.string.folder_source_manual)
+            } else {
+                stringResource(R.string.folder_source_auto)
+            }
+        )
+        if (folder.isIgnored) {
+            add(stringResource(R.string.folder_status_ignored))
+        }
+    }.joinToString(" · ")
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // 操作列表
-        RoundedColumn {
-            ItemTip(stringResource(R.string.folder_sheet_path_prefix, folder.path))
+        Card(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            colors = CardDefaults.defaultColors(
+                color = MiuixTheme.colorScheme.surfaceContainer,
+                contentColor = MiuixTheme.colorScheme.onBackground
+            )
+        ) {
+            BasicComponent(
+                title = folderName,
+                summary = folder.path,
+                startAction = {
+                    FolderLeadingIcon(folder = folder)
+                },
+                bottomAction = {
+                    Text(
+                        text = statusText,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        fontSize = MiuixTheme.textStyles.body2.fontSize
+                    )
+                }
+            )
+        }
 
-            // 忽略/启用设置
-            ItemSwitcher(
-                state = !folder.isIgnored,
-                onChange = { onIgnoreChange() },
-                text = stringResource(R.string.folder_action_enable),
-                sub = stringResource(R.string.folder_action_enable_sub)
+        Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+            SuperSwitch(
+                title = stringResource(R.string.folder_action_enable),
+                summary = stringResource(R.string.folder_action_enable_sub),
+                checked = !folder.isIgnored,
+                onCheckedChange = { onIgnoreChange() }
             )
 
-            // 删除设置
-            Item(
-                onClick = onDelete,
-                text = stringResource(R.string.folder_action_remove),
-                textColor = Color.Red,
-                sub = stringResource(R.string.folder_action_remove_sub),
-                iconColor = Color.Red,
-                arrowType = ItemArrowType.None
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp),
+                color = MiuixTheme.colorScheme.dividerLine,
+                thickness = 0.5.dp
+            )
+
+            FolderSheetActionRow(
+                title = stringResource(R.string.folder_action_remove),
+                summary = stringResource(R.string.folder_action_remove_sub),
+                onClick = onDelete
             )
         }
     }
+}
+
+@Composable
+private fun FolderSheetActionRow(
+    title: String,
+    summary: String,
+    onClick: () -> Unit
+) {
+    BasicComponent(
+        title = title,
+        titleColor = BasicComponentDefaults.titleColor(MiuixTheme.colorScheme.error),
+        summary = summary,
+        endActions = {
+            Icon(
+                painter = painterResource(R.drawable.ic_delete_24dp),
+                contentDescription = stringResource(R.string.common_delete),
+                modifier = Modifier.size(18.dp),
+                tint = MiuixTheme.colorScheme.error
+            )
+        },
+        onClick = onClick
+    )
 }

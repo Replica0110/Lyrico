@@ -24,4 +24,6 @@ data class SettingsBackup(
     @SerialName("batch_match_config") val batchMatchConfig: BatchMatchConfig? = null,
     @SerialName("rename_format") val renameFormat: String? = null,
     @SerialName("conversion_mode") val conversionMode: String? = null,
+    @SerialName("key_theme_color") val keyThemeColor: Int? = null,
+    @SerialName("monet_enable") val monetEnable: Boolean? = null
 )

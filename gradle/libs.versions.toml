@@ -23,11 +23,13 @@ reorderable = "3.0.0"
 retrofit = "3.0.0"
 retrofit2KotlinxSerializationConverter = "1.0.0"
 saltui = "2.9.0-alpha08"
+shapes = "1.2.0"
 datastorePreferences = "1.2.1"
 room = "2.8.4"
 tinypinyin = "2.0.3"
 xxpermissions="28.0"
 monitor = "1.8.0"
+miuix = "0.8.8"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,6 +55,7 @@ lazycolumnscrollbar = { module = "com.github.nanihadesuka:LazyColumnScrollbar", 
 opencc4j = { module = "com.github.houbb:opencc4j", version.ref = "opencc4j" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 salt-ui-android = { module = "io.github.moriafly:salt-ui-android", version.ref = "saltui" }
+shapes = { module = "io.github.kyant0:shapes", version.ref = "shapes" }
 tinypinyin = { module = "com.github.promeg:tinypinyin", version.ref = "tinypinyin" }
 xxpermissions = { module = "com.github.getActivity:XXPermissions", version.ref = "xxpermissions" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
@@ -67,6 +70,8 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-monitor = { group = "androidx.test", name = "monitor", version.ref = "monitor" }
+miuix-android = { module = "top.yukonga.miuix.kmp:miuix-android", version.ref = "miuix" }
+miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

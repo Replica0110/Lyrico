@@ -6,6 +6,8 @@ import com.lonx.audiotag.TagLib
 import com.lonx.audiotag.internal.FdUtils
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
+import com.lonx.audiotag.model.AudioTagKeys
+import com.lonx.audiotag.model.CustomTagField
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -150,6 +152,18 @@ object AudioTagReader {
                     if (ratingStar == 0) ratingStar = null
                 }
 
+                val customFields = props.entries
+                    .asSequence()
+                    .filterNot { (key, _) -> AudioTagKeys.isReserved(key) }
+                    .map { (key, values) ->
+                        CustomTagField(
+                            key = key,
+                            value = values.joinToString("; ")
+                        )
+                    }
+                    .sortedBy { it.key.uppercase() }
+                    .toList()
+
                 return@withContext AudioTagData(
                     title = firstOf("TITLE"),
                     artist = firstOf("ARTIST"),
@@ -172,6 +186,7 @@ object AudioTagReader {
                     sampleRate = audioProps?.sampleRate ?: 0,
                     channels = audioProps?.channels ?: 0,
                     rawProperties = props,
+                    customFields = customFields,
                     pictures = picList
                 )
 

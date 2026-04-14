@@ -30,10 +30,18 @@ data class AudioTagData(
     val channels: Int = 0,
 
     val rawProperties: Map<String, Array<String>>? = null,
+    val customFields: List<CustomTagField> = emptyList(),
 
     val pictures: List<AudioPicture> = ArrayList(),
     val picUrl: String? = null
 ): Parcelable
+
+@Keep
+@Parcelize
+data class CustomTagField(
+    val key: String = "",
+    val value: String = ""
+) : Parcelable
 
 @Keep
 @Parcelize

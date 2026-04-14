@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import kotlinx.coroutines.launch
@@ -395,6 +396,99 @@ fun EditMetadataScreen(
                                 isModified = editingTagData?.comment != originalTagData?.comment,
                                 onRevert = { viewModel.updateTag { copy(comment = originalTagData?.comment ?: "") } }
                             )
+                        }
+                    }
+                }
+            }
+
+            item(key = "custom_fields") {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SmallTitle(text = stringResource(R.string.group_custom_tags))
+                        Spacer(modifier = Modifier.weight(1f))
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(MiuixTheme.colorScheme.primary)
+                                .clickable {
+                                    viewModel.updateTag {
+                                        copy(customFields = customFields + CustomTagField())
+                                    }
+                                }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.action_add_custom_tag),
+                                color = MiuixTheme.colorScheme.onPrimary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Card(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                        Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                            if (editingTagData?.customFields.isNullOrEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.custom_tags_empty),
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                    style = MiuixTheme.textStyles.body2
+                                )
+                            } else {
+                                editingTagData?.customFields?.forEachIndexed { index, field ->
+                                    CustomMetadataFieldEditor(
+                                        field = field,
+                                        isModified = field != originalTagData?.customFields?.getOrNull(index),
+                                        onKeyChange = { newKey ->
+                                            viewModel.updateTag {
+                                                copy(
+                                                    customFields = customFields.toMutableList().apply {
+                                                        this[index] = this[index].copy(key = newKey)
+                                                    }
+                                                )
+                                            }
+                                        },
+                                        onValueChange = { newValue ->
+                                            viewModel.updateTag {
+                                                copy(
+                                                    customFields = customFields.toMutableList().apply {
+                                                        this[index] = this[index].copy(value = newValue)
+                                                    }
+                                                )
+                                            }
+                                        },
+                                        onRemove = {
+                                            viewModel.updateTag {
+                                                copy(
+                                                    customFields = customFields.toMutableList().apply {
+                                                        removeAt(index)
+                                                    }
+                                                )
+                                            }
+                                        },
+                                        onRevert = {
+                                            viewModel.updateTag {
+                                                val originalField = originalTagData?.customFields?.getOrNull(index)
+                                                copy(
+                                                    customFields = customFields.toMutableList().apply {
+                                                        if (originalField != null) {
+                                                            this[index] = originalField
+                                                        } else {
+                                                            removeAt(index)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -830,5 +924,63 @@ private fun MetadataInputField(
             } } else null,
             borderColor = if (isModified) LyricoColors.modifiedBorder else MiuixTheme.colorScheme.primary
         )
+    }
+}
+
+@Composable
+private fun CustomMetadataFieldEditor(
+    field: CustomTagField,
+    isModified: Boolean,
+    onKeyChange: (String) -> Unit,
+    onValueChange: (String) -> Unit,
+    onRemove: () -> Unit,
+    onRevert: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        Column(modifier = Modifier.padding(vertical = 6.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.label_custom_tag),
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                if (isModified) {
+                    IconButton(onClick = onRevert) {
+                        Icon(imageVector = MiuixIcons.Undo, contentDescription = null)
+                    }
+                }
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_delete_24dp),
+                        contentDescription = stringResource(R.string.action_remove_custom_tag)
+                    )
+                }
+            }
+
+            MetadataInputField(
+                label = stringResource(R.string.label_custom_tag_name),
+                value = field.key,
+                onValueChange = onKeyChange,
+                isModified = isModified,
+                onRevert = onRevert
+            )
+            MetadataInputField(
+                label = stringResource(R.string.label_custom_tag_value),
+                value = field.value,
+                onValueChange = onValueChange,
+                isModified = isModified,
+                onRevert = onRevert
+            )
+        }
     }
 }

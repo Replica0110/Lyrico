@@ -50,4 +50,5 @@
 - [Miuix](https://github.com/compose-miuix-ui/miuix) - 提供 Xiaomi HyperOS 设计风格的组件库
 - [音乐标签](https://www.cnblogs.com/vinlxc/p/11932130.html) - 一款可以编辑歌曲的标题，专辑，艺术家，歌词，封面等信息的应用程序， 支持多种音频格式
 - [taglib](https://github.com/taglib/taglib) - TagLib Audio Meta-Data Library
+- [Foobar2000](https://www.foobar2000.org/SDK) - Foobar2000 SDK，提供了丰富的音频处理和元数据编辑功能
 - ~[Auxio - musikr](https://github.com/OxygenCobalt/Auxio/tree/dev/musikr) - Musikr 是一个高度主观设计（highly opinionated）且支持多线程的音乐加载器，用于支持 Auxio 的高级音乐功能~

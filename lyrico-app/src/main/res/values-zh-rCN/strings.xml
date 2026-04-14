@@ -266,6 +266,9 @@
     <string name="label_lyricist">作词</string>
     <string name="label_comment">注释</string>
     <string name="label_lyrics">歌词</string>
+    <string name="label_custom_tag">自定义标签</string>
+    <string name="label_custom_tag_name">标签名</string>
+    <string name="label_custom_tag_value">标签值</string>
 
     <!-- 封面编辑 -->
     <string name="group_credits_other">其他信息</string>
@@ -382,6 +385,10 @@
     <string name="label_rating">评级</string>
     <string name="group_basic_info">基础信息</string>
     <string name="group_track_details">音轨信息</string>
+    <string name="group_custom_tags">自定义标签</string>
+    <string name="action_add_custom_tag">添加标签</string>
+    <string name="action_remove_custom_tag">移除标签</string>
+    <string name="custom_tags_empty">还没有自定义标签，点击“添加标签”即可创建。</string>
 
     <!-- 批量编辑 -->
     <string name="batch_edit_title">批量编辑</string>

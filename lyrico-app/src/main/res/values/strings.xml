@@ -260,11 +260,18 @@
     <string name="label_lyricist">Lyricist</string>
     <string name="label_comment">Comment</string>
     <string name="label_lyrics">Lyrics</string>
+    <string name="label_custom_tag">Custom Tag</string>
+    <string name="label_custom_tag_name">Tag Name</string>
+    <string name="label_custom_tag_value">Tag Value</string>
     <string name="label_copyright">Copyright</string>
     <string name="label_rating">Rating</string>
     <string name="group_basic_info">Basic Info</string>
     <string name="group_track_details">Track Details</string>
+    <string name="group_custom_tags">Custom Tags</string>
     <string name="group_credits_other">Credits &amp; Others</string>
+    <string name="action_add_custom_tag">Add Tag</string>
+    <string name="action_remove_custom_tag">Remove Tag</string>
+    <string name="custom_tags_empty">No custom tags yet. Tap \"Add Tag\" to create one.</string>
     <string name="label_file_size">File Size</string>
     <!-- Cover Editor -->
     <string name="status_modified">Modified</string>

@@ -10,6 +10,7 @@ import androidx.core.net.toUri
 import androidx.room.withTransaction
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
+import com.lonx.audiotag.model.AudioTagKeys
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
 import com.lonx.lyrico.data.LyricoDatabase
@@ -375,6 +376,20 @@ class SongRepositoryImpl(
                 }
             } else if (star == 0) {
                 updateTag("POPM", null, listOf("RATING", "RATE"))
+            }
+
+            audioTagData.rawProperties
+                .orEmpty()
+                .keys
+                .filterNot { AudioTagKeys.isReserved(it) }
+                .forEach { key ->
+                    updates.putIfAbsent(key, "")
+                }
+
+            audioTagData.customFields.forEach { field ->
+                val key = field.key.trim()
+                if (key.isEmpty() || AudioTagKeys.isReserved(key)) return@forEach
+                updates[key] = field.value.trim()
             }
 
             AudioTagWriter.writeTags(pfdDescriptor, updates)

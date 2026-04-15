@@ -21,11 +21,15 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.LyricsUtils
+import com.lonx.lyrico.utils.ReplayGainScanResult
+import com.lonx.lyrico.utils.ReplayGainScanner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class EditMetadataUiState(
     val songInfo: SongInfo? = null,
@@ -45,6 +49,8 @@ data class EditMetadataUiState(
     val originalCover: Any? = null,
     val picture: AudioPicture? = null,
     val permissionIntentSender: IntentSender? = null,
+    val isReplayGainScanning: Boolean = false,
+    val replayGainScanMessage: String? = null,
     
     /**
      * 歌词导出导入状态
@@ -55,7 +61,8 @@ data class EditMetadataUiState(
 
 class EditMetadataViewModel(
     private val songRepository: SongRepository,
-    private val playbackRepository: PlaybackRepository
+    private val playbackRepository: PlaybackRepository,
+    private val replayGainScanner: ReplayGainScanner
 ) : ViewModel() {
 
     private val TAG = "EditMetadataVM"
@@ -365,6 +372,63 @@ class EditMetadataViewModel(
                 }
             }
         }
+    }
+
+    fun scanReplayGain() {
+        val uriString = currentSongUri ?: _uiState.value.songInfo?.uriString ?: return
+        if (_uiState.value.isReplayGainScanning) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isReplayGainScanning = true,
+                    replayGainScanMessage = null
+                )
+            }
+
+            try {
+                when (val result = withContext(Dispatchers.IO) {
+                    replayGainScanner.analyze(uriString)
+                }) {
+                    is ReplayGainScanResult.Success -> {
+                        _uiState.update { state ->
+                            val current = state.editingTagData ?: AudioTagData(fileName = state.fileName.orEmpty())
+                            state.copy(
+                                editingTagData = current.copy(
+                                    replayGainTrackGain = replayGainScanner.formatGain(result.analysis),
+                                    replayGainTrackPeak = replayGainScanner.formatPeak(result.analysis.peak),
+                                    replayGainReferenceLoudness = current.replayGainReferenceLoudness ?: "89.0 dB"
+                                ),
+                                isEditing = true,
+                                isReplayGainScanning = false,
+                                replayGainScanMessage = replayGainScanner.buildFailureMessage(result)
+                            )
+                        }
+                    }
+
+                    else -> {
+                        _uiState.update {
+                            it.copy(
+                                isReplayGainScanning = false,
+                                replayGainScanMessage = replayGainScanner.buildFailureMessage(result)
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "扫描 ReplayGain 失败: $uriString", e)
+                _uiState.update {
+                    it.copy(
+                        isReplayGainScanning = false,
+                        replayGainScanMessage = "ReplayGain 扫描失败: ${e.message ?: "Unknown error"}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearReplayGainScanMessage() {
+        _uiState.update { it.copy(replayGainScanMessage = null) }
     }
 
 

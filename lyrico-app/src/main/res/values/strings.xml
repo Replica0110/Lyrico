@@ -65,6 +65,12 @@
     <!-- Metadata -->
     <string name="artist_separator">Artist Separator</string>
     <string name="artist_separator_hint">Used when multiple artists exist</string>
+    <string name="replay_gain_scan_title">Scan ReplayGain</string>
+    <string name="replay_gain_scan_summary">Analyze the current music library and write ReplayGain track/album gain tags back to audio files.</string>
+    <string name="replay_gain_no_songs">No songs available for ReplayGain scanning.</string>
+    <string name="action_scan_replay_gain">Scan current song ReplayGain</string>
+    <string name="replay_gain_scan_single_summary">Analyze the current track and fill ReplayGain tags here for manual adjustment.</string>
+    <string name="replay_gain_scan_in_progress">Scanning current track. This can take a few seconds.</string>
 
     <!-- Other -->
     <string name="batch_match_history">Batch Match History</string>
@@ -263,6 +269,12 @@
     <string name="label_lyricist">Lyricist</string>
     <string name="label_comment">Comment</string>
     <string name="label_lyrics">Lyrics</string>
+    <string name="group_replay_gain">ReplayGain</string>
+    <string name="label_replaygain_track_gain">Track Gain</string>
+    <string name="label_replaygain_track_peak">Track Peak</string>
+    <string name="label_replaygain_album_gain">Album Gain</string>
+    <string name="label_replaygain_album_peak">Album Peak</string>
+    <string name="label_replaygain_reference_loudness">Reference Loudness</string>
     <string name="label_custom_tag">Custom Tag</string>
     <string name="label_custom_tag_name">Tag Name</string>
     <string name="label_custom_tag_value">Tag Value</string>

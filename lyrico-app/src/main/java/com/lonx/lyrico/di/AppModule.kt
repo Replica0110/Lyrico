@@ -17,6 +17,7 @@ import com.lonx.lyrico.data.repository.SongRepositoryImpl
 import com.lonx.lyrico.data.repository.UpdateRepository
 import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
 import com.lonx.lyrico.utils.MediaScanner
+import com.lonx.lyrico.utils.ReplayGainScanner
 import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrico.utils.UpdateManagerImpl
 import com.lonx.lyrico.viewmodel.AboutViewModel
@@ -181,6 +182,7 @@ val appModule = module {
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
     single<UpdateManager> { UpdateManagerImpl(get(), get()) }
     single { MediaScanner(androidContext()) }
+    single { ReplayGainScanner(androidContext()) }
     
 
     // 数据库和存储库
@@ -200,10 +202,10 @@ val appModule = module {
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
     viewModel { SongListViewModel(get(), get(), get(), get(),get(),get()) }
-    viewModel { SettingsViewModel(get(),get()) }
+    viewModel { SettingsViewModel(get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { CoverSearchViewModel(get(), get()) }
-    viewModel { EditMetadataViewModel(get(), get()) }
+    viewModel { EditMetadataViewModel(get(), get(), get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get()) }
 
     viewModel { BatchMatchHistoryViewModel(get()) }

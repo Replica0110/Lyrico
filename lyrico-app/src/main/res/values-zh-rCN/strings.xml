@@ -65,6 +65,12 @@
     <!-- 元数据 -->
     <string name="artist_separator">艺术家分隔符</string>
     <string name="artist_separator_hint">存在多个艺术家时使用该分隔符分隔</string>
+    <string name="replay_gain_scan_title">扫描 ReplayGain</string>
+    <string name="replay_gain_scan_summary">扫描当前音乐库并把 ReplayGain 曲目/专辑增益标签写回音频文件。</string>
+    <string name="replay_gain_no_songs">当前没有可用于 ReplayGain 扫描的歌曲。</string>
+    <string name="action_scan_replay_gain">扫描当前歌曲 ReplayGain</string>
+    <string name="replay_gain_scan_single_summary">分析当前歌曲并填入 ReplayGain 标签，你可以继续手动调整。</string>
+    <string name="replay_gain_scan_in_progress">正在扫描当前歌曲，通常需要几秒钟。</string>
 
     <!-- 其他 -->
     <string name="batch_match_history">批量匹配记录</string>
@@ -268,6 +274,12 @@
     <string name="label_lyricist">作词</string>
     <string name="label_comment">注释</string>
     <string name="label_lyrics">歌词</string>
+    <string name="group_replay_gain">ReplayGain</string>
+    <string name="label_replaygain_track_gain">曲目增益</string>
+    <string name="label_replaygain_track_peak">曲目峰值</string>
+    <string name="label_replaygain_album_gain">专辑增益</string>
+    <string name="label_replaygain_album_peak">专辑峰值</string>
+    <string name="label_replaygain_reference_loudness">参考响度</string>
     <string name="label_custom_tag">自定义标签</string>
     <string name="label_custom_tag_name">标签名</string>
     <string name="label_custom_tag_value">标签值</string>

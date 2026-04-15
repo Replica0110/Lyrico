@@ -9,9 +9,9 @@ import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.CacheCategory
 import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -63,13 +63,12 @@ class SettingsViewModel(
     private val folder = database.folderDao()
     private val _categorizedCacheSize = MutableStateFlow<Map<CacheCategory, Long>>(emptyMap())
 
-    // 使用 combine 合并各分组设置流和缓存流
-    val uiState: StateFlow<SettingsUiState> = combine(
+    private val baseUiState = combine(
         settingsRepository.lyricRenderConfigFlow,
         settingsRepository.searchConfigFlow,
         settingsRepository.themeConfigFlow,
         settingsRepository.ignoreShortAudio,
-        _categorizedCacheSize,
+        _categorizedCacheSize
     ) { lyric, search, theme, ignoreShort, cacheMap ->
         SettingsUiState(
             lyricFormat = lyric.format,
@@ -89,7 +88,10 @@ class SettingsViewModel(
             removeEmptyLines = lyric.removeEmptyLines,
             conversionMode = lyric.conversionMode
         )
-    }.stateIn(
+    }
+
+    // 使用 combine 合并各分组设置流和缓存流
+    val uiState: StateFlow<SettingsUiState> = baseUiState.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = SettingsUiState()
@@ -187,6 +189,7 @@ class SettingsViewModel(
             settingsRepository.saveThemeMode(mode)
         }
     }
+
     fun exportSettings(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

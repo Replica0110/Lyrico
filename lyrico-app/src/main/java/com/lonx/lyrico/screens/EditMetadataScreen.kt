@@ -192,6 +192,13 @@ fun EditMetadataScreen(
         }
     }
 
+    LaunchedEffect(uiState.replayGainScanMessage) {
+        uiState.replayGainScanMessage?.let { message ->
+            scope.launch { snackbarHostState.showSnackbar(message) }
+            viewModel.clearReplayGainScanMessage()
+        }
+    }
+
     BackHandler {
         if (!navigator.popBackStack()) {
             activity.finish()
@@ -481,6 +488,80 @@ fun EditMetadataScreen(
                                         copy(
                                             comment = originalTagData?.comment ?: ""
                                         )
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            item(key = "replay_gain") {
+                Column {
+                    SmallTitle(text = stringResource(R.string.group_replay_gain))
+                    Card(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                        Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                            ArrowPreference(
+                                title = stringResource(R.string.action_scan_replay_gain),
+                                summary = if (uiState.isReplayGainScanning) {
+                                    stringResource(R.string.replay_gain_scan_in_progress)
+                                } else {
+                                    stringResource(R.string.replay_gain_scan_single_summary)
+                                },
+                                onClick = { viewModel.scanReplayGain() }
+                            )
+                            MetadataInputField(
+                                label = stringResource(R.string.label_replaygain_track_gain),
+                                value = editingTagData?.replayGainTrackGain ?: "",
+                                onValueChange = { viewModel.updateTag { copy(replayGainTrackGain = it) } },
+                                isModified = editingTagData?.replayGainTrackGain != originalTagData?.replayGainTrackGain,
+                                onRevert = {
+                                    viewModel.updateTag {
+                                        copy(replayGainTrackGain = originalTagData?.replayGainTrackGain ?: "")
+                                    }
+                                }
+                            )
+                            MetadataInputField(
+                                label = stringResource(R.string.label_replaygain_track_peak),
+                                value = editingTagData?.replayGainTrackPeak ?: "",
+                                onValueChange = { viewModel.updateTag { copy(replayGainTrackPeak = it) } },
+                                isModified = editingTagData?.replayGainTrackPeak != originalTagData?.replayGainTrackPeak,
+                                onRevert = {
+                                    viewModel.updateTag {
+                                        copy(replayGainTrackPeak = originalTagData?.replayGainTrackPeak ?: "")
+                                    }
+                                }
+                            )
+                            MetadataInputField(
+                                label = stringResource(R.string.label_replaygain_album_gain),
+                                value = editingTagData?.replayGainAlbumGain ?: "",
+                                onValueChange = { viewModel.updateTag { copy(replayGainAlbumGain = it) } },
+                                isModified = editingTagData?.replayGainAlbumGain != originalTagData?.replayGainAlbumGain,
+                                onRevert = {
+                                    viewModel.updateTag {
+                                        copy(replayGainAlbumGain = originalTagData?.replayGainAlbumGain ?: "")
+                                    }
+                                }
+                            )
+                            MetadataInputField(
+                                label = stringResource(R.string.label_replaygain_album_peak),
+                                value = editingTagData?.replayGainAlbumPeak ?: "",
+                                onValueChange = { viewModel.updateTag { copy(replayGainAlbumPeak = it) } },
+                                isModified = editingTagData?.replayGainAlbumPeak != originalTagData?.replayGainAlbumPeak,
+                                onRevert = {
+                                    viewModel.updateTag {
+                                        copy(replayGainAlbumPeak = originalTagData?.replayGainAlbumPeak ?: "")
+                                    }
+                                }
+                            )
+                            MetadataInputField(
+                                label = stringResource(R.string.label_replaygain_reference_loudness),
+                                value = editingTagData?.replayGainReferenceLoudness ?: "",
+                                onValueChange = { viewModel.updateTag { copy(replayGainReferenceLoudness = it) } },
+                                isModified = editingTagData?.replayGainReferenceLoudness != originalTagData?.replayGainReferenceLoudness,
+                                onRevert = {
+                                    viewModel.updateTag {
+                                        copy(replayGainReferenceLoudness = originalTagData?.replayGainReferenceLoudness ?: "")
                                     }
                                 }
                             )
@@ -909,7 +990,6 @@ fun EditMetadataScreen(
         }
     }
 }
-
 
 @Composable
 private fun CoverSection(

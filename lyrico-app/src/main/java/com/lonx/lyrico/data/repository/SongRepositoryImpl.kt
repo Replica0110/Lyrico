@@ -380,6 +380,11 @@ class SongRepositoryImpl(
             updateTag("LYRICIST", audioTagData.lyricist, listOf("TEXT", "WRITER", "LYRICS BY"))
             updateTag("LYRICS", audioTagData.lyrics, listOf("UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG"))
             updateTag("COPYRIGHT", audioTagData.copyright, listOf("TCOP", "CPRO", "©cpy"))
+            updateTag("REPLAYGAIN_TRACK_GAIN", audioTagData.replayGainTrackGain, emptyList())
+            updateTag("REPLAYGAIN_TRACK_PEAK", audioTagData.replayGainTrackPeak, emptyList())
+            updateTag("REPLAYGAIN_ALBUM_GAIN", audioTagData.replayGainAlbumGain, emptyList())
+            updateTag("REPLAYGAIN_ALBUM_PEAK", audioTagData.replayGainAlbumPeak, emptyList())
+            updateTag("REPLAYGAIN_REFERENCE_LOUDNESS", audioTagData.replayGainReferenceLoudness, emptyList())
 
             val ext = uriString.substringAfterLast(".").uppercase()
             val star = audioTagData.rating ?: 0
@@ -466,6 +471,11 @@ class SongRepositoryImpl(
             updateTagIfPresent("LYRICIST", audioTagData.lyricist, listOf("TEXT", "WRITER", "LYRICS BY"))
             updateTagIfPresent("LYRICS", audioTagData.lyrics, listOf("UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG"))
             updateTagIfPresent("COPYRIGHT", audioTagData.copyright, listOf("TCOP", "CPRO", "©cpy"))
+            updateTagIfPresent("REPLAYGAIN_TRACK_GAIN", audioTagData.replayGainTrackGain, emptyList())
+            updateTagIfPresent("REPLAYGAIN_TRACK_PEAK", audioTagData.replayGainTrackPeak, emptyList())
+            updateTagIfPresent("REPLAYGAIN_ALBUM_GAIN", audioTagData.replayGainAlbumGain, emptyList())
+            updateTagIfPresent("REPLAYGAIN_ALBUM_PEAK", audioTagData.replayGainAlbumPeak, emptyList())
+            updateTagIfPresent("REPLAYGAIN_REFERENCE_LOUDNESS", audioTagData.replayGainReferenceLoudness, emptyList())
 
             // 评分处理：只有明确设置了 rating 才更新
             val star = audioTagData.rating

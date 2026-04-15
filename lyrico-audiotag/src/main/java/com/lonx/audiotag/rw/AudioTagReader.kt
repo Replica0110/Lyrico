@@ -180,6 +180,11 @@ object AudioTagReader {
                     lyrics = lyrics,
                     copyright = copyright,
                     rating = ratingStar,
+                    replayGainTrackGain = firstOf("REPLAYGAIN_TRACK_GAIN"),
+                    replayGainTrackPeak = firstOf("REPLAYGAIN_TRACK_PEAK"),
+                    replayGainAlbumGain = firstOf("REPLAYGAIN_ALBUM_GAIN"),
+                    replayGainAlbumPeak = firstOf("REPLAYGAIN_ALBUM_PEAK"),
+                    replayGainReferenceLoudness = firstOf("REPLAYGAIN_REFERENCE_LOUDNESS"),
 
                     durationMilliseconds = audioProps?.length ?: 0,
                     bitrate = audioProps?.bitrate ?: 0,

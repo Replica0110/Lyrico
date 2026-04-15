@@ -493,7 +493,9 @@ fun SearchResultsScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             Card(
-                modifier = Modifier.padding(horizontal = 12.dp),
+                modifier = Modifier
+                    .padding(bottom = 12.dp)
+                    .fillMaxWidth(),
                 colors = CardDefaults.defaultColors(
                     color = MiuixTheme.colorScheme.secondaryContainer,
                 )

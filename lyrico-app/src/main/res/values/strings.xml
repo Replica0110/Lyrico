@@ -7,6 +7,7 @@
 
     <!-- Search -->
     <string name="search_lyrics_placeholder">Search lyrics…</string>
+    <string name="search_cover_placeholder">Search cover…</string>
     <string name="search_failed">Search failed: %1$s</string>
     <string name="search_no_results">No results found</string>
     <string name="fetch_lyrics_failed">Failed to fetch lyrics. Please try again.</string>
@@ -51,7 +52,9 @@
     <string name="folder_ignored">, %1$d ignored</string>
     <string name="ignore_short_audio">Ignore audio shorter than 60 seconds</string>
 
-
+    <string name="batch_match_prefer_filename">Prefer filename for matching</string>
+    <string name="batch_match_prefer_filename_summary">Ignore embedded tags during matching; prioritize searching by file name to improve accuracy. When this feature is enabled, it is recommended to set the title and artist to overwrite mode.
+</string>
     <!-- Lyrics -->
     <string name="lyric_mode">Lyric Mode</string>
     <string name="roma">Romaji</string>
@@ -395,11 +398,25 @@
     <string name="batch_edit_cover_hint">Tap to select cover image</string>
     <string name="batch_edit_field_remove_hint">Remove this field</string>
     <string name="batch_edit_info_summary">Learn how to use batch edit</string>
-    <string name="batch_edit_info_content">Batch Edit Guide:\n\n• All fields display \"&lt;keep&gt;\" by default, meaning that field will not be modified\n• After editing a field, it will be updated to all selected songs\n• Click the undo button on the right side of a field to restore it to \"&lt;keep&gt;\" state\n• For rating, click stars to set a new rating, or click \"Undo\" to keep unchanged\n• Cover images can be changed or removed by tapping\n• Click \"Save\" to write the changes to all selected songs\' file tags</string>
+    <string name="batch_edit_info_content">Batch Edit Guide:
+
+• All fields display \"&lt;keep&gt;\" by default, meaning that field will not be modified
+• After editing a field, it will be updated to all selected songs
+• Click the undo button on the right side of a field to restore it to \"&lt;keep&gt;\" state
+• For rating, click stars to set a new rating, or click \"Undo\" to keep unchanged
+• Cover images can be changed or removed by tapping
+• Click \"Save\" to write the changes to all selected songs\' file tags</string>
     <string name="search_type_all">All</string>
     <string name="search_type_title">Title</string>
     <string name="search_type_artist">Artist</string>
     <string name="search_type_album">Album</string>
-    <string name="search_type_filename">File Name</string>
-    <string name="action_scroll_to_top">Scroll to Top</string>
+    <string name="search_type_filename">File name</string>
+    <string name="action_scroll_to_top">Scroll to top</string>
+    <string name="label_search_cover">Search cover</string>
+    <string name="action_lyrics_options">Lyrics options</string>
+    <string name="label_cover_options">Cover options</string>
+    <string name="label_crop_cover">Crop cover</string>
+    <string name="msg_read_cover_failed">Read cover failed</string>
+    <string name="label_image_ratio">Image ratio</string>
+    <string name="option_free_ratio">Free ratio</string>
 </resources>

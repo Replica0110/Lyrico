@@ -192,7 +192,7 @@ class SongRepositoryImpl(
         }
     }
 
-    override suspend fun applyBatchMetadata(updates: List<Pair<SongEntity, AudioTagData>>) {
+    override suspend fun updateMetadatas(updates: List<Pair<SongEntity, AudioTagData>>) {
         withContext(Dispatchers.IO) {
             if (updates.isEmpty()) return@withContext
 
@@ -314,7 +314,7 @@ class SongRepositoryImpl(
             false
         }
     }
-    override suspend fun writeAudioTagData(contentUri: String, audioTagData: AudioTagData): Boolean {
+    override suspend fun overwriteAudioTags(contentUri: String, audioTagData: AudioTagData): Boolean {
         try {
             return writeInternal(contentUri, audioTagData)
         } catch (e: Exception) {
@@ -328,6 +328,24 @@ class SongRepositoryImpl(
             }
 
             Log.e("SongRepository", "写入失败: $contentUri", e)
+            return false
+        }
+    }
+
+    override suspend fun patchAudioTags(contentUri: String, audioTagData: AudioTagData): Boolean {
+        try {
+            return writeIncremental(contentUri, audioTagData)
+        } catch (e: Exception) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && e is RecoverableSecurityException) {
+                throw RequiresUserPermissionException(e.userAction.actionIntent.intentSender)
+            }
+
+            if (e is SecurityException) {
+                Log.e("SongRepository", "权限不足无法写入: $contentUri", e)
+                return false
+            }
+
+            Log.e("SongRepository", "增量更新失败: $contentUri", e)
             return false
         }
     }
@@ -400,7 +418,87 @@ class SongRepositoryImpl(
                 if (picUrl.isEmpty()) {
                     AudioTagWriter.writePictures(pfdDescriptor, emptyList())
                 } else {
-                    val imageBytes = getImageBytes(picUrl)
+                    val imageBytes = fetchImageBytes(picUrl)
+                    if (imageBytes != null) {
+                        val picture = AudioPicture(data = imageBytes)
+                        AudioTagWriter.writePictures(pfdDescriptor, listOf(picture))
+                    }
+                }
+            }
+
+            return true
+        }
+        return false
+    }
+
+    /**
+     * 增量写入：只更新非 null 字段，忽略 null 字段
+     */
+    private suspend fun writeIncremental(uriString: String, audioTagData: AudioTagData): Boolean {
+        val contentUri = uriString.toUri()
+
+        context.contentResolver.openFileDescriptor(contentUri, "rw")?.use { pfdDescriptor ->
+
+            val updates = mutableMapOf<String, String>()
+
+            // 增量更新：只有非 null 值才写入
+            fun updateTagIfPresent(standardKey: String, value: String?, aliases: List<String>) {
+                if (value != null) {
+                    updates[standardKey] = value
+                    aliases.forEach { aliasKey ->
+                        updates[aliasKey] = ""
+                    }
+                }
+                // 如果 value 为 null，不做任何操作，保留原有值
+            }
+
+            updateTagIfPresent("TITLE", audioTagData.title, listOf("TIT2", "TIT1"))
+            updateTagIfPresent("ARTIST", audioTagData.artist, listOf("TPE1"))
+            updateTagIfPresent("ALBUM", audioTagData.album, listOf("TALB"))
+            updateTagIfPresent("GENRE", audioTagData.genre, listOf("TCON", "STYLE", "SUBGENRE", "MOOD"))
+            updateTagIfPresent("DATE", audioTagData.date, listOf("YEAR", "TYER", "TDAT"))
+            updateTagIfPresent("TRACKNUMBER", audioTagData.trackNumber, listOf("TRACK", "TRCK"))
+
+            updateTagIfPresent("ALBUMARTIST", audioTagData.albumArtist, listOf("TPE2", "ALBUM ARTIST", "aART", "ALBUMARTISTSORT"))
+            updateTagIfPresent("DISCNUMBER", audioTagData.discNumber?.toString(), listOf("DISC", "TPOS", "DISKNUMBER"))
+            updateTagIfPresent("COMPOSER", audioTagData.composer, listOf("TCOM", "©wrt"))
+            updateTagIfPresent("COMMENT", audioTagData.comment, listOf("COMM", "DESCRIPTION"))
+            updateTagIfPresent("LYRICIST", audioTagData.lyricist, listOf("TEXT", "WRITER", "LYRICS BY"))
+            updateTagIfPresent("LYRICS", audioTagData.lyrics, listOf("UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG"))
+            updateTagIfPresent("COPYRIGHT", audioTagData.copyright, listOf("TCOP", "CPRO", "©cpy"))
+
+            // 评分处理：只有明确设置了 rating 才更新
+            val star = audioTagData.rating
+            if (star != null) {
+                val ext = uriString.substringAfterLast(".").uppercase()
+                if (star in 1..5) {
+                    if (ext == "MP3") {
+                        val popmVal = when(star) { 1->1; 2->64; 3->128; 4->196; 5->255; else->0 }
+                        updateTagIfPresent("POPM", "no@email|$popmVal|0", listOf("RATING", "RATE"))
+                    } else if (ext == "FLAC" || ext == "OGG") {
+                        updateTagIfPresent("RATING", (star * 20).toString(), listOf("POPM", "RATE"))
+                    } else {
+                        updateTagIfPresent("RATE", (star * 20).toString(), listOf("RATING", "POPM"))
+                    }
+                } else if (star == 0) {
+                    // 明确设置为 0，清空评分
+                    updateTagIfPresent("POPM", "", listOf("RATING", "RATE"))
+                }
+            }
+            // 如果 rating 为 null，不执行任何操作，保留原有评分
+
+            // 只有在有实际更新时才写入
+            if (updates.isNotEmpty()) {
+                AudioTagWriter.writeTags(pfdDescriptor, updates)
+            }
+
+            // 图片写入：只有 picUrl 非 null 才处理
+            val picUrl = audioTagData.picUrl
+            if (picUrl != null) {
+                if (picUrl.isEmpty()) {
+                    AudioTagWriter.writePictures(pfdDescriptor, emptyList())
+                } else {
+                    val imageBytes = fetchImageBytes(picUrl)
                     if (imageBytes != null) {
                         val picture = AudioPicture(data = imageBytes)
                         AudioTagWriter.writePictures(pfdDescriptor, listOf(picture))
@@ -415,7 +513,7 @@ class SongRepositoryImpl(
 
     override suspend fun readAudioTagData(contentUri: String): AudioTagData {
         return withContext(Dispatchers.IO) {
-            val displayName = resolveDisplayName(contentUri)
+            val displayName = getDisplayName(contentUri)
             try {
                 val uri = contentUri.toUri()
                 context.contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
@@ -429,8 +527,8 @@ class SongRepositoryImpl(
         }
     }
 
-    override suspend fun getSongsCount(): Int = withContext(Dispatchers.IO) {
-        songDao.getSongsCount()
+    override suspend fun getSongCount(): Int = withContext(Dispatchers.IO) {
+        songDao.getSongCount()
     }
 
     override suspend fun clearAll() {
@@ -457,13 +555,13 @@ class SongRepositoryImpl(
         )
     }
 
-    override fun getAllSongsSorted(sortBy: SortBy, order: SortOrder): Flow<List<SongEntity>> {
+    override fun observeSongs(sortBy: SortBy, order: SortOrder): Flow<List<SongEntity>> {
         val sortInfo = SortInfo(sortBy, order)
         val query = songQueryBuilder.build(sortInfo)
         return songDao.getSongs(query)
     }
 
-    private suspend fun getImageBytes(path: String): ByteArray? = withContext(Dispatchers.IO) {
+    private suspend fun fetchImageBytes(path: String): ByteArray? = withContext(Dispatchers.IO) {
         try {
             if (path.startsWith("http")) {
                 val request = Request.Builder().url(path).build()
@@ -480,7 +578,7 @@ class SongRepositoryImpl(
     }
 
 
-    override fun resolveDisplayName(contentUri: String): String {
+    override fun getDisplayName(contentUri: String): String {
         try {
             val uri = contentUri.toUri()
             if (uri.scheme == "content") {

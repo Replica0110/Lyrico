@@ -107,6 +107,45 @@ class KgSource(
         }
     }
 
+    override suspend fun searchCover(
+        keyword: String,
+        pageSize: Int
+    ): List<SongSearchResult> = withContext(Dispatchers.IO) {
+
+        try {
+            val params = mapOf(
+                "keyword" to keyword,
+                "page" to "1",
+                "pagesize" to pageSize.toString()
+            )
+
+            val signedParams = buildSignedParams(params, body = "", module = "Search")
+            val response = api.searchSong(signedParams)
+
+            if (response.errorCode != 0) return@withContext emptyList()
+
+            response.data?.lists?.take(pageSize)?.mapNotNull { item ->
+                val picUrl = if (item.picUrl.isNotBlank()) item.picUrl.replace("{size}", "480") else ""
+                
+                if (picUrl.isBlank()) return@mapNotNull null
+
+                SongSearchResult(
+                    id = item.id ?: "",
+                    title = item.songName,
+                    artist = item.singers.joinToString("/") { it.name },
+                    album = item.albumName ?: "",
+                    duration = (item.duration * 1000).toLong(),
+                    source = Source.KG,
+                    date = item.publishDate ?: "",
+                    extras = mapOf("hash" to item.fileHash),
+                    picUrl = picUrl
+                )
+            } ?: emptyList()
+
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
 
     private suspend fun buildSignedParams(

@@ -86,7 +86,7 @@ interface SongDao {
         INNER JOIN folders AS f ON s.folderId = f.id
         WHERE f.isIgnored = 0
     """)
-    suspend fun getSongsCount(): Int
+    suspend fun getSongCount(): Int
 
     // ================= 查询操作 (列表与排序) =================
 

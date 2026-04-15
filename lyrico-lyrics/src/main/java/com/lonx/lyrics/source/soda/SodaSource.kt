@@ -71,7 +71,43 @@ class SodaSource(
             )
         }
     }
+    override suspend fun searchCover(
+        keyword: String,
+        pageSize: Int
+    ): List<SongSearchResult> = withContext(Dispatchers.IO) {
 
+        try {
+            val resp = api.searchSong(keyword)
+
+            val list = resp.resultGroups
+                .firstOrNull()
+                ?.data
+                ?: return@withContext emptyList()
+
+            list.take(pageSize).mapNotNull { item ->
+                val track = item.entity.track
+                if (track.id.isBlank()) return@mapNotNull null
+
+                val artists = track.artists.joinToString("/") { it.name }
+                val cover = buildCover(track.album.cover)
+                
+                if (cover.isBlank()) return@mapNotNull null
+
+                SongSearchResult(
+                    id = track.id,
+                    title = track.name,
+                    artist = artists,
+                    album = track.album.name,
+                    duration = track.duration.toLong(),
+                    source = sourceType,
+                    picUrl = cover
+                )
+            }
+
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
     override suspend fun getLyrics(song: SongSearchResult): LyricsResult =
         withContext(Dispatchers.IO) {
 

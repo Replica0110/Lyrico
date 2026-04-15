@@ -197,7 +197,7 @@ class BatchEditViewModel(
 
         // 写入文件
         return try {
-            val success = songRepository.writeAudioTagData(uriString, mergedTag)
+            val success = songRepository.overwriteAudioTags(uriString, mergedTag)
             if (success) {
                 songRepository.updateSongMetadata(mergedTag, uriString, System.currentTimeMillis())
             }

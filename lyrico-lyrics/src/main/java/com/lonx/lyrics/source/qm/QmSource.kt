@@ -80,7 +80,63 @@ class QmSource(
             emptyList()
         }
     }
+    override suspend fun searchCover(
+        keyword: String,
+        pageSize: Int
+    ): List<SongSearchResult> = withContext(Dispatchers.IO) {
 
+        try {
+            val param = buildJsonObject {
+                put("search_id", Random.nextLong(1e16.toLong(), 9e16.toLong()).toString())
+                put("remoteplace", "search.android.keyboard")
+                put("query", keyword)
+                put("search_type", 0)
+                put("num_per_page", pageSize)
+                put("page_num", 1)
+                put("highlight", 0)
+                put("nqc_flag", 0)
+                put("page_id", 1)
+                put("grp", 1)
+            }
+
+            val reqBody = QmRequestBody(
+                comm = comm,
+                req_0 = QmRequestModule(
+                    method = "DoSearchForQQMusicLite",
+                    module = "music.search.SearchCgiService",
+                    param = param
+                )
+            )
+
+            val resp = api.searchSong(reqBody)
+            val songs = resp.req_0.data?.body?.songs ?: return@withContext emptyList()
+
+            songs.take(pageSize).mapNotNull { item ->
+                val picUrl = if (item.album.mid.isNotEmpty()) {
+                    "https://y.gtimg.cn/music/photo_new/T002R800x800M000${item.album.mid}.jpg"
+                } else {
+                    ""
+                }
+                
+                if (picUrl.isBlank()) return@mapNotNull null
+
+                SongSearchResult(
+                    id = item.id,
+                    title = item.title,
+                    artist = item.singer.joinToString("/") { it.name },
+                    album = item.album.name,
+                    duration = item.interval * 1000L,
+                    source = Source.QM,
+                    date = item.timePublic ?: "",
+                    trackerNumber = item.trackerNumber,
+                    picUrl = picUrl
+                )
+            }
+
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
     override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
         if (song.id == "0") return@withContext null
 

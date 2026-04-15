@@ -121,6 +121,44 @@ object LyricsUtils {
         }
     }
 
+    /**
+     * 对纯文本歌词字符串进行简繁转换
+     * @param lyricsText 歌词全文
+     * @param conversionMode 转换模式
+     * @return 转换后的歌词字符串
+     */
+    fun convertLyricsText(lyricsText: String, conversionMode: ConversionMode): String {
+        if (conversionMode == ConversionMode.NONE || lyricsText.isBlank()) return lyricsText
+
+        // 匹配所有时间戳 token（LRC 和 TTML），对非时间戳部分做转换
+        val timeTokenPattern = Regex(
+            """[\[<]\d{2,}:\d{2}\.\d{2,3}[>\]]""" +          // LRC: [01:23.456] 或 <01:23.456>
+            """|begin="\d{2,}:\d{2}:\d{2}\.\d{2,3}"""" +     // TTML begin
+            """|end="\d{2,}:\d{2}:\d{2}\.\d{2,3}""""         // TTML end
+        )
+
+        val result = StringBuilder()
+        var lastEnd = 0
+
+        timeTokenPattern.findAll(lyricsText).forEach { match ->
+            // 转换时间戳之前的文本部分
+            if (match.range.first > lastEnd) {
+                val textSegment = lyricsText.substring(lastEnd, match.range.first)
+                result.append(convertText(textSegment, conversionMode))
+            }
+            // 时间戳原样保留
+            result.append(match.value)
+            lastEnd = match.range.last + 1
+        }
+
+        // 处理最后一段文本
+        if (lastEnd < lyricsText.length) {
+            result.append(convertText(lyricsText.substring(lastEnd), conversionMode))
+        }
+
+        return result.toString()
+    }
+
     fun formatLrcResult(
         result: LyricsResult,
         config: LyricRenderConfig,

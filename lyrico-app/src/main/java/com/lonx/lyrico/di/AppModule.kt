@@ -21,8 +21,10 @@ import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrico.utils.UpdateManagerImpl
 import com.lonx.lyrico.viewmodel.AboutViewModel
 import com.lonx.lyrico.viewmodel.BatchMatchHistoryViewModel
+import com.lonx.lyrico.viewmodel.BatchMatchViewModel
 import com.lonx.lyrico.viewmodel.BatchEditViewModel
 import com.lonx.lyrico.viewmodel.BatchRenameViewModel
+import com.lonx.lyrico.viewmodel.CoverSearchViewModel
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
@@ -197,10 +199,12 @@ val appModule = module {
     single<GhContributorRepository> { GhContributorRepositoryImpl(get(), get()) }
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
-    viewModel { SongListViewModel(get(), get(), get(),get(), get(), get(), get(),get()) }
+    viewModel { SongListViewModel(get(), get(), get(), get(),get(),get()) }
     viewModel { SettingsViewModel(get(),get()) }
     viewModel { SearchViewModel(get(), get()) }
+    viewModel { CoverSearchViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), get()) }
+    viewModel { BatchMatchViewModel(get(), get(), get(), get(), get()) }
 
     viewModel { BatchMatchHistoryViewModel(get()) }
     viewModel { FolderManagerViewModel(get()) }

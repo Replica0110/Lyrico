@@ -23,7 +23,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -47,6 +46,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -96,9 +96,10 @@ import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.components.DropdownItem
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.rememberTintedPainter
-import com.lonx.lyrico.ui.dialog.BatchMatchConfigDialog
+import com.lonx.lyrico.ui.dialog.BatchMatchConfigBottomSheet
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.coil.CoverRequest
+import com.lonx.lyrico.viewmodel.BatchMatchViewModel
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
@@ -176,30 +177,27 @@ enum class TopBarState {
 fun SongListScreen(
     navigator: DestinationsNavigator
 ) {
-    val viewModel: SongListViewModel = koinViewModel()
-    val uiState by viewModel.uiState.collectAsState()
-    val sortInfo by viewModel.sortInfo.collectAsState()
-    val songs by viewModel.songs.collectAsState()
-    val searchType by viewModel.searchType.collectAsState()
-    val isSelectionMode by viewModel.isSelectionMode.collectAsState(initial = false)
-    val selectedSongIds by viewModel.selectedSongIds.collectAsState()
+    val songListViewModel: SongListViewModel = koinViewModel()
+    val batchMatchViewModel: BatchMatchViewModel = koinViewModel()
+    val songListUiState by songListViewModel.uiState.collectAsState()
+    val batchMatchUiState by batchMatchViewModel.uiState.collectAsState()
+    val sortInfo by songListViewModel.sortInfo.collectAsState()
+    val songs by songListViewModel.songs.collectAsState()
+    val searchType by songListViewModel.searchType.collectAsState()
+    val isSelectionMode by songListViewModel.isSelectionMode.collectAsState(initial = false)
+    val selectedSongIds by songListViewModel.selectedSongIds.collectAsState()
     val allSelected = selectedSongIds.size == songs.size
-    val showScrollTopButton by viewModel.showScrollTopButton.collectAsStateWithLifecycle()
-    val batchMatchConfig by viewModel.batchMatchConfig.collectAsState()
+    val showScrollTopButton by songListViewModel.showScrollTopButton.collectAsStateWithLifecycle()
+    val batchMatchConfig by batchMatchViewModel.batchMatchConfig.collectAsState()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val sheetUiState by viewModel.sheetState.collectAsStateWithLifecycle()
+    val sheetUiState by songListViewModel.sheetState.collectAsStateWithLifecycle()
 
     val showFab by remember {
         derivedStateOf {
             showScrollTopButton && listState.firstVisibleItemIndex > 0
         }
     }
-    var initialDragIndex by remember { mutableStateOf<Int?>(null) }
-    var currentDragIndex by remember { mutableStateOf<Int?>(null) }
-    var initialDragY by remember { mutableStateOf<Float?>(null) }
-    var currentDragY by remember { mutableStateOf<Float?>(null) }
-    var autoScrollSpeed by remember { mutableFloatStateOf(0f) }
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -234,118 +232,18 @@ fun SongListScreen(
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "backToTopPadding"
     )
-    LaunchedEffect(autoScrollSpeed) {
-        if (autoScrollSpeed != 0f) {
-            while (isActive) {
-                listState.scrollBy(autoScrollSpeed)
-                currentDragY?.let { y ->
-                    val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
-                    val clampedY = y.coerceIn(0f, viewportHeight - 1f)
-                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                        clampedY >= it.offset && clampedY <= (it.offset + it.size)
-                    }
-                    if (itemInfo != null && initialDragIndex != null) {
-                        if (itemInfo.index != currentDragIndex) {
-                            currentDragIndex = itemInfo.index
-                            viewModel.updateDragSelection(
-                                initialDragIndex!!,
-                                currentDragIndex!!,
-                                songs
-                            )
-                        }
-                    }
-                }
-                delay(16) // 大约 60 帧的刷新率
-            }
-        }
-    }
-    val dragSelectionModifier = if (isSelectionMode) {
-        Modifier.pointerInput(songs, isSelectionMode) {
-            detectDragGesturesAfterLongPress(
-                onDragStart = { offset ->
-                    initialDragY = offset.y
-                    currentDragY = offset.y
-                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                        offset.y >= it.offset && offset.y <= (it.offset + it.size)
-                    }
-                    itemInfo?.let {
-                        initialDragIndex = it.index
-                        currentDragIndex = it.index
-                        viewModel.startDragSelection(it.index, songs)
-                    }
-                },
-                onDrag = { change, _ ->
-                    val y = change.position.y
-                    currentDragY = y
-
-                    // 基于起始点的距离计算滚动方向和速度
-                    if (initialDragY != null) {
-                        val dragDistance = y - initialDragY!!
-
-                        // 参数调优
-                        val deadZone = 180f // 缓冲死区：滑动超出起点的这部分距离内，不自动滚动，只做普通框选
-                        val speedFactor = 0.15f // 速度乘数：决定超出死区后滚动的快慢
-                        val maxSpeed = 60f // 最大滚动速度限制（像素/帧）
-
-                        autoScrollSpeed = when {
-                            dragDistance > deadZone -> {
-                                // 向下滑动，超出死区，列表向下滚动
-                                ((dragDistance - deadZone) * speedFactor).coerceAtMost(maxSpeed)
-                            }
-
-                            dragDistance < -deadZone -> {
-                                // 向上滑动，超出死区，列表向上滚动
-                                ((dragDistance + deadZone) * speedFactor).coerceAtLeast(-maxSpeed)
-                            }
-
-                            else -> 0f
-                        }
-                    }
-
-                    // 更新选中状态
-                    val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
-                    val clampedY = y.coerceIn(0f, viewportHeight - 1f)
-                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                        clampedY >= it.offset && clampedY <= (it.offset + it.size)
-                    }
-                    if (itemInfo != null && initialDragIndex != null) {
-                        if (itemInfo.index != currentDragIndex) {
-                            currentDragIndex = itemInfo.index
-                            viewModel.updateDragSelection(
-                                initialDragIndex!!,
-                                currentDragIndex!!,
-                                songs
-                            )
-                        }
-                    }
-                },
-                onDragEnd = {
-                    initialDragIndex = null
-                    currentDragIndex = null
-                    initialDragY = null
-                    currentDragY = null
-                    autoScrollSpeed = 0f
-                    viewModel.endDragSelection()
-                },
-                onDragCancel = {
-                    initialDragIndex = null
-                    currentDragIndex = null
-                    initialDragY = null
-                    currentDragY = null
-                    autoScrollSpeed = 0f
-                    viewModel.endDragSelection()
-                }
-            )
-        }
-    } else {
-        Modifier
-    }
+    val dragSelectionModifier = rememberDragSelectionModifier(
+        listState = listState,
+        songs = songs,
+        songListViewModel = songListViewModel,
+        isSelectionMode = isSelectionMode
+    )
     BackHandler(enabled = isSelectionMode || isSearchMode) {
         if (isSelectionMode) {
-            viewModel.exitSelectionMode()
+            songListViewModel.exitSelectionMode()
         } else if (isSearchMode) {
             isSearchMode = false
-            viewModel.clearSearch()
+            songListViewModel.clearSearch()
         }
     }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -373,21 +271,24 @@ fun SongListScreen(
                             selected = hasSelection,
                             enabled = hasSelection,
                             label = stringResource(R.string.action_share),
-                            onClick = { viewModel.batchShare(context, songs) },
+                            onClick = { songListViewModel.batchShare(context, songs) },
                             icon = MiuixIcons.Share
                         )
                         FloatingNavigationBarItem(
                             selected = hasSelection,
                             enabled = hasSelection,
                             label = stringResource(R.string.action_delete),
-                            onClick = { viewModel.showBatchDeleteDialog() },
+                            onClick = { songListViewModel.showBatchDeleteDialog() },
                             icon = MiuixIcons.Delete
                         )
                         FloatingNavigationBarItem(
                             selected = hasSelection,
                             enabled = hasSelection,
                             label = stringResource(R.string.action_batch_match),
-                            onClick = { viewModel.openBatchMatchConfig() },
+                            onClick = {
+                                songListViewModel.setSelectionUris()
+                                batchMatchViewModel.openBatchMatchConfig()
+                                      },
                             icon = MiuixIcons.Edit
                         )
                         FloatingNavigationBarItem(
@@ -395,7 +296,7 @@ fun SongListScreen(
                             enabled = hasSelection,
                             label = stringResource(R.string.batch_edit_title),
                             onClick = {
-                                if (viewModel.setSelectionUris()) {
+                                if (songListViewModel.setSelectionUris()) {
                                     navigator.navigate(BatchEditDestination())
                                 }
                             },
@@ -406,7 +307,7 @@ fun SongListScreen(
                             enabled = hasSelection,
                             label = stringResource(R.string.action_batch_rename),
                             onClick = {
-                                if (viewModel.setSelectionPaths()) {
+                                if (songListViewModel.setSelectionPaths()) {
                                     navigator.navigate(BatchRenameDestination)
                                 }
                             },
@@ -463,9 +364,9 @@ fun SongListScreen(
                                     TextButton(
                                         onClick = {
                                             if (allSelected) {
-                                                viewModel.deselectAll()
+                                                songListViewModel.deselectAll()
                                             } else {
-                                                viewModel.selectAll(songs)
+                                                songListViewModel.selectAll(songs)
                                             }
                                         }
                                     ) {
@@ -482,7 +383,7 @@ fun SongListScreen(
                                     }
                                     TextButton(
                                         onClick = {
-                                            viewModel.exitSelectionMode()
+                                            songListViewModel.exitSelectionMode()
                                         }
                                     ) {
                                         Text(
@@ -502,16 +403,16 @@ fun SongListScreen(
                             ) {
                                 SearchBar(
                                     modifier = Modifier.padding(horizontal = 12.dp),
-                                    value = uiState.searchQuery,
+                                    value = songListUiState.searchQuery,
                                     onValueChange = {
-                                        viewModel.onSearchQueryChanged(it)
+                                        songListViewModel.onSearchQueryChanged(it)
                                     },
                                     placeholder = stringResource(id = R.string.local_search_hint),
                                     actions = {
                                         TextButton(
                                             onClick = {
                                                 isSearchMode = false
-                                                viewModel.clearSearch()
+                                                songListViewModel.clearSearch()
                                             }
                                         ) {
                                             Text(
@@ -522,7 +423,7 @@ fun SongListScreen(
                                         }
                                     },
                                     onSearch = {
-                                        viewModel.onSearchQueryChanged(uiState.searchQuery)
+                                        songListViewModel.onSearchQueryChanged(songListUiState.searchQuery)
                                     }
                                 )
                             }
@@ -585,7 +486,7 @@ fun SongListScreen(
                                                             } else {
                                                                 SortOrder.ASC
                                                             }
-                                                            viewModel.onSortChange(SortInfo(type, newOrder))
+                                                            songListViewModel.onSortChange(SortInfo(type, newOrder))
                                                         }
                                                     )
                                                 }
@@ -595,7 +496,7 @@ fun SongListScreen(
                                                     summary = stringResource(R.string.show_scroll_top_button_hint),
                                                     checked = showScrollTopButton,
                                                     onCheckedChange = {
-                                                        viewModel.setScrollToTopButtonEnabled(it)
+                                                        songListViewModel.setScrollToTopButtonEnabled(it)
                                                     }
                                                 )
                                             }
@@ -609,8 +510,8 @@ fun SongListScreen(
             }
         ) { paddingValues ->
             PullToRefresh(
-                isRefreshing = uiState.isLoading,
-                onRefresh = { viewModel.refreshSongs() },
+                isRefreshing = songListUiState.isLoading,
+                onRefresh = { songListViewModel.refreshSongs() },
                 modifier = Modifier.padding(paddingValues),
                 topAppBarScrollBehavior = topAppBarScrollBehavior,
                 refreshTexts = refreshTexts
@@ -635,7 +536,7 @@ fun SongListScreen(
                             tabs = LocalSearchType.entries.map { stringResource(it.labelRes) },
                             selectedTabIndex = LocalSearchType.entries.indexOf(searchType),
                             onTabSelected = {
-                                viewModel.onSearchTypeChanged(LocalSearchType.entries[it])
+                                songListViewModel.onSearchTypeChanged(LocalSearchType.entries[it])
                             }
                         )
                     }
@@ -671,11 +572,11 @@ fun SongListScreen(
                                     modifier = Modifier.animateItem(),
                                     isSelectionMode = isSelectionMode,
                                     isSelected = selectedSongIds.contains(song.mediaId),
-                                    onToggleSelection = { viewModel.toggleSelection(song.mediaId) },
+                                    onToggleSelection = { songListViewModel.toggleSelection(song.mediaId) },
                                     trailingContent = {
                                         Box(modifier = Modifier.padding(end = 8.dp)) {
                                             if (!isSelectionMode) {
-                                                IconButton(onClick = { viewModel.showMenu(song) }) {
+                                                IconButton(onClick = { songListViewModel.showMenu(song) }) {
                                                     Icon(
                                                         imageVector = MiuixIcons.More,
                                                         contentDescription = "More"
@@ -684,7 +585,7 @@ fun SongListScreen(
                                             } else {
                                                 Checkbox(
                                                     state = if (selectedSongIds.contains(song.mediaId)) ToggleableState.On else ToggleableState.Off,
-                                                    onClick = { viewModel.toggleSelection(song.mediaId) }
+                                                    onClick = { songListViewModel.toggleSelection(song.mediaId) }
                                                 )
                                             }
                                         }
@@ -722,14 +623,14 @@ fun SongListScreen(
 
             WindowBottomSheet(
                 show = song != null,
-                onDismissRequest = { viewModel.dismissAll() }
+                onDismissRequest = { songListViewModel.dismissAll() }
             ) {
                 song?.let {
                     SongMenuBottomSheetContent(
                         song = it,
-                        onPlay = { viewModel.play(context, it) },
-                        showInfo = { viewModel.showDetail(it) },
-                        onDelete = { viewModel.showDeleteDialog() },
+                        onPlay = { songListViewModel.play(context, it) },
+                        showInfo = { songListViewModel.showDetail(it) },
+                        onDelete = { songListViewModel.showDeleteDialog() },
                         onShare = {
                             val uri = ContentUris.withAppendedId(
                                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -754,7 +655,7 @@ fun SongListScreen(
             val detailSong = sheetUiState.detailSong
             WindowBottomSheet(
                 show = detailSong != null,
-                onDismissRequest = { viewModel.dismissDetail() },
+                onDismissRequest = { songListViewModel.dismissDetail() },
             ) {
                 detailSong?.let {
                     SongDetailBottomSheetContent(context = context, song = it)
@@ -763,27 +664,27 @@ fun SongListScreen(
 
             WindowDialog(
                 title = stringResource(R.string.dialog_delete_file_title),
-                show = uiState.showDeleteDialog && sheetUiState.menuSong != null,
+                show = songListUiState.showDeleteDialog && sheetUiState.menuSong != null,
                 summary = stringResource(
                     R.string.dialog_delete_file_content,
                     sheetUiState.menuSong?.fileName ?: ""
                 ),
-                onDismissRequest = { viewModel.dismissDeleteDialog() },
+                onDismissRequest = { songListViewModel.dismissDeleteDialog() },
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(horizontalArrangement = Arrangement.SpaceBetween) {
                         top.yukonga.miuix.kmp.basic.TextButton(
                             text = stringResource(R.string.cancel),
-                            onClick = { viewModel.dismissDeleteDialog() },
+                            onClick = { songListViewModel.dismissDeleteDialog() },
                             modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.width(20.dp))
                         top.yukonga.miuix.kmp.basic.TextButton(
                             text = stringResource(R.string.confirm),
                             onClick = {
-                                viewModel.dismissDeleteDialog()
-                                viewModel.dismissAll()
-                                viewModel.delete(sheetUiState.menuSong!!)
+                                songListViewModel.dismissDeleteDialog()
+                                songListViewModel.dismissAll()
+                                songListViewModel.delete(sheetUiState.menuSong!!)
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.textButtonColorsPrimary()
@@ -793,8 +694,8 @@ fun SongListScreen(
             }
             // 批量删除确认对话框
             WindowDialog(
-                show = uiState.showBatchDeleteDialog,
-                onDismissRequest = { viewModel.dismissBatchDeleteDialog() },
+                show = songListUiState.showBatchDeleteDialog,
+                onDismissRequest = { songListViewModel.dismissBatchDeleteDialog() },
                 summary = stringResource(
                     R.string.dialog_batch_delete_content,
                     selectedSongIds.size
@@ -804,15 +705,15 @@ fun SongListScreen(
                     Row(horizontalArrangement = Arrangement.SpaceBetween) {
                         top.yukonga.miuix.kmp.basic.TextButton(
                             text = stringResource(R.string.cancel),
-                            onClick = { viewModel.dismissBatchDeleteDialog() },
+                            onClick = { songListViewModel.dismissBatchDeleteDialog() },
                             modifier = Modifier.weight(1f)
                         )
                         Spacer(Modifier.width(20.dp))
                         top.yukonga.miuix.kmp.basic.TextButton(
                             text = stringResource(R.string.confirm),
                             onClick = {
-                                viewModel.dismissBatchDeleteDialog()
-                                viewModel.batchDelete(songs)
+                                songListViewModel.dismissBatchDeleteDialog()
+                                songListViewModel.batchDelete(songs)
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.textButtonColorsPrimary()
@@ -820,28 +721,29 @@ fun SongListScreen(
                     }
                 }
             }
-            // 批量匹配配置对话框
-            BatchMatchConfigDialog(
-                show = uiState.showBatchConfigDialog,
+            // 批量匹配配置BottomSheet
+            BatchMatchConfigBottomSheet(
+                show = batchMatchUiState.showBatchConfigDialog,
                 initialConfig = batchMatchConfig,
                 onDismissRequest = { config ->
-                    viewModel.saveBatchMatchConfig(config)
-                    viewModel.closeBatchMatchConfig()
+                    batchMatchViewModel.saveBatchMatchConfig(config)
+                    batchMatchViewModel.closeBatchMatchConfig()
                 },
                 onConfirm = {
-                    scope.launch { viewModel.batchMatch() }
+                    batchMatchViewModel.batchMatch(songs)
                 }
             )
 
-            WindowDialog(
-                show = uiState.isBatchMatching || uiState.batchProgress != null,
+            WindowBottomSheet(
+                show = batchMatchUiState.isBatchMatching || batchMatchUiState.batchProgress != null,
                 onDismissRequest = {
-                    if (!uiState.isBatchMatching) viewModel.closeBatchMatchDialog()
+                    if (!batchMatchUiState.isBatchMatching) batchMatchViewModel.closeBatchMatchDialog()
                 },
                 title = stringResource(R.string.batch_matching_title),
             ) {
                 Column(
                     modifier = Modifier
+                        .padding(bottom = 32.dp)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
@@ -849,7 +751,7 @@ fun SongListScreen(
                         modifier = Modifier.padding(bottom = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        uiState.batchProgress?.let { (current, total) ->
+                        batchMatchUiState.batchProgress?.let { (current, total) ->
                             val progress =
                                 if (total > 0) current.toFloat() / total.toFloat() else 0f
 
@@ -858,12 +760,12 @@ fun SongListScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (uiState.isBatchMatching) {
-                                        uiState.currentFile
+                                    text = if (batchMatchUiState.isBatchMatching) {
+                                        batchMatchUiState.currentFile
                                     } else {
                                         stringResource(
                                             R.string.batch_matching_total_time,
-                                            uiState.batchTimeMillis / 1000.0
+                                            batchMatchUiState.batchTimeMillis / 1000.0
                                         )
                                     },
                                     style = MiuixTheme.textStyles.subtitle,
@@ -892,21 +794,21 @@ fun SongListScreen(
                         Text(
                             text = stringResource(
                                 R.string.batch_matching_success,
-                                uiState.successCount
+                                batchMatchUiState.successCount
                             ),
                             style = MiuixTheme.textStyles.main
                         )
                         Text(
                             text = stringResource(
                                 R.string.batch_matching_skipped,
-                                uiState.skippedCount
+                                batchMatchUiState.skippedCount
                             ),
                             style = MiuixTheme.textStyles.main
                         )
                         Text(
                             text = stringResource(
                                 R.string.batch_matching_failure,
-                                uiState.failureCount
+                                batchMatchUiState.failureCount
                             ),
                             style = MiuixTheme.textStyles.main
                         )
@@ -914,23 +816,23 @@ fun SongListScreen(
 
                     Row(horizontalArrangement = Arrangement.SpaceBetween) {
                         top.yukonga.miuix.kmp.basic.TextButton(
-                            enabled = !uiState.isBatchMatching,
+                            enabled = !batchMatchUiState.isBatchMatching,
                             text = stringResource(R.string.action_close),
-                            onClick = { viewModel.closeBatchMatchDialog() },
+                            onClick = { batchMatchViewModel.closeBatchMatchDialog() },
                             modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.width(20.dp))
                         top.yukonga.miuix.kmp.basic.TextButton(
-                            text = if (uiState.isBatchMatching) stringResource(R.string.action_abort) else stringResource(
+                            text = if (batchMatchUiState.isBatchMatching) stringResource(R.string.action_abort) else stringResource(
                                 R.string.action_view_results
                             ),
                             onClick = {
-                                if (uiState.isBatchMatching) {
-                                    viewModel.abortBatchMatch()
+                                if (batchMatchUiState.isBatchMatching) {
+                                    batchMatchViewModel.abortBatchMatch()
                                 } else {
-                                    viewModel.closeBatchMatchDialog()
+                                    batchMatchViewModel.closeBatchMatchDialog()
                                     navigator.navigate(
-                                        BatchMatchHistoryDetailDestination(uiState.batchHistoryId)
+                                        BatchMatchHistoryDetailDestination(batchMatchUiState.batchHistoryId)
                                     )
                                 }
                             },
@@ -1483,5 +1385,200 @@ fun SongDetailItem(label: String, value: String?) {
             style = MiuixTheme.textStyles.main,
             modifier = Modifier.padding(top = 2.dp)
         )
+    }
+}
+enum class ScrollDirection {
+    UP, DOWN, NONE
+}
+@Composable
+fun rememberDragSelectionModifier(
+    listState: LazyListState,
+    songs: List<SongEntity>,
+    songListViewModel: SongListViewModel,
+    isSelectionMode: Boolean
+): Modifier {
+
+    var initialDragY by remember { mutableStateOf<Float?>(null) }
+    var currentDragY by remember { mutableStateOf<Float?>(null) }
+
+    var initialDragIndex by remember { mutableStateOf<Int?>(null) }
+    var currentDragIndex by remember { mutableStateOf<Int?>(null) }
+
+    var autoScrollSpeed by remember { mutableFloatStateOf(0f) }
+    var currentSpeed by remember { mutableFloatStateOf(0f) }
+
+
+    var peakDragY by remember { mutableStateOf<Float?>(null) }
+    var scrollDirection by remember { mutableStateOf(ScrollDirection.NONE) }
+
+    LaunchedEffect(Unit) {
+        while (isActive) {
+
+            // 平滑速度
+            currentSpeed += (autoScrollSpeed - currentSpeed) * 0.2f
+
+            if (autoScrollSpeed == 0f) {
+                currentSpeed *= 0.85f
+            }
+
+            if (kotlin.math.abs(currentSpeed) < 0.5f) {
+                currentSpeed = 0f
+            }
+
+            if (currentSpeed != 0f) {
+                listState.scrollBy(currentSpeed)
+
+                currentDragY?.let { y ->
+                    val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
+                    val clampedY = y.coerceIn(0f, viewportHeight - 1f)
+
+                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
+                        clampedY >= it.offset && clampedY <= (it.offset + it.size)
+                    }
+
+                    if (itemInfo != null && initialDragIndex != null) {
+                        if (itemInfo.index != currentDragIndex) {
+                            currentDragIndex = itemInfo.index
+                            songListViewModel.updateDragSelection(
+                                initialDragIndex!!,
+                                currentDragIndex!!,
+                                songs
+                            )
+                        }
+                    }
+                }
+            }
+
+            delay(16)
+        }
+    }
+
+    return if (isSelectionMode) {
+        Modifier.pointerInput(songs, isSelectionMode) {
+            detectDragGesturesAfterLongPress(
+
+                onDragStart = { offset ->
+                    initialDragY = offset.y
+                    currentDragY = offset.y
+
+                    scrollDirection = ScrollDirection.NONE // 重置方向
+
+                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
+                        offset.y >= it.offset && offset.y <= (it.offset + it.size)
+                    }
+
+                    itemInfo?.let {
+                        initialDragIndex = it.index
+                        currentDragIndex = it.index
+                        songListViewModel.startDragSelection(it.index, songs)
+                    }
+                },
+
+                onDrag = { change, _ ->
+                    val y = change.position.y
+                    currentDragY = y
+
+                    val retreatThreshold = 20f // 反向滑动的灵敏度阈值（回退多少就停）
+                    val startThreshold = 180f
+                    val speedFactor = 0.1f
+                    val maxSpeed = 60f
+
+                    initialDragY?.let { startY ->
+                        val dragDistance = y - startY
+
+                        when (scrollDirection) {
+                            ScrollDirection.NONE -> {
+                                if (dragDistance > startThreshold) {
+                                    scrollDirection = ScrollDirection.DOWN
+                                    peakDragY = y
+                                } else if (dragDistance < -startThreshold) {
+                                    scrollDirection = ScrollDirection.UP
+                                    peakDragY = y
+                                }
+                            }
+
+                            ScrollDirection.DOWN -> {
+                                peakDragY = maxOf(peakDragY ?: y, y)
+
+                                if (y < (peakDragY!! - retreatThreshold)) {
+                                    scrollDirection = ScrollDirection.NONE
+                                    peakDragY = null
+                                } else if (dragDistance < 0) {
+                                    scrollDirection = ScrollDirection.NONE
+                                }
+                            }
+
+                            ScrollDirection.UP -> {
+                                peakDragY = minOf(peakDragY ?: y, y)
+
+                                if (y > (peakDragY!! + retreatThreshold)) {
+                                    scrollDirection = ScrollDirection.NONE
+                                    peakDragY = null
+                                } else if (dragDistance > 0) {
+                                    scrollDirection = ScrollDirection.NONE
+                                }
+                            }
+                        }
+
+                        autoScrollSpeed = when (scrollDirection) {
+                            ScrollDirection.DOWN -> {
+                                ((dragDistance - startThreshold) * speedFactor).coerceAtMost(maxSpeed)
+                            }
+                            ScrollDirection.UP -> {
+                                ((dragDistance + startThreshold) * speedFactor).coerceAtLeast(-maxSpeed)
+                            }
+                            ScrollDirection.NONE -> 0f
+                        }
+                    }
+
+                    //  更新选中项
+                    val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
+                    val clampedY = y.coerceIn(0f, viewportHeight - 1f)
+
+                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
+                        clampedY >= it.offset && clampedY <= (it.offset + it.size)
+                    }
+
+                    if (itemInfo != null && initialDragIndex != null) {
+                        if (itemInfo.index != currentDragIndex) {
+                            currentDragIndex = itemInfo.index
+                            songListViewModel.updateDragSelection(
+                                initialDragIndex!!,
+                                currentDragIndex!!,
+                                songs
+                            )
+                        }
+                    }
+                },
+
+                onDragEnd = {
+                    initialDragIndex = null
+                    currentDragIndex = null
+                    initialDragY = null
+                    currentDragY = null
+
+                    autoScrollSpeed = 0f
+                    currentSpeed = 0f
+                    scrollDirection = ScrollDirection.NONE
+
+                    songListViewModel.endDragSelection()
+                },
+
+                onDragCancel = {
+                    initialDragIndex = null
+                    currentDragIndex = null
+                    initialDragY = null
+                    currentDragY = null
+
+                    autoScrollSpeed = 0f
+                    currentSpeed = 0f
+                    scrollDirection = ScrollDirection.NONE
+
+                    songListViewModel.endDragSelection()
+                }
+            )
+        }
+    } else {
+        Modifier
     }
 }

@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -203,14 +205,14 @@ fun FolderManagerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-        ){
+        ) {
             Text(
                 text = stringResource(R.string.folder_tip_disabled_logic),
                 fontSize = MiuixTheme.textStyles.footnote1.fontSize,
                 color = MiuixTheme.colorScheme.onSurfaceVariantActions,
                 modifier = Modifier.padding(12.dp)
             )
-            if (folders.isEmpty()){
+            if (folders.isEmpty()) {
                 Text(
                     text = stringResource(R.string.folder_empty_state_tip),
                     fontSize = MiuixTheme.textStyles.footnote1.fontSize,
@@ -228,37 +230,37 @@ fun FolderManagerScreen(
             ) {
 
 
-                    item {
-                        Card(
-                            modifier = Modifier.padding(horizontal = 12.dp)
-                        ) {
-                            folders.forEachIndexed { index, folder ->
-                                FolderListItem(
-                                    folder = folder,
-                                    onClick = {
-                                        navigator.navigate(
-                                            FolderSongsDestination(
-                                                folder.id,
-                                                folder.path
-                                            )
+                item {
+                    Card(
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    ) {
+                        folders.forEachIndexed { index, folder ->
+                            FolderListItem(
+                                folder = folder,
+                                onClick = {
+                                    navigator.navigate(
+                                        FolderSongsDestination(
+                                            folder.id,
+                                            folder.path
                                         )
-                                    },
-                                    onShowActions = {
-                                        selectedFolderId = folder.id
-                                        showSheet = true
-                                    }
-                                )
-
-                                if (index != folders.lastIndex) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(start = 68.dp, end = 16.dp),
-                                        color = MiuixTheme.colorScheme.dividerLine,
-                                        thickness = 0.5.dp
                                     )
+                                },
+                                onShowActions = {
+                                    selectedFolderId = folder.id
+                                    showSheet = true
                                 }
+                            )
+
+                            if (index != folders.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 68.dp, end = 16.dp),
+                                    color = MiuixTheme.colorScheme.dividerLine,
+                                    thickness = 0.5.dp
+                                )
                             }
                         }
                     }
+                }
 
             }
         }
@@ -388,70 +390,64 @@ fun FolderActionSheetContent(
         }
     }.joinToString(" · ")
 
-    LazyColumn(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
             .padding(bottom = 32.dp)
-            .scrollEndHaptic()
-            .overScrollVertical(),
-        overscrollEffect = null,
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
     ) {
-        item(key = "folder_info") {
-            Card(
-                modifier = Modifier.padding(bottom = 12.dp),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer,
-                )
-            ) {
-                BasicComponent(
-                    title = folderName,
-                    summary = folder.path,
-                    startAction = {
-                        if (folder.isIgnored) {
-                            Icon(
-                                imageVector = MiuixIcons.Hide,
-                                contentDescription = null
-                            )
-                        } else {
-                            Icon(
-                                imageVector = MiuixIcons.Show,
-                                contentDescription = null
-                            )
-                        }
-                    },
-                    bottomAction = {
-                        Text(
-                            text = statusText,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            fontSize = MiuixTheme.textStyles.body2.fontSize
+        Card(
+            modifier = Modifier.padding(bottom = 12.dp),
+            colors = CardDefaults.defaultColors(
+                color = MiuixTheme.colorScheme.secondaryContainer,
+            )
+        ) {
+            BasicComponent(
+                title = folderName,
+                summary = folder.path,
+                startAction = {
+                    if (folder.isIgnored) {
+                        Icon(
+                            imageVector = MiuixIcons.Hide,
+                            contentDescription = null
+                        )
+                    } else {
+                        Icon(
+                            imageVector = MiuixIcons.Show,
+                            contentDescription = null
                         )
                     }
-                )
-            }
+                },
+                bottomAction = {
+                    Text(
+                        text = statusText,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        fontSize = MiuixTheme.textStyles.body2.fontSize
+                    )
+                }
+            )
         }
 
-        item(key = "folder_action") {
-            Card(
-                modifier = Modifier.padding(bottom = 12.dp),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer,
-                )
-            ) {
-                SwitchPreference(
-                    title = stringResource(R.string.folder_action_enable),
-                    summary = stringResource(R.string.folder_action_enable_sub),
-                    checked = !folder.isIgnored,
-                    onCheckedChange = { onIgnoreChange() }
-                )
+
+        Card(
+            modifier = Modifier.padding(bottom = 12.dp),
+            colors = CardDefaults.defaultColors(
+                color = MiuixTheme.colorScheme.secondaryContainer,
+            )
+        ) {
+            SwitchPreference(
+                title = stringResource(R.string.folder_action_enable),
+                summary = stringResource(R.string.folder_action_enable_sub),
+                checked = !folder.isIgnored,
+                onCheckedChange = { onIgnoreChange() }
+            )
 
 
-                FolderSheetActionRow(
-                    title = stringResource(R.string.folder_action_remove),
-                    summary = stringResource(R.string.folder_action_remove_sub),
-                    onClick = onDelete
-                )
-            }
-
+            FolderSheetActionRow(
+                title = stringResource(R.string.folder_action_remove),
+                summary = stringResource(R.string.folder_action_remove_sub),
+                onClick = onDelete
+            )
         }
     }
 }

@@ -6,6 +6,7 @@
 
     <!-- 搜索 -->
     <string name="search_lyrics_placeholder">搜索歌词…</string>
+    <string name="search_cover_placeholder">搜索封面…</string>
     <string name="search_failed">搜索失败: %1$s</string>
     <string name="search_no_results">未找到相关结果</string>
     <string name="fetch_lyrics_failed">获取歌词失败，请重试</string>
@@ -52,7 +53,8 @@
     <!-- 搜索 -->
     <string name="search_limit">搜索限制数</string>
     <string name="search_limit_tip">限制每个源的搜索结果数量，设置更大的值会消耗更多流量，同时产生更多图片缓存</string>
-
+    <string name="batch_match_prefer_filename">优先使用文件名匹配</string>
+    <string name="batch_match_prefer_filename_summary">匹配时忽略内置标签，优先依靠文件名进行搜索以提高准确度，启用此功能时建议将标题和艺术家设置为覆盖模式</string>
     <!-- 歌词 -->
     <string name="lyric_mode">歌词模式</string>
     <string name="roma">罗马音</string>
@@ -406,11 +408,25 @@
     <string name="batch_edit_cover_hint">点击选择封面图片</string>
     <string name="batch_edit_field_remove_hint">移除此标签</string>
     <string name="batch_edit_info_summary">了解批量编辑的使用方法</string>
-    <string name="batch_edit_info_content">批量编辑说明：\n\n• 所有字段默认显示"&lt;keep&gt;"，表示该字段不会被修改\n• 编辑字段内容后，该字段将被更新到所有选中的歌曲\n• 点击字段右侧的撤销按钮可以恢复到"&lt;keep&gt;"状态\n• 对于评分字段，点击星星可以设置新的评分，或点击"撤销"按钮不修改\n• 封面图片可以点击来更换或移除\n• 点击「保存」按钮后，修改会写入所有选中歌曲的文件标签</string>
+    <string name="batch_edit_info_content">批量编辑说明：
+
+• 所有字段默认显示"&lt;keep&gt;"，表示该字段不会被修改
+• 编辑字段内容后，该字段将被更新到所有选中的歌曲
+• 点击字段右侧的撤销按钮可以恢复到"&lt;keep&gt;"状态
+• 对于评分字段，点击星星可以设置新的评分，或点击"撤销"按钮不修改
+• 封面图片可以点击来更换或移除
+• 点击「保存」按钮后，修改会写入所有选中歌曲的文件标签</string>
     <string name="search_type_all">全部</string>
     <string name="search_type_title">标题</string>
     <string name="search_type_artist">艺术家</string>
     <string name="search_type_album">专辑</string>
     <string name="search_type_filename">文件名</string>
     <string name="action_scroll_to_top">返回顶部</string>
+    <string name="label_search_cover">从网络搜索封面</string>
+    <string name="action_lyrics_options">歌词选项</string>
+    <string name="label_cover_options">封面选项</string>
+    <string name="label_crop_cover">裁剪图片</string>
+    <string name="msg_read_cover_failed">无法读取封面图片</string>
+    <string name="label_image_ratio">图片比例</string>
+    <string name="option_free_ratio">自由比例</string>
 </resources>

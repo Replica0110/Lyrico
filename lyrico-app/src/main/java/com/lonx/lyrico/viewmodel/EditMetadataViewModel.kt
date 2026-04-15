@@ -1,9 +1,11 @@
 package com.lonx.lyrico.viewmodel
 
 import android.app.RecoverableSecurityException
+import com.lonx.lyrico.data.model.ConversionMode
 import android.content.ContentValues
 import android.content.Context
 import android.content.IntentSender
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -197,6 +199,42 @@ class EditMetadataViewModel(
             )
         }
     }
+    fun updateCover(picUrl: String) {
+        _uiState.update { state ->
+            state.copy(
+                coverUri = picUrl,
+                isEditing = true,
+                editingTagData = state.editingTagData?.copy(picUrl = picUrl)
+            )
+        }
+    }
+    fun updateCover(bitmap: Bitmap) {
+        // 将 Bitmap 压缩为 JPEG 格式的 ByteArray
+        val byteArray = java.io.ByteArrayOutputStream().use { stream ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+            stream.toByteArray()
+        }
+        
+        // 创建 AudioPicture 对象
+        val audioPicture = AudioPicture(
+            data = byteArray,
+            mimeType = "image/jpeg",
+            description = "",
+            pictureType = "Front Cover"
+        )
+        
+        _uiState.update { state ->
+            state.copy(
+                coverUri = bitmap,
+                picture = audioPicture,
+                isEditing = true,
+                editingTagData = state.editingTagData?.copy(
+                    pictures = listOf(audioPicture),
+                    picUrl = null
+                )
+            )
+        }
+    }
 
     /**
      * 移除封面
@@ -289,7 +327,7 @@ class EditMetadataViewModel(
             _uiState.update { it.copy(isSaving = true, saveSuccess = null, permissionIntentSender = null) }
 
             try {
-                val success = songRepository.writeAudioTagData(uriString, audioTagData)
+                val success = songRepository.overwriteAudioTags(uriString, audioTagData)
 
                 if (success) {
                     val newModifiedTime = System.currentTimeMillis()
@@ -426,6 +464,17 @@ class EditMetadataViewModel(
 
     fun clearExportLyricsStatus() {
         _uiState.update { it.copy(exportLyricsResult = null) }
+    }
+
+    /**
+     * 对当前歌词进行简繁转换
+     */
+    fun convertLyrics(conversionMode: ConversionMode) {
+        val currentLyrics = _uiState.value.editingTagData?.lyrics ?: return
+        if (currentLyrics.isBlank()) return
+
+        val convertedLyrics = LyricsUtils.convertLyricsText(currentLyrics, conversionMode)
+        updateTag { copy(lyrics = convertedLyrics) }
     }
 
     fun clearImportLyricsStatus() {

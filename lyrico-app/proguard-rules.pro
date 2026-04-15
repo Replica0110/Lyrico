@@ -32,3 +32,13 @@
 ############################################
 -keep class com.lonx.lyrico.utils.coil.AudioCoverFetcher* { *; }
 
+############################################
+# opencc4j
+############################################
+-dontwarn com.huaban.analysis.jieba.JiebaSegmenter
+-dontwarn java.beans.IntrospectionException
+-dontwarn java.beans.PropertyDescriptor
+-dontwarn java.lang.management.ManagementFactory
+-dontwarn java.lang.management.RuntimeMXBean
+-keep class com.github.houbb.** { *; }
+

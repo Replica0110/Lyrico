@@ -39,7 +39,7 @@ interface SongRepository {
      *
      * @param updates 要更新的歌曲列表，包含歌曲实体和音频标签数据
      */
-    suspend fun applyBatchMetadata(updates: List<Pair<SongEntity, AudioTagData>>)
+    suspend fun updateMetadatas(updates: List<Pair<SongEntity, AudioTagData>>)
 
     /**
      * 根据查询条件搜索歌曲
@@ -67,7 +67,19 @@ interface SongRepository {
      * @param audioTagData 要写入的音频标签数据
      * @return 如果写入操作成功返回 true，否则返回 false。
      */
-    suspend fun writeAudioTagData(contentUri: String, audioTagData: AudioTagData): Boolean
+    suspend fun overwriteAudioTags(contentUri: String, audioTagData: AudioTagData): Boolean
+
+    /**
+     * 增量更新音频标签（只写入非 null 字段）
+     *
+     * 与 [overwriteAudioTags] 不同，此方法只会更新 [AudioTagData] 中非 null 的字段，
+     * null 字段会被忽略，不会清空原有值。适用于批量匹配等场景，避免意外覆盖未指定的字段。
+     *
+     * @param contentUri 目标文件uri
+     * @param audioTagData 要更新的音频标签数据（null 字段将被忽略）
+     * @return 如果写入操作成功返回 true，否则返回 false。
+     */
+    suspend fun patchAudioTags(contentUri: String, audioTagData: AudioTagData): Boolean
 
     /**
      * 读取物理音频文件的元数据
@@ -82,7 +94,7 @@ interface SongRepository {
      *
      * @return 歌曲数量
      */
-    suspend fun getSongsCount(): Int
+    suspend fun getSongCount(): Int
 
     /**
      * 清空数据库中的所有歌曲数据
@@ -96,7 +108,7 @@ interface SongRepository {
      * @param order 排序顺序 (升序或降序)
      * @return 返回排序后的 [SongEntity] 列表 Flow 流。
      */
-    fun getAllSongsSorted(sortBy: SortBy, order: SortOrder): Flow<List<SongEntity>>
+    fun observeSongs(sortBy: SortBy, order: SortOrder): Flow<List<SongEntity>>
 
     /**
      * 获取文件显示名称
@@ -106,6 +118,6 @@ interface SongRepository {
      * @param contentUri 文件路径或 URI
      * @return 文件名称
      */
-    fun resolveDisplayName(contentUri: String): String
+    fun getDisplayName(contentUri: String): String
 
 }

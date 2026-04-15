@@ -10,7 +10,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class BatchMatchConfig(
     val fields: Map<BatchMatchField, BatchMatchMode>,
-    val concurrency: Int = 3
+    val concurrency: Int = 3,
+    val preferFileName: Boolean = false
 ) : Parcelable {
 }
 
@@ -45,6 +46,7 @@ object BatchMatchConfigDefaults {
             BatchMatchField.LYRICS to BatchMatchMode.SUPPLEMENT,
             BatchMatchField.COVER to BatchMatchMode.SUPPLEMENT
         ),
-        concurrency = 3
+        concurrency = 3,
+        preferFileName = false
     )
 }

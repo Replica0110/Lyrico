@@ -347,7 +347,52 @@ class NeSource(
             return@withContext emptyList()
         }
     }
+    override suspend fun searchCover(
+        keyword: String,
+        pageSize: Int
+    ): List<SongSearchResult> = withContext(Dispatchers.IO) {
 
+        ensureInit()
+
+        try {
+            val path = "/eapi/search/song/list/page"
+
+            val params = buildJsonObject {
+                put("limit", pageSize.toString())
+                put("offset", "0")
+                put("keyword", keyword)
+                put("scene", "NORMAL")
+                put("needCorrect", "true")
+            }
+
+            val rawJson = doRequest(path, params)
+            val resp = json.decodeFromString<NeSearchResponse>(rawJson)
+
+            if (resp.code != 200) return@withContext emptyList()
+
+            resp.data?.resources?.take(pageSize)?.mapNotNull { res ->
+                val song = res.baseInfo.simpleSongData
+                val picUrl = song.album.picUrl
+                
+                if (picUrl.isBlank()) return@mapNotNull null
+
+                SongSearchResult(
+                    id = song.id.toString(),
+                    title = song.name,
+                    artist = song.artists.joinToString("/") { it.name },
+                    album = song.album.name,
+                    duration = song.duration,
+                    source = Source.NE,
+                    date = song.publishTime?.let { formatMillisToDate(it) } ?: "",
+                    trackerNumber = song.trackerNumber,
+                    picUrl = picUrl
+                )
+            } ?: emptyList()
+
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
     override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
         ensureInit()
         val path = "/eapi/song/lyric/v1"

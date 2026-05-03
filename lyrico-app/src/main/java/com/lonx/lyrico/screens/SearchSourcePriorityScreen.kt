@@ -28,8 +28,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.SourceUsage
+import com.lonx.lyrico.data.model.SourceUsageConfig
 import com.lonx.lyrico.viewmodel.SettingsViewModel
-import com.lonx.lyrics.model.Source
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -53,42 +54,50 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 @Composable
 @Destination<RootGraph>(route = "search_source_priority")
 fun SearchSourcePriorityScreen(
-    navigator: DestinationsNavigator
+    navigator: DestinationsNavigator,
+    usageName: String = SourceUsage.LYRICS.name
 ) {
     val viewModel: SettingsViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
+    val usage = remember(usageName) {
+        runCatching { SourceUsage.valueOf(usageName) }.getOrDefault(SourceUsage.LYRICS)
+    }
+    val sourceConfig = uiState.sourceUsageConfig(usage)
+    val supportedSources = uiState.sourcesForUsage(usage)
 
-    // 维护本地列表状态用于实时排序
-    var currentList by remember(uiState.searchSourceOrder) {
-        mutableStateOf(uiState.searchSourceOrder)
+    var currentList by remember(sourceConfig.sourceOrder, supportedSources) {
+        mutableStateOf(sourceConfig.sourceOrder.filter { it in supportedSources })
+    }
+    var enabledSources by remember(sourceConfig.enabledSources, supportedSources) {
+        mutableStateOf(sourceConfig.enabledSources.filter { it in supportedSources }.toSet())
     }
 
-    // 维护启用/禁用状态
-    var enabledSources by remember(uiState.enabledSearchSources) {
-        mutableStateOf(uiState.enabledSearchSources)
+    fun saveCurrentConfig() {
+        viewModel.setSourceUsageConfig(
+            usage,
+            SourceUsageConfig(
+                sourceOrder = currentList,
+                enabledSources = enabledSources
+            )
+        )
     }
 
     val lazyListState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
-
-    // 初始化库提供的 Reorderable 状态
     val reorderableLazyColumnState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        // 当项发生位移时实时更新本地列表
         currentList = currentList.toMutableList().apply {
             add(to.index, removeAt(from.index))
         }
-        // 移动时的轻微震动反馈
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = stringResource(id = R.string.search_source_priority),
+                title = stringResource(id = usage.titleRes()),
                 navigationIcon = {
-                    IconButton(
-                        onClick = { navigator.navigateUp() }
-                    ) {
+                    IconButton(onClick = { navigator.navigateUp() }) {
                         Icon(
                             imageVector = MiuixIcons.Back,
                             contentDescription = stringResource(R.string.action_back)
@@ -97,7 +106,7 @@ fun SearchSourcePriorityScreen(
                 },
                 scrollBehavior = topAppBarScrollBehavior
             )
-        },
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -118,7 +127,7 @@ fun SearchSourcePriorityScreen(
                     .overScrollVertical()
                     .fillMaxHeight()
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
-                overscrollEffect = null,
+                overscrollEffect = null
             ) {
                 itemsIndexed(
                     items = currentList,
@@ -140,55 +149,56 @@ fun SearchSourcePriorityScreen(
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     },
                                     onDragStopped = {
-                                        viewModel.setSearchSourceOrder(currentList)
-                                        viewModel.setEnabledSearchSources(enabledSources)
+                                        saveCurrentConfig()
                                     },
                                     interactionSource = interactionSource
                                 )
                         ) {
                             ReorderableSourceItem(
-                                modifier = Modifier.background(if (isDragging) MiuixTheme.colorScheme.secondary else MiuixTheme.colorScheme.background),
+                                modifier = Modifier.background(
+                                    if (isDragging) {
+                                        MiuixTheme.colorScheme.secondary
+                                    } else {
+                                        MiuixTheme.colorScheme.background
+                                    }
+                                ),
                                 index = index,
                                 source = source,
                                 isEnabled = isEnabled,
                                 onEnabledChanged = { newState ->
-                                    // 不允许禁用最后一个启用的源
                                     if (!newState && enabledSources.size == 1) {
                                         haptic.performHapticFeedback(HapticFeedbackType.Reject)
                                         return@ReorderableSourceItem
                                     }
-                                    
+
                                     enabledSources = if (newState) {
                                         enabledSources + source
                                     } else {
                                         enabledSources - source
                                     }
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    viewModel.setEnabledSearchSources(enabledSources)
+                                    saveCurrentConfig()
                                 },
                                 showDivider = index != currentList.lastIndex
                             )
                         }
                     }
                 }
-
             }
-
         }
     }
 }
-
 
 @Composable
 fun ReorderableSourceItem(
     modifier: Modifier = Modifier,
     index: Int,
-    source: Source,
+    source: com.lonx.lyrics.model.Source,
     isEnabled: Boolean = true,
     onEnabledChanged: (Boolean) -> Unit = {},
     showDivider: Boolean = false
 ) {
-    Column() {
+    Column {
         SwitchPreference(
             modifier = modifier,
             title = stringResource(id = source.labelRes),
@@ -196,8 +206,7 @@ fun ReorderableSourceItem(
             onCheckedChange = onEnabledChanged,
             startAction = {
                 Box(
-                    modifier = Modifier
-                        .size(40.dp),
+                    modifier = Modifier.size(40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -225,5 +234,13 @@ fun ReorderableSourceItem(
                 thickness = 0.5.dp
             )
         }
+    }
+}
+
+private fun SourceUsage.titleRes(): Int {
+    return when (this) {
+        SourceUsage.LYRICS -> R.string.lyrics_source_priority
+        SourceUsage.COVER -> R.string.cover_source_priority
+        SourceUsage.METADATA -> R.string.metadata_source_priority
     }
 }

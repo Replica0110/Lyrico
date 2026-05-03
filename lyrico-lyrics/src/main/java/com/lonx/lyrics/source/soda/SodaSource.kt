@@ -6,6 +6,7 @@ import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.withInferredTypes
 import com.lonx.lyrics.utils.SodaParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -68,7 +69,7 @@ class SodaSource(
                         put(k, v) // e.g. genre
                     }
                 }
-            )
+            ).withInferredTypes()
         }
     }
     override suspend fun searchCover(
@@ -101,7 +102,7 @@ class SodaSource(
                     duration = track.duration.toLong(),
                     source = sourceType,
                     picUrl = cover
-                )
+                ).withInferredTypes()
             }
 
         } catch (e: Exception) {

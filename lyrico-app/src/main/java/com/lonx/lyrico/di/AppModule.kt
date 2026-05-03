@@ -224,7 +224,7 @@ val appModule = module {
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
     viewModel { SongListViewModel(get(), get(), get(), get(),get(),get()) }
-    viewModel { SettingsViewModel(get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { CoverSearchViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), get(), get(),get()) }

@@ -10,5 +10,8 @@ data class SearchConfig(
     val separator: String = SettingsDefaults.SEPARATOR,
     val searchSourceOrder: List<Source> = SettingsDefaults.SEARCH_SOURCE_ORDER,
     val enabledSearchSources: Set<Source> = SettingsDefaults.DEFAULT_ENABLED_SEARCH_SOURCES,
-    val searchPageSize: Int = SettingsDefaults.SEARCH_PAGE_SIZE
+    val searchPageSize: Int = SettingsDefaults.SEARCH_PAGE_SIZE,
+    val lyricsSourceConfig: SourceUsageConfig = SourceUsageConfig(),
+    val coverSourceConfig: SourceUsageConfig = SourceUsageConfig(),
+    val metadataSourceConfig: SourceUsageConfig = SourceUsageConfig()
 )

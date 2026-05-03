@@ -11,6 +11,8 @@ import com.lonx.lyrico.data.model.CacheCategory
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.LyricFormat
+import com.lonx.lyrico.data.model.SourceUsage
+import com.lonx.lyrico.data.model.SourceUsageConfig
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrics.model.Source
@@ -21,6 +23,8 @@ import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.utils.CacheManager
 import com.lonx.lyrico.utils.UiMessage
+import com.lonx.lyrics.model.SearchCapability
+import com.lonx.lyrics.model.SearchSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,23 +51,53 @@ data class SettingsUiState(
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
     val conversionMode: ConversionMode = ConversionMode.NONE,
-    val extraMetadataWriteRules: List<ExtraMetadataWriteRule> = emptyList()
+    val extraMetadataWriteRules: List<ExtraMetadataWriteRule> = emptyList(),
+    val lyricsSourceConfig: SourceUsageConfig = SourceUsageConfig(),
+    val coverSourceConfig: SourceUsageConfig = SourceUsageConfig(),
+    val metadataSourceConfig: SourceUsageConfig = SourceUsageConfig(),
+    val sourceCapabilities: Map<Source, Set<SearchCapability>> = emptyMap()
 ) {
     /**
      * 返回按优先级排序且启用的搜索源列表
      */
     val filteredSearchSources: List<Source>
         get() = searchSourceOrder.filter { it in enabledSearchSources }
+
+    fun sourceUsageConfig(usage: SourceUsage): SourceUsageConfig {
+        return when (usage) {
+            SourceUsage.LYRICS -> lyricsSourceConfig
+            SourceUsage.COVER -> coverSourceConfig
+            SourceUsage.METADATA -> metadataSourceConfig
+        }
+    }
+
+    fun sourcesForUsage(usage: SourceUsage): List<Source> {
+        val capability = usage.toCapability()
+        val config = sourceUsageConfig(usage)
+        return config.sourceOrder.filter { source ->
+            sourceCapabilities[source]?.contains(capability) != false
+        }
+    }
+}
+
+fun SourceUsage.toCapability(): SearchCapability {
+    return when (this) {
+        SourceUsage.LYRICS -> SearchCapability.LYRICS
+        SourceUsage.COVER -> SearchCapability.COVER
+        SourceUsage.METADATA -> SearchCapability.METADATA
+    }
 }
 sealed class SettingsEvent {
     data class ShowToast(val message: UiMessage) : SettingsEvent()
 }
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
-    private val database: LyricoDatabase
+    private val database: LyricoDatabase,
+    sources: List<SearchSource>
 ) : ViewModel() {
     private val folder = database.folderDao()
     private val _categorizedCacheSize = MutableStateFlow<Map<CacheCategory, Long>>(emptyMap())
+    private val sourceCapabilities = sources.associate { it.sourceType to it.capabilities }
 
     private data class SettingsBaseState(
         val lyric: com.lonx.lyrico.data.model.LyricRenderConfig,
@@ -104,7 +138,11 @@ class SettingsViewModel(
             totalCacheSize = cacheMap.values.sum(),
             removeEmptyLines = base.lyric.removeEmptyLines,
             conversionMode = base.lyric.conversionMode,
-            extraMetadataWriteRules = base.extraRules
+            extraMetadataWriteRules = base.extraRules,
+            lyricsSourceConfig = base.search.lyricsSourceConfig,
+            coverSourceConfig = base.search.coverSourceConfig,
+            metadataSourceConfig = base.search.metadataSourceConfig,
+            sourceCapabilities = sourceCapabilities
         )
     }
 
@@ -194,6 +232,12 @@ class SettingsViewModel(
     fun setEnabledSearchSources(sources: Set<Source>) {
         viewModelScope.launch {
             settingsRepository.saveEnabledSearchSources(sources)
+        }
+    }
+
+    fun setSourceUsageConfig(usage: SourceUsage, config: SourceUsageConfig) {
+        viewModelScope.launch {
+            settingsRepository.saveSourceUsageConfig(usage, config)
         }
     }
     fun setSearchPageSize(size: Int) {

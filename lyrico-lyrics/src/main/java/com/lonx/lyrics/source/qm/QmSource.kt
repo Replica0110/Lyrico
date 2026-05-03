@@ -4,10 +4,12 @@ package com.lonx.lyrics.source.qm
 import android.util.Base64
 import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.LyricsData
+import com.lonx.lyrics.model.SearchCapability
 import com.lonx.lyrics.model.SearchResultExtraKeys
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.withInferredTypes
 import com.lonx.lyrics.utils.QmCryptoUtils
 import com.lonx.lyrics.utils.QrcParser
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +23,12 @@ class QmSource(
     private val api: QmApi
 ) : SearchSource {
     override val sourceType: Source = Source.QM
+    override val capabilities = setOf(
+        SearchCapability.LYRICS,
+        SearchCapability.COVER,
+        SearchCapability.METADATA,
+        SearchCapability.EXTRA_METADATA
+    )
     override val supportedExtras = setOf(
         SearchResultExtraKeys.REPLAY_GAIN_TRACK_GAIN,
         SearchResultExtraKeys.REPLAY_GAIN_TRACK_PEAK,
@@ -99,7 +107,7 @@ class QmSource(
                     trackerNumber = item.trackerNumber,
                     picUrl = picUrl,
                     extras = extrasMap
-                )
+                ).withInferredTypes(supportedExtras = supportedExtras)
             }
         } catch (e: Exception) {
             emptyList()
@@ -155,7 +163,7 @@ class QmSource(
                     date = item.timePublic ?: "",
                     trackerNumber = item.trackerNumber,
                     picUrl = picUrl
-                )
+                ).withInferredTypes(supportedExtras = supportedExtras)
             }
 
         } catch (e: Exception) {

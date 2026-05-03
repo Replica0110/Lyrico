@@ -62,6 +62,34 @@ data class SongSearchResult(
     val date: String = "",
     val trackerNumber: String = "",
     val picUrl: String = "",
-    val extras: Map<String, String> = emptyMap()
+    val extras: Map<String, String> = emptyMap(),
+    val availableTypes: Set<SearchResultType> = emptySet()
 ) : Parcelable
 
+enum class SearchResultType {
+    METADATA,
+    LYRICS,
+    COVER,
+    EXTRA_METADATA
+}
+
+fun SongSearchResult.withInferredTypes(
+    supportsLyrics: Boolean = true,
+    supportedExtras: Set<String> = emptySet()
+): SongSearchResult {
+    val types = buildSet {
+        if (title.isNotBlank() || artist.isNotBlank() || album.isNotBlank() || date.isNotBlank() || trackerNumber.isNotBlank()) {
+            add(SearchResultType.METADATA)
+        }
+        if (supportsLyrics) {
+            add(SearchResultType.LYRICS)
+        }
+        if (picUrl.isNotBlank()) {
+            add(SearchResultType.COVER)
+        }
+        if (extras.keys.any { it in supportedExtras }) {
+            add(SearchResultType.EXTRA_METADATA)
+        }
+    }
+    return copy(availableTypes = types)
+}

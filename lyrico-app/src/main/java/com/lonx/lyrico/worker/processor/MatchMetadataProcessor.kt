@@ -14,6 +14,8 @@ import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.ExtraMetadataResolver
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.MusicMatchUtils
+import com.lonx.lyrics.model.SearchCapability
+import com.lonx.lyrics.model.SearchResultType
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.Dispatchers
@@ -97,7 +99,8 @@ class MatchMetadataProcessor(
 
         val orderedSources = sources
             .filter { source ->
-                enabledSourceOrder.isEmpty() || source.sourceType in enabledSourceOrder
+                source.capabilities.contains(SearchCapability.METADATA) &&
+                        (enabledSourceOrder.isEmpty() || source.sourceType in enabledSourceOrder)
             }
             .sortedBy { source ->
                 enabledSourceOrder.indexOf(source.sourceType).let { if (it == -1) Int.MAX_VALUE else it }
@@ -112,7 +115,10 @@ class MatchMetadataProcessor(
                     async(Dispatchers.IO) {
                         try {
                             val results = source.search(query, separator = separator, pageSize = 2)
-                            results.map { res ->
+                            results.filter {
+                                it.availableTypes.contains(SearchResultType.METADATA) ||
+                                        it.availableTypes.contains(SearchResultType.EXTRA_METADATA)
+                            }.map { res ->
                                 val score = MusicMatchUtils.calculateMatchScore(res, song, queryTitle, queryArtist)
                                 ScoredSearchResult(res, score, source)
                             }

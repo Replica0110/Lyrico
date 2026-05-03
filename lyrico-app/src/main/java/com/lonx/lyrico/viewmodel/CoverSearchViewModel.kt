@@ -3,6 +3,8 @@ package com.lonx.lyrico.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrics.model.SearchCapability
+import com.lonx.lyrics.model.SearchResultType
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.Source
 import kotlinx.coroutines.Deferred
@@ -73,9 +75,12 @@ class CoverSearchViewModel(
             searchConfigFlow
         ) { search, searchConfig ->
 
-            val sourcesOrder = searchConfig?.searchSourceOrder.orEmpty()
-            val enabledSources = searchConfig?.enabledSearchSources.orEmpty()
-            val filteredSources = sourcesOrder.filter { it in enabledSources }
+            val sourcesOrder = searchConfig?.coverSourceConfig?.sourceOrder.orEmpty()
+            val enabledSources = searchConfig?.coverSourceConfig?.enabledSources.orEmpty()
+            val filteredSources = sourcesOrder.filter { source ->
+                source in enabledSources &&
+                        findSource(source)?.capabilities?.contains(SearchCapability.COVER) != false
+            }
 
             CoverSearchUiState(
                 searchKeyword = search.keyword,
@@ -136,8 +141,11 @@ class CoverSearchViewModel(
             val searchConfig = searchConfigFlow.filterNotNull().first()
             val pageSize = settingsRepository.searchPageSize.first()
             
-            val enabledSources = searchConfig.searchSourceOrder
-                .filter { it in searchConfig.enabledSearchSources }
+            val enabledSources = searchConfig.coverSourceConfig.sourceOrder
+                .filter { source ->
+                    source in searchConfig.coverSourceConfig.enabledSources &&
+                            findSource(source)?.capabilities?.contains(SearchCapability.COVER) != false
+                }
 
             // 并行从所有启用的源搜索封面
             val allCovers = enabledSources.map { source ->
@@ -146,7 +154,9 @@ class CoverSearchViewModel(
                         val sourceImpl = findSource(source)
                         if (sourceImpl != null) {
                             val songs = sourceImpl.searchCover(keyword, pageSize)
-                            songs.filter { it.picUrl.isNotBlank() }.map { song ->
+                            songs.filter {
+                                it.availableTypes.contains(SearchResultType.COVER) && it.picUrl.isNotBlank()
+                            }.map { song ->
                                 CoverSearchResult(
                                     id = song.id,
                                     url = song.picUrl,

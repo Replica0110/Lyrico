@@ -4,10 +4,12 @@ import android.content.Context
 import android.util.Base64
 import android.util.Log
 import com.lonx.lyrics.model.LyricsResult
+import com.lonx.lyrics.model.SearchCapability
 import com.lonx.lyrics.model.SearchResultExtraKeys
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.withInferredTypes
 import com.lonx.lyrics.utils.NeCryptoUtils
 import com.lonx.lyrics.utils.YrcParser
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +43,12 @@ class NeSource(
     private val context: Context
 ): SearchSource {
     override val sourceType = Source.NE
+    override val capabilities = setOf(
+        SearchCapability.LYRICS,
+        SearchCapability.COVER,
+        SearchCapability.METADATA,
+        SearchCapability.EXTRA_METADATA
+    )
     override val supportedExtras = setOf(SearchResultExtraKeys.NETEASE_163_KEY)
 
 
@@ -345,7 +353,7 @@ class NeSource(
                     trackerNumber = song.trackerNumber,
                     picUrl = song.album.picUrl,
                     extras = buildNeteaseExtras(song)
-                )
+                ).withInferredTypes(supportedExtras = supportedExtras)
             } ?: emptyList()
 
         } catch (e: Exception) {
@@ -393,7 +401,7 @@ class NeSource(
                     trackerNumber = song.trackerNumber,
                     picUrl = picUrl,
                     extras = buildNeteaseExtras(song)
-                )
+                ).withInferredTypes(supportedExtras = supportedExtras)
             } ?: emptyList()
 
         } catch (e: Exception) {

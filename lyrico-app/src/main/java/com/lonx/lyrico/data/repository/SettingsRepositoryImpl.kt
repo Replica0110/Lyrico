@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.lonx.lyrico.data.model.BatchMatchConfig
@@ -25,6 +26,8 @@ import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.SearchConfig
 import com.lonx.lyrico.data.model.SettingsBackup
+import com.lonx.lyrico.data.model.SourceUsage
+import com.lonx.lyrico.data.model.SourceUsageConfig
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.ui.theme.KeyColor
@@ -100,6 +103,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val IGNORE_SHORT_AUDIO = booleanPreferencesKey("ignore_short_audio")
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
         val ENABLED_SEARCH_SOURCES = stringPreferencesKey("enabled_search_sources")
+        val LYRICS_SOURCE_CONFIG = stringPreferencesKey("lyrics_source_config")
+        val COVER_SOURCE_CONFIG = stringPreferencesKey("cover_source_config")
+        val METADATA_SOURCE_CONFIG = stringPreferencesKey("metadata_source_config")
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val MONET_ENABLE = booleanPreferencesKey("monet_enable")
@@ -183,6 +189,15 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 enabledCsv.split(",").mapNotNull { Source.fromNameOrNull(it) }.toSet()
             }
         }
+
+    override val lyricsSourceConfig: Flow<SourceUsageConfig>
+        get() = sourceUsageConfigFlow(PreferencesKeys.LYRICS_SOURCE_CONFIG)
+
+    override val coverSourceConfig: Flow<SourceUsageConfig>
+        get() = sourceUsageConfigFlow(PreferencesKeys.COVER_SOURCE_CONFIG)
+
+    override val metadataSourceConfig: Flow<SourceUsageConfig>
+        get() = sourceUsageConfigFlow(PreferencesKeys.METADATA_SOURCE_CONFIG)
 
     override val searchPageSize: Flow<Int>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -294,13 +309,35 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             )
         }
 
+    private data class SourceConfigBundle(
+        val legacyOrder: List<Source>,
+        val legacyEnabled: Set<Source>,
+        val lyrics: SourceUsageConfig,
+        val cover: SourceUsageConfig,
+        val metadata: SourceUsageConfig
+    )
+
+    private val sourceConfigBundleFlow =
+        combine(
+            searchSourceOrder,
+            enabledSearchSources,
+            lyricsSourceConfig,
+            coverSourceConfig,
+            metadataSourceConfig
+        ) { legacyOrder, legacyEnabled, lyrics, cover, metadata ->
+            SourceConfigBundle(legacyOrder, legacyEnabled, lyrics, cover, metadata)
+        }
+
     override val searchConfigFlow: Flow<SearchConfig> =
-        combine(separator, searchSourceOrder, enabledSearchSources, searchPageSize) { sep, order, enabled, size ->
+        combine(separator, sourceConfigBundleFlow, searchPageSize) { sep, sourceConfig, size ->
             SearchConfig(
                 separator = sep,
-                searchSourceOrder = order,
-                enabledSearchSources = enabled,
-                searchPageSize = size
+                searchSourceOrder = sourceConfig.legacyOrder,
+                enabledSearchSources = sourceConfig.legacyEnabled,
+                searchPageSize = size,
+                lyricsSourceConfig = sourceConfig.lyrics,
+                coverSourceConfig = sourceConfig.cover,
+                metadataSourceConfig = sourceConfig.metadata
             )
         }
 
@@ -379,6 +416,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         context.settingsDataStore.edit { preferences ->
             val csv = sources.joinToString(",") { it.name }
             preferences[PreferencesKeys.ENABLED_SEARCH_SOURCES] = csv
+        }
+    }
+
+    override suspend fun saveSourceUsageConfig(usage: SourceUsage, config: SourceUsageConfig) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[usage.preferenceKey()] = jsonFormatter.encodeToString(config.normalized())
         }
     }
 
@@ -498,6 +541,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
             enabledSearchSources = (prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.toSourceCsv()).split(",").mapNotNull { Source.fromNameOrNull(it) }.map { it.name },
 
+            lyricsSourceConfig = lyricsSourceConfig.first(),
+            coverSourceConfig = coverSourceConfig.first(),
+            metadataSourceConfig = metadataSourceConfig.first(),
+
             searchPageSize = prefs[PreferencesKeys.SEARCH_PAGE_SIZE]
                 ?: SettingsDefaults.SEARCH_PAGE_SIZE,
 
@@ -556,7 +603,16 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                     val csv = validSources.joinToString(",") { it.name }
                     prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] = csv
                 }
-                
+                backup.lyricsSourceConfig?.let { config ->
+                    prefs[PreferencesKeys.LYRICS_SOURCE_CONFIG] = jsonFormatter.encodeToString(config.normalized())
+                }
+                backup.coverSourceConfig?.let { config ->
+                    prefs[PreferencesKeys.COVER_SOURCE_CONFIG] = jsonFormatter.encodeToString(config.normalized())
+                }
+                backup.metadataSourceConfig?.let { config ->
+                    prefs[PreferencesKeys.METADATA_SOURCE_CONFIG] = jsonFormatter.encodeToString(config.normalized())
+                }
+
                 backup.searchPageSize?.let { prefs[PreferencesKeys.SEARCH_PAGE_SIZE] = it }
                 backup.themeMode?.let { prefs[PreferencesKeys.THEME_MODE] = it }
                 backup.monetEnable?.let { prefs[PreferencesKeys.MONET_ENABLE] = it }
@@ -744,6 +800,52 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 it.key == defaultRule.key && it.source == defaultRule.source
             } ?: defaultRule
         }
+    }
+
+    private fun sourceUsageConfigFlow(
+        key: Preferences.Key<String>
+    ): Flow<SourceUsageConfig> {
+        return context.settingsDataStore.data.map { preferences ->
+            val configJson = preferences[key]
+            if (configJson.isNullOrBlank()) {
+                legacySourceUsageConfig(preferences)
+            } else {
+                try {
+                    jsonFormatter.decodeFromString<SourceUsageConfig>(configJson).normalized()
+                } catch (e: Exception) {
+                    legacySourceUsageConfig(preferences)
+                }
+            }
+        }
+    }
+
+    private fun legacySourceUsageConfig(preferences: Preferences): SourceUsageConfig {
+        val order = preferences[PreferencesKeys.SEARCH_SOURCE_ORDER].toSourceList()
+        val enabledCsv = preferences[PreferencesKeys.ENABLED_SEARCH_SOURCES]
+        val enabled = if (enabledCsv.isNullOrBlank()) {
+            SettingsDefaults.DEFAULT_ENABLED_SEARCH_SOURCES
+        } else {
+            enabledCsv.split(",").mapNotNull { Source.fromNameOrNull(it) }.toSet()
+        }
+        return SourceUsageConfig(order, enabled).normalized()
+    }
+
+    private fun SourceUsage.preferenceKey(): Preferences.Key<String> {
+        return when (this) {
+            SourceUsage.LYRICS -> PreferencesKeys.LYRICS_SOURCE_CONFIG
+            SourceUsage.COVER -> PreferencesKeys.COVER_SOURCE_CONFIG
+            SourceUsage.METADATA -> PreferencesKeys.METADATA_SOURCE_CONFIG
+        }
+    }
+
+    private fun SourceUsageConfig.normalized(): SourceUsageConfig {
+        val order = (sourceOrder + Source.entries).distinct()
+        val enabled = if (enabledSources.isEmpty()) {
+            SettingsDefaults.DEFAULT_ENABLED_SEARCH_SOURCES
+        } else {
+            enabledSources
+        }.filter { it in order }.toSet()
+        return copy(sourceOrder = order, enabledSources = enabled)
     }
 }
 

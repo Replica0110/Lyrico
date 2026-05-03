@@ -7,6 +7,8 @@ import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.SearchConfig
+import com.lonx.lyrico.data.model.SourceUsage
+import com.lonx.lyrico.data.model.SourceUsageConfig
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.ui.theme.KeyColor
@@ -34,6 +36,9 @@ interface SettingsRepository {
     val ignoreShortAudio: Flow<Boolean>
     val searchSourceOrder: Flow<List<Source>>
     val enabledSearchSources: Flow<Set<Source>>
+    val lyricsSourceConfig: Flow<SourceUsageConfig>
+    val coverSourceConfig: Flow<SourceUsageConfig>
+    val metadataSourceConfig: Flow<SourceUsageConfig>
     val searchPageSize: Flow<Int>
     val themeMode: Flow<ThemeMode>
     val keyColor: Flow<KeyColor>
@@ -63,6 +68,7 @@ interface SettingsRepository {
     suspend fun saveLastScanTime(time: Long)
     suspend fun saveSearchSourceOrder(sources: List<Source>)
     suspend fun saveEnabledSearchSources(sources: Set<Source>)
+    suspend fun saveSourceUsageConfig(usage: SourceUsage, config: SourceUsageConfig)
     suspend fun saveSearchPageSize(size: Int)
     suspend fun saveThemeMode(mode: ThemeMode)
     suspend fun saveKeyColor(selectedKeyColor: KeyColor)

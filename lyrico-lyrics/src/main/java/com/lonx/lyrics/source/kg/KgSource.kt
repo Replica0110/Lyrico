@@ -6,6 +6,7 @@ import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.withInferredTypes
 import com.lonx.lyrics.utils.KgCryptoUtils
 import com.lonx.lyrics.utils.KrcParser
 import kotlinx.coroutines.Dispatchers
@@ -100,7 +101,7 @@ class KgSource(
                     date = item.publishDate ?: "",
                     extras = mapOf("hash" to item.fileHash),
                     picUrl = if (item.picUrl.isNotBlank()) item.picUrl.replace("{size}", "480") else "",
-                )
+                ).withInferredTypes()
             } ?: emptyList()
         } catch (e: Exception) {
             emptyList()
@@ -139,7 +140,7 @@ class KgSource(
                     date = item.publishDate ?: "",
                     extras = mapOf("hash" to item.fileHash),
                     picUrl = picUrl
-                )
+                ).withInferredTypes()
             } ?: emptyList()
 
         } catch (e: Exception) {

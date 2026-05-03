@@ -39,6 +39,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
+import com.lonx.lyrico.data.model.SourceUsage
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.ui.components.RoundedRectanglePainter
 import com.lonx.lyrico.ui.components.getSystemWallpaperColor
@@ -107,7 +108,6 @@ fun SettingsScreen(
     val totalFolders = folders.size
     val conversionMode = settingsUiState.conversionMode
     val ignoredFolders = folders.count { it.isIgnored }
-    val searchSourceOrder = settingsUiState.searchSourceOrder
     val searchPageSize = settingsUiState.searchPageSize
     val scope = rememberCoroutineScope()
 
@@ -408,13 +408,29 @@ fun SettingsScreen(
             item(key = "search"){
                 SmallTitle(text = stringResource(R.string.section_search))
                 Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    val searchSourceSummary = settingsUiState.filteredSearchSources
-                        .map { stringResource(it.labelRes) }
-                        .joinToString(" > ")
                     ArrowPreference(
-                        title = stringResource(R.string.search_source_priority),
-                        summary = searchSourceSummary,
-                        onClick = { navigator.navigate(SearchSourcePriorityDestination()) }
+                        title = stringResource(R.string.lyrics_source_priority),
+                        summary = settingsUiState.sourcesForUsage(SourceUsage.LYRICS)
+                            .filter { it in settingsUiState.lyricsSourceConfig.enabledSources }
+                            .map { stringResource(it.labelRes) }
+                            .joinToString(" > "),
+                        onClick = { navigator.navigate(SearchSourcePriorityDestination(SourceUsage.LYRICS.name)) }
+                    )
+                    ArrowPreference(
+                        title = stringResource(R.string.cover_source_priority),
+                        summary = settingsUiState.sourcesForUsage(SourceUsage.COVER)
+                            .filter { it in settingsUiState.coverSourceConfig.enabledSources }
+                            .map { stringResource(it.labelRes) }
+                            .joinToString(" > "),
+                        onClick = { navigator.navigate(SearchSourcePriorityDestination(SourceUsage.COVER.name)) }
+                    )
+                    ArrowPreference(
+                        title = stringResource(R.string.metadata_source_priority),
+                        summary = settingsUiState.sourcesForUsage(SourceUsage.METADATA)
+                            .filter { it in settingsUiState.metadataSourceConfig.enabledSources }
+                            .map { stringResource(it.labelRes) }
+                            .joinToString(" > "),
+                        onClick = { navigator.navigate(SearchSourcePriorityDestination(SourceUsage.METADATA.name)) }
                     )
                     ArrowPreference(
                         title = stringResource(R.string.search_limit),

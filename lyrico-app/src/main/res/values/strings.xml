@@ -2,6 +2,9 @@
     <string name="app_name" translatable="false">Lyrico</string>
     <string name="search_settings">Search Settings</string>
     <string name="search_source_priority">Search Source Priority</string>
+    <string name="lyrics_source_priority">Lyrics Sources</string>
+    <string name="cover_source_priority">Cover Sources</string>
+    <string name="metadata_source_priority">Metadata Sources</string>
     <string name="search_source_priority_tip">Long press and drag to reorder search source priority. This affects the source order used in batch matching and the default source for single searches.</string>
 
 

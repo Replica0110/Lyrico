@@ -2,6 +2,9 @@
 <resources>
     <string name="search_settings">搜索设置</string>
     <string name="search_source_priority">搜索源优先级</string>
+    <string name="lyrics_source_priority">歌词源</string>
+    <string name="cover_source_priority">封面源</string>
+    <string name="metadata_source_priority">标签源</string>
     <string name="search_source_priority_tip">长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源</string>
 
     <!-- 搜索 -->

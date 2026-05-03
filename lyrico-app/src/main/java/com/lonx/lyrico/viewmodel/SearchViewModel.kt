@@ -7,6 +7,7 @@ import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrics.model.LyricsResult
+import com.lonx.lyrics.model.SearchCapability
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
@@ -108,10 +109,13 @@ class SearchViewModel(
             selectedSourceId
         ) { search, searchConfig, renderedLyrics, selectedId ->
 
-            val sourcesOrder = searchConfig?.searchSourceOrder.orEmpty()
-            val enabledSources = searchConfig?.enabledSearchSources.orEmpty()
+            val sourcesOrder = searchConfig?.lyricsSourceConfig?.sourceOrder.orEmpty()
+            val enabledSources = searchConfig?.lyricsSourceConfig?.enabledSources.orEmpty()
 
-            val filteredSources = sourcesOrder.filter { it in enabledSources }
+            val filteredSources = sourcesOrder.filter { source ->
+                source in enabledSources &&
+                        findSource(source)?.capabilities?.contains(SearchCapability.LYRICS) != false
+            }
 
             val selectedSource =
                 filteredSources.find { it == selectedId }
@@ -182,7 +186,10 @@ class SearchViewModel(
 
             val source =
                 selectedSourceId.value
-                    ?: searchConfig.searchSourceOrder.firstOrNull { it in searchConfig.enabledSearchSources }
+                    ?: searchConfig.lyricsSourceConfig.sourceOrder.firstOrNull { source ->
+                        source in searchConfig.lyricsSourceConfig.enabledSources &&
+                                findSource(source)?.capabilities?.contains(SearchCapability.LYRICS) != false
+                    }
 
             if (source == null) return@launch
 

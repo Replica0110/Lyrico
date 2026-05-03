@@ -35,6 +35,7 @@ import com.lonx.lyrico.utils.ReplayGainError
 import com.lonx.lyrico.utils.ReplayGainScanner
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrics.model.LyricsResult
+import com.lonx.lyrics.model.SearchResultType
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.isWordByWord
 import kotlinx.coroutines.CancellationException
@@ -233,6 +234,8 @@ class EditMetadataViewModel(
                 val source = result.source
                 if (source == null) {
                     AudioTagData()
+                } else if (result.extras.isEmpty()) {
+                    AudioTagData()
                 } else {
                     extraMetadataResolver.resolve(
                         currentSong = song,
@@ -248,7 +251,8 @@ class EditMetadataViewModel(
                                     date = result.date.orEmpty(),
                                     trackerNumber = result.trackerNumber.orEmpty(),
                                     picUrl = result.picUrl.orEmpty(),
-                                    extras = result.extras
+                                    extras = result.extras,
+                                    availableTypes = setOf(SearchResultType.EXTRA_METADATA)
                                 ),
                                 score = 1.0
                             )

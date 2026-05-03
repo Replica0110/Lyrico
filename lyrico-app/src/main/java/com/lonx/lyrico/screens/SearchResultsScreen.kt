@@ -68,6 +68,7 @@ import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.lonx.lyrico.viewmodel.SearchViewModel
+import com.lonx.lyrics.model.SearchResultType
 import com.lonx.lyrics.model.SongSearchResult
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -276,21 +277,24 @@ fun SearchResultsScreen(
                                     },
                                     onApplyClick = {
                                         scope.launch {
-                                            val lyrics =
+                                            val lyrics = if (song.availableTypes.contains(SearchResultType.LYRICS)) {
                                                 viewModel.fetchLyrics(song)
-                                            if (lyrics != null) {
+                                            } else {
+                                                null
+                                            }
+                                            if (lyrics != null || song.availableTypes.any { it != SearchResultType.LYRICS }) {
                                                 resultNavigator.navigateBack(
                                                     LyricsSearchResult(
-                                                        title = song.title,
-                                                        artist = song.artist,
-                                                        album = song.album,
+                                                        title = song.title.takeIf { song.availableTypes.contains(SearchResultType.METADATA) },
+                                                        artist = song.artist.takeIf { song.availableTypes.contains(SearchResultType.METADATA) },
+                                                        album = song.album.takeIf { song.availableTypes.contains(SearchResultType.METADATA) },
                                                         lyrics = lyrics,
-                                                        date = song.date,
-                                                        trackerNumber = song.trackerNumber,
-                                                        picUrl = song.picUrl,
+                                                        date = song.date.takeIf { song.availableTypes.contains(SearchResultType.METADATA) },
+                                                        trackerNumber = song.trackerNumber.takeIf { song.availableTypes.contains(SearchResultType.METADATA) },
+                                                        picUrl = song.picUrl.takeIf { song.availableTypes.contains(SearchResultType.COVER) },
                                                         source = song.source,
                                                         lyricsOnly = false,
-                                                        extras = song.extras
+                                                        extras = song.extras.takeIf { song.availableTypes.contains(SearchResultType.EXTRA_METADATA) }.orEmpty()
                                                     )
                                                 )
                                             } else {
@@ -321,7 +325,9 @@ fun SearchResultsScreen(
                                                 )
                                             }
                                         }
-                                    }
+                                    },
+                                    lyricsAvailable = song.availableTypes.contains(SearchResultType.LYRICS),
+                                    applyAvailable = song.availableTypes.isNotEmpty()
                                 )
                             }
                         }
@@ -470,10 +476,10 @@ fun SearchResultsScreen(
                                     lyrics = uiState.lyricsState.content,
                                     date = currentSong.date,
                                     trackerNumber = currentSong.trackerNumber,
-                                    picUrl = currentSong.picUrl,
+                                    picUrl = currentSong.picUrl.takeIf { currentSong.availableTypes.contains(SearchResultType.COVER) },
                                     source = currentSong.source,
                                     lyricsOnly = false,
-                                    extras = currentSong.extras
+                                    extras = currentSong.extras.takeIf { currentSong.availableTypes.contains(SearchResultType.EXTRA_METADATA) }.orEmpty()
                                 )
                             )
                         },
@@ -570,7 +576,9 @@ fun SearchResultItem(
     song: SongSearchResult,
     onPreviewClick: () -> Unit,
     onApplyClick: () -> Unit,
-    onApplyLyricsOnlyClick: () -> Unit
+    onApplyLyricsOnlyClick: () -> Unit,
+    lyricsAvailable: Boolean,
+    applyAvailable: Boolean
 ) {
 
     var imageSize by remember(song.picUrl) { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -600,7 +608,7 @@ fun SearchResultItem(
         modifier = Modifier
             .padding(bottom = 6.dp)
             .clip(RoundedCornerShape(CardDefaults.CornerRadius))
-            .clickable(onClick = { onPreviewClick() }),
+            .clickable(enabled = lyricsAvailable, onClick = { onPreviewClick() }),
     ) {
         Column(
             modifier = Modifier.padding(12.dp)
@@ -713,27 +721,29 @@ fun SearchResultItem(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.End
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(MiuixTheme.colorScheme.surfaceVariant)
-                                    .clickable { onApplyLyricsOnlyClick() }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.apply_lyrics_only_action),
-                                    fontSize = 11.sp,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                    fontWeight = FontWeight.Medium
-                                )
+                            if (lyricsAvailable) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(MiuixTheme.colorScheme.surfaceVariant)
+                                        .clickable { onApplyLyricsOnlyClick() }
+                                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.apply_lyrics_only_action),
+                                        fontSize = 11.sp,
+                                        color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
                             Box(
                                 modifier = Modifier
                                     .clip(CircleShape)
                                     .background(MiuixTheme.colorScheme.primary)
-                                    .clickable { onApplyClick() }
+                                    .clickable(enabled = applyAvailable) { onApplyClick() }
                                     .padding(horizontal = 10.dp, vertical = 5.dp),
                                 contentAlignment = Alignment.Center
                             ) {

@@ -190,9 +190,8 @@ class AppleSource(
         val rawPlainLrc = root.string("lrc")
         val rawSinglePersonEnhancedLrc = root.string("elrc")
         val rawTtml = root.string("ttmlContent")
-        val rawPlainText = root.string("plain")
         val rawMultiPersonEnhancedLrc = root.string("elrcMultiPerson")
-        val rawEnhancedLrc = rawMultiPersonEnhancedLrc.ifBlank { rawSinglePersonEnhancedLrc }
+        val rawEnhancedLrc = rawSinglePersonEnhancedLrc.ifBlank { rawMultiPersonEnhancedLrc }
         val content = root["content"]?.jsonArray.orEmpty()
         val original = content.mapNotNull { element ->
             val line = element.jsonObject
@@ -232,7 +231,6 @@ class AppleSource(
             rawPlainLrc.isBlank() &&
             rawEnhancedLrc.isBlank() &&
             rawTtml.isBlank() &&
-            rawPlainText.isBlank() &&
             rawMultiPersonEnhancedLrc.isBlank()
         ) return null
 
@@ -263,7 +261,6 @@ class AppleSource(
             rawPlainLrc = rawPlainLrc,
             rawEnhancedLrc = rawEnhancedLrc,
             rawTtml = rawTtml,
-            rawPlainText = rawPlainText,
             rawMultiPersonEnhancedLrc = rawMultiPersonEnhancedLrc
         )
     }

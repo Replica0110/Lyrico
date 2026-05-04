@@ -47,7 +47,6 @@ data class LyricsResult(
     val rawVerbatimLrc: String = "",
     val rawEnhancedLrc: String = "",
     val rawTtml: String = "",
-    val rawPlainText: String = "",
     val rawMultiPersonEnhancedLrc: String = ""
 ) : Parcelable
 

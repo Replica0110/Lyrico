@@ -133,9 +133,6 @@ object LyricEncoder {
         config: LyricRenderConfig,
         conversionMode: ConversionMode = ConversionMode.NONE
     ): String {
-        result.rawPlainText.takeIf { it.isNotBlank() }?.let {
-            return convertLyricsText(it, conversionMode).trim()
-        }
 
         val convertedResult = convertLyricsResult(result, conversionMode)
         val builder = StringBuilder()
@@ -323,9 +320,6 @@ object LyricEncoder {
                 }
             }
 
-        if (config.format == PLAIN_LRC && result.rawPlainText.isNotBlank()) {
-            return convertLyricsText(result.rawPlainText, config.conversionMode).trim()
-        }
 
         return null
     }

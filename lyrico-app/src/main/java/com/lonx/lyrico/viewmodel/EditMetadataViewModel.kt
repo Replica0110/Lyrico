@@ -777,15 +777,18 @@ class EditMetadataViewModel(
         _uiState.update { it.copy(sameAlbumCoverMessage = null) }
     }
 
-    fun getPlainLyrics(): String? {
+    fun getPlainLyrics(
+        showRomanization: Boolean = true,
+        showTranslation: Boolean = true
+    ): String? {
         val lyricsResult = LyricDecoder.decode(_uiState.value.editingTagData?.lyrics ?: "")
             ?: return null
         if (lyricsResult.original.isEmpty()) return null
         val config = LyricRenderConfig(
             format = LyricFormat.PLAIN_LRC,
             conversionMode = ConversionMode.NONE,
-            showTranslation = lyricsResult.translated != null,
-            showRomanization = lyricsResult.romanization != null,
+            showTranslation = showTranslation && lyricsResult.translated != null,
+            showRomanization = showRomanization && lyricsResult.romanization != null,
             removeEmptyLines = true,
             onlyTranslationIfAvailable = false
         )

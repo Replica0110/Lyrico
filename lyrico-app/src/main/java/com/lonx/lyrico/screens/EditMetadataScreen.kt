@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -959,23 +960,44 @@ fun EditMetadataScreen(
         }
     }
     // 歌词文本预览
-    val plainLyrics = viewModel.getPlainLyrics()
+    var plainLyricsShowRomanization by remember { mutableStateOf(true) }
+    var plainLyricsShowTranslation by remember { mutableStateOf(true) }
+    val plainLyrics = viewModel.getPlainLyrics(
+        showRomanization = plainLyricsShowRomanization,
+        showTranslation = plainLyricsShowTranslation
+    )
     WindowBottomSheet(
         show = showPlainLyricsSheet,
         enableNestedScroll = false,
-        endAction =  {
-            IconButton(
-                onClick = {
-                    showPlainLyricsSheet = false
-                    clipboardManager.setText(
-                        AnnotatedString(plainLyrics ?: "")
+        endAction = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PlainLyricsToggleChip(
+                    text = stringResource(R.string.roma),
+                    selected = plainLyricsShowRomanization,
+                    onClick = { plainLyricsShowRomanization = !plainLyricsShowRomanization }
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                PlainLyricsToggleChip(
+                    text = stringResource(R.string.translation),
+                    selected = plainLyricsShowTranslation,
+                    onClick = { plainLyricsShowTranslation = !plainLyricsShowTranslation }
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                IconButton(
+                    onClick = {
+                        showPlainLyricsSheet = false
+                        clipboardManager.setText(
+                            AnnotatedString(plainLyrics ?: "")
+                        )
+                    }
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.Copy,
+                        contentDescription = null
                     )
                 }
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Copy,
-                    contentDescription = null
-                )
             }
         },
         title = stringResource(R.string.label_plain_lyrics),
@@ -987,12 +1009,17 @@ fun EditMetadataScreen(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         ){
-
-            Text(
-                style = MiuixTheme.textStyles.body2,
-                text = plainLyrics?: stringResource(R.string.lyrics_empty),
-                modifier = Modifier.padding(vertical = 12.dp).fillMaxWidth(),
-            )
+            SelectionContainer(
+                modifier = Modifier
+                    .padding(vertical = 12.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    style = MiuixTheme.textStyles.body2,
+                    text = plainLyrics ?: stringResource(R.string.lyrics_empty),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
     // 封面操作
@@ -1307,6 +1334,42 @@ fun EditMetadataScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun PlainLyricsToggleChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val background = if (selected) {
+        MiuixTheme.colorScheme.primary
+    } else {
+        MiuixTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = if (selected) {
+        MiuixTheme.colorScheme.onPrimary
+    } else {
+        MiuixTheme.colorScheme.onSurfaceVariantActions
+    }
+
+    Box(
+        modifier = Modifier
+            .height(30.dp)
+            .clip(RoundedCornerShape(50))
+            .background(background)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MiuixTheme.textStyles.footnote1,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

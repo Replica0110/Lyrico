@@ -205,6 +205,9 @@ object LyricEncoder {
             val converted = convertLyricsText(raw, config.conversionMode)
             return shiftLyricsOffset(converted, offset).trim()
         }
+        encodeFallbackRawLyrics(result, config, offset)?.let {
+            return it
+        }
 
         val convertedResult = convertLyricsResult(result, config.conversionMode)
         
@@ -290,41 +293,41 @@ object LyricEncoder {
         result: LyricsResult,
         config: LyricRenderConfig
     ): String? {
-        val rawCandidates = when (config.format) {
-            PLAIN_LRC -> listOf(
-                result.rawPlainLrc,
-                result.rawEnhancedLrc,
-                result.rawVerbatimLrc,
-                result.rawTtml,
-                result.rawPlainText
-            )
-
-            VERBATIM_LRC -> listOf(
-                result.rawVerbatimLrc,
-                result.rawEnhancedLrc,
-                result.rawPlainLrc,
-                result.rawTtml,
-                result.rawPlainText
-            )
-
-            ENHANCED_LRC -> listOf(
-                result.rawEnhancedLrc,
-                result.rawVerbatimLrc,
-                result.rawPlainLrc,
-                result.rawTtml,
-                result.rawPlainText
-            )
-
-            TTML -> listOf(
-                result.rawTtml,
-                result.rawEnhancedLrc,
-                result.rawVerbatimLrc,
-                result.rawPlainLrc,
-                result.rawPlainText
-            )
+        val raw = when (config.format) {
+            PLAIN_LRC -> result.rawPlainLrc
+            VERBATIM_LRC -> result.rawVerbatimLrc
+            ENHANCED_LRC -> result.rawEnhancedLrc
+            TTML -> result.rawTtml
         }
 
-        return rawCandidates.firstOrNull { it.isNotBlank() }
+        return raw.takeIf { it.isNotBlank() }
+    }
+
+    private fun encodeFallbackRawLyrics(
+        result: LyricsResult,
+        config: LyricRenderConfig,
+        offset: Long
+    ): String? {
+        val fallbackRaw = when (config.format) {
+            PLAIN_LRC -> listOf(result.rawVerbatimLrc, result.rawEnhancedLrc, result.rawTtml)
+            VERBATIM_LRC -> listOf(result.rawEnhancedLrc, result.rawPlainLrc, result.rawTtml)
+            ENHANCED_LRC -> listOf(result.rawVerbatimLrc, result.rawPlainLrc, result.rawTtml)
+            TTML -> listOf(result.rawEnhancedLrc, result.rawVerbatimLrc, result.rawPlainLrc)
+        }
+
+        fallbackRaw
+            .firstOrNull { it.isNotBlank() }
+            ?.let { raw ->
+                LyricDecoder.decode(raw)?.let { decoded ->
+                    return encode(decoded, config, offset).takeIf { it.isNotBlank() }
+                }
+            }
+
+        if (config.format == PLAIN_LRC && result.rawPlainText.isNotBlank()) {
+            return convertLyricsText(result.rawPlainText, config.conversionMode).trim()
+        }
+
+        return null
     }
 
 

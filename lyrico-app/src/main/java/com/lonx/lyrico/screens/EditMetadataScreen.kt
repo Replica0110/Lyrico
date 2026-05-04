@@ -19,21 +19,22 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,9 +48,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,7 +68,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -970,34 +967,18 @@ fun EditMetadataScreen(
         show = showPlainLyricsSheet,
         enableNestedScroll = false,
         endAction = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                PlainLyricsToggleChip(
-                    text = stringResource(R.string.roma),
-                    selected = plainLyricsShowRomanization,
-                    onClick = { plainLyricsShowRomanization = !plainLyricsShowRomanization }
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                PlainLyricsToggleChip(
-                    text = stringResource(R.string.translation),
-                    selected = plainLyricsShowTranslation,
-                    onClick = { plainLyricsShowTranslation = !plainLyricsShowTranslation }
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                IconButton(
-                    onClick = {
-                        showPlainLyricsSheet = false
-                        clipboardManager.setText(
-                            AnnotatedString(plainLyrics ?: "")
-                        )
-                    }
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Copy,
-                        contentDescription = null
+            IconButton(
+                onClick = {
+                    showPlainLyricsSheet = false
+                    clipboardManager.setText(
+                        AnnotatedString(plainLyrics ?: "")
                     )
                 }
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Copy,
+                    contentDescription = null
+                )
             }
         },
         title = stringResource(R.string.label_plain_lyrics),
@@ -1006,18 +987,44 @@ fun EditMetadataScreen(
         Column(
             modifier = Modifier
                 .padding(bottom = 32.dp)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+                .fillMaxWidth(),
         ){
-            SelectionContainer(
+            val plainLyricsScrollState = rememberScrollState()
+            Box(
                 modifier = Modifier
-                    .padding(vertical = 12.dp)
+                    .heightIn(min = 30.dp, max = 420.dp)
                     .fillMaxWidth()
+                    .verticalScroll(plainLyricsScrollState)
             ) {
-                Text(
-                    style = MiuixTheme.textStyles.body2,
-                    text = plainLyrics ?: stringResource(R.string.lyrics_empty),
-                    modifier = Modifier.fillMaxWidth(),
+                SelectionContainer(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        style = MiuixTheme.textStyles.body2,
+                        text = plainLyrics ?: stringResource(R.string.lyrics_empty),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PlainLyricsToggleChip(
+                    text = stringResource(R.string.roma),
+                    selected = plainLyricsShowRomanization,
+                    onClick = { plainLyricsShowRomanization = !plainLyricsShowRomanization }
+                )
+                PlainLyricsToggleChip(
+                    text = stringResource(R.string.translation),
+                    selected = plainLyricsShowTranslation,
+                    onClick = { plainLyricsShowTranslation = !plainLyricsShowTranslation }
                 )
             }
         }

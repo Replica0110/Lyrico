@@ -3,8 +3,6 @@ package com.lonx.lyrico.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -51,31 +49,28 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.FloatingToolbar
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.ToolbarPosition
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Clear
 import top.yukonga.miuix.kmp.icon.extended.Copy
-import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import top.yukonga.miuix.kmp.window.WindowDialog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -95,7 +90,11 @@ fun AppLogScreen(
     var selectedLevel by remember { mutableStateOf<AppLogLevel?>(null) }
     var selectedType by remember { mutableStateOf<AppLogType?>(null) }
     var selectedLog by remember { mutableStateOf<AppLogEntity?>(null) }
+    var selectedLogIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var showDetailSheet by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var pendingDeleteIds by remember { mutableStateOf<List<Long>>(emptyList()) }
+    var pendingExportIds by remember { mutableStateOf<List<Long>?>(null) }
     val copiedMessage = stringResource(R.string.msg_copied_to_clipboard)
 
     val filteredLogs = remember(logs, selectedLevel, selectedType) {
@@ -118,10 +117,16 @@ fun AppLogScreen(
         selectedType?.let { type -> AppLogType.entries.indexOf(type) + 1 } ?: 0
     }
 
+    LaunchedEffect(filteredLogs) {
+        val visibleIds = filteredLogs.mapTo(mutableSetOf()) { it.id }
+        selectedLogIds = selectedLogIds.intersect(visibleIds)
+    }
+
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("*/*")
     ) { uri ->
-        uri?.let { viewModel.exportLogs(context, it) }
+        uri?.let { viewModel.exportLogs(context, it, pendingExportIds) }
+        pendingExportIds = null
     }
 
     LaunchedEffect(Unit) {
@@ -148,8 +153,9 @@ fun AppLogScreen(
                 },
                 actions = {
                     IconButton(
-                        enabled = logs.isNotEmpty(),
+                        enabled = filteredLogs.isNotEmpty(),
                         onClick = {
+                            pendingExportIds = filteredLogs.map { it.id }
                             exportLauncher.launch("lyrico_log_${System.currentTimeMillis()}.log")
                         }
                     ) {
@@ -159,12 +165,16 @@ fun AppLogScreen(
                         )
                     }
                     IconButton(
-                        enabled = logs.isNotEmpty(),
-                        onClick = { viewModel.clearLogs() }
+                        enabled = filteredLogs.isNotEmpty(),
+                        onClick = {
+                            pendingDeleteIds = filteredLogs.map { it.id }
+                            showDeleteConfirmDialog = true
+                        }
                     ) {
                         Icon(
-                            imageVector = MiuixIcons.Clear,
-                            contentDescription = stringResource(R.string.clear_logs)
+                            imageVector = MiuixIcons.Delete,
+                            contentDescription = stringResource(R.string.action_delete),
+                            tint = MiuixTheme.colorScheme.error
                         )
                     }
                 },
@@ -248,6 +258,39 @@ fun AppLogScreen(
             showDetailSheet = false
         }
     )
+
+    WindowDialog(
+        show = showDeleteConfirmDialog,
+        title = stringResource(R.string.app_log_delete_title),
+        onDismissRequest = { showDeleteConfirmDialog = false }
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = stringResource(R.string.app_log_delete_message, pendingDeleteIds.size),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = { showDeleteConfirmDialog = false },
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(20.dp))
+                TextButton(
+                    text = stringResource(R.string.confirm),
+                    onClick = {
+                        viewModel.deleteLogs(pendingDeleteIds)
+                        selectedLogIds = emptySet()
+                        pendingDeleteIds = emptyList()
+                        showDeleteConfirmDialog = false
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary()
+                )
+            }
+        }
+    }
 }
 
 
@@ -261,7 +304,7 @@ private fun AppLogItem(
             .padding(horizontal = 12.dp)
     ) {
         BasicComponent(
-            insideMargin = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             onClick = onClick
         ) {
             Row(
@@ -470,3 +513,6 @@ private fun formatTime(timestamp: Long): String =
 
 private fun formatDateTime(timestamp: Long): String =
     SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
+
+private fun Set<Long>.toggle(id: Long): Set<Long> =
+    if (contains(id)) this - id else this + id

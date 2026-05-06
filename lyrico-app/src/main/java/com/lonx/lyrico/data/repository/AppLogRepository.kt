@@ -9,7 +9,9 @@ interface AppLogRepository {
     fun observeLatest(limit: Int = 300): Flow<List<AppLogEntity>>
     fun observeByRelatedId(relatedId: String): Flow<List<AppLogEntity>>
     suspend fun getLatest(limit: Int = 1000): List<AppLogEntity>
+    suspend fun getByIds(ids: List<Long>): List<AppLogEntity>
     suspend fun exportText(limit: Int = 1000): String
+    suspend fun exportText(ids: List<Long>): String
     suspend fun log(
         level: AppLogLevel,
         type: AppLogType,
@@ -26,6 +28,7 @@ interface AppLogRepository {
         relatedId: String? = null
     )
     suspend fun clear()
+    suspend fun deleteByIds(ids: List<Long>)
     suspend fun trim()
     suspend fun applyRetentionPolicy()
 }

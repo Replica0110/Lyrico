@@ -19,6 +19,9 @@ interface AppLogDao {
     @Query("SELECT * FROM app_logs ORDER BY createdAt DESC LIMIT :limit")
     suspend fun getLatest(limit: Int = 1000): List<AppLogEntity>
 
+    @Query("SELECT * FROM app_logs WHERE id IN (:ids) ORDER BY createdAt DESC")
+    suspend fun getByIds(ids: List<Long>): List<AppLogEntity>
+
     @Query("SELECT * FROM app_logs WHERE relatedId = :relatedId ORDER BY createdAt DESC")
     fun observeByRelatedId(relatedId: String): Flow<List<AppLogEntity>>
 
@@ -30,6 +33,9 @@ interface AppLogDao {
 
     @Query("DELETE FROM app_logs WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("DELETE FROM app_logs WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
 
     @Query("DELETE FROM app_logs WHERE createdAt < :timestamp")
     suspend fun deleteOlderThan(timestamp: Long)

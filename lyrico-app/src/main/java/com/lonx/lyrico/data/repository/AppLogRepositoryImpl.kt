@@ -29,8 +29,20 @@ class AppLogRepositoryImpl(
     override suspend fun getLatest(limit: Int): List<AppLogEntity> =
         dao.getLatest(limit)
 
+    override suspend fun getByIds(ids: List<Long>): List<AppLogEntity> =
+        if (ids.isEmpty()) emptyList() else dao.getByIds(ids)
+
     override suspend fun exportText(limit: Int): String {
         val logs = getLatest(limit).asReversed()
+        return formatExportText(logs)
+    }
+
+    override suspend fun exportText(ids: List<Long>): String {
+        val logs = getByIds(ids).asReversed()
+        return formatExportText(logs)
+    }
+
+    private fun formatExportText(logs: List<AppLogEntity>): String {
         return buildString {
             appendLine("Lyrico log export")
             appendLine("Generated: ${formatTime(System.currentTimeMillis())}")
@@ -91,6 +103,11 @@ class AppLogRepositoryImpl(
 
     override suspend fun clear() {
         dao.clear()
+    }
+
+    override suspend fun deleteByIds(ids: List<Long>) {
+        if (ids.isEmpty()) return
+        dao.deleteByIds(ids)
     }
 
     override suspend fun trim() {

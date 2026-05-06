@@ -29,6 +29,7 @@ interface BatchTaskRepository {
     suspend fun getOrphanedRunningTasks(): List<BatchTaskEntity>
     suspend fun markOrphanedTasksFailed()
     suspend fun deleteTask(taskId: String)
+    suspend fun deleteTasks(taskIds: List<String>)
     suspend fun clearFinishedTasks()
     suspend fun getRunningTaskByType(type: BatchTaskType): BatchTaskEntity?
 }

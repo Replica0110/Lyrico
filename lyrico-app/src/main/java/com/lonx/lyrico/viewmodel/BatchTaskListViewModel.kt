@@ -70,6 +70,12 @@ class BatchTaskListViewModel(
         }
     }
 
+    fun deleteTasks(taskIds: List<String>) {
+        viewModelScope.launch {
+            batchTaskRepository.deleteTasks(taskIds)
+        }
+    }
+
     fun clearFinishedTasks() {
         viewModelScope.launch {
             batchTaskRepository.clearFinishedTasks()

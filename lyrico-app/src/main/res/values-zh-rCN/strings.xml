@@ -509,8 +509,9 @@
     <string name="no_song_selected">未选择歌曲</string>
     <string name="batch_task_delete_title">删除任务</string>
     <string name="batch_task_delete_message">确定要删除此任务记录吗？</string>
+    <string name="batch_task_delete_selected_message">确定要删除 %d 条任务记录吗？</string>
     <string name="batch_task_clear_title">清空历史</string>
-    <string name="batch_task_clear_message">确定要清空所有已结束的任务记录吗？运行中的任务会保留。</string>
+    <string name="batch_task_clear_message">确定要删除当前筛选条件下已结束的任务记录吗？运行中的任务会保留</string>
     <string name="batch_task_type_label">任务类型：</string>
     <string name="batch_task_status_label">运行状态：</string>
     <string name="batch_task_detail_title">任务详情</string>
@@ -538,6 +539,8 @@
     <string name="action_copy_all">复制全部</string>
     <string name="action_export_logs">导出</string>
     <string name="clear_logs">清空</string>
+    <string name="app_log_delete_title">删除日志？</string>
+    <string name="app_log_delete_message">确认删除 %d 条日志吗？此操作不可撤销</string>
     <string name="app_log_filter_all">全部</string>
     <string name="app_log_filter_level">级别</string>
     <string name="app_log_filter_type">类型</string>

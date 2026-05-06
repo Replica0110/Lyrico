@@ -171,6 +171,10 @@ class BatchTaskRepositoryImpl(
         batchTaskDao.deleteTaskWithItems(taskId)
     }
 
+    override suspend fun deleteTasks(taskIds: List<String>) {
+        batchTaskDao.deleteTasksWithItems(taskIds)
+    }
+
     override suspend fun clearFinishedTasks() {
         batchTaskDao.deleteFinishedTasks()
     }

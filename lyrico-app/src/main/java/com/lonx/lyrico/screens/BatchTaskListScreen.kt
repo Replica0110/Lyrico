@@ -12,15 +12,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.BatchTaskStatus
@@ -78,6 +81,19 @@ fun BatchTaskListScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
     var selectedTaskId by remember { mutableStateOf<String?>(null) }
+    var selectedTaskIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var pendingDeleteTaskIds by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    val deletableFilteredTaskIds = remember(uiState.filteredTasks) {
+        uiState.filteredTasks
+            .filterNot { it.status == BatchTaskStatus.RUNNING || it.status == BatchTaskStatus.QUEUED }
+            .map { it.taskId }
+    }
+
+    LaunchedEffect(uiState.filteredTasks) {
+        val visibleIds = uiState.filteredTasks.mapTo(mutableSetOf()) { it.taskId }
+        selectedTaskIds = selectedTaskIds.intersect(visibleIds)
+    }
 
     WindowDialog(
         title = stringResource(R.string.batch_task_delete_title),
@@ -88,11 +104,19 @@ fun BatchTaskListScreen(
         onDismissFinished = {
             showDeleteDialog = false
             selectedTaskId = null
+            pendingDeleteTaskIds = emptyList()
         }
     ) {
         Column {
             Text(
-                text = stringResource(R.string.batch_task_delete_message),
+                text = if (pendingDeleteTaskIds.size > 1) {
+                    stringResource(
+                        R.string.batch_task_delete_selected_message,
+                        pendingDeleteTaskIds.size
+                    )
+                } else {
+                    stringResource(R.string.batch_task_delete_message)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 color = MiuixTheme.colorScheme.onBackground
             )
@@ -112,9 +136,15 @@ fun BatchTaskListScreen(
                 TextButton(
                     text = stringResource(R.string.confirm),
                     onClick = {
-                        selectedTaskId?.let(viewModel::deleteTask)
+                        if (pendingDeleteTaskIds.isNotEmpty()) {
+                            viewModel.deleteTasks(pendingDeleteTaskIds)
+                        } else {
+                            selectedTaskId?.let(viewModel::deleteTask)
+                        }
+                        selectedTaskIds = emptySet()
                         showDeleteDialog = false
                         selectedTaskId = null
+                        pendingDeleteTaskIds = emptyList()
                     },
                     modifier = Modifier.weight(1f),
                     colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
@@ -131,8 +161,7 @@ fun BatchTaskListScreen(
         Column {
             Text(
                 text = stringResource(R.string.batch_task_clear_message),
-                modifier = Modifier.fillMaxWidth(),
-                color = MiuixTheme.colorScheme.onBackground
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
             Row(
@@ -147,7 +176,8 @@ fun BatchTaskListScreen(
                 TextButton(
                     text = stringResource(R.string.confirm),
                     onClick = {
-                        viewModel.clearFinishedTasks()
+                        viewModel.deleteTasks(deletableFilteredTaskIds)
+                        selectedTaskIds = emptySet()
                         showClearDialog = false
                     },
                     modifier = Modifier.weight(1f),
@@ -172,12 +202,13 @@ fun BatchTaskListScreen(
                     }
                 },
                 actions = {
-                    val canClearFinishedTasks = uiState.allTasks.any {
-                        it.status != BatchTaskStatus.RUNNING && it.status != BatchTaskStatus.QUEUED
-                    }
+                    val canClearFinishedTasks = deletableFilteredTaskIds.isNotEmpty()
                     IconButton(
+                        enabled = canClearFinishedTasks,
                         onClick = {
-                            if (canClearFinishedTasks) showClearDialog = true
+                            if (canClearFinishedTasks) {
+                                showClearDialog = true
+                            }
                         }
                     ) {
                         Icon(
@@ -260,6 +291,7 @@ fun BatchTaskListScreen(
                         },
                         onDeleteClick = {
                             selectedTaskId = task.taskId
+                            pendingDeleteTaskIds = emptyList()
                             showDeleteDialog = true
                         },
                         onCancelClick = {
@@ -290,49 +322,12 @@ private fun BatchTaskCard(
             (task.finishedAt - task.startedAt) / 1000.0
         } else null
 
-        val summary = buildString {
-            // 第一行：任务类型
-            append(stringResource(R.string.batch_task_type_label))
-            append(typeLabel)
-
-            // 第二行：运行状态
-            append("\n")
-            append(stringResource(R.string.batch_task_status_label))
-            append(statusLabel)
-
-            // 第三行：统计信息或进度
-            append("\n")
-            if (task.status == BatchTaskStatus.SUCCEEDED || task.status == BatchTaskStatus.FAILED || task.status == BatchTaskStatus.CANCELLED) {
-                append(
-                    stringResource(
-                        R.string.batch_match_stat_format,
-                        task.successCount,
-                        task.failureCount,
-                        task.skippedCount
-                    )
-                )
-            } else if (task.status == BatchTaskStatus.RUNNING || task.status == BatchTaskStatus.QUEUED) {
-                append("${task.current}/${task.total}")
-            }
-
-            // 第四行：耗时（如果有）
-            if (durationSecs != null) {
-                append("\n")
-                append(
-                    stringResource(
-                        R.string.batch_match_duration_format,
-                        durationSecs
-                    )
-                )
-            }
-        }
-
         val isRunning =
             task.status == BatchTaskStatus.RUNNING || task.status == BatchTaskStatus.QUEUED
 
         BasicComponent(
-            title = formattedDate,
-            summary = summary,
+            onClick = onClick,
+            insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             endActions = {
                 if (isRunning) {
                     IconButton(onClick = onCancelClick) {
@@ -351,8 +346,63 @@ private fun BatchTaskCard(
                         )
                     }
                 }
-            },
-            onClick = onClick
-        )
+            }
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = formattedDate,
+                        fontWeight = FontWeight.Bold,
+                        color = MiuixTheme.colorScheme.onSurface
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.batch_task_type_label) + typeLabel,
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.batch_task_status_label) + statusLabel,
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                if (task.status == BatchTaskStatus.SUCCEEDED || task.status == BatchTaskStatus.FAILED || task.status == BatchTaskStatus.CANCELLED) {
+                    Text(
+                        text = stringResource(
+                            R.string.batch_match_stat_format,
+                            task.successCount,
+                            task.failureCount,
+                            task.skippedCount
+                        ),
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurface
+                    )
+                } else if (task.status == BatchTaskStatus.RUNNING || task.status == BatchTaskStatus.QUEUED) {
+                    Text(
+                        text = "${task.current}/${task.total}",
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurface
+                    )
+                }
+                if (durationSecs != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.batch_match_duration_format,
+                            durationSecs
+                        ),
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
     }
 }

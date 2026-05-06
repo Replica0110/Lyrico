@@ -73,8 +73,14 @@ interface BatchTaskDao {
     @Query("DELETE FROM batch_task_items WHERE taskId = :taskId")
     suspend fun deleteItemsByTaskId(taskId: String)
 
+    @Query("DELETE FROM batch_task_items WHERE taskId IN (:taskIds)")
+    suspend fun deleteItemsByTaskIds(taskIds: List<String>)
+
     @Query("DELETE FROM batch_tasks WHERE taskId = :taskId")
     suspend fun deleteTask(taskId: String)
+
+    @Query("DELETE FROM batch_tasks WHERE taskId IN (:taskIds)")
+    suspend fun deleteTasks(taskIds: List<String>)
 
     @Query("DELETE FROM batch_task_items WHERE taskId IN (SELECT taskId FROM batch_tasks WHERE status NOT IN (:activeStatuses))")
     suspend fun deleteItemsExceptStatuses(activeStatuses: List<BatchTaskStatus>)
@@ -86,6 +92,13 @@ interface BatchTaskDao {
     suspend fun deleteTaskWithItems(taskId: String) {
         deleteItemsByTaskId(taskId)
         deleteTask(taskId)
+    }
+
+    @Transaction
+    suspend fun deleteTasksWithItems(taskIds: List<String>) {
+        if (taskIds.isEmpty()) return
+        deleteItemsByTaskIds(taskIds)
+        deleteTasks(taskIds)
     }
 
     @Transaction

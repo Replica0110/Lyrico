@@ -512,8 +512,9 @@
     <string name="no_song_selected">No songs selected</string>
     <string name="batch_task_delete_title">Delete Task</string>
     <string name="batch_task_delete_message">Are you sure you want to delete this task record?</string>
+    <string name="batch_task_delete_selected_message">Are you sure you want to delete %d task records?</string>
     <string name="batch_task_clear_title">Clear History</string>
-    <string name="batch_task_clear_message">Are you sure you want to clear all finished task records? Running tasks will be kept.</string>
+    <string name="batch_task_clear_message">Are you sure you want to delete finished task records under the current filters? Running tasks will be kept.</string>
     <string name="batch_task_type_label">Task Type: </string>
     <string name="batch_task_status_label">Status: </string>
     <string name="batch_task_detail_title">Task Detail</string>
@@ -527,6 +528,8 @@
     <string name="action_copy_all">Copy all</string>
     <string name="action_export_logs">Export</string>
     <string name="clear_logs">Clear</string>
+    <string name="app_log_delete_title">Delete logs?</string>
+    <string name="app_log_delete_message">Delete %d log entries? This action cannot be undone.</string>
     <string name="app_log_filter_all">All</string>
     <string name="app_log_filter_level">Level</string>
     <string name="app_log_filter_type">Type</string>

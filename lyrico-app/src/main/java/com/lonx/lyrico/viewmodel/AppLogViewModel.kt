@@ -32,16 +32,20 @@ class AppLogViewModel(
     private val _events = MutableSharedFlow<AppLogEvent>()
     val events = _events.asSharedFlow()
 
-    fun clearLogs() {
+    fun deleteLogs(ids: List<Long>) {
         viewModelScope.launch {
-            appLogRepository.clear()
+            appLogRepository.deleteByIds(ids)
         }
     }
 
-    fun exportLogs(context: Context, uri: Uri) {
+    fun exportLogs(context: Context, uri: Uri, ids: List<Long>? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val text = appLogRepository.exportText()
+                val text = if (ids == null) {
+                    appLogRepository.exportText()
+                } else {
+                    appLogRepository.exportText(ids)
+                }
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     outputStream.write(text.toByteArray(Charsets.UTF_8))
                 }

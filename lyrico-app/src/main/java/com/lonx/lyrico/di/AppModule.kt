@@ -221,7 +221,9 @@ val appModule = module {
             androidContext(),
             LyricoDatabase::class.java,
             "lyrico_database"
-        ).build()
+        )
+            .addMigrations(LyricoDatabase.MIGRATION_14_15)
+            .build()
     }
     single { get<LyricoDatabase>().batchTaskDao() }
     single { get<LyricoDatabase>().appLogDao() }

@@ -22,6 +22,8 @@ interface SongRepository {
      */
     suspend fun deleteSong(song: SongEntity)
 
+    suspend fun deleteSongs(songs: List<SongEntity>)
+
 
     suspend fun getSongByUri(uri: String): SongEntity?
 

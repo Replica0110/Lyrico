@@ -124,6 +124,81 @@ class SongRepositoryImpl(
         }
     }
 
+    override suspend fun deleteSongs(songs: List<SongEntity>) {
+        withContext(Dispatchers.IO) {
+            if (songs.isEmpty()) return@withContext
+
+            val contentResolver = context.contentResolver
+            val deletedSongs = mutableListOf<SongEntity>()
+            val impactedFolderIds = mutableSetOf<Long>()
+
+            songs.forEach { song ->
+                try {
+                    val uri = song.uri.toUri()
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        try {
+                            val rowsDeleted = contentResolver.delete(uri, null, null)
+                            if (rowsDeleted == 0) {
+                                Log.w(TAG, "系统未返回删除行数或文件已不存在: $uri")
+                            }
+                        } catch (e: RecoverableSecurityException) {
+                            MediaStore.createDeleteRequest(contentResolver, listOf(uri))
+                            Log.w(TAG, "RecoverableSecurityException, 需要用户确认: $uri")
+                            throw e
+                        } catch (e: SecurityException) {
+                            Log.e(TAG, "权限不足，无法删除: $uri", e)
+                            logException(
+                                message = "Failed to delete song: permission denied",
+                                throwable = e,
+                                relatedId = song.uri
+                            )
+                            return@forEach
+                        }
+                    } else {
+                        contentResolver.delete(uri, null, null)
+                    }
+
+                    deletedSongs.add(song)
+                    impactedFolderIds.add(song.folderId)
+                } catch (e: Exception) {
+                    Log.e(TAG, "删除歌曲失败: ${song.title}", e)
+                    logException(
+                        message = "Failed to delete song: ${song.title}",
+                        throwable = e,
+                        relatedId = song.uri
+                    )
+                }
+            }
+
+            if (deletedSongs.isEmpty()) return@withContext
+
+            database.withTransaction {
+                deletedSongs.map { it.uri }
+                    .chunked(BATCH_SIZE)
+                    .forEach { chunk -> songDao.deleteByUris(chunk) }
+
+                impactedFolderIds.forEach { folderId ->
+                    folderDao.refreshSongCount(folderId)
+                }
+                folderDao.performPostScanCleanup()
+            }
+
+            logApp(
+                level = AppLogLevel.INFO,
+                message = "Songs deleted",
+                detail = buildString {
+                    appendLine("count=${deletedSongs.size}")
+                    appendLimitedItems(
+                        "uris",
+                        deletedSongs.map { it.uri }
+                    )
+                }
+            )
+            Log.d(TAG, "已批量删除歌曲: ${deletedSongs.size} 首")
+        }
+    }
+
 
     override suspend fun getSongByUri(uri: String): SongEntity? {
         return songDao.getSongByUri(uri)

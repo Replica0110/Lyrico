@@ -309,9 +309,7 @@ class SongListViewModel(
         val selectedIds = _selectedSongIds.value
         val toDelete = songs.filter { it.mediaId in selectedIds }
         viewModelScope.launch {
-            toDelete.forEach { song ->
-                songRepository.deleteSong(song)
-            }
+            songRepository.deleteSongs(toDelete)
             exitSelectionMode()
         }
     }

@@ -15,12 +15,12 @@ espressoCore = "3.7.0"
 lazycolumnscrollbar = "2.2.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
-composeBom = "2026.03.01"
+composeBom = "2026.05.00"
 kotlinxCoroutinesAndroid = "1.10.2"
 kotlinxSerializationJson = "1.11.0"
 okhttp = "5.3.2"
 opencc4j = "1.14.0"
-reorderable = "3.0.0"
+reorderable = "3.1.0"
 retrofit = "3.0.0"
 retrofit2KotlinxSerializationConverter = "1.0.0"
 shapes = "1.2.0"
@@ -30,7 +30,6 @@ documentfile = "1.1.0"
 room = "2.8.4"
 work = "2.11.2"
 tinypinyin = "2.0.3"
-xxpermissions="28.0"
 monitor = "1.8.0"
 miuix = "0.9.0"
 
@@ -63,7 +62,6 @@ opencc4j = { module = "com.github.houbb:opencc4j", version.ref = "opencc4j" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 shapes = { module = "io.github.kyant0:shapes", version.ref = "shapes" }
 tinypinyin = { module = "com.github.promeg:tinypinyin", version.ref = "tinypinyin" }
-xxpermissions = { module = "com.github.getActivity:XXPermissions", version.ref = "xxpermissions" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }

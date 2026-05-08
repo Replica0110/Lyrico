@@ -111,7 +111,6 @@ dependencies {
 
     // Utilities
     implementation(libs.devicecompat)
-    implementation(libs.xxpermissions)
     implementation(libs.tinypinyin)
     implementation(libs.opencc4j)
     implementation(libs.aboutlibraries.compose.core)

@@ -29,7 +29,6 @@ import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.ui.theme.LyricoTheme
 import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrico.viewmodel.SongListViewModel
-import kotlinx.coroutines.flow.first
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.compose.koinInject
@@ -40,8 +39,6 @@ import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
 open class MainActivity : ComponentActivity() {
     private var externalUri by mutableStateOf<Uri?>(null)
 
-    @JvmField
-    protected var hasPermission = false
     private val songListViewModel: SongListViewModel by viewModel()
     private val settingsRepository: SettingsRepository by inject()
 
@@ -114,7 +111,7 @@ open class MainActivity : ComponentActivity() {
                     containerColor = MiuixTheme.colorScheme.background,
                     contentWindowInsets = WindowInsets(0, 0, 0, 0)
                 ) {
-                    LyricoApp(externalUri = if (hasPermission) externalUri else null)
+                    LyricoApp(externalUri = externalUri)
 
                     updateState.releaseInfo?.let { releaseInfo ->
                         UpdateDialog(

@@ -8,6 +8,7 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
+import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.model.AppLogLevel
@@ -86,10 +87,16 @@ class App : Application(), SingletonImageLoader.Factory {
                 add(AudioCoverKeyer())
                 add(AudioCoverFetcher.Factory(context.contentResolver))
             }
+            .memoryCache {
+                // 内存缓存：应用可用内存的 25%
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.25)
+                    .build()
+            }
             .diskCache {
-                // 磁盘缓存：最多 10 MB，目录为应用缓存目录
+                // 磁盘缓存：设备存储可用大小的 2%，目录为应用缓存目录
                 DiskCache.Builder()
-                    .maxSizeBytes(10 * 1024 * 1024)
+                    .maxSizePercent(0.02)
                     .directory(context.cacheDir.resolve("image_cache"))
                     .build()
             }

@@ -1,7 +1,9 @@
 package com.lonx.lyrico
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -11,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.DisposableEffect
@@ -19,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.App.Companion.ACTION_EDIT_TAG
@@ -38,6 +42,17 @@ import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
 
 open class MainActivity : ComponentActivity() {
     private var externalUri by mutableStateOf<Uri?>(null)
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(
+                    this,
+                    "通知权限未授予，可能无法接收通知",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
 
     private val songListViewModel: SongListViewModel by viewModel()
     private val settingsRepository: SettingsRepository by inject()
@@ -50,7 +65,7 @@ open class MainActivity : ComponentActivity() {
         if (externalUri == null) {
             songListViewModel.checkForUpdate()
         }
-
+        requestNotificationPermissionIfNeeded()
 
         setContent {
             val themeMode by settingsRepository.themeMode.collectAsStateWithLifecycle(
@@ -155,7 +170,21 @@ open class MainActivity : ComponentActivity() {
             }
         }
     }
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_DENIED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     private fun openBrowser(context: Context, url: String) {
         val intent = Intent(Intent.ACTION_VIEW, url.toUri())
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

@@ -18,6 +18,7 @@ import com.ramcosta.composedestinations.animations.NavHostAnimatedDestinationSty
 import com.ramcosta.composedestinations.generated.NavGraphs
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.spec.Direction
+import com.lonx.lyrico.ui.player.PlayerOverlay
 import top.yukonga.miuix.kmp.basic.Surface
 
 @Composable
@@ -81,6 +82,11 @@ fun LyricoApp(externalUri: Uri?) {
                             )
                         )
                     }
+            }
+        )
+        PlayerOverlay(
+            onEditMetadata = { songUri ->
+                navController.navigate(EditMetadataDestination(songUri).route)
             }
         )
     }

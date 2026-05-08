@@ -371,7 +371,7 @@ fun EditMetadataScreen(
                             }
                         }
                         IconButton(
-                            onClick = { viewModel.play(context) }
+                            onClick = { viewModel.play() }
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Play,

@@ -12,8 +12,6 @@ import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.AppLogRepositoryImpl
 import com.lonx.lyrico.data.repository.GhContributorRepository
 import com.lonx.lyrico.data.repository.GhContributorRepositoryImpl
-import com.lonx.lyrico.data.repository.PlaybackRepository
-import com.lonx.lyrico.data.repository.PlaybackRepositoryImpl
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
 import com.lonx.lyrico.data.repository.SongRepository
@@ -28,6 +26,8 @@ import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrico.utils.UpdateManagerImpl
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.data.model.BatchTaskType
+import com.lonx.lyrico.playback.PlaybackRepository
+import com.lonx.lyrico.playback.PlaybackRepositoryImpl
 import com.lonx.lyrico.worker.processor.BatchTaskProcessorFactory
 import com.lonx.lyrico.worker.processor.EditTagsProcessor
 import com.lonx.lyrico.worker.processor.LyricsFormatProcessor
@@ -234,7 +234,12 @@ val appModule = module {
     single { get<LyricoDatabase>().appLogDao() }
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
-    single<PlaybackRepository> { PlaybackRepositoryImpl() }
+    single<PlaybackRepository> {
+        PlaybackRepositoryImpl(
+            context = androidContext(),
+            appScope = get()
+        )
+    }
     single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get(), get()) }
     single<LibraryScanManager> { LibraryScanManagerImpl(get(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }

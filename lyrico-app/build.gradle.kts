@@ -96,7 +96,14 @@ dependencies {
     implementation(libs.reorderable)
     implementation(libs.compose.markdown)
     implementation(libs.lazycolumnscrollbar)
+
+    // media3 player
+    implementation(libs.kotlinx.coroutines.guava)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.common)
+    implementation(libs.androidx.media3.session)
     // AndroidX
+    implementation(libs.androidx.palette)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)

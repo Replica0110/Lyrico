@@ -15,7 +15,7 @@ import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.data.model.LocalSearchType
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
-import com.lonx.lyrico.data.repository.PlaybackRepository
+import com.lonx.lyrico.playback.PlaybackRepository
 import com.lonx.lyrico.utils.LibraryScanManager
 import com.lonx.lyrico.utils.UpdateManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -213,9 +213,19 @@ class SongListViewModel(
         }
     }
 
-    fun play(context: Context, song: SongEntity) {
-        val uri = song.getUri
-        playbackRepository.play(context, uri)
+    fun play(song: SongEntity) {
+        viewModelScope.launch {
+            playbackRepository.play(song)
+        }
+    }
+
+    fun playQueue(songs: List<SongEntity>, song: SongEntity) {
+        viewModelScope.launch {
+            val index = songs.indexOfFirst { it.uri == song.uri }
+                .takeIf { it >= 0 }
+                ?: 0
+            playbackRepository.playQueue(songs, startIndex = index)
+        }
     }
     fun delete(song: SongEntity) {
         viewModelScope.launch {

@@ -27,10 +27,10 @@ import com.lonx.lyrico.data.model.LyricsSearchResult
 import com.lonx.lyrico.data.model.ScoredSearchResult
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.data.repository.SettingsDefaults
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.playback.PlaybackRepository
 import com.lonx.lyrico.utils.CoverSourceType
 import com.lonx.lyrico.utils.ExtraMetadataResolver
 import com.lonx.lyrico.utils.LyricDecoder
@@ -957,9 +957,15 @@ class EditMetadataViewModel(
         _uiState.update { it.copy(importLyricsResult = null) }
     }
 
-    fun play(context: Context) {
-        val uriStr = currentSong?.uri ?: currentSongUri ?: return
-        playbackRepository.play(context, uriStr.toUri())
+    fun play() {
+        viewModelScope.launch {
+            currentSong?.let {
+                playbackRepository.play(it)
+                return@launch
+            }
+            val uriStr = currentSongUri ?: return@launch
+            playbackRepository.playUri(uriStr.toUri())
+        }
     }
 
     /**

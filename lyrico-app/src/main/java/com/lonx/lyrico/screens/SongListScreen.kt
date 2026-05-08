@@ -692,7 +692,7 @@ fun SongListScreen(
                 song?.let {
                     SongMenuBottomSheetContent(
                         song = it,
-                        onPlay = { songListViewModel.play(context, it) },
+                        onPlay = { songListViewModel.playQueue(songs, it) },
                         showInfo = { songListViewModel.showDetail(it) },
                         onDelete = { songListViewModel.showDeleteDialog() },
                         onShare = {

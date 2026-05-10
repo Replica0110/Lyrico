@@ -82,7 +82,11 @@ fun SearchCoverScreen(
     LaunchedEffect(keyword) {
         keyword?.let { viewModel.performCoverSearch(it) }
     }
-
+    val localSegments = remember(uiState.searchKeyword) {
+        MusicMatchUtils.splitToSegments(uiState.searchKeyword)
+            .ifEmpty { listOf(uiState.searchKeyword.trim()) }
+            .filter { it.isNotBlank() }
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -159,21 +163,27 @@ fun SearchCoverScreen(
                 modifier = Modifier.fillMaxSize()
             ) { page ->
                 val results = if (page == 0) {
-                    // 全部tab显示所有结果，按相似度排序
-                    val keyword = uiState.searchKeyword
-                    uiState.coverResults.sortedWith(
-                        compareByDescending<CoverSearchResult> { cover ->
-                            // 计算标题和艺人的综合相似度
-                            val titleScore = MusicMatchUtils.stringSimilarity(keyword, cover.title)
-                            val artistScore = MusicMatchUtils.stringSimilarity(keyword, cover.artist)
-                            titleScore * 0.6 + artistScore * 0.4
-                        }.thenByDescending { cover ->
-                            // 相似度相同时，优先展示图片更大的
-                            imageSizeCache.value[cover.url]?.let { it.first * it.second } ?: 0
+
+                    uiState.coverResults
+                        .mapIndexed { index, cover ->
+                            val score = MusicMatchUtils.calculateCoverMatchScore(
+                                localSegments = localSegments,
+                                coverTitle = cover.title,
+                                coverArtist = cover.artist,
+                                rankIndex = index
+                            )
+
+                            cover to score
                         }
-                    )
+                        .sortedWith(
+                            compareByDescending<Pair<CoverSearchResult, Double>> { (_, score) ->
+                                score
+                            }.thenByDescending { (cover, _) ->
+                                imageSizeCache.value[cover.url]?.let { it.first * it.second } ?: 0
+                            }
+                        )
+                        .map { it.first }
                 } else {
-                    // 其他tab显示对应来源的结果
                     val source = uiState.availableSources.getOrNull(page - 1)
                     uiState.coverResults.filter { it.source == source }
                 }

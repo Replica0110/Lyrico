@@ -13,6 +13,7 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.ExtraMetadataResolver
 import com.lonx.lyrico.utils.LyricEncoder
+import com.lonx.lyrico.utils.MatchScoreDetail
 import com.lonx.lyrico.utils.MusicMatchUtils
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.Source
@@ -67,33 +68,10 @@ class MatchMetadataProcessor(
         val enabledSourceOrder = config.enabledSourceOrderIds.mapNotNull { id ->
             Source.entries.find { it.id == id }
         }
-
-        val (parsedTitle, parsedArtist) = MusicMatchUtils.parseFileName(song.fileName)
-
-        val queryTitle: String?
-        val queryArtist: String?
-        val queries: List<String>
-
-        if (matchConfig.preferFileName) {
-            queryTitle = parsedTitle?.takeIf { it.isNotBlank() }
-                ?: song.title?.takeIf { it.isNotBlank() && !it.contains("未知", true) }
-            queryArtist = parsedArtist?.takeIf { it.isNotBlank() }
-                ?: song.artist?.takeIf { it.isNotBlank() && !it.contains("未知", true) }
-            val fileNameQuery = if (!queryTitle.isNullOrBlank() && !queryArtist.isNullOrBlank()) {
-                "$queryTitle $queryArtist"
-            } else {
-                queryTitle ?: queryArtist
-            }
-            queries = if (!fileNameQuery.isNullOrBlank()) {
-                listOf(fileNameQuery)
-            } else {
-                MusicMatchUtils.buildSearchQueries(song)
-            }
-        } else {
-            queryTitle = song.title?.takeIf { it.isNotBlank() && !it.contains("未知", true) } ?: parsedTitle
-            queryArtist = song.artist?.takeIf { it.isNotBlank() && !it.contains("未知", true) } ?: parsedArtist
-            queries = MusicMatchUtils.buildSearchQueries(song)
-        }
+        val queries = MusicMatchUtils.buildSearchQueries(
+            song = song,
+            preferFileName = matchConfig.preferFileName
+        )
 
         val orderedSources = sources
             .filter { source ->
@@ -104,6 +82,7 @@ class MatchMetadataProcessor(
             }
 
         var bestMatch: ScoredSearchResult? = null
+        var bestMatchDetail: MatchScoreDetail? = null
         val allScoredResults = mutableListOf<ScoredSearchResult>()
 
         for (query in queries) {
@@ -111,28 +90,70 @@ class MatchMetadataProcessor(
                 coroutineScope {
                     async(Dispatchers.IO) {
                         try {
-                            val results = source.search(query, separator = separator, pageSize = 2)
-                            results.map { res ->
-                                val score = MusicMatchUtils.calculateMatchScore(res, song, queryTitle, queryArtist)
-                                ScoredSearchResult(res, score, source)
+                            val results = source.search(
+                                keyword = query,
+                                separator = separator,
+                                pageSize = 2
+                            )
+
+                            results.mapIndexed { index, res ->
+                                val detail = MusicMatchUtils.calculateMatchScoreDetail(
+                                    result = res,
+                                    song = song,
+                                    preferFileName = matchConfig.preferFileName,
+                                    rankIndex = index
+                                )
+
+                                ScoredSearchResult(
+                                    result = res,
+                                    score = detail.finalScore,
+                                    source = source
+                                ) to detail
                             }
-                        } catch (e: Exception) { emptyList() }
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
                     }
                 }
             }
+
             val allResults = searchTasks.awaitAll().flatten()
-            allScoredResults += allResults
-            val currentBest = allResults.maxByOrNull { it.score }
+
+            allScoredResults += allResults.map { (scoredResult, _) ->
+                scoredResult
+            }
+
+            val currentBest = allResults.maxByOrNull { (_, detail) ->
+                detail.finalScore
+            }
+
             if (currentBest != null) {
-                if (bestMatch == null || currentBest.score > bestMatch.score) {
-                    bestMatch = currentBest
+                val currentScoredResult = currentBest.first
+                val currentDetail = currentBest.second
+
+                if (
+                    bestMatch == null ||
+                    currentDetail.finalScore > (bestMatchDetail?.finalScore ?: 0.0)
+                ) {
+                    bestMatch = currentScoredResult
+                    bestMatchDetail = currentDetail
                 }
-                if (currentBest.score > 0.9) break
+
+                // 文本分和最终分都非常高时才提前停止搜索
+                if (currentDetail.finalScore >= 0.92 && currentDetail.textScore >= 0.86) {
+                    break
+                }
             }
         }
 
         val finalMatch = bestMatch ?: throw BatchTaskSkippedException("No match found")
-        if (finalMatch.score < 0.35) throw BatchTaskSkippedException("Match score too low")
+        val finalDetail = bestMatchDetail ?: throw BatchTaskSkippedException("No match detail found")
+
+        if (finalDetail.finalScore < 0.76 || finalDetail.textScore < 0.72) {
+            throw BatchTaskSkippedException(
+                "Match score too low: final=${finalDetail.finalScore}, text=${finalDetail.textScore}"
+            )
+        }
 
         val newLyrics = try {
             coroutineScope {
@@ -143,8 +164,9 @@ class MatchMetadataProcessor(
                 }
                 deferred.await()
             }
-        } catch (e: Exception) { null }
-
+        } catch (e: Exception) {
+            null
+        }
         val newTitle = resolveValue(matchConfig, BatchMatchField.TITLE, song.title, finalMatch.result.title)
         val newArtist = resolveValue(matchConfig, BatchMatchField.ARTIST, song.artist, finalMatch.result.artist)
         val newAlbum = resolveValue(matchConfig, BatchMatchField.ALBUM, song.album, finalMatch.result.album)

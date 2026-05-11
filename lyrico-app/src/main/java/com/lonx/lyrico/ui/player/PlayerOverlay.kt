@@ -7,7 +7,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,11 +20,14 @@ import androidx.palette.graphics.Palette
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -37,6 +45,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -58,6 +67,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -245,6 +255,22 @@ fun PlayerOverlay(
             ) {
                 Box(
                     modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            // 让背景的顶部始终跟随播放页的顶部，当隐藏时露出下方的App主界面
+                            val topEdge = sheetOffset.value.coerceAtLeast(0f)
+                            clipRect(top = topEdge) {
+                                this@drawWithContent.drawContent()
+                            }
+                        }
+                ) {
+                    FluidInkBackground(
+                        accentColor = backgroundAccent,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                Box(
+                    modifier = Modifier
                         .fillMaxWidth()
                         .height(screenHeight * 2)
                         .offset { IntOffset(0, sheetOffset.value.roundToInt()) }
@@ -253,10 +279,10 @@ fun PlayerOverlay(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(screenHeight)
-                            .playerBackground(backgroundAccent)
                     ) {
                         MiniPlayerCard(
                             state = playbackState,
+                            expandedProgress = expandedProgress,
                             onExpand = { showSheet(PlayerSheet.NowPlaying) },
                             onTogglePlay = playbackRepository::togglePlayPause,
                             onQueue = { showSheet(PlayerSheet.Queue) },
@@ -268,6 +294,7 @@ fun PlayerOverlay(
                                 .height(miniHeight)
                                 .align(Alignment.TopCenter)
                                 .zIndex(if (expandedProgress < 0.98f) 2f else -1f)
+                                // 保留内容的渐渐透明，但背景我们在其内部独立控制
                                 .alpha((1f - expandedProgress).coerceIn(0f, 1f))
                         )
 
@@ -314,7 +341,6 @@ fun PlayerOverlay(
                             .fillMaxWidth()
                             .height(screenHeight)
                             .offset { IntOffset(0, heightPx.roundToInt()) }
-                            .playerBackground(backgroundAccent)
                     )
                 }
             }
@@ -325,6 +351,7 @@ fun PlayerOverlay(
 @Composable
 private fun MiniPlayerCard(
     state: PlaybackState,
+    expandedProgress: Float,
     onExpand: () -> Unit,
     onTogglePlay: () -> Unit,
     onQueue: () -> Unit,
@@ -337,10 +364,11 @@ private fun MiniPlayerCard(
     val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     var dragTotal by remember { mutableFloatStateOf(0f) }
 
+    val cardBgAlpha = (1f - expandedProgress * 10f).coerceIn(0f, 1f)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MiuixTheme.colorScheme.surface)
+            .background(MiuixTheme.colorScheme.surface.copy(alpha = cardBgAlpha))
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragStart = {
@@ -435,7 +463,7 @@ private fun NowPlayingSheet(
             }
             .padding(horizontal = 28.dp)
     ) {
-        Spacer(Modifier.height(56.dp))
+        Spacer(Modifier.height(72.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -811,11 +839,14 @@ private fun WordByWordLyrics(
         if (lines.isEmpty() || !autoFollowLyrics) return@LaunchedEffect
 
         autoScrolling = true
-        listState.animateScrollToItem(
-            index = activeIndex,
-            scrollOffset = -104
-        )
-        autoScrolling = false
+        try {
+            listState.animateScrollToCenteredItem(
+                index = activeIndex.coerceIn(0, lines.lastIndex),
+                durationMillis = 560
+            )
+        } finally {
+            autoScrolling = false
+        }
     }
 
     LaunchedEffect(listState) {
@@ -828,7 +859,15 @@ private fun WordByWordLyrics(
                     delay(3_000L)
                     autoFollowLyrics = true
                     if (latestLines.isNotEmpty()) {
-                        listState.animateScrollToItem(latestActiveIndex, scrollOffset = -112)
+                        autoScrolling = true
+                        try {
+                            listState.animateScrollToCenteredItem(
+                                index = latestActiveIndex.coerceIn(0, latestLines.lastIndex),
+                                durationMillis = 560
+                            )
+                        } finally {
+                            autoScrolling = false
+                        }
                     }
                 }
             }
@@ -845,24 +884,28 @@ private fun WordByWordLyrics(
         return
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.lyricEdgeFade(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 150.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    BoxWithConstraints(
+        modifier = modifier
     ) {
+        val topPadding = (maxHeight * 0.42f).coerceAtLeast(50.dp)
+        val bottomPadding = (maxHeight * 0.58f).coerceAtLeast(50.dp)
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .lyricEdgeFade(),
+            contentPadding = PaddingValues(
+                top = topPadding,
+                bottom = bottomPadding
+            ),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
         itemsIndexed(
             items = lines,
             key = { index, line -> "${line.start}-${line.end}-$index" }
         ) { index, line ->
-            val distance = abs(index - activeIndex)
             val alpha by animateFloatAsState(
-                targetValue = when (distance) {
-                    0 -> 1f
-                    1 -> 0.58f
-                    2 -> 0.34f
-                    else -> 0.18f
-                },
+                targetValue = if (index == activeIndex) 1f else 0.45f,
                 animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
                 label = "lyricLineAlpha"
             )
@@ -921,6 +964,7 @@ private fun WordByWordLyrics(
                     }
             }
         }
+    }
     }
 }
 
@@ -1033,6 +1077,35 @@ private fun CanvasKaraokeLineText(
     }
 }
 
+
+private suspend fun LazyListState.animateScrollToCenteredItem(
+    index: Int,
+    durationMillis: Int = 560
+) {
+    var item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+
+    if (item == null) {
+        scrollToItem(index)
+        withFrameNanos { }
+        item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+    }
+
+    item ?: return
+
+    val viewportCenter = layoutInfo.viewportSize.height * 0.42f
+    val itemCenter = item.offset + item.size / 2f
+    val delta = itemCenter - viewportCenter
+
+    if (abs(delta) > 1f) {
+        animateScrollBy(
+            value = delta,
+            animationSpec = tween(
+                durationMillis = durationMillis,
+                easing = FastOutSlowInEasing
+            )
+        )
+    }
+}
 @Composable
 private fun PlaybackProgress(
     positionMs: Long,
@@ -1142,7 +1215,66 @@ private fun rememberCoverAccentColor(song: SongEntity?): Color {
 
     return accent
 }
+@Composable
+private fun FluidInkBackground(
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "fluid_bg")
+    val surface = MiuixTheme.colorScheme.surface
 
+    // 设定3个墨水团的独立运动轨迹
+    val p1x by infiniteTransition.animateFloat(0.1f, 0.9f, infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse), label = "")
+    val p1y by infiniteTransition.animateFloat(0.1f, 0.6f, infiniteRepeatable(tween(15000, easing = LinearEasing), RepeatMode.Reverse), label = "")
+
+    val p2x by infiniteTransition.animateFloat(0.8f, 0.2f, infiniteRepeatable(tween(14000, easing = LinearEasing), RepeatMode.Reverse), label = "")
+    val p2y by infiniteTransition.animateFloat(0.4f, 0.9f, infiniteRepeatable(tween(11000, easing = LinearEasing), RepeatMode.Reverse), label = "")
+
+    val p3x by infiniteTransition.animateFloat(0.5f, 0.9f, infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Reverse), label = "")
+    val p3y by infiniteTransition.animateFloat(0.8f, 0.1f, infiniteRepeatable(tween(13000, easing = LinearEasing), RepeatMode.Reverse), label = "")
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val radius = maxOf(w, h) * 0.75f
+
+        // 绘制底层
+        drawRect(surface)
+
+        // 绘制墨水团 1
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(accentColor.copy(alpha = 0.45f), accentColor.copy(alpha = 0f)),
+                center = androidx.compose.ui.geometry.Offset(p1x * w, p1y * h),
+                radius = radius
+            ),
+            radius = radius,
+            center = androidx.compose.ui.geometry.Offset(p1x * w, p1y * h)
+        )
+
+        // 绘制墨水团 2
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(accentColor.copy(alpha = 0.35f), accentColor.copy(alpha = 0f)),
+                center = androidx.compose.ui.geometry.Offset(p2x * w, p2y * h),
+                radius = radius * 0.9f
+            ),
+            radius = radius * 0.9f,
+            center = androidx.compose.ui.geometry.Offset(p2x * w, p2y * h)
+        )
+
+        // 绘制墨水团 3
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(accentColor.copy(alpha = 0.25f), accentColor.copy(alpha = 0f)),
+                center = androidx.compose.ui.geometry.Offset(p3x * w, p3y * h),
+                radius = radius * 1.1f
+            ),
+            radius = radius * 1.1f,
+            center = androidx.compose.ui.geometry.Offset(p3x * w, p3y * h)
+        )
+    }
+}
 @Composable
 private fun Modifier.playerBackground(accent: Color): Modifier {
     val surface = MiuixTheme.colorScheme.surface

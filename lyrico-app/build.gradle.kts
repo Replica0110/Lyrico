@@ -98,6 +98,7 @@ dependencies {
     implementation(libs.lazycolumnscrollbar)
 
     // media3 player
+    implementation(libs.lyricon.provider)
     implementation(libs.kotlinx.coroutines.guava)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.common)

@@ -19,6 +19,7 @@ activityCompose = "1.13.0"
 composeBom = "2026.05.00"
 kotlinxCoroutinesAndroid = "1.10.2"
 kotlinxSerializationJson = "1.11.0"
+lyricon = "0.1.70"
 okhttp = "5.3.2"
 opencc4j = "1.14.0"
 reorderable = "3.1.0"
@@ -60,6 +61,7 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 compose-destinations-ksp = { module = "io.github.raamcosta.compose-destinations:ksp", version.ref = "core" }
 kotlinx-coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "kotlinxCoroutinesGuava" }
 lazycolumnscrollbar = { module = "com.github.nanihadesuka:LazyColumnScrollbar", version.ref = "lazycolumnscrollbar" }
+lyricon-provider = { module = "io.github.proify.lyricon:provider", version.ref = "lyricon" }
 miuix-preference-android = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }
 miuix-ui-android = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
 miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }

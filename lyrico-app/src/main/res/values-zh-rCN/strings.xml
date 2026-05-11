@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="lyricon_module_description">向词幕推送 Lyrico 正在播放的歌词。</string>
     <string name="search_settings">搜索设置</string>
     <string name="search_source_priority">搜索源优先级</string>
     <string name="search_source_priority_tip">长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源</string>

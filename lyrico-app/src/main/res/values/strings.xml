@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name" translatable="false">Lyrico</string>
+    <string name="lyricon_module_author" translatable="false">Replica0110</string>
+    <string name="lyricon_module_description">Provide Lyrico playback lyrics to Lyricon.</string>
     <string name="search_settings">Search Settings</string>
     <string name="search_source_priority">Search Source Priority</string>
     <string name="search_source_priority_tip">Long press and drag to reorder search source priority. This affects the source order used in batch matching and the default source for single searches.</string>

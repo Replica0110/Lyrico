@@ -72,6 +72,18 @@
         <meta-data
             android:name="ScopedStorage"
             android:value="true"/>
+        <meta-data
+            android:name="lyricon_module"
+            android:value="true" />
+        <meta-data
+            android:name="lyricon_module_author"
+            android:value="@string/lyricon_module_author" />
+        <meta-data
+            android:name="lyricon_module_description"
+            android:value="@string/lyricon_module_description" />
+        <meta-data
+            android:name="lyricon_module_tags"
+            android:resource="@array/lyricon_module_tags" />
         <service
             android:name=".service.PlaybackService"
             android:exported="true"

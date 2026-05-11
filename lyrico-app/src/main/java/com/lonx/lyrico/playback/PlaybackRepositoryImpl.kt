@@ -45,6 +45,7 @@ class PlaybackRepositoryImpl(
 
     private var positionTickerJob: Job? = null
     private var artworkUpdateJob: Job? = null
+    private val lyriconSyncManager = LyriconSyncManager(appContext)
 
     private val playerListener = object : Player.Listener {
 
@@ -171,6 +172,7 @@ class PlaybackRepositoryImpl(
     override fun seekTo(positionMs: Long) {
         val c = ensureControllerOrNull() ?: return
         c.seekTo(positionMs.coerceAtLeast(0L))
+        lyriconSyncManager.seekTo(positionMs)
         publishPlayerSnapshot(c)
     }
 
@@ -219,6 +221,7 @@ class PlaybackRepositoryImpl(
         positionTickerJob = null
 
         _state.value = PlaybackState()
+        lyriconSyncManager.clear()
     }
 
     override fun setRepeatMode(mode: PlaybackRepeatMode) {
@@ -251,6 +254,7 @@ class PlaybackRepositoryImpl(
 
         controller = null
         controllerFuture = null
+        lyriconSyncManager.release()
     }
 
     private suspend fun connectController() {
@@ -349,6 +353,7 @@ class PlaybackRepositoryImpl(
                 error = null
             )
         }
+        lyriconSyncManager.syncState(_state.value)
     }
 
     private fun updatePositionTicker(isPlaying: Boolean) {
@@ -369,6 +374,7 @@ class PlaybackRepositoryImpl(
                             durationMs = c.duration.normalizedDuration(previous = it.durationMs)
                         )
                     }
+                    lyriconSyncManager.syncPosition(_state.value.positionMs)
 
                     delay(POSITION_UPDATE_INTERVAL_MS)
                 }
@@ -385,6 +391,7 @@ class PlaybackRepositoryImpl(
                         durationMs = c.duration.normalizedDuration(previous = it.durationMs)
                     )
                 }
+                lyriconSyncManager.syncPosition(_state.value.positionMs)
             }
         }
     }

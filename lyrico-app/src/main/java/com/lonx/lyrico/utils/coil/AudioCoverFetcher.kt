@@ -11,6 +11,7 @@ import coil3.fetch.FetchResult
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
 import com.lonx.audiotag.rw.AudioTagReader
+import com.lonx.lyrico.ui.components.CoverRequest
 import okio.Buffer
 
 class AudioCoverFetcher(

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -31,28 +30,21 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchField
 import com.lonx.lyrico.data.model.BatchMatchMode
+import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Checkbox
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.CheckboxPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import kotlin.math.roundToInt
 
-@OptIn( ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BatchMatchConfigBottomSheet(
     show: Boolean,
@@ -74,153 +66,135 @@ fun BatchMatchConfigBottomSheet(
         config = config.copy(fields = currentMap)
     }
 
-    WindowBottomSheet(
+    YesNoBottomSheet(
         show = show,
-        enableNestedScroll =  false,
+        enableNestedScroll = false,
         onDismissRequest = { onDismissRequest(config) },
-        title = stringResource(R.string.batch_match_config_title)
-    ) {
-
-        Column(
-            modifier = Modifier
-                .padding(bottom = 32.dp)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            Card(
-                modifier = Modifier.padding(bottom = 12.dp),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer,
-                )
+        title = stringResource(R.string.batch_match_config_title),
+        onConfirm = {
+            onConfirm(config)
+            onDismissRequest(config)
+        },
+        content = {
+            Column(
+                modifier = Modifier
+                    .padding(bottom = 32.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
             ) {
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 250.dp)
+                Card(
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.secondaryContainer,
+                    )
                 ) {
-                    items(allFields, key = { it.name }) { field ->
-                        val isSelected = config.fields.containsKey(field)
-                        val mode = config.fields[field] ?: BatchMatchMode.SUPPLEMENT
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 250.dp)
+                    ) {
+                        items(allFields, key = { it.name }) { field ->
+                            val isSelected = config.fields.containsKey(field)
+                            val mode = config.fields[field] ?: BatchMatchMode.SUPPLEMENT
 
-                        BatchMatchFieldItem(
-                            field = field,
-                            isSelected = isSelected,
-                            mode = mode,
-                            onCheckedChange = { checked ->
-                                updateField(field, checked, mode)
-                            },
-                            onModeToggle = {
-                                updateField(
-                                    field,
-                                    isSelected,
-                                    if (mode == BatchMatchMode.OVERWRITE)
-                                        BatchMatchMode.SUPPLEMENT
-                                    else
-                                        BatchMatchMode.OVERWRITE
-                                )
-                            }
-                        )
-                    }
-                }
-            }
-
-
-            Card(
-                modifier = Modifier.padding(bottom = 12.dp),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer,
-                )
-            ) {
-                val tempConcurrency = remember(config.concurrency) {
-                    mutableIntStateOf(config.concurrency)
-                }
-                CheckboxPreference(
-                    title = stringResource(R.string.batch_match_prefer_filename),
-                    checked = config.preferFileName,
-                    onCheckedChange = { checked ->
-                        val updatedFields = config.fields.toMutableMap()
-
-                        if (checked) {
-                            if (updatedFields.containsKey(BatchMatchField.TITLE)) {
-                                updatedFields[BatchMatchField.TITLE] = BatchMatchMode.OVERWRITE
-                            }
-                            if (updatedFields.containsKey(BatchMatchField.ARTIST)) {
-                                updatedFields[BatchMatchField.ARTIST] = BatchMatchMode.OVERWRITE
-                            }
+                            BatchMatchFieldItem(
+                                field = field,
+                                isSelected = isSelected,
+                                mode = mode,
+                                onCheckedChange = { checked ->
+                                    updateField(field, checked, mode)
+                                },
+                                onModeToggle = {
+                                    updateField(
+                                        field,
+                                        isSelected,
+                                        if (mode == BatchMatchMode.OVERWRITE)
+                                            BatchMatchMode.SUPPLEMENT
+                                        else
+                                            BatchMatchMode.OVERWRITE
+                                    )
+                                }
+                            )
                         }
-
-                        config = config.copy(
-                            preferFileName = checked,
-                            fields = updatedFields
-                        )
-                    },
-                    bottomAction = {
-                        Text(
-                            text = stringResource(R.string.batch_match_prefer_filename_summary),
-                            fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                        )
-                    },
-                    insideMargin = PaddingValues(12.dp)
-                )
-                ArrowPreference(
-                    title = stringResource(R.string.batch_match_config_concurrency),
-                    endActions = {
-                        Text(
-                            text = "${tempConcurrency.intValue}",
-                            fontSize = MiuixTheme.textStyles.body2.fontSize,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                        )
-                    },
-                    insideMargin = PaddingValues(12.dp),
-                    onClick = {
-
-                    },
-                    bottomAction = {
-                        Slider(
-                            showKeyPoints = true,
-                            valueRange = 1f .. 5f,
-                            steps = 3,
-                            value = tempConcurrency.intValue.toFloat(),
-                            onValueChange = {
-                                tempConcurrency.intValue = it.roundToInt()
-                            },
-                            onValueChangeFinished = {
-                                config = config.copy(concurrency = tempConcurrency.intValue)
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(BasicComponentDefaults.InsideMargin.calculateBottomPadding()))
-                        Text(
-                            text = stringResource(R.string.search_limit_tip),
-                            fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                        )
                     }
-                )
-            }
+                }
 
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = {
-                        onDismissRequest(config)
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(20.dp))
-                TextButton(
-                    text = stringResource(R.string.confirm),
-                    onClick = {
-                        onDismissRequest(config)
-                        onConfirm(config)
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
-        }
 
-    }
+                Card(
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.secondaryContainer,
+                    )
+                ) {
+                    val tempConcurrency = remember(config.concurrency) {
+                        mutableIntStateOf(config.concurrency)
+                    }
+                    CheckboxPreference(
+                        title = stringResource(R.string.batch_match_prefer_filename),
+                        checked = config.preferFileName,
+                        onCheckedChange = { checked ->
+                            val updatedFields = config.fields.toMutableMap()
+
+                            if (checked) {
+                                if (updatedFields.containsKey(BatchMatchField.TITLE)) {
+                                    updatedFields[BatchMatchField.TITLE] = BatchMatchMode.OVERWRITE
+                                }
+                                if (updatedFields.containsKey(BatchMatchField.ARTIST)) {
+                                    updatedFields[BatchMatchField.ARTIST] = BatchMatchMode.OVERWRITE
+                                }
+                            }
+
+                            config = config.copy(
+                                preferFileName = checked,
+                                fields = updatedFields
+                            )
+                        },
+                        bottomAction = {
+                            Text(
+                                text = stringResource(R.string.batch_match_prefer_filename_summary),
+                                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                            )
+                        },
+                        insideMargin = PaddingValues(12.dp)
+                    )
+                    ArrowPreference(
+                        title = stringResource(R.string.batch_match_config_concurrency),
+                        endActions = {
+                            Text(
+                                text = "${tempConcurrency.intValue}",
+                                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            )
+                        },
+                        insideMargin = PaddingValues(12.dp),
+                        onClick = {
+
+                        },
+                        bottomAction = {
+                            Slider(
+                                showKeyPoints = true,
+                                valueRange = 1f..5f,
+                                steps = 3,
+                                value = tempConcurrency.intValue.toFloat(),
+                                onValueChange = {
+                                    tempConcurrency.intValue = it.roundToInt()
+                                },
+                                onValueChangeFinished = {
+                                    config = config.copy(concurrency = tempConcurrency.intValue)
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(BasicComponentDefaults.InsideMargin.calculateBottomPadding()))
+                            Text(
+                                text = stringResource(R.string.search_limit_tip),
+                                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                            )
+                        }
+                    )
+                }
+
+            }
+        },
+    )
 }
 
 @Composable
@@ -240,7 +214,7 @@ private fun BatchMatchFieldItem(
                 onClick = { onCheckedChange(!isSelected) }
             )
         },
-        onClick =  {
+        onClick = {
             onCheckedChange(!isSelected)
         },
         endActions = {
@@ -276,7 +250,6 @@ private fun BatchMatchFieldItem(
         }
     }
 }
-
 
 
 @Preview(showBackground = true)

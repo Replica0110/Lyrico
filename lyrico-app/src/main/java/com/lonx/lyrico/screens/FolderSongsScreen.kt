@@ -13,10 +13,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.SongListItem
+import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -87,7 +88,11 @@ fun FolderSongsScreen(
                 ) { song ->
                     SongListItem(
                         song = song,
-                        navigator = navigator
+                        onClick = {
+                            navigator.navigate(
+                                EditMetadataDestination(song.uri)
+                            )
+                        }
                     )
                 }
             }

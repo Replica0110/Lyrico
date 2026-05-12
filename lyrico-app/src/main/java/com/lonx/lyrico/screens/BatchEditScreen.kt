@@ -56,7 +56,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
-import com.lonx.lyrico.utils.coil.CoverRequest
+import com.lonx.lyrico.ui.components.CoverRequest
 import com.lonx.lyrico.viewmodel.BatchEditField
 import com.lonx.lyrico.viewmodel.BatchEditSelectableCover
 import com.lonx.lyrico.viewmodel.BatchEditSelectableValue

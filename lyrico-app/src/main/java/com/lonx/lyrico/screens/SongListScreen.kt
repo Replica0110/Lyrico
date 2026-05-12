@@ -1,14 +1,10 @@
 package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
-import android.text.format.Formatter
-import android.view.HapticFeedbackConstants
-import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -28,8 +24,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -59,7 +53,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TextButton
@@ -69,7 +62,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -82,39 +74,33 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.LocalSearchType
 import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.model.entity.getUri
-import com.lonx.lyrico.data.repository.LibraryScanProgress
-import com.lonx.lyrico.data.repository.LibraryScanStage
 import com.lonx.lyrico.ui.components.DropdownItem
 import com.lonx.lyrico.ui.components.FabMenuItem
-import com.lonx.lyrico.ui.components.SongListItem
+import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.SearchBar
+import com.lonx.lyrico.ui.components.bar.findScrollIndex
+import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.search.LocalSearchTypeTabs
+import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
+import com.lonx.lyrico.ui.components.song.SongDetailBottomSheet
+import com.lonx.lyrico.ui.components.song.SongListEmptyState
+import com.lonx.lyrico.ui.components.song.SongListItem
+import com.lonx.lyrico.ui.components.song.SongListItemActions
+import com.lonx.lyrico.ui.components.song.SongMenuBottomSheetContent
 import com.lonx.lyrico.ui.dialog.BatchLyricsFormatConfigBottomSheet
 import com.lonx.lyrico.ui.dialog.BatchMatchConfigBottomSheet
 import com.lonx.lyrico.ui.dialog.ReplayGainConfigBottomSheet
-import com.lonx.lyrico.utils.coil.CoverRequest
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
 import com.lonx.lyrico.viewmodel.BatchMatchViewModel
@@ -127,6 +113,7 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.BatchEditDestination
 import com.ramcosta.composedestinations.generated.destinations.BatchRenameDestination
+import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.delay
@@ -137,10 +124,6 @@ import my.nanihadesuka.compose.ScrollbarSelectionMode
 import my.nanihadesuka.compose.ScrollbarSettings
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.viewmodel.koinActivityViewModel
-import top.yukonga.miuix.kmp.basic.BasicComponentColors
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
@@ -153,32 +136,24 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Surface
-import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBarDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Add
-import top.yukonga.miuix.kmp.icon.extended.AddFolder
-import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Edit
-import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.icon.extended.Rename
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Share
 import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.overlay.OverlayListPopup
-import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
-import top.yukonga.miuix.kmp.window.WindowDialog
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 
 private val SECTIONS_ASC = listOf(
@@ -219,6 +194,13 @@ fun SongListScreen(
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val sheetUiState by songListViewModel.sheetState.collectAsStateWithLifecycle()
+
+    var showMenuSheet by remember { mutableStateOf(false) }
+    var showDetailSheet by remember { mutableStateOf(false) }
+    val selectedSong = sheetUiState.menuSong
+    LaunchedEffect(selectedSong) {
+        showMenuSheet = selectedSong != null
+    }
 
     val showFab by remember {
         derivedStateOf {
@@ -552,20 +534,10 @@ fun SongListScreen(
                         targetOffsetY = { -it }
                     ) + fadeOut()
                 ) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                            .padding(bottom = 12.dp)
-                    ) {
-                        TabRowWithContour(
-                            tabs = LocalSearchType.entries.map { stringResource(it.labelRes) },
-                            selectedTabIndex = LocalSearchType.entries.indexOf(searchType),
-                            onTabSelected = {
-                                songListViewModel.onSearchTypeChanged(LocalSearchType.entries[it])
-                            }
-                        )
-                    }
+                    LocalSearchTypeTabs(
+                        selectedType = searchType,
+                        onTypeSelected = { songListViewModel.onSearchTypeChanged(it) }
+                    )
                 }
                 LazyColumnScrollbar(
                     state = listState,
@@ -591,38 +563,34 @@ fun SongListScreen(
                         if (songs.isNotEmpty()) {
                             items(
                                 items = songs,
-                                key = { song -> song.uri.takeIf { it.isNotBlank() && it != "0" } ?: "song-${song.id}" }
+                                key = { song ->
+                                    song.uri.takeIf { it.isNotBlank() && it != "0" }
+                                        ?: "song-${song.id}"
+                                }
                             ) { song ->
                                 SongListItem(
                                     song = song,
-                                    navigator = navigator,
                                     modifier = Modifier.animateItem(),
                                     isSelectionMode = isSelectionMode,
                                     isSelected = selectedSongUris.contains(song.uri),
-                                    onToggleSelection = { songListViewModel.toggleSelection(song.uri) },
+                                    onClick = {
+                                        navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                                    },
+                                    onToggleSelection = {
+                                        songListViewModel.toggleSelection(song.uri)
+                                    },
                                     trailingContent = {
                                         Box(modifier = Modifier.padding(end = 8.dp)) {
-                                            if (!isSelectionMode) {
-                                                IconButton(onClick = {
-                                                    songListViewModel.showMenu(
-                                                        song
-                                                    )
-                                                }) {
-                                                    Icon(
-                                                        imageVector = MiuixIcons.More,
-                                                        contentDescription = "More"
-                                                    )
+                                            SongListItemActions(
+                                                isSelectionMode = isSelectionMode,
+                                                isSelected = selectedSongUris.contains(song.uri),
+                                                onToggleSelection = {
+                                                    songListViewModel.toggleSelection(song.uri)
+                                                },
+                                                onShowMenu = {
+                                                    songListViewModel.showMenu(song)
                                                 }
-                                            } else {
-                                                Checkbox(
-                                                    state = if (selectedSongUris.contains(song.uri)) ToggleableState.On else ToggleableState.Off,
-                                                    onClick = {
-                                                        songListViewModel.toggleSelection(
-                                                            song.uri
-                                                        )
-                                                    }
-                                                )
-                                            }
+                                            )
                                         }
                                     }
                                 )
@@ -678,22 +646,17 @@ fun SongListScreen(
                         .align(Alignment.CenterEnd)
                 )
             }
-            val song = sheetUiState.menuSong
-            var showMenuSheet by remember { mutableStateOf(false) }
-            LaunchedEffect(song) {
-                showMenuSheet = song != null
-            }
 
             WindowBottomSheet(
                 show = showMenuSheet,
                 onDismissRequest = { showMenuSheet = false },
                 onDismissFinished = { songListViewModel.dismissAll() }
             ) {
-                song?.let {
+                selectedSong?.let {
                     SongMenuBottomSheetContent(
                         song = it,
                         onPlay = { songListViewModel.play(context, it) },
-                        showInfo = { songListViewModel.showDetail(it) },
+                        showInfo = { showDetailSheet = true },
                         onDelete = { songListViewModel.showDeleteDialog() },
                         onShare = {
                             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -713,68 +676,46 @@ fun SongListScreen(
                     )
                 }
             }
-            val detailSong = sheetUiState.detailSong
-            var showDetailSheet by remember { mutableStateOf(false) }
-            LaunchedEffect(detailSong) {
-                if (detailSong != null) {
-                    showDetailSheet = true
-                }
-            }
-            WindowBottomSheet(
-                show = showDetailSheet,
-                enableNestedScroll = false,
+            SongDetailBottomSheet(
+                show = showDetailSheet && selectedSong != null,
+                song = selectedSong,
                 onDismissRequest = { showDetailSheet = false },
                 onDismissFinished = { songListViewModel.dismissDetail() },
-            ) {
-                detailSong?.let {
-                    SongDetailBottomSheetContent(context = context, song = it)
-                }
-            }
-
-            WindowDialog(
+            )
+            YesNoDialog(
                 title = stringResource(R.string.dialog_delete_file_title),
-                show = songListUiState.showDeleteDialog && sheetUiState.menuSong != null,
+                show = songListUiState.showDeleteDialog && selectedSong != null,
                 summary = stringResource(
                     R.string.dialog_delete_file_content,
-                    sheetUiState.menuSong?.fileName ?: ""
+                    selectedSong?.fileName ?: ""
                 ),
+                onConfirm = {
+                    songListViewModel.dismissDeleteDialog()
+                    songListViewModel.dismissAll()
+                    songListViewModel.delete(selectedSong!!)
+                },
                 onDismissRequest = { songListViewModel.dismissDeleteDialog() },
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            text = stringResource(R.string.cancel),
-                            onClick = { songListViewModel.dismissDeleteDialog() },
-                            modifier = Modifier.weight(1f),
-                        )
-                        Spacer(Modifier.width(20.dp))
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            text = stringResource(R.string.confirm),
-                            onClick = {
-                                songListViewModel.dismissDeleteDialog()
-                                songListViewModel.dismissAll()
-                                songListViewModel.delete(sheetUiState.menuSong!!)
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = MiuixButtonDefaults.textButtonColorsPrimary()
-                        )
-                    }
-                }
+            )
+            val fileExtension = selectedSong?.fileName?.substringAfterLast('.', "") ?: ""
+            val extensionDot = if (fileExtension.isNotEmpty()) ".$fileExtension" else ""
+            val oldName = selectedSong?.fileName?.substringBeforeLast('.') ?: ""
+            var newName by remember(selectedSong) {
+                mutableStateOf(oldName)
             }
-            WindowDialog(
+            YesNoDialog(
                 title = stringResource(R.string.dialog_rename_title),
-                show = songListUiState.showRenameDialog && sheetUiState.menuSong != null,
+                show = songListUiState.showRenameDialog && selectedSong != null,
                 onDismissRequest = { songListViewModel.dismissRenameDialog() },
-            ) {
-                val renameSong = sheetUiState.menuSong
-                val fileExtension = renameSong?.fileName?.substringAfterLast('.', "") ?: ""
-                val extensionDot = if (fileExtension.isNotEmpty()) ".$fileExtension" else ""
-                val oldName = renameSong?.fileName?.substringBeforeLast('.') ?: ""
-                var newName by remember(renameSong) {
-                    mutableStateOf(oldName)
-                }
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    top.yukonga.miuix.kmp.basic.TextField(
+                onConfirm = {
+                    val fullNewName = newName.trim() + extensionDot
+                    if (newName.isNotBlank() && fullNewName != selectedSong?.fileName) {
+                        if (fullNewName != sheetUiState.menuSong?.fileName) {
+                            songListViewModel.renameSong(fullNewName)
+                        }
+                    }
+                },
+                content = {
+                    TextField(
                         value = newName,
                         onValueChange = { newName = it },
                         maxLines = 1,
@@ -789,57 +730,20 @@ fun SongListScreen(
                             }
                         }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            text = stringResource(R.string.cancel),
-                            onClick = { songListViewModel.dismissRenameDialog() },
-                            modifier = Modifier.weight(1f),
-                        )
-                        Spacer(Modifier.width(20.dp))
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            text = stringResource(R.string.confirm),
-                            onClick = {
-                                val fullNewName = newName.trim() + extensionDot
-                                if (newName.isNotBlank() && fullNewName != renameSong?.fileName) {
-                                    songListViewModel.renameSong(fullNewName)
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = MiuixButtonDefaults.textButtonColorsPrimary()
-                        )
-                    }
                 }
-            }
-            // 批量删除确认对话框
-            WindowDialog(
+            )
+            YesNoDialog(
                 show = songListUiState.showBatchDeleteDialog,
                 onDismissRequest = { songListViewModel.dismissBatchDeleteDialog() },
                 summary = stringResource(
                     R.string.dialog_batch_delete_content,
                     selectedSongUris.size
-                )
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            text = stringResource(R.string.cancel),
-                            onClick = { songListViewModel.dismissBatchDeleteDialog() },
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(Modifier.width(20.dp))
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            text = stringResource(R.string.confirm),
-                            onClick = {
-                                songListViewModel.dismissBatchDeleteDialog()
-                                songListViewModel.batchDelete(songs)
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = MiuixButtonDefaults.textButtonColorsPrimary()
-                        )
-                    }
+                ),
+                onConfirm = {
+                    songListViewModel.dismissBatchDeleteDialog()
+                    songListViewModel.batchDelete(songs)
                 }
-            }
+            )
             // 批量匹配配置BottomSheet
             BatchMatchConfigBottomSheet(
                 show = batchMatchUiState.showBatchConfigDialog,
@@ -1014,7 +918,8 @@ fun SongListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         batchReplayGainUiState.progress?.let { (current, total) ->
-                            val progress = if (total > 0) current.toFloat() / total.toFloat() else 0f
+                            val progress =
+                                if (total > 0) current.toFloat() / total.toFloat() else 0f
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1049,7 +954,7 @@ fun SongListScreen(
                                 progress = progress,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            
+
                             // 显示并发任务的进度条
                             if (batchReplayGainUiState.isRunning && batchReplayGainUiState.fileProgressMap.isNotEmpty()) {
                                 Column(
@@ -1119,7 +1024,9 @@ fun SongListScreen(
 
                     Row(horizontalArrangement = Arrangement.SpaceBetween) {
                         top.yukonga.miuix.kmp.basic.TextButton(
-                            text = if (batchReplayGainUiState.isRunning) stringResource(R.string.action_abort) else stringResource(R.string.action_close),
+                            text = if (batchReplayGainUiState.isRunning) stringResource(R.string.action_abort) else stringResource(
+                                R.string.action_close
+                            ),
                             onClick = {
                                 if (batchReplayGainUiState.isRunning) {
                                     batchReplayGainViewModel.abortBatchScan()
@@ -1177,7 +1084,8 @@ fun SongListScreen(
                         )
 
                         batchLyricsFormatUiState.progress?.let { (current, total) ->
-                            val progress = if (total > 0) current.toFloat() / total.toFloat() else 0f
+                            val progress =
+                                if (total > 0) current.toFloat() / total.toFloat() else 0f
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1444,471 +1352,6 @@ fun SongListScreen(
     }
 }
 
-@Composable
-private fun LibraryScanProgressText(
-    progress: LibraryScanProgress,
-    modifier: Modifier = Modifier
-) {
-    val title = when (progress.stage) {
-        LibraryScanStage.LISTING_FILES -> stringResource(R.string.scan_progress_listing)
-        LibraryScanStage.READING_METADATA -> stringResource(
-            R.string.scan_progress_reading,
-            progress.current,
-            progress.total
-        )
-        LibraryScanStage.WRITING_DATABASE -> stringResource(R.string.scan_progress_writing)
-        LibraryScanStage.FINISHED -> stringResource(R.string.scan_progress_finished)
-    }
-
-    Text(
-        text = title,
-        modifier = modifier
-            .padding(horizontal = 24.dp),
-        style = MiuixTheme.textStyles.title4,
-        color = MiuixTheme.colorScheme.onSurface,
-        textAlign = TextAlign.Center
-    )
-}
-
-@Composable
-private fun SongListEmptyState(
-    onAddFolder: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(420.dp)
-            .padding(horizontal = 24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = MiuixIcons.AddFolder,
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                modifier = Modifier.size(42.dp)
-            )
-            Text(
-                text = stringResource(R.string.song_list_empty_title),
-                style = MiuixTheme.textStyles.title3,
-                color = MiuixTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(R.string.song_list_empty_desc),
-                style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                textAlign = TextAlign.Center
-            )
-            top.yukonga.miuix.kmp.basic.TextButton(
-                text = stringResource(R.string.action_add_folder),
-                onClick = onAddFolder,
-                colors = MiuixButtonDefaults.textButtonColorsPrimary()
-            )
-        }
-    }
-}
-
-fun findScrollIndex(
-    section: String,
-    sectionIndexMap: Map<String, Int>,
-    order: SortOrder
-): Int {
-    if (sectionIndexMap.isEmpty()) return 0
-    sectionIndexMap[section]?.let { return it }
-    val keys = sectionIndexMap.keys.sorted()
-
-    return if (order == SortOrder.ASC) {
-        keys.firstOrNull { it >= section }
-            ?.let { sectionIndexMap[it] }
-            ?: sectionIndexMap[keys.last()]!!
-    } else {
-        keys.lastOrNull { it <= section }
-            ?.let { sectionIndexMap[it] }
-            ?: sectionIndexMap[keys.first()]!!
-    }
-}
-
-@Composable
-fun AlphabetSideBar(
-    sections: List<String>,
-    onSectionSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val view = LocalView.current
-    var componentHeight by remember { mutableIntStateOf(0) }
-    var currentSection by remember { mutableStateOf<String?>(null) }
-    var lastSelectedIndex by remember { mutableIntStateOf(-1) }
-
-    fun getSectionIndex(offsetY: Float): Int {
-        if (componentHeight == 0 || sections.isEmpty()) return -1
-        val step = componentHeight.toFloat() / sections.size
-        return (offsetY / step).toInt().coerceIn(0, sections.lastIndex)
-    }
-
-    fun updateSelection(index: Int) {
-        if (index != -1) {
-            val section = sections[index]
-            currentSection = section
-            if (index != lastSelectedIndex) {
-                lastSelectedIndex = index
-                onSectionSelected(section)
-                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-            }
-        }
-    }
-
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End
-    ) {
-        AnimatedVisibility(
-            visible = currentSection != null,
-            enter = fadeIn() + scaleIn(),
-            exit = fadeOut() + scaleOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .size(50.dp)
-                    .background(
-                        color = MiuixTheme.colorScheme.primary,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = currentSection ?: "",
-                    style = MiuixTheme.textStyles.title1,
-                    color = MiuixTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .width(24.dp)
-                .onGloballyPositioned { componentHeight = it.size.height }
-                .pointerInput(sections) {
-                    detectVerticalDragGestures(
-                        onDragStart = { offset ->
-                            val index = getSectionIndex(offset.y)
-                            updateSelection(index)
-                        },
-                        onDragEnd = {
-                            currentSection = null
-                            lastSelectedIndex = -1
-                        },
-                        onDragCancel = {
-                            currentSection = null
-                            lastSelectedIndex = -1
-                        }
-                    ) { change, _ ->
-                        change.consume()
-                        val index = getSectionIndex(change.position.y)
-                        updateSelection(index)
-                    }
-                }
-                .pointerInput(sections) {
-                    detectTapGestures(
-                        onPress = { offset ->
-                            val index = getSectionIndex(offset.y)
-                            updateSelection(index)
-                            tryAwaitRelease()
-                            currentSection = null
-                            lastSelectedIndex = -1
-                        },
-                        onTap = {}
-                    )
-                },
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            sections.forEach { section ->
-                Text(
-                    text = section,
-                    style = MiuixTheme.textStyles.body2.copy(fontSize = 12.sp),
-                    color = if (currentSection == section) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceContainerVariant,
-                    modifier = Modifier.padding(vertical = 1.dp)
-                )
-            }
-        }
-    }
-}
-
-
-
-@SuppressLint("DefaultLocale")
-@Composable
-fun SongMenuBottomSheetContent(
-    song: SongEntity,
-    onPlay: () -> Unit = {},
-    showInfo: () -> Unit = {},
-    onDelete: () -> Unit = {},
-    onShare: () -> Unit = {},
-    onRename: () -> Unit = {},
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 32.dp)
-            .verticalScroll(rememberScrollState()),
-    ) {
-        val songTitle = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName
-        val text =
-            song.artist.takeIf { !it.isNullOrBlank() }?.let { "$songTitle - $it" } ?: songTitle
-        Text(
-            text = text,
-            style = MiuixTheme.textStyles.footnote1,
-            color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
-            modifier = Modifier.padding(12.dp)
-        )
-
-
-        Card(
-            modifier = Modifier.padding(bottom = 12.dp),
-            colors = CardDefaults.defaultColors(
-                color = MiuixTheme.colorScheme.secondaryContainer,
-            )
-        ) {
-            ArrowPreference(
-                title = stringResource(R.string.menu_action_play),
-                summary = stringResource(R.string.menu_action_play_sub),
-                onClick = { onPlay() }
-            )
-            ArrowPreference(
-                title = stringResource(R.string.menu_action_info),
-                onClick = { showInfo() }
-            )
-            ArrowPreference(
-                title = stringResource(R.string.menu_action_share),
-                onClick = { onShare() }
-            )
-            ArrowPreference(
-                title = stringResource(R.string.menu_action_rename),
-                onClick = { onRename() }
-            )
-            ArrowPreference(
-                title = stringResource(R.string.menu_action_delete),
-                summary = stringResource(R.string.menu_action_delete_sub),
-                titleColor = BasicComponentColors(
-                    MiuixTheme.colorScheme.error,
-                    MiuixTheme.colorScheme.disabledOnSecondaryVariant
-                ),
-                onClick = { onDelete() }
-            )
-        }
-
-    }
-}
-
-@SuppressLint("DefaultLocale")
-@Composable
-fun SongDetailBottomSheetContent(context: Context, song: SongEntity) {
-    val clipboardManager = LocalClipboardManager.current
-    val dateFormat = remember {
-        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 32.dp)
-            .verticalScroll(rememberScrollState()),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            AsyncImage(
-                model = CoverRequest(song.getUri, song.fileLastModified),
-                contentDescription = stringResource(R.string.cd_cover),
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(R.drawable.ic_album_24dp),
-                error = painterResource(R.drawable.ic_album_24dp)
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
-                    style = MiuixTheme.textStyles.title3,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = song.artist.takeIf { !it.isNullOrBlank() }
-                        ?: stringResource(R.string.unknown_artist),
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = MiuixTheme.colorScheme.primary
-                )
-            }
-        }
-
-
-        Card(
-            modifier = Modifier.padding(bottom = 12.dp),
-            colors = CardDefaults.defaultColors(
-                color = MiuixTheme.colorScheme.secondaryContainer,
-            )
-        ) {
-            val copyToClipboard: (String) -> Unit = { text ->
-                clipboardManager.setText(AnnotatedString(text))
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.msg_copied_to_clipboard),
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            SongDetailItem(
-                stringResource(R.string.label_album),
-                song.album,
-                onCopy = copyToClipboard
-            )
-            SongDetailItem(stringResource(R.string.label_date), song.date, onCopy = copyToClipboard)
-            SongDetailItem(
-                stringResource(R.string.label_genre),
-                song.genre,
-                onCopy = copyToClipboard
-            )
-            SongDetailItem(
-                stringResource(R.string.label_track_number),
-                song.trackerNumber,
-                onCopy = copyToClipboard
-            )
-            SongDetailItem(
-                stringResource(R.string.label_duration),
-                if (song.durationMilliseconds > 0) {
-                    val min = song.durationMilliseconds / 60000
-                    val sec = (song.durationMilliseconds % 60000) / 1000
-                    String.format("%d:%02d", min, sec)
-                } else null,
-                onCopy = copyToClipboard
-            )
-
-            SongDetailItem(
-                stringResource(R.string.label_bitrate),
-                if (song.bitrate > 0) "${song.bitrate} kbps" else null,
-                onCopy = copyToClipboard
-            )
-
-            SongDetailItem(
-                stringResource(R.string.label_sample_rate),
-                if (song.sampleRate > 0) "${song.sampleRate} Hz" else null,
-                onCopy = copyToClipboard
-            )
-
-            SongDetailItem(
-                stringResource(R.string.label_channels),
-                if (song.channels > 0) "${song.channels}" else null,
-                onCopy = copyToClipboard
-            )
-            SongDetailItem(
-                stringResource(R.string.label_date_added),
-                if (song.fileAdded > 0)
-                    dateFormat.format(Date(song.fileAdded))
-                else null,
-                onCopy = copyToClipboard
-            )
-
-            SongDetailItem(
-                stringResource(R.string.label_date_modified),
-                if (song.fileLastModified > 0)
-                    dateFormat.format(Date(song.fileLastModified))
-                else null,
-                onCopy = copyToClipboard
-            )
-
-            SongDetailItem(
-                stringResource(R.string.label_file_path),
-                song.filePath,
-                onCopy = copyToClipboard
-            )
-
-            SongDetailItem(
-                stringResource(R.string.label_file_size),
-                if (song.fileSize > 0)
-                    Formatter.formatFileSize(context, song.fileSize)
-                else null,
-                onCopy = copyToClipboard
-            )
-
-            if (BuildConfig.DEBUG) {
-                SongDetailItem(
-                    label = "文件URI",
-                    value = song.uri,
-                    onCopy = copyToClipboard
-                )
-                SongDetailItem(
-                    label = "文件ID",
-                    value = song.id.toString(),
-                    onCopy = copyToClipboard
-                )
-                SongDetailItem(
-                    label = "文件名",
-                    value = song.fileName,
-                    onCopy = copyToClipboard
-                )
-            }
-
-        }
-    }
-}
-
-@Composable
-fun SongDetailItem(
-    label: String,
-    value: String?,
-    onCopy: ((String) -> Unit)? = null
-) {
-    if (value.isNullOrBlank()) return
-
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .fillMaxWidth()
-    ) {
-        Text(
-            text = label,
-            style = MiuixTheme.textStyles.footnote1,
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = value,
-                style = MiuixTheme.textStyles.main,
-                modifier = Modifier.weight(1f)
-            )
-
-            if (onCopy != null) {
-                IconButton(
-                    modifier = Modifier.size(20.dp),
-                    onClick = { onCopy(value) }
-                ) {
-                    Icon(
-                        modifier = Modifier.size(16.dp),
-                        imageVector = MiuixIcons.Copy,
-                        contentDescription = "复制"
-                    )
-                }
-            }
-        }
-    }
-}
 
 enum class ScrollDirection {
     UP, DOWN, NONE

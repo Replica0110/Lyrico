@@ -92,6 +92,7 @@ import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.bar.findScrollIndex
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.search.LocalSearchTypeTabs
+import com.lonx.lyrico.ui.components.selection.dragSelection
 import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
 import com.lonx.lyrico.ui.components.song.SongDetailBottomSheet
 import com.lonx.lyrico.ui.components.song.SongListEmptyState
@@ -262,12 +263,6 @@ fun SongListScreen(
         },
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "backToTopPadding"
-    )
-    val dragSelectionModifier = rememberDragSelectionModifier(
-        listState = listState,
-        songs = songs,
-        songListViewModel = songListViewModel,
-        isSelectionMode = isSelectionMode
     )
     BackHandler(enabled = isSelectionMode || isSearchMode || isFabMenuExpanded) {
         if (isFabMenuExpanded) {
@@ -555,7 +550,24 @@ fun SongListScreen(
                             .overScrollVertical()
                             .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
                             .fillMaxHeight()
-                            .then(dragSelectionModifier),
+                            .dragSelection(
+                                listState = listState,
+                                itemCount = songs.size,
+                                isSelectionMode = isSelectionMode,
+                                onDragSelectionStart = { index ->
+                                    songListViewModel.startDragSelection(index, songs)
+                                },
+                                onDragSelectionChange = { startIndex, endIndex ->
+                                    songListViewModel.updateDragSelection(
+                                        startIndex,
+                                        endIndex,
+                                        songs
+                                    )
+                                },
+                                onDragSelectionEnd = {
+                                    songListViewModel.endDragSelection()
+                                }
+                            ),
                         state = listState,
                         overscrollEffect = null,
                         contentPadding = PaddingValues(bottom = navigationBarBottomInset)
@@ -1349,207 +1361,5 @@ fun SongListScreen(
                 }
             }
         }
-    }
-}
-
-
-enum class ScrollDirection {
-    UP, DOWN, NONE
-}
-
-@Composable
-fun rememberDragSelectionModifier(
-    listState: LazyListState,
-    songs: List<SongEntity>,
-    songListViewModel: SongListViewModel,
-    isSelectionMode: Boolean
-): Modifier {
-
-    var initialDragY by remember { mutableStateOf<Float?>(null) }
-    var currentDragY by remember { mutableStateOf<Float?>(null) }
-
-    var initialDragIndex by remember { mutableStateOf<Int?>(null) }
-    var currentDragIndex by remember { mutableStateOf<Int?>(null) }
-
-    var autoScrollSpeed by remember { mutableFloatStateOf(0f) }
-    var currentSpeed by remember { mutableFloatStateOf(0f) }
-
-
-    var peakDragY by remember { mutableStateOf<Float?>(null) }
-    var scrollDirection by remember { mutableStateOf(ScrollDirection.NONE) }
-
-    LaunchedEffect(Unit) {
-        while (isActive) {
-
-            // 平滑速度
-            currentSpeed += (autoScrollSpeed - currentSpeed) * 0.2f
-
-            if (autoScrollSpeed == 0f) {
-                currentSpeed *= 0.85f
-            }
-
-            if (kotlin.math.abs(currentSpeed) < 0.5f) {
-                currentSpeed = 0f
-            }
-
-            if (currentSpeed != 0f) {
-                listState.scrollBy(currentSpeed)
-
-                currentDragY?.let { y ->
-                    val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
-                    val clampedY = y.coerceIn(0f, viewportHeight - 1f)
-
-                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                        clampedY >= it.offset && clampedY <= (it.offset + it.size)
-                    }
-
-                    if (itemInfo != null && initialDragIndex != null) {
-                        if (itemInfo.index != currentDragIndex) {
-                            currentDragIndex = itemInfo.index
-                            songListViewModel.updateDragSelection(
-                                initialDragIndex!!,
-                                currentDragIndex!!,
-                                songs
-                            )
-                        }
-                    }
-                }
-            }
-
-            delay(16)
-        }
-    }
-
-    return if (isSelectionMode) {
-        Modifier.pointerInput(songs, isSelectionMode) {
-            detectDragGesturesAfterLongPress(
-
-                onDragStart = { offset ->
-                    initialDragY = offset.y
-                    currentDragY = offset.y
-
-                    scrollDirection = ScrollDirection.NONE // 重置方向
-
-                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                        offset.y >= it.offset && offset.y <= (it.offset + it.size)
-                    }
-
-                    itemInfo?.let {
-                        initialDragIndex = it.index
-                        currentDragIndex = it.index
-                        songListViewModel.startDragSelection(it.index, songs)
-                    }
-                },
-
-                onDrag = { change, _ ->
-                    val y = change.position.y
-                    currentDragY = y
-
-                    val retreatThreshold = 20f // 反向滑动的灵敏度阈值（回退多少就停）
-                    val startThreshold = 180f
-                    val speedFactor = 0.1f
-                    val maxSpeed = 60f
-
-                    initialDragY?.let { startY ->
-                        val dragDistance = y - startY
-
-                        when (scrollDirection) {
-                            ScrollDirection.NONE -> {
-                                if (dragDistance > startThreshold) {
-                                    scrollDirection = ScrollDirection.DOWN
-                                    peakDragY = y
-                                } else if (dragDistance < -startThreshold) {
-                                    scrollDirection = ScrollDirection.UP
-                                    peakDragY = y
-                                }
-                            }
-
-                            ScrollDirection.DOWN -> {
-                                peakDragY = maxOf(peakDragY ?: y, y)
-
-                                if (y < (peakDragY!! - retreatThreshold)) {
-                                    scrollDirection = ScrollDirection.NONE
-                                    peakDragY = null
-                                } else if (dragDistance < 0) {
-                                    scrollDirection = ScrollDirection.NONE
-                                }
-                            }
-
-                            ScrollDirection.UP -> {
-                                peakDragY = minOf(peakDragY ?: y, y)
-
-                                if (y > (peakDragY!! + retreatThreshold)) {
-                                    scrollDirection = ScrollDirection.NONE
-                                    peakDragY = null
-                                } else if (dragDistance > 0) {
-                                    scrollDirection = ScrollDirection.NONE
-                                }
-                            }
-                        }
-
-                        autoScrollSpeed = when (scrollDirection) {
-                            ScrollDirection.DOWN -> {
-                                ((dragDistance - startThreshold) * speedFactor).coerceAtMost(
-                                    maxSpeed
-                                )
-                            }
-
-                            ScrollDirection.UP -> {
-                                ((dragDistance + startThreshold) * speedFactor).coerceAtLeast(-maxSpeed)
-                            }
-
-                            ScrollDirection.NONE -> 0f
-                        }
-                    }
-
-                    //  更新选中项
-                    val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
-                    val clampedY = y.coerceIn(0f, viewportHeight - 1f)
-
-                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                        clampedY >= it.offset && clampedY <= (it.offset + it.size)
-                    }
-
-                    if (itemInfo != null && initialDragIndex != null) {
-                        if (itemInfo.index != currentDragIndex) {
-                            currentDragIndex = itemInfo.index
-                            songListViewModel.updateDragSelection(
-                                initialDragIndex!!,
-                                currentDragIndex!!,
-                                songs
-                            )
-                        }
-                    }
-                },
-
-                onDragEnd = {
-                    initialDragIndex = null
-                    currentDragIndex = null
-                    initialDragY = null
-                    currentDragY = null
-
-                    autoScrollSpeed = 0f
-                    currentSpeed = 0f
-                    scrollDirection = ScrollDirection.NONE
-
-                    songListViewModel.endDragSelection()
-                },
-
-                onDragCancel = {
-                    initialDragIndex = null
-                    currentDragIndex = null
-                    initialDragY = null
-                    currentDragY = null
-
-                    autoScrollSpeed = 0f
-                    currentSpeed = 0f
-                    scrollDirection = ScrollDirection.NONE
-
-                    songListViewModel.endDragSelection()
-                }
-            )
-        }
-    } else {
-        Modifier
     }
 }

@@ -68,17 +68,11 @@ fun BatchMatchConfigBottomSheet(
 
     YesNoBottomSheet(
         show = show,
-        enableNestedScroll = false,
-        onDismissRequest = { onDismissRequest(config) },
         title = stringResource(R.string.batch_match_config_title),
-        onConfirm = {
-            onConfirm(config)
-            onDismissRequest(config)
-        },
+        enableNestedScroll = false,
         content = {
             Column(
                 modifier = Modifier
-                    .padding(bottom = 32.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
             ) {
@@ -116,8 +110,6 @@ fun BatchMatchConfigBottomSheet(
                         }
                     }
                 }
-
-
                 Card(
                     modifier = Modifier.padding(bottom = 12.dp),
                     colors = CardDefaults.defaultColors(
@@ -129,6 +121,7 @@ fun BatchMatchConfigBottomSheet(
                     }
                     CheckboxPreference(
                         title = stringResource(R.string.batch_match_prefer_filename),
+                        summary = stringResource(R.string.batch_match_prefer_filename_summary),
                         checked = config.preferFileName,
                         onCheckedChange = { checked ->
                             val updatedFields = config.fields.toMutableMap()
@@ -145,13 +138,6 @@ fun BatchMatchConfigBottomSheet(
                             config = config.copy(
                                 preferFileName = checked,
                                 fields = updatedFields
-                            )
-                        },
-                        bottomAction = {
-                            Text(
-                                text = stringResource(R.string.batch_match_prefer_filename_summary),
-                                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantActions
                             )
                         },
                         insideMargin = PaddingValues(12.dp)
@@ -194,6 +180,11 @@ fun BatchMatchConfigBottomSheet(
 
             }
         },
+        onDismissRequest = { onDismissRequest(config) },
+        onConfirm = {
+            onConfirm(config)
+            onDismissRequest(config)
+        }
     )
 }
 

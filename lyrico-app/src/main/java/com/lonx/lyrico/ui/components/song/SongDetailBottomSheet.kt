@@ -48,8 +48,7 @@ import java.util.Locale
 fun SongDetailBottomSheet(
     show: Boolean,
     song: SongEntity,
-    onDismissRequest: () -> Unit,
-    onDismissFinished: () -> Unit
+    onDismissRequest: () -> Unit
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -61,10 +60,7 @@ fun SongDetailBottomSheet(
         enableNestedScroll = false,
         onDismissRequest = {
             onDismissRequest()
-        },
-        onDismissFinished = {
-            onDismissFinished()
-        },
+        }
     ) {
         Column(
             modifier = Modifier

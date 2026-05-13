@@ -23,26 +23,18 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun BatchMatchingBottomSheet(
-    show: Boolean,
     uiState: BatchMatchUiState,
     onDismissRequest: () -> Unit,
     enableNestedScroll: Boolean = true,
     onConfirm: () -> Unit
 ) {
     YesNoBottomSheet(
-        show = show,
-        enableNestedScroll = enableNestedScroll,
-        onDismissRequest = {
-            onDismissRequest()
-        },
-        onConfirm = {
-            onConfirm()
-        },
+        show = uiState.isBatchMatching || uiState.batchProgress != null,
         title = stringResource(R.string.batch_matching_title),
+        enableNestedScroll = enableNestedScroll,
         content = {
             Column(
                 modifier = Modifier
-                    .padding(bottom = 32.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
             ) {
@@ -113,6 +105,12 @@ fun BatchMatchingBottomSheet(
                     )
                 }
             }
-        }
+        },
+        onDismissRequest = {
+            onDismissRequest()
+        },
+        onConfirm = {
+            onConfirm()
+        },
     )
 }

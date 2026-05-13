@@ -42,16 +42,10 @@ fun BatchLyricsFormatConfigBottomSheet(
 
     YesNoBottomSheet(
         show = show,
-        onDismissRequest = { onDismissRequest(concurrency, targetFormat) },
         title = stringResource(R.string.action_batch_convert_lyrics_format),
-        onConfirm = {
-            onDismissRequest(concurrency, targetFormat)
-            onConfirm(concurrency, targetFormat)
-        },
         content = {
             Column(
                 modifier = Modifier
-                    .padding(bottom = 32.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
             ) {
@@ -113,6 +107,11 @@ fun BatchLyricsFormatConfigBottomSheet(
                     )
                 }
             }
-        }
+        },
+        onDismissRequest = { onDismissRequest(concurrency, targetFormat) },
+        onConfirm = {
+            onDismissRequest(concurrency, targetFormat)
+            onConfirm(concurrency, targetFormat)
+        },
     )
 }

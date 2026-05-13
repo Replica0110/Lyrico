@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,24 +23,29 @@ fun YesNoBottomSheet(
     enableNestedScroll: Boolean = true,
     content: @Composable (() -> Unit),
     onDismissRequest: () -> Unit,
+    allowDismiss: Boolean = true,
     onDismissFinished: () -> Unit = {},
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    cancelText: String = stringResource(R.string.cancel),
+    confirmText: String = stringResource(R.string.confirm)
 ) {
     WindowBottomSheet(
         show = show,
         enableNestedScroll = enableNestedScroll,
         onDismissRequest = onDismissRequest,
         onDismissFinished = onDismissFinished,
+        allowDismiss = allowDismiss,
         title = title
     ) {
         Column(
             modifier = Modifier
+                .padding(bottom = 32.dp)
                 .fillMaxWidth()
         ) {
             content.invoke()
             Row {
                 TextButton(
-                    text = stringResource(R.string.cancel),
+                    text = cancelText,
                     onClick = {
                         onDismissRequest()
                     },
@@ -49,7 +55,7 @@ fun YesNoBottomSheet(
                 Spacer(modifier = Modifier.width(20.dp))
 
                 TextButton(
-                    text = stringResource(R.string.dialog_action_go_update),
+                    text = confirmText,
                     onClick = {
                         onConfirm()
                     },

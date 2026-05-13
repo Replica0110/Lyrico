@@ -23,7 +23,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
 
 @Composable
-fun ReplayGainConfigBottomSheet(
+fun BatchRGConfigBottomSheet(
     show: Boolean,
     initialConcurrency: Int,
     onDismissRequest: (Int) -> Unit,
@@ -33,10 +33,6 @@ fun ReplayGainConfigBottomSheet(
 
     YesNoBottomSheet(
         show = show,
-        onConfirm = {
-            onConfirm(concurrency)
-        },
-        onDismissRequest = { onDismissRequest(concurrency) },
         title = stringResource(R.string.action_batch_replay_gain),
         content = {
             Card(
@@ -81,6 +77,10 @@ fun ReplayGainConfigBottomSheet(
                     }
                 )
             }
+        },
+        onDismissRequest = { onDismissRequest(concurrency) },
+        onConfirm = {
+            onConfirm(concurrency)
         }
     )
 }

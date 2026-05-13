@@ -28,7 +28,7 @@ import kotlinx.serialization.json.Json
 
 data class BatchMatchUiState(
     val showBatchConfigDialog: Boolean = false,
-    val isBatchMatching: Boolean = false,
+    val isRunning: Boolean = false,
     val batchProgress: Pair<Int, Int>? = null,
     val successCount: Int = 0,
     val failureCount: Int = 0,
@@ -87,7 +87,7 @@ class BatchMatchViewModel(
         _uiState.update {
             it.copy(
                 currentTaskId = taskId,
-                isBatchMatching = true,
+                isRunning = true,
                 batchProgress = 0 to 0
             )
         }
@@ -101,7 +101,7 @@ class BatchMatchViewModel(
                         failureCount = task.failureCount,
                         skippedCount = task.skippedCount,
                         currentFile = task.currentFile ?: "",
-                        isBatchMatching = task.status == BatchTaskStatus.RUNNING || task.status == BatchTaskStatus.QUEUED
+                        isRunning = task.status == BatchTaskStatus.RUNNING || task.status == BatchTaskStatus.QUEUED
                     )
                 }
                 if (task.status == BatchTaskStatus.SUCCEEDED ||
@@ -111,7 +111,7 @@ class BatchMatchViewModel(
                     val duration = if (task.startedAt != null && task.finishedAt != null) {
                         task.finishedAt - task.startedAt
                     } else 0L
-                    _uiState.update { it.copy(isBatchMatching = false, batchTimeMillis = duration) }
+                    _uiState.update { it.copy(isRunning = false, batchTimeMillis = duration) }
                     observeJob?.cancel()
                 }
             }
@@ -143,7 +143,7 @@ class BatchMatchViewModel(
 
         _uiState.update {
             it.copy(
-                isBatchMatching = true,
+                isRunning = true,
                 successCount = 0,
                 failureCount = 0,
                 skippedCount = 0,
@@ -155,7 +155,7 @@ class BatchMatchViewModel(
         viewModelScope.launch {
             val songsToMatch = songs.filter { it.uri in selectedIds }
             if (songsToMatch.isEmpty()) {
-                _uiState.update { it.copy(isBatchMatching = false) }
+                _uiState.update { it.copy(isRunning = false) }
                 return@launch
             }
 
@@ -195,7 +195,17 @@ class BatchMatchViewModel(
             it.copy(
                 batchProgress = null,
                 currentFile = "",
-                isBatchMatching = false,
+                isRunning = false,
+                batchTimeMillis = 0
+            )
+        }
+    }
+    fun clearFinishedTasks() {
+        _uiState.update {
+            it.copy(
+                batchProgress = null,
+                currentFile = "",
+                isRunning = false,
                 batchTimeMillis = 0
             )
         }

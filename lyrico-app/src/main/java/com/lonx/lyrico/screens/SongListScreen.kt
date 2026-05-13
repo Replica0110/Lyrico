@@ -48,9 +48,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -72,7 +70,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -85,6 +82,7 @@ import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.bar.findScrollIndex
 import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.batch.BatchLyricsFormatBottomSheet
 import com.lonx.lyrico.ui.components.search.LocalSearchTypeTabs
 import com.lonx.lyrico.ui.components.selection.dragSelection
 import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
@@ -95,7 +93,7 @@ import com.lonx.lyrico.ui.components.song.SongListItemActions
 import com.lonx.lyrico.ui.components.song.SongMenuBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchLyricsFormatConfigBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchMatchConfigBottomSheet
-import com.lonx.lyrico.ui.components.batch.BatchMatchingBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchMatchBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchRGBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchRGConfigBottomSheet
 import com.lonx.lyrico.utils.UriUtils
@@ -123,7 +121,6 @@ import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -148,8 +145,6 @@ import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
-import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 
 private val SECTIONS_ASC = listOf(
     "0"
@@ -764,23 +759,23 @@ fun SongListScreen(
                     batchMatchViewModel.closeBatchMatchConfig()
                 },
                 onConfirm = { config ->
+                    batchMatchViewModel.saveBatchMatchConfig(config)
                     batchMatchViewModel.batchMatch(songs, config)
                 }
             )
 
             // 批量匹配进度
-            BatchMatchingBottomSheet(
+            BatchMatchBottomSheet(
                 onDismissRequest = {
-                    if (!batchMatchUiState.isBatchMatching) batchMatchViewModel.closeBatchMatchDialog()
+                    if (!batchMatchUiState.isRunning) batchMatchViewModel.closeBatchMatchDialog()
+                },
+                onDismissFinished = {
+                    if (!batchMatchUiState.isRunning) batchMatchViewModel.closeBatchMatchDialog()
                 },
                 enableNestedScroll = false,
                 uiState = batchMatchUiState,
-                onConfirm = {
-                    if (batchMatchUiState.isBatchMatching) {
-                        batchMatchViewModel.abortBatchMatch()
-                    } else {
-                        batchMatchViewModel.closeBatchMatchDialog()
-                    }
+                onAbort = {
+                    batchMatchViewModel.abortBatchMatch()
                 }
             )
             // ReplayGain配置BottomSheet
@@ -791,7 +786,8 @@ fun SongListScreen(
                     batchReplayGainViewModel.setConcurrency(concurrency)
                     batchReplayGainViewModel.closeReplayGainConfig()
                 },
-                onConfirm = { _ ->
+                onConfirm = { concurrency ->
+                    batchReplayGainViewModel.setConcurrency(concurrency)
                     batchReplayGainViewModel.startBatchScan()
                 }
             )
@@ -819,16 +815,10 @@ fun SongListScreen(
             BatchRGBottomSheet(
                 batchReplayGainUiState = batchReplayGainUiState,
                 onDismissRequest = {
-                    if (batchReplayGainUiState.isRunning) {
-                        batchReplayGainViewModel.abortBatchScan()
-                    } else {
-                        batchReplayGainViewModel.closeProgressDialog()
-                    }
+                    batchReplayGainViewModel.closeProgressDialog()
                 },
-                onConfirm = {
-                    if(!batchReplayGainUiState.isRunning){
-                        batchReplayGainViewModel.closeProgressDialog()
-                    }
+                onAbort = {
+                    batchReplayGainViewModel.abortBatchScan()
                 },
                 onDismissFinished = {
                     if (batchReplayGainUiState.isSuccess) {
@@ -838,8 +828,8 @@ fun SongListScreen(
             )
 
             // 批量歌词格式转换进度
-            WindowBottomSheet(
-                show = batchLyricsFormatUiState.showProgressDialog,
+            BatchLyricsFormatBottomSheet(
+                batchLyricsFormatUiState = batchLyricsFormatUiState,
                 onDismissRequest = {
                     if (!batchLyricsFormatUiState.isRunning) {
                         batchLyricsFormatViewModel.closeProgressDialog()
@@ -847,128 +837,13 @@ fun SongListScreen(
                 },
                 onDismissFinished = {
                     if (batchLyricsFormatUiState.isSuccess) {
-                        batchLyricsFormatViewModel.closeProgressDialog()
+                        batchLyricsFormatViewModel.clearProgressDialog()
                     }
                 },
-                allowDismiss = !batchLyricsFormatUiState.isRunning,
-                title = stringResource(R.string.action_batch_convert_lyrics_format),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(bottom = 32.dp)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Column(
-                        modifier = Modifier.padding(bottom = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(
-                                R.string.current_target_format,
-                                stringResource(batchLyricsFormatUiState.targetFormat.labelRes)
-                            ),
-                            style = MiuixTheme.textStyles.footnote1,
-                            color = MiuixTheme.colorScheme.onSurfaceContainerVariant
-                        )
-
-                        batchLyricsFormatUiState.progress?.let { (current, total) ->
-                            val progress =
-                                if (total > 0) current.toFloat() / total.toFloat() else 0f
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (batchLyricsFormatUiState.isRunning) {
-                                        stringResource(R.string.batch_edit_processing)
-                                    } else {
-                                        stringResource(
-                                            R.string.batch_replay_gain_total_time,
-                                            batchLyricsFormatUiState.totalTimeMillis / 1000.0
-                                        )
-                                    },
-                                    style = MiuixTheme.textStyles.subtitle,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                Text(
-                                    text = "$current / $total",
-                                    style = MiuixTheme.textStyles.main,
-                                    textAlign = TextAlign.End
-                                )
-                            }
-
-                            LinearProgressIndicator(
-                                progress = progress,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(
-                                R.string.batch_replay_gain_success,
-                                batchLyricsFormatUiState.successCount
-                            ),
-                            style = MiuixTheme.textStyles.main
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.batch_replay_gain_skipped,
-                                batchLyricsFormatUiState.skippedCount
-                            ),
-                            style = MiuixTheme.textStyles.main
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.batch_replay_gain_failure,
-                                batchLyricsFormatUiState.failureCount
-                            ),
-                            style = MiuixTheme.textStyles.main
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            text = if (batchLyricsFormatUiState.isRunning) {
-                                stringResource(R.string.action_abort)
-                            } else {
-                                stringResource(R.string.action_close)
-                            },
-                            onClick = {
-                                if (batchLyricsFormatUiState.isRunning) {
-                                    batchLyricsFormatViewModel.abortBatchConvert()
-                                } else {
-                                    batchLyricsFormatViewModel.closeProgressDialog()
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                        if (!batchLyricsFormatUiState.isRunning) {
-                            Spacer(Modifier.width(20.dp))
-                            top.yukonga.miuix.kmp.basic.TextButton(
-                                text = stringResource(R.string.confirm),
-                                onClick = { batchLyricsFormatViewModel.closeProgressDialog() },
-                                modifier = Modifier.weight(1f),
-                                colors = MiuixButtonDefaults.textButtonColorsPrimary(),
-                            )
-                        }
-                    }
+                onAbort = {
+                    batchLyricsFormatViewModel.abortBatchConvert()
                 }
-            }
+            )
         }
         AnimatedVisibility(
             visible = showFab,

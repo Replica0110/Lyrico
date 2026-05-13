@@ -2,6 +2,7 @@ package com.lonx.lyrico.ui.components.base
 
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,48 +22,38 @@ fun YesNoBottomSheet(
     show: Boolean,
     title: String? = null,
     enableNestedScroll: Boolean = true,
-    content: @Composable (() -> Unit),
-    onDismissRequest: () -> Unit,
     allowDismiss: Boolean = true,
+    onDismissRequest: () -> Unit,
     onDismissFinished: () -> Unit = {},
+    onCancel: () -> Unit = onDismissRequest,
     onConfirm: () -> Unit,
     cancelText: String = stringResource(R.string.cancel),
-    confirmText: String = stringResource(R.string.confirm)
+    confirmText: String = stringResource(R.string.confirm),
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    WindowBottomSheet(
+    ActionBottomSheet(
         show = show,
+        title = title,
         enableNestedScroll = enableNestedScroll,
+        allowDismiss = allowDismiss,
         onDismissRequest = onDismissRequest,
         onDismissFinished = onDismissFinished,
-        allowDismiss = allowDismiss,
-        title = title
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(bottom = 32.dp)
-                .fillMaxWidth()
-        ) {
-            content.invoke()
-            Row {
-                TextButton(
-                    text = cancelText,
-                    onClick = {
-                        onDismissRequest()
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+        content = content,
+        actions = {
+            TextButton(
+                text = cancelText,
+                onClick = onCancel,
+                modifier = Modifier.weight(1f)
+            )
 
-                Spacer(modifier = Modifier.width(20.dp))
+            Spacer(modifier = Modifier.width(20.dp))
 
-                TextButton(
-                    text = confirmText,
-                    onClick = {
-                        onConfirm()
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary()
-                )
-            }
+            TextButton(
+                text = confirmText,
+                onClick = onConfirm,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.textButtonColorsPrimary()
+            )
         }
-    }
+    )
 }

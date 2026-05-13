@@ -1,5 +1,7 @@
 package com.lonx.lyrico.ui.components.update
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -33,6 +35,7 @@ fun UpdateDialog(
             id = R.string.dialog_title_update_available,
             versionName
         ),
+        confirmText = stringResource(R.string.dialog_action_go_update),
         content = {
             Card(
                 modifier = Modifier.padding(bottom = 12.dp),
@@ -42,7 +45,7 @@ fun UpdateDialog(
             ) {
                 MarkdownText(
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(horizontal = 12.dp)
                         .heightIn(max = 300.dp)
                         .verticalScroll(scrollState),
                     markdown = releaseNote

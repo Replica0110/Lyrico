@@ -5,10 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -25,26 +24,30 @@ fun YesNoDialog(
     summary: String? = null,
     content: @Composable (() -> Unit)? = null,
     onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit
+    onDismissFinished: () -> Unit = {},
+    onConfirm: () -> Unit,
+    cancelText: String = stringResource(R.string.cancel),
+    confirmText: String = stringResource(R.string.confirm)
 ) {
     WindowDialog(
         show = show,
         summary = summary,
         onDismissRequest = onDismissRequest,
+        onDismissFinished = onDismissFinished,
         title = title
     ) {
-
         Column(
             modifier = Modifier
-                .padding(bottom = 32.dp)
                 .fillMaxWidth()
         ) {
 
-            content?.invoke()
-
+            content?.let {
+                content()
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             Row {
                 TextButton(
-                    text = stringResource(R.string.cancel),
+                    text = cancelText,
                     onClick = onDismissRequest,
                     modifier = Modifier.weight(1f)
                 )
@@ -52,7 +55,7 @@ fun YesNoDialog(
                 Spacer(modifier = Modifier.width(20.dp))
 
                 TextButton(
-                    text = stringResource(R.string.dialog_action_go_update),
+                    text = confirmText,
                     onClick = {
                         onConfirm()
                         onDismissRequest()

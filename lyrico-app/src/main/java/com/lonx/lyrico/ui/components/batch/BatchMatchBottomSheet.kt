@@ -15,21 +15,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
+import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.viewmodel.BatchMatchUiState
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun BatchMatchingBottomSheet(
+fun BatchMatchBottomSheet(
     uiState: BatchMatchUiState,
     onDismissRequest: () -> Unit,
+    onDismissFinished: () -> Unit,
     enableNestedScroll: Boolean = true,
-    onConfirm: () -> Unit
+    onAbort: () -> Unit
 ) {
-    YesNoBottomSheet(
-        show = uiState.isBatchMatching || uiState.batchProgress != null,
+    ActionBottomSheet(
+        show = uiState.isRunning || uiState.batchProgress != null,
         title = stringResource(R.string.batch_matching_title),
         enableNestedScroll = enableNestedScroll,
         content = {
@@ -51,7 +52,7 @@ fun BatchMatchingBottomSheet(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (uiState.isBatchMatching) {
+                                text = if (uiState.isRunning) {
                                     uiState.currentFile
                                 } else {
                                     stringResource(
@@ -109,8 +110,21 @@ fun BatchMatchingBottomSheet(
         onDismissRequest = {
             onDismissRequest()
         },
-        onConfirm = {
-            onConfirm()
+        onDismissFinished = {
+            onDismissFinished()
         },
+        actions = {
+            top.yukonga.miuix.kmp.basic.TextButton(
+                text = if (uiState.isRunning) stringResource(R.string.action_abort) else stringResource(R.string.action_close),
+                onClick = {
+                    if (uiState.isRunning) {
+                        onAbort()
+                    } else {
+                        onDismissRequest()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     )
 }

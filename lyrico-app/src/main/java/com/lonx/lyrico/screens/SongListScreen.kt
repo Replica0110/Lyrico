@@ -11,20 +11,13 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -57,8 +50,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -66,7 +57,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
@@ -81,18 +71,16 @@ import com.lonx.lyrico.ui.components.batch.BatchMatchBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchMatchConfigBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchRGBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchRGConfigBottomSheet
-import com.lonx.lyrico.ui.components.fab.ExpandableSelectionFabMenu
+import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
 import com.lonx.lyrico.ui.components.fab.ScrollToTopButton
 import com.lonx.lyrico.ui.components.search.LocalSearchTypeTabs
 import com.lonx.lyrico.ui.components.selection.dragSelection
 import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
 import com.lonx.lyrico.ui.components.song.SongActionSheets
-import com.lonx.lyrico.ui.components.song.SongDetailBottomSheet
 import com.lonx.lyrico.ui.components.song.SongListEmptyState
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
-import com.lonx.lyrico.ui.components.song.SongMenuBottomSheet
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
 import com.lonx.lyrico.viewmodel.BatchMatchViewModel
@@ -114,7 +102,6 @@ import my.nanihadesuka.compose.ScrollbarSelectionMode
 import my.nanihadesuka.compose.ScrollbarSettings
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.viewmodel.koinActivityViewModel
-import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -125,7 +112,6 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBarDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Add
@@ -789,10 +775,11 @@ fun SongListScreen(
             }
         )
 
-        ExpandableSelectionFabMenu(
+        ExpandableFabMenu(
             visible = isSelectionMode,
             expanded = isFabMenuExpanded,
-            hasSelection = hasSelection,
+            icon = MiuixIcons.Add,
+            enabled = hasSelection,
             onExpandedChange = { isFabMenuExpanded = it }
         ) {
             FabMenuItem(

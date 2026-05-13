@@ -44,11 +44,7 @@ data class SongInfo(
 data class SongListUiState(
     val isLoading: Boolean = false,
     val lastScanTime: Long = 0,
-    val showBatchConfigDialog: Boolean = false,
     val isBatchMatching: Boolean = false,
-    val showDeleteDialog: Boolean = false,
-    val showBatchDeleteDialog: Boolean = false,
-    val showRenameDialog: Boolean = false,
     val batchProgress: Pair<Int, Int>? = null,
     val successCount: Int = 0,
     val failureCount: Int = 0,
@@ -59,10 +55,6 @@ data class SongListUiState(
     val batchTimeMillis: Long = 0,
     val searchQuery: String = "",
     val isSearching: Boolean = false
-)
-data class SheetUiState(
-    val menuSong: SongEntity? = null,
-    val detailSong: SongEntity? = null
 )
 
 
@@ -105,8 +97,6 @@ class SongListViewModel(
     val searchType = _searchType.asStateFlow()
     private val _isSelectionMode = MutableStateFlow(false)
     val isSelectionMode = _isSelectionMode.asStateFlow()
-    private val _sheetState = MutableStateFlow(SheetUiState())
-    val sheetState = _sheetState.asStateFlow()
     val songs: StateFlow<List<SongEntity>> = combine(
         sortInfo,
         _uiState.map { it.searchQuery }.distinctUntilChanged(),
@@ -122,48 +112,18 @@ class SongListViewModel(
     }.onEach {
         _uiState.update { it.copy(isSearching = false) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    fun showMenu(song: SongEntity) {
-        _sheetState.value = SheetUiState(menuSong = song)
-    }
-    fun showDeleteDialog() {
-        _uiState.update { it.copy(showDeleteDialog = true) }
-    }
-    fun dismissDeleteDialog() {
-        _uiState.update { it.copy(showDeleteDialog = false) }
-    }
 
-    fun showRenameDialog() {
-        _uiState.update { it.copy(showRenameDialog = true) }
-    }
-    fun dismissRenameDialog() {
-        _uiState.update { it.copy(showRenameDialog = false) }
-    }
 
-    fun renameSong(newFileName: String) {
-        val song = _sheetState.value.menuSong ?: return
+
+    fun renameSong(song: SongEntity, newFileName: String) {
         viewModelScope.launch {
             val success = songRepository.renameSong(song, newFileName)
             if (success) {
-                dismissRenameDialog()
-                dismissAll()
                 libraryScanManager.scanFolders(setOf(song.folderId))
             }
         }
     }
 
-    fun showDetail(song: SongEntity) {
-        _sheetState.update {
-            it.copy(detailSong = song)
-        }
-    }
-
-    fun dismissDetail() {
-        _sheetState.update { it.copy(detailSong = null) }
-    }
-
-    fun dismissAll() {
-        _sheetState.value = SheetUiState()
-    }
 
     fun onSearchQueryChanged(query: String) {
         _uiState.update {
@@ -219,7 +179,6 @@ class SongListViewModel(
     }
     fun delete(song: SongEntity) {
         viewModelScope.launch {
-            dismissAll()
             songRepository.deleteSong(song)
         }
     }
@@ -254,13 +213,7 @@ class SongListViewModel(
         _selectedSongUris.value = songs.map { it.uri }.toSet()
     }
 
-    fun showBatchDeleteDialog() {
-        _uiState.update { it.copy(showBatchDeleteDialog = true) }
-    }
 
-    fun dismissBatchDeleteDialog() {
-        _uiState.update { it.copy(showBatchDeleteDialog = false) }
-    }
 
     fun batchDelete(songs: List<SongEntity>) {
         val selectedUris = _selectedSongUris.value

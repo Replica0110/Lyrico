@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components
+package com.lonx.lyrico.ui.components.crop
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas

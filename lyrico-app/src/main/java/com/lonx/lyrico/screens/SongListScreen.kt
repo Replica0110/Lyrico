@@ -23,8 +23,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,7 +46,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -57,11 +54,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,7 +68,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -86,7 +80,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.DropdownItem
-import com.lonx.lyrico.ui.components.FabMenuItem
+import com.lonx.lyrico.ui.components.fab.FabMenuItem
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.bar.findScrollIndex
@@ -98,10 +92,11 @@ import com.lonx.lyrico.ui.components.song.SongDetailBottomSheet
 import com.lonx.lyrico.ui.components.song.SongListEmptyState
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
-import com.lonx.lyrico.ui.components.song.SongMenuBottomSheetContent
-import com.lonx.lyrico.ui.dialog.BatchLyricsFormatConfigBottomSheet
-import com.lonx.lyrico.ui.dialog.BatchMatchConfigBottomSheet
-import com.lonx.lyrico.ui.dialog.ReplayGainConfigBottomSheet
+import com.lonx.lyrico.ui.components.song.SongMenuBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchLyricsFormatConfigBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchMatchConfigBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchMatchingBottomSheet
+import com.lonx.lyrico.ui.components.batch.ReplayGainConfigBottomSheet
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
 import com.lonx.lyrico.viewmodel.BatchMatchViewModel
@@ -117,8 +112,6 @@ import com.ramcosta.composedestinations.generated.destinations.BatchRenameDestin
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import my.nanihadesuka.compose.LazyColumnScrollbar
 import my.nanihadesuka.compose.ScrollbarSelectionMode
@@ -194,14 +187,12 @@ fun SongListScreen(
     val batchMatchConfig by batchMatchViewModel.batchMatchConfig.collectAsState()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val sheetUiState by songListViewModel.sheetState.collectAsStateWithLifecycle()
-
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showBatchDeleteDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
     var showMenuSheet by remember { mutableStateOf(false) }
     var showDetailSheet by remember { mutableStateOf(false) }
-    val selectedSong = sheetUiState.menuSong
-    LaunchedEffect(selectedSong) {
-        showMenuSheet = selectedSong != null
-    }
+    var selectedSong by remember { mutableStateOf<SongEntity?>(null) }
 
     val showFab by remember {
         derivedStateOf {
@@ -600,7 +591,8 @@ fun SongListScreen(
                                                     songListViewModel.toggleSelection(song.uri)
                                                 },
                                                 onShowMenu = {
-                                                    songListViewModel.showMenu(song)
+                                                    showMenuSheet = true
+                                                    selectedSong = song
                                                 }
                                             )
                                         }
@@ -659,103 +651,110 @@ fun SongListScreen(
                 )
             }
 
-            WindowBottomSheet(
-                show = showMenuSheet,
-                onDismissRequest = { showMenuSheet = false },
-                onDismissFinished = { songListViewModel.dismissAll() }
-            ) {
-                selectedSong?.let {
-                    SongMenuBottomSheetContent(
-                        song = it,
-                        onPlay = { songListViewModel.play(context, it) },
-                        showInfo = { showDetailSheet = true },
-                        onDelete = { songListViewModel.showDeleteDialog() },
-                        onShare = {
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "audio/*"
-                                putExtra(Intent.EXTRA_STREAM, it.uri.toUri())
-                                putExtra(Intent.EXTRA_TITLE, it.title ?: it.fileName)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(
-                                Intent.createChooser(
-                                    intent,
-                                    context.getString(R.string.share_chooser_title)
-                                )
+            selectedSong?.let { song ->
+                // 歌曲菜单
+                SongMenuBottomSheet(
+                    show = showMenuSheet,
+                    song = song,
+                    onDismissRequest = { showMenuSheet = false },
+                    onDismissFinished = { selectedSong = null },
+                    onPlay = { songListViewModel.play(context, song) },
+                    showInfo = { showDetailSheet = true },
+                    onDelete = {
+                        showDeleteDialog = true
+                    },
+                    onShare = {
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "audio/*"
+                            putExtra(Intent.EXTRA_STREAM, song.uri.toUri())
+                            putExtra(Intent.EXTRA_TITLE, song.title ?: song.fileName)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(
+                            Intent.createChooser(
+                                intent,
+                                context.getString(R.string.share_chooser_title)
                             )
-                        },
-                        onRename = { songListViewModel.showRenameDialog() }
-                    )
+                        )
+                    },
+                    onRename = { showRenameDialog = true }
+                )
+                // 歌曲详情
+                SongDetailBottomSheet(
+                    show = showDetailSheet,
+                    song = song,
+                    onDismissRequest = { showDetailSheet = false },
+                    onDismissFinished = { selectedSong = null },
+                )
+                // 单首歌曲删除确认
+                YesNoDialog(
+                    title = stringResource(R.string.dialog_delete_file_title),
+                    show = showDeleteDialog,
+                    summary = stringResource(
+                        R.string.dialog_delete_file_content,
+                        selectedSong?.fileName ?: ""
+                    ),
+                    onConfirm = {
+                        songListViewModel.delete(song)
+                    },
+                    onDismissRequest = {
+                        showDeleteDialog = false
+                    },
+                )
+                // 重命名
+                val extensionDot = if (!song.fileExtension.isNullOrEmpty()) ".${song.fileExtension}" else ""
+                val oldName = song.fileName.substringBeforeLast('.')
+                var newName by remember(song) {
+                    mutableStateOf(oldName)
                 }
-            }
-            SongDetailBottomSheet(
-                show = showDetailSheet && selectedSong != null,
-                song = selectedSong,
-                onDismissRequest = { showDetailSheet = false },
-                onDismissFinished = { songListViewModel.dismissDetail() },
-            )
-            YesNoDialog(
-                title = stringResource(R.string.dialog_delete_file_title),
-                show = songListUiState.showDeleteDialog && selectedSong != null,
-                summary = stringResource(
-                    R.string.dialog_delete_file_content,
-                    selectedSong?.fileName ?: ""
-                ),
-                onConfirm = {
-                    songListViewModel.dismissDeleteDialog()
-                    songListViewModel.dismissAll()
-                    songListViewModel.delete(selectedSong!!)
-                },
-                onDismissRequest = { songListViewModel.dismissDeleteDialog() },
-            )
-            val fileExtension = selectedSong?.fileName?.substringAfterLast('.', "") ?: ""
-            val extensionDot = if (fileExtension.isNotEmpty()) ".$fileExtension" else ""
-            val oldName = selectedSong?.fileName?.substringBeforeLast('.') ?: ""
-            var newName by remember(selectedSong) {
-                mutableStateOf(oldName)
-            }
-            YesNoDialog(
-                title = stringResource(R.string.dialog_rename_title),
-                show = songListUiState.showRenameDialog && selectedSong != null,
-                onDismissRequest = { songListViewModel.dismissRenameDialog() },
-                onConfirm = {
-                    val fullNewName = newName.trim() + extensionDot
-                    if (newName.isNotBlank() && fullNewName != selectedSong?.fileName) {
-                        if (fullNewName != sheetUiState.menuSong?.fileName) {
-                            songListViewModel.renameSong(fullNewName)
+                // 单曲重命名
+                YesNoDialog(
+                    title = stringResource(R.string.dialog_rename_title),
+                    show = showRenameDialog,
+                    onDismissRequest = {
+                        showRenameDialog = false
+                    },
+                    onConfirm = {
+                        val fullNewName = newName.trim() + extensionDot
+                        if (newName.isNotBlank() && fullNewName != song.fileName) {
+                            songListViewModel.renameSong(song,fullNewName)
                         }
-                    }
-                },
-                content = {
-                    TextField(
-                        value = newName,
-                        onValueChange = { newName = it },
-                        maxLines = 1,
-                        modifier = Modifier.fillMaxWidth(),
-                        trailingIcon = {
-                            if (extensionDot.isNotEmpty()) {
-                                Text(
-                                    text = extensionDot,
-                                    style = MiuixTheme.textStyles.footnote1,
-                                    modifier = Modifier.padding(end = 12.dp)
-                                )
+                    },
+                    content = {
+                        TextField(
+                            value = newName,
+                            onValueChange = { newName = it },
+                            maxLines = 1,
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                if (extensionDot.isNotEmpty()) {
+                                    Text(
+                                        text = extensionDot,
+                                        style = MiuixTheme.textStyles.footnote1,
+                                        modifier = Modifier.padding(end = 12.dp)
+                                    )
+                                }
                             }
-                        }
-                    )
-                }
-            )
-            YesNoDialog(
-                show = songListUiState.showBatchDeleteDialog,
-                onDismissRequest = { songListViewModel.dismissBatchDeleteDialog() },
-                summary = stringResource(
-                    R.string.dialog_batch_delete_content,
-                    selectedSongUris.size
-                ),
-                onConfirm = {
-                    songListViewModel.dismissBatchDeleteDialog()
-                    songListViewModel.batchDelete(songs)
-                }
-            )
+                        )
+                    }
+                )
+                // 批量删除
+                YesNoDialog(
+                    show = showBatchDeleteDialog,
+                    onDismissRequest = {
+                        showBatchDeleteDialog = false
+                    },
+                    summary = stringResource(
+                        R.string.dialog_batch_delete_content,
+                        selectedSongUris.size
+                    ),
+                    onConfirm = {
+                        showBatchDeleteDialog = false
+                        songListViewModel.batchDelete(songs)
+                    }
+                )
+            }
+
             // 批量匹配配置BottomSheet
             BatchMatchConfigBottomSheet(
                 show = batchMatchUiState.showBatchConfigDialog,
@@ -769,112 +768,22 @@ fun SongListScreen(
                 }
             )
 
-            WindowBottomSheet(
+            // 批量匹配进度
+            BatchMatchingBottomSheet(
                 show = batchMatchUiState.isBatchMatching || batchMatchUiState.batchProgress != null,
                 onDismissRequest = {
                     if (!batchMatchUiState.isBatchMatching) batchMatchViewModel.closeBatchMatchDialog()
                 },
-                title = stringResource(R.string.batch_matching_title),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(bottom = 32.dp)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Column(
-                        modifier = Modifier.padding(bottom = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        batchMatchUiState.batchProgress?.let { (current, total) ->
-                            val progress =
-                                if (total > 0) current.toFloat() / total.toFloat() else 0f
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (batchMatchUiState.isBatchMatching) {
-                                        batchMatchUiState.currentFile
-                                    } else {
-                                        stringResource(
-                                            R.string.batch_matching_total_time,
-                                            batchMatchUiState.batchTimeMillis / 1000.0
-                                        )
-                                    },
-                                    style = MiuixTheme.textStyles.subtitle,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                Text(
-                                    text = "$current / $total",
-                                    style = MiuixTheme.textStyles.main,
-                                    textAlign = TextAlign.End
-                                )
-                            }
-
-                            LinearProgressIndicator(progress = progress)
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(
-                                R.string.batch_matching_success,
-                                batchMatchUiState.successCount
-                            ),
-                            style = MiuixTheme.textStyles.main
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.batch_matching_skipped,
-                                batchMatchUiState.skippedCount
-                            ),
-                            style = MiuixTheme.textStyles.main
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.batch_matching_failure,
-                                batchMatchUiState.failureCount
-                            ),
-                            style = MiuixTheme.textStyles.main
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            enabled = !batchMatchUiState.isBatchMatching,
-                            text = stringResource(R.string.action_close),
-                            onClick = { batchMatchViewModel.closeBatchMatchDialog() },
-                            modifier = Modifier.weight(1f),
-                        )
-                        Spacer(Modifier.width(20.dp))
-                        top.yukonga.miuix.kmp.basic.TextButton(
-                            text = if (batchMatchUiState.isBatchMatching) stringResource(R.string.action_abort) else stringResource(
-                                R.string.confirm
-                            ),
-                            onClick = {
-                                if (batchMatchUiState.isBatchMatching) {
-                                    batchMatchViewModel.abortBatchMatch()
-                                } else {
-                                    batchMatchViewModel.closeBatchMatchDialog()
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = MiuixButtonDefaults.textButtonColorsPrimary(),
-                        )
+                enableNestedScroll = false,
+                uiState = batchMatchUiState,
+                onConfirm = {
+                    if (batchMatchUiState.isBatchMatching) {
+                        batchMatchViewModel.abortBatchMatch()
+                    } else {
+                        batchMatchViewModel.closeBatchMatchDialog()
                     }
                 }
-            }
-
+            )
             // ReplayGain配置BottomSheet
             ReplayGainConfigBottomSheet(
                 show = batchReplayGainUiState.showConfigDialog,
@@ -888,6 +797,7 @@ fun SongListScreen(
                 }
             )
 
+            // 批量歌词格式转换配置BottomSheet
             BatchLyricsFormatConfigBottomSheet(
                 show = batchLyricsFormatUiState.showConfigDialog,
                 initialConcurrency = batchLyricsFormatUiState.concurrency,
@@ -1328,7 +1238,7 @@ fun SongListScreen(
                             icon = MiuixIcons.Delete,
                             onClick = {
                                 isFabMenuExpanded = false
-                                songListViewModel.showBatchDeleteDialog()
+                                showBatchDeleteDialog = true
                             }
                         )
                         FabMenuItem(

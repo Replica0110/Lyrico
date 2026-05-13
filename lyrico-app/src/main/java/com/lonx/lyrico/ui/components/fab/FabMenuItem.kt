@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components
+package com.lonx.lyrico.ui.components.fab
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

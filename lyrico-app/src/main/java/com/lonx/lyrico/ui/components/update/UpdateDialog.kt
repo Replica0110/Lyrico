@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.dialog
+package com.lonx.lyrico.ui.components.update
 
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding

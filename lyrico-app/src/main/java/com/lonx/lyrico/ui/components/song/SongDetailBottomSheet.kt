@@ -47,7 +47,7 @@ import java.util.Locale
 @Composable
 fun SongDetailBottomSheet(
     show: Boolean,
-    song: SongEntity? =  null,
+    song: SongEntity,
     onDismissRequest: () -> Unit,
     onDismissFinished: () -> Unit
 ) {
@@ -66,157 +66,155 @@ fun SongDetailBottomSheet(
             onDismissFinished()
         },
     ) {
-        song?.let {
-            Column(
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
+                AsyncImage(
+                    model = CoverRequest(song.getUri, song.fileLastModified),
+                    contentDescription = stringResource(R.string.cd_cover),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    AsyncImage(
-                        model = CoverRequest(song.getUri, song.fileLastModified),
-                        contentDescription = stringResource(R.string.cd_cover),
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop,
-                        placeholder = painterResource(R.drawable.ic_album_24dp),
-                        error = painterResource(R.drawable.ic_album_24dp)
-                    )
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(R.drawable.ic_album_24dp),
+                    error = painterResource(R.drawable.ic_album_24dp)
+                )
 
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
-                            style = MiuixTheme.textStyles.title3,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = song.artist.takeIf { !it.isNullOrBlank() }
-                                ?: stringResource(R.string.unknown_artist),
-                            style = MiuixTheme.textStyles.footnote1,
-                            color = MiuixTheme.colorScheme.primary
-                        )
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
+                        style = MiuixTheme.textStyles.title3,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = song.artist.takeIf { !it.isNullOrBlank() }
+                            ?: stringResource(R.string.unknown_artist),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.primary
+                    )
+                }
+            }
+
+
+            Card(
+                modifier = Modifier.padding(bottom = 12.dp),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.secondaryContainer,
+                )
+            ) {
+                val copyToClipboard: (String) -> Unit = { text ->
+                    clipboardManager.setText(AnnotatedString(text))
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.msg_copied_to_clipboard),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                SongDetailItem(
+                    stringResource(R.string.label_album),
+                    song.album,
+                    onCopy = copyToClipboard
+                )
+                SongDetailItem(
+                    stringResource(R.string.label_date),
+                    song.date,
+                    onCopy = copyToClipboard
+                )
+                SongDetailItem(
+                    stringResource(R.string.label_genre),
+                    song.genre,
+                    onCopy = copyToClipboard
+                )
+                SongDetailItem(
+                    stringResource(R.string.label_track_number),
+                    song.trackerNumber,
+                    onCopy = copyToClipboard
+                )
+                SongDetailItem(
+                    stringResource(R.string.label_duration),
+                    if (song.durationMilliseconds > 0) {
+                        val min = song.durationMilliseconds / 60000
+                        val sec = (song.durationMilliseconds % 60000) / 1000
+                        String.format("%d:%02d", min, sec)
+                    } else null,
+                    onCopy = copyToClipboard
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_bitrate),
+                    if (song.bitrate > 0) "${song.bitrate} kbps" else null,
+                    onCopy = copyToClipboard
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_sample_rate),
+                    if (song.sampleRate > 0) "${song.sampleRate} Hz" else null,
+                    onCopy = copyToClipboard
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_channels),
+                    if (song.channels > 0) "${song.channels}" else null,
+                    onCopy = copyToClipboard
+                )
+                SongDetailItem(
+                    stringResource(R.string.label_date_added),
+                    if (song.fileAdded > 0)
+                        dateFormat.format(Date(song.fileAdded))
+                    else null,
+                    onCopy = copyToClipboard
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_date_modified),
+                    if (song.fileLastModified > 0)
+                        dateFormat.format(Date(song.fileLastModified))
+                    else null,
+                    onCopy = copyToClipboard
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_file_path),
+                    song.filePath,
+                    onCopy = copyToClipboard
+                )
+
+                SongDetailItem(
+                    stringResource(R.string.label_file_size),
+                    if (song.fileSize > 0)
+                        Formatter.formatFileSize(context, song.fileSize)
+                    else null,
+                    onCopy = copyToClipboard
+                )
+
+                if (BuildConfig.DEBUG) {
+                    SongDetailItem(
+                        label = "文件URI",
+                        value = song.uri,
+                        onCopy = copyToClipboard
+                    )
+                    SongDetailItem(
+                        label = "文件ID",
+                        value = song.id.toString(),
+                        onCopy = copyToClipboard
+                    )
+                    SongDetailItem(
+                        label = "文件名",
+                        value = song.fileName,
+                        onCopy = copyToClipboard
+                    )
                 }
 
-
-                Card(
-                    modifier = Modifier.padding(bottom = 12.dp),
-                    colors = CardDefaults.defaultColors(
-                        color = MiuixTheme.colorScheme.secondaryContainer,
-                    )
-                ) {
-                    val copyToClipboard: (String) -> Unit = { text ->
-                        clipboardManager.setText(AnnotatedString(text))
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.msg_copied_to_clipboard),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                    SongDetailItem(
-                        stringResource(R.string.label_album),
-                        song.album,
-                        onCopy = copyToClipboard
-                    )
-                    SongDetailItem(
-                        stringResource(R.string.label_date),
-                        song.date,
-                        onCopy = copyToClipboard
-                    )
-                    SongDetailItem(
-                        stringResource(R.string.label_genre),
-                        song.genre,
-                        onCopy = copyToClipboard
-                    )
-                    SongDetailItem(
-                        stringResource(R.string.label_track_number),
-                        song.trackerNumber,
-                        onCopy = copyToClipboard
-                    )
-                    SongDetailItem(
-                        stringResource(R.string.label_duration),
-                        if (song.durationMilliseconds > 0) {
-                            val min = song.durationMilliseconds / 60000
-                            val sec = (song.durationMilliseconds % 60000) / 1000
-                            String.format("%d:%02d", min, sec)
-                        } else null,
-                        onCopy = copyToClipboard
-                    )
-
-                    SongDetailItem(
-                        stringResource(R.string.label_bitrate),
-                        if (song.bitrate > 0) "${song.bitrate} kbps" else null,
-                        onCopy = copyToClipboard
-                    )
-
-                    SongDetailItem(
-                        stringResource(R.string.label_sample_rate),
-                        if (song.sampleRate > 0) "${song.sampleRate} Hz" else null,
-                        onCopy = copyToClipboard
-                    )
-
-                    SongDetailItem(
-                        stringResource(R.string.label_channels),
-                        if (song.channels > 0) "${song.channels}" else null,
-                        onCopy = copyToClipboard
-                    )
-                    SongDetailItem(
-                        stringResource(R.string.label_date_added),
-                        if (song.fileAdded > 0)
-                            dateFormat.format(Date(song.fileAdded))
-                        else null,
-                        onCopy = copyToClipboard
-                    )
-
-                    SongDetailItem(
-                        stringResource(R.string.label_date_modified),
-                        if (song.fileLastModified > 0)
-                            dateFormat.format(Date(song.fileLastModified))
-                        else null,
-                        onCopy = copyToClipboard
-                    )
-
-                    SongDetailItem(
-                        stringResource(R.string.label_file_path),
-                        song.filePath,
-                        onCopy = copyToClipboard
-                    )
-
-                    SongDetailItem(
-                        stringResource(R.string.label_file_size),
-                        if (song.fileSize > 0)
-                            Formatter.formatFileSize(context, song.fileSize)
-                        else null,
-                        onCopy = copyToClipboard
-                    )
-
-                    if (BuildConfig.DEBUG) {
-                        SongDetailItem(
-                            label = "文件URI",
-                            value = song.uri,
-                            onCopy = copyToClipboard
-                        )
-                        SongDetailItem(
-                            label = "文件ID",
-                            value = song.id.toString(),
-                            onCopy = copyToClipboard
-                        )
-                        SongDetailItem(
-                            label = "文件名",
-                            value = song.fileName,
-                            onCopy = copyToClipboard
-                        )
-                    }
-
-                }
             }
         }
     }

@@ -75,13 +75,12 @@ import coil3.compose.AsyncImage
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
-import com.lonx.lyrico.data.editfield.VisibleEditFieldGroup
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricsSearchResult
-import com.lonx.lyrico.ui.components.ImageCropper
+import com.lonx.lyrico.ui.components.crop.ImageCropper
 import com.lonx.lyrico.ui.components.getBitmap
-import com.lonx.lyrico.ui.components.rememberImageCropperState
+import com.lonx.lyrico.ui.components.crop.rememberImageCropperState
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.CoverSourceType

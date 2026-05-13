@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -24,18 +22,19 @@ fun YesNoBottomSheet(
     enableNestedScroll: Boolean = true,
     content: @Composable (() -> Unit),
     onDismissRequest: () -> Unit,
+    onDismissFinished: () -> Unit = {},
     onConfirm: () -> Unit
 ) {
     WindowBottomSheet(
         show = show,
         enableNestedScroll = enableNestedScroll,
         onDismissRequest = onDismissRequest,
+        onDismissFinished = onDismissFinished,
         title = title
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
         ) {
             content.invoke()
             Row {

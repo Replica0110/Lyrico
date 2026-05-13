@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.dialog
+package com.lonx.lyrico.ui.components.batch
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer

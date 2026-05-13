@@ -29,8 +29,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -41,14 +39,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -62,7 +57,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -77,25 +71,28 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.DropdownItem
-import com.lonx.lyrico.ui.components.fab.FabMenuItem
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.bar.findScrollIndex
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.batch.BatchLyricsFormatBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchLyricsFormatConfigBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchMatchBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchMatchConfigBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchRGBottomSheet
+import com.lonx.lyrico.ui.components.batch.BatchRGConfigBottomSheet
+import com.lonx.lyrico.ui.components.fab.ExpandableSelectionFabMenu
+import com.lonx.lyrico.ui.components.fab.FabMenuItem
+import com.lonx.lyrico.ui.components.fab.ScrollToTopButton
 import com.lonx.lyrico.ui.components.search.LocalSearchTypeTabs
 import com.lonx.lyrico.ui.components.selection.dragSelection
 import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
+import com.lonx.lyrico.ui.components.song.SongActionSheets
 import com.lonx.lyrico.ui.components.song.SongDetailBottomSheet
 import com.lonx.lyrico.ui.components.song.SongListEmptyState
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
 import com.lonx.lyrico.ui.components.song.SongMenuBottomSheet
-import com.lonx.lyrico.ui.components.batch.BatchLyricsFormatConfigBottomSheet
-import com.lonx.lyrico.ui.components.batch.BatchMatchConfigBottomSheet
-import com.lonx.lyrico.ui.components.batch.BatchMatchBottomSheet
-import com.lonx.lyrico.ui.components.batch.BatchRGBottomSheet
-import com.lonx.lyrico.ui.components.batch.BatchRGConfigBottomSheet
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
 import com.lonx.lyrico.viewmodel.BatchMatchViewModel
@@ -127,7 +124,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.basic.Surface
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TopAppBarDefaults
@@ -647,109 +643,45 @@ fun SongListScreen(
                 )
             }
 
-            selectedSong?.let { song ->
-                // 歌曲菜单
-                SongMenuBottomSheet(
-                    show = showMenuSheet,
-                    song = song,
-                    onDismissRequest = { showMenuSheet = false },
-                    onDismissFinished = { selectedSong = null },
-                    onPlay = { songListViewModel.play(context, song) },
-                    showInfo = { showDetailSheet = true },
-                    onDelete = {
-                        showDeleteDialog = true
-                    },
-                    onShare = {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "audio/*"
-                            putExtra(Intent.EXTRA_STREAM, song.uri.toUri())
-                            putExtra(Intent.EXTRA_TITLE, song.title ?: song.fileName)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(
-                            Intent.createChooser(
-                                intent,
-                                context.getString(R.string.share_chooser_title)
-                            )
-                        )
-                    },
-                    onRename = { showRenameDialog = true }
-                )
-                // 歌曲详情
-                SongDetailBottomSheet(
-                    show = showDetailSheet,
-                    song = song,
-                    onDismissRequest = { showDetailSheet = false }
-                )
-                // 单首歌曲删除确认
-                YesNoDialog(
-                    title = stringResource(R.string.dialog_delete_file_title),
-                    show = showDeleteDialog,
-                    summary = stringResource(
-                        R.string.dialog_delete_file_content,
-                        selectedSong?.fileName ?: ""
-                    ),
-                    onConfirm = {
-                        songListViewModel.delete(song)
-                    },
-                    onDismissRequest = {
-                        showDeleteDialog = false
-                    },
-                )
-                // 重命名
-                val extensionDot = if (!song.fileExtension.isNullOrEmpty()) ".${song.fileExtension}" else ""
-                val oldName = song.fileName.substringBeforeLast('.')
-                var newName by remember(song) {
-                    mutableStateOf(oldName)
+            SongActionSheets(
+                selectedSong = selectedSong,
+                showMenuSheet = showMenuSheet,
+                showDetailSheet = showDetailSheet,
+                showDeleteDialog = showDeleteDialog,
+                showRenameDialog = showRenameDialog,
+                onDismissMenu = { showMenuSheet = false },
+                onDismissMenuFinished = { selectedSong = null },
+                onDismissDetail = { showDetailSheet = false },
+                onDismissDelete = { showDeleteDialog = false },
+                onDismissRename = { showRenameDialog = false },
+                onShowDetail = { showDetailSheet = true },
+                onShowDelete = { showDeleteDialog = true },
+                onShowRename = { showRenameDialog = true },
+                onPlay = { song ->
+                    songListViewModel.play(context, song)
+                },
+                onDelete = { song ->
+                    songListViewModel.delete(song)
+                },
+                onRename = { song, newFileName ->
+                    songListViewModel.renameSong(song, newFileName)
                 }
-                // 单曲重命名
-                YesNoDialog(
-                    title = stringResource(R.string.dialog_rename_title),
-                    show = showRenameDialog,
-                    onDismissRequest = {
-                        showRenameDialog = false
-                    },
-                    onConfirm = {
-                        val fullNewName = newName.trim() + extensionDot
-                        if (newName.isNotBlank() && fullNewName != song.fileName) {
-                            songListViewModel.renameSong(song,fullNewName)
-                        }
-                    },
-                    content = {
-                        TextField(
-                            value = newName,
-                            onValueChange = { newName = it },
-                            maxLines = 1,
-                            modifier = Modifier.fillMaxWidth(),
-                            trailingIcon = {
-                                if (extensionDot.isNotEmpty()) {
-                                    Text(
-                                        text = extensionDot,
-                                        style = MiuixTheme.textStyles.footnote1,
-                                        modifier = Modifier.padding(end = 12.dp)
-                                    )
-                                }
-                            }
-                        )
-                    }
-                )
-                // 批量删除
-                YesNoDialog(
-                    show = showBatchDeleteDialog,
-                    onDismissRequest = {
-                        showBatchDeleteDialog = false
-                    },
-                    summary = stringResource(
-                        R.string.dialog_batch_delete_content,
-                        selectedSongUris.size
-                    ),
-                    onConfirm = {
-                        showBatchDeleteDialog = false
-                        songListViewModel.batchDelete(songs)
-                    }
-                )
-            }
-
+            )
+            // 批量删除
+            YesNoDialog(
+                show = showBatchDeleteDialog,
+                onDismissRequest = {
+                    showBatchDeleteDialog = false
+                },
+                summary = stringResource(
+                    R.string.dialog_batch_delete_content,
+                    selectedSongUris.size
+                ),
+                onConfirm = {
+                    showBatchDeleteDialog = false
+                    songListViewModel.batchDelete(songs)
+                }
+            )
             // 批量匹配配置BottomSheet
             BatchMatchConfigBottomSheet(
                 show = batchMatchUiState.showBatchConfigDialog,
@@ -845,173 +777,97 @@ fun SongListScreen(
                 }
             )
         }
-        AnimatedVisibility(
+        ScrollToTopButton(
             visible = showFab,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(top = topPadding)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .height(38.dp)
-                    .clip(CircleShape)
-                    .clickable {
-                        scope.launch { listState.animateScrollToItem(0) }
-                    },
-                shape = CircleShape,
-                color = MiuixTheme.colorScheme.primary,
-                shadowElevation = 4.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_arrow_up_24dp),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MiuixTheme.colorScheme.onPrimary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.action_scroll_to_top),
-                        style = MiuixTheme.textStyles.button,
-                        color = MiuixTheme.colorScheme.onPrimary
-                    )
+            topPadding = topPadding,
+            text = stringResource(R.string.action_scroll_to_top),
+            icon = painterResource(R.drawable.ic_arrow_up_24dp),
+            onClick = {
+                scope.launch {
+                    listState.animateScrollToItem(0)
                 }
             }
-        }
-        AnimatedVisibility(
-            visible = isSelectionMode && isFabMenuExpanded,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.2f)) // 加上淡淡的暗色遮罩层，让用户的视觉聚焦在菜单上
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { isFabMenuExpanded = false }
-            )
-        }
+        )
 
-        AnimatedVisibility(
+        ExpandableSelectionFabMenu(
             visible = isSelectionMode,
-            enter = scaleIn() + fadeIn(),
-            exit = scaleOut() + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 24.dp)
-                .windowInsetsPadding(WindowInsets.navigationBars)
+            expanded = isFabMenuExpanded,
+            hasSelection = hasSelection,
+            onExpandedChange = { isFabMenuExpanded = it }
         ) {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // 向上展开的子菜单
-                AnimatedVisibility(
-                    visible = isFabMenuExpanded && hasSelection,
-                    enter = slideInVertically { it / 2 } + fadeIn(),
-                    exit = slideOutVertically { it / 2 } + fadeOut()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    ) {
-                        FabMenuItem(
-                            label = stringResource(R.string.action_batch_replay_gain),
-                            icon = MiuixIcons.Edit,
-                            onClick = {
-                                isFabMenuExpanded = false
-                                batchReplayGainViewModel.setSelectionUris(songListViewModel.selectedSongUris.value.toList())
-                                batchReplayGainViewModel.openReplayGainConfig()
-                            }
-                        )
-                        FabMenuItem(
-                            label = stringResource(R.string.action_batch_convert_lyrics_format),
-                            icon = MiuixIcons.Edit,
-                            onClick = {
-                                isFabMenuExpanded = false
-                                batchLyricsFormatViewModel.setSelectionUris(
-                                    songListViewModel.selectedSongUris.value.toList()
-                                )
-                                batchLyricsFormatViewModel.openConfig(batchReplayGainUiState.concurrency)
-                            }
-                        )
-                        FabMenuItem(
-                            label = stringResource(R.string.action_batch_rename),
-                            icon = MiuixIcons.Rename,
-                            onClick = {
-                                isFabMenuExpanded = false
-                                if (songListViewModel.setSelectionUris()) {
-                                    navigator.navigate(BatchRenameDestination)
-                                }
-                            }
-                        )
-                        FabMenuItem(
-                            label = stringResource(R.string.batch_edit_title),
-                            icon = MiuixIcons.Edit,
-                            onClick = {
-                                isFabMenuExpanded = false
-                                if (songListViewModel.setSelectionUris()) {
-                                    navigator.navigate(BatchEditDestination())
-                                }
-                            }
-                        )
-                        FabMenuItem(
-                            label = stringResource(R.string.action_batch_match),
-                            icon = MiuixIcons.Edit,
-                            onClick = {
-                                isFabMenuExpanded = false
-                                songListViewModel.setSelectionUris()
-                                batchMatchViewModel.openBatchMatchConfig()
-                            }
-                        )
-                        FabMenuItem(
-                            label = stringResource(R.string.action_delete),
-                            icon = MiuixIcons.Delete,
-                            onClick = {
-                                isFabMenuExpanded = false
-                                showBatchDeleteDialog = true
-                            }
-                        )
-                        FabMenuItem(
-                            label = stringResource(R.string.action_share),
-                            icon = MiuixIcons.Share,
-                            onClick = {
-                                isFabMenuExpanded = false
-                                songListViewModel.batchShare(context, songs)
-                            }
-                        )
-                    }
-                }
-
-                // 主 FAB 按钮
-                FloatingActionButton(
-                    onClick = {
-                        if (hasSelection) {
-                            isFabMenuExpanded = !isFabMenuExpanded
-                        }
-                    }
-                ) {
-                    // 添加旋转动画
-                    val rotation by animateFloatAsState(targetValue = if (isFabMenuExpanded) 45f else 0f)
-                    Icon(
-                        imageVector = MiuixIcons.Add,
-                        contentDescription = "Batch Actions",
-                        tint = MiuixTheme.colorScheme.onPrimary,
-                        modifier = Modifier.rotate(rotation)
+            FabMenuItem(
+                label = stringResource(R.string.action_batch_replay_gain),
+                icon = MiuixIcons.Edit,
+                onClick = {
+                    isFabMenuExpanded = false
+                    batchReplayGainViewModel.setSelectionUris(
+                        songListViewModel.selectedSongUris.value.toList()
                     )
+                    batchReplayGainViewModel.openReplayGainConfig()
                 }
-            }
+            )
+
+            FabMenuItem(
+                label = stringResource(R.string.action_batch_convert_lyrics_format),
+                icon = MiuixIcons.Edit,
+                onClick = {
+                    isFabMenuExpanded = false
+                    batchLyricsFormatViewModel.setSelectionUris(
+                        songListViewModel.selectedSongUris.value.toList()
+                    )
+                    batchLyricsFormatViewModel.openConfig(batchReplayGainUiState.concurrency)
+                }
+            )
+
+            FabMenuItem(
+                label = stringResource(R.string.action_batch_rename),
+                icon = MiuixIcons.Rename,
+                onClick = {
+                    isFabMenuExpanded = false
+                    if (songListViewModel.setSelectionUris()) {
+                        navigator.navigate(BatchRenameDestination)
+                    }
+                }
+            )
+
+            FabMenuItem(
+                label = stringResource(R.string.batch_edit_title),
+                icon = MiuixIcons.Edit,
+                onClick = {
+                    isFabMenuExpanded = false
+                    if (songListViewModel.setSelectionUris()) {
+                        navigator.navigate(BatchEditDestination())
+                    }
+                }
+            )
+
+            FabMenuItem(
+                label = stringResource(R.string.action_batch_match),
+                icon = MiuixIcons.Edit,
+                onClick = {
+                    isFabMenuExpanded = false
+                    songListViewModel.setSelectionUris()
+                    batchMatchViewModel.openBatchMatchConfig()
+                }
+            )
+
+            FabMenuItem(
+                label = stringResource(R.string.action_delete),
+                icon = MiuixIcons.Delete,
+                onClick = {
+                    isFabMenuExpanded = false
+                    showBatchDeleteDialog = true
+                }
+            )
+
+            FabMenuItem(
+                label = stringResource(R.string.action_share),
+                icon = MiuixIcons.Share,
+                onClick = {
+                    isFabMenuExpanded = false
+                    songListViewModel.batchShare(context, songs)
+                }
+            )
         }
     }
 }

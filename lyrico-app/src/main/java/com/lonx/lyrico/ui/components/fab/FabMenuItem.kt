@@ -24,8 +24,21 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun FabMenuItem(
     label: String,
     icon: ImageVector,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
+    val textColor = if (enabled) {
+        MiuixTheme.colorScheme.onSurface
+    } else {
+        MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    }
+
+    val iconColor = if (enabled) {
+        MiuixTheme.colorScheme.primary
+    } else {
+        MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End,
@@ -36,12 +49,14 @@ fun FabMenuItem(
             shape = RoundedCornerShape(8.dp),
             color = MiuixTheme.colorScheme.surface,
             shadowElevation = 2.dp,
-            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick)
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(enabled = enabled, onClick = onClick)
         ) {
             Text(
                 text = label,
                 style = MiuixTheme.textStyles.main,
-                color = MiuixTheme.colorScheme.onSurface,
+                color = textColor,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
@@ -50,9 +65,13 @@ fun FabMenuItem(
 
         // 小尺寸的 FAB
         SmallFloatingActionButton(
-            onClick = onClick,
+            onClick = {
+                if (enabled) {
+                    onClick()
+                }
+            },
             containerColor = MiuixTheme.colorScheme.surface,
-            contentColor = MiuixTheme.colorScheme.primary
+            contentColor = iconColor
         ) {
             Icon(
                 imageVector = icon,

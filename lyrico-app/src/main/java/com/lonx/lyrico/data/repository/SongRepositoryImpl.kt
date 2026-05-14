@@ -24,6 +24,8 @@ import com.lonx.lyrico.data.model.AppLogLevel
 import com.lonx.lyrico.data.model.AppLogType
 import com.lonx.lyrico.data.model.LocalSearchType
 import com.lonx.lyrico.data.model.SongFile
+import com.lonx.lyrico.data.model.dao.AlbumSearchRow
+import com.lonx.lyrico.data.model.dao.ArtistSearchRow
 import com.lonx.lyrico.data.model.dao.SongFieldValue
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.utils.SongQueryBuilder
@@ -622,6 +624,33 @@ class SongRepositoryImpl(
 
     override fun searchSongs(query: String, type: LocalSearchType): Flow<List<SongEntity>> {
         return songDao.searchSongsByType(query, type.value)
+    }
+
+    override fun searchSongsForLocalSearch(query: String): Flow<List<SongEntity>> {
+        return songDao.searchSongsForLocalSearch(query)
+    }
+
+    override fun searchAlbumsForLocalSearch(query: String): Flow<List<AlbumSearchRow>> {
+        return songDao.searchAlbumsForLocalSearch(query)
+    }
+
+    override fun searchArtistsForLocalSearch(query: String): Flow<List<ArtistSearchRow>> {
+        return songDao.searchArtistsForLocalSearch(query)
+    }
+
+    override fun observeSongsByAlbumForSearch(
+        album: String,
+        albumArtist: String?
+    ): Flow<List<SongEntity>> {
+        return songDao.observeSongsByAlbumForSearch(album, albumArtist)
+    }
+
+    override fun observeSongsByArtistForSearch(artist: String): Flow<List<SongEntity>> {
+        return songDao.observeSongsByArtistForSearch(artist)
+    }
+
+    override fun observeAlbumsByArtistForSearch(artist: String): Flow<List<AlbumSearchRow>> {
+        return songDao.observeAlbumsByArtistForSearch(artist)
     }
 
     override suspend fun updateSongMetadata(

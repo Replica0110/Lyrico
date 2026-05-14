@@ -578,4 +578,16 @@
     <string name="edit_field_visibility_group_enabled_summary">After closing, the fields under this group will not appear on the edit screen</string>
     <string name="edit_field_visibility_fields">Fields</string>
     <string name="edit_field_visibility_group_summary">" %1$d / %2$d enables"</string>
+    <string name="local_search_title">Local Search</string>
+    <string name="search_section_songs">Songs</string>
+    <string name="search_section_albums">Albums</string>
+    <string name="search_section_artists">Artists</string>
+    <string name="search_empty">No search results</string>
+    <string name="album_detail_title">Album</string>
+    <string name="artist_detail_title">Artist</string>
+    <string name="artist_tab_songs">Songs</string>
+    <string name="artist_tab_albums">Albums</string>
+    <string name="song_count">%1$d songs</string>
+    <string name="album_count">%1$d albums</string>
+    <string name="album_song_count">%1$d albums - %2$d songs</string>
 </resources>

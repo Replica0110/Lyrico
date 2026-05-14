@@ -35,7 +35,9 @@ import com.lonx.lyrico.worker.processor.LyricsFormatProcessor
 import com.lonx.lyrico.worker.processor.MatchMetadataProcessor
 import com.lonx.lyrico.worker.processor.ReplayGainProcessor
 import com.lonx.lyrico.viewmodel.AboutViewModel
+import com.lonx.lyrico.viewmodel.AlbumDetailViewModel
 import com.lonx.lyrico.viewmodel.AppLogViewModel
+import com.lonx.lyrico.viewmodel.ArtistDetailViewModel
 import com.lonx.lyrico.viewmodel.BatchEditViewModel
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
 import com.lonx.lyrico.viewmodel.BatchTaskDetailViewModel
@@ -48,9 +50,11 @@ import com.lonx.lyrico.viewmodel.EditFieldVisibilitySettingsViewModel
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
+import com.lonx.lyrico.viewmodel.LocalSearchViewModel
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.lonx.lyrico.viewmodel.SongListViewModel
+import com.lonx.lyrico.viewmodel.SongSelectionViewModel
 import com.lonx.lyrico.worker.processor.RenameFilesProcessor
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.source.am.AppleApi
@@ -258,6 +262,21 @@ val appModule = module {
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
     viewModel { SongListViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SongSelectionViewModel(get(), get(), get()) }
+    viewModel { LocalSearchViewModel(get()) }
+    viewModel { (album: String, albumArtist: String?) ->
+        AlbumDetailViewModel(
+            songRepository = get(),
+            album = album,
+            albumArtist = albumArtist
+        )
+    }
+    viewModel { (artist: String) ->
+        ArtistDetailViewModel(
+            songRepository = get(),
+            artist = artist
+        )
+    }
     viewModel { SettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { CoverSearchViewModel(get(), get()) }

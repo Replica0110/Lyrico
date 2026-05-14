@@ -95,6 +95,7 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.BatchEditDestination
 import com.ramcosta.composedestinations.generated.destinations.BatchRenameDestination
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
+import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
@@ -152,22 +153,17 @@ fun SongListScreen(
     val batchLyricsFormatViewModel: BatchLyricsFormatViewModel = koinViewModel()
     val songListUiState by songListViewModel.uiState.collectAsState()
     val scanState by songListViewModel.scanState.collectAsStateWithLifecycle()
-    val batchMatchUiState by batchMatchViewModel.uiState.collectAsState()
-    val batchReplayGainUiState by batchReplayGainViewModel.uiState.collectAsStateWithLifecycle()
-    val batchLyricsFormatUiState by batchLyricsFormatViewModel.uiState.collectAsStateWithLifecycle()
+
     val sortInfo by songListViewModel.sortInfo.collectAsState()
     val songs by songListViewModel.songs.collectAsState()
     val searchType by songListViewModel.searchType.collectAsState()
     val isSelectionMode by songListViewModel.isSelectionMode.collectAsState(initial = false)
     val selectedSongUris by songListViewModel.selectedSongUris.collectAsState()
     val hasFolders by songListViewModel.hasFolders.collectAsStateWithLifecycle()
-    val allSelected = songs.isNotEmpty() && selectedSongUris.containsAll(songs.map { it.uri })
     val showScrollTopButton by songListViewModel.showScrollTopButton.collectAsStateWithLifecycle()
-    val batchMatchConfig by batchMatchViewModel.batchMatchConfig.collectAsState()
     var sortOrderDropdownExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var showBatchDeleteDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showMenuSheet by remember { mutableStateOf(false) }
     var showDetailSheet by remember { mutableStateOf(false) }
@@ -179,7 +175,6 @@ fun SongListScreen(
         }
     }
     var isFabMenuExpanded by remember { mutableStateOf(false) }
-    val hasSelection = selectedSongUris.isNotEmpty()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val layoutDirection = LocalLayoutDirection.current
@@ -293,61 +288,14 @@ fun SongListScreen(
                 ) { state ->
                     when (state) {
                         TopBarState.Selection -> {
-                            BoxWithConstraints {
-                                val compactTopBar = maxWidth < 360.dp
-
-                                SmallTopAppBar(
-                                    title = "",
-                                    scrollBehavior = topAppBarScrollBehavior,
-                                    navigationIcon = {
-                                        Text(
-                                            text = stringResource(
-                                                R.string.selection_mode_selected_count,
-                                                selectedSongUris.size
-                                            )
-                                        )
-                                    },
-                                    actions = {
-                                        if (!compactTopBar) {
-                                            TextButton(
-                                                onClick = {
-                                                    if (allSelected) {
-                                                        songListViewModel.deselectAll()
-                                                    } else {
-                                                        songListViewModel.selectAll(songs)
-                                                    }
-                                                }
-                                            ) {
-                                                Text(
-                                                    text = stringResource(
-                                                        if (allSelected) {
-                                                            R.string.action_deselect_all
-                                                        } else {
-                                                            R.string.action_select_all
-                                                        }
-                                                    ),
-                                                    color = MiuixTheme.colorScheme.primary,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-
-                                        TextButton(
-                                            onClick = {
-                                                songListViewModel.exitSelectionMode()
-                                            }
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.action_close),
-                                                color = MiuixTheme.colorScheme.primary,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                )
-                            }
+                            SongSelectionTopAppBar(
+                                songs = songs,
+                                selectedSongUris = selectedSongUris,
+                                scrollBehavior = topAppBarScrollBehavior,
+                                onSelectAll = songListViewModel::selectAll,
+                                onDeselectAll = songListViewModel::deselectAll,
+                                onClose = songListViewModel::exitSelectionMode
+                            )
                         }
 
                         TopBarState.Search -> {
@@ -404,10 +352,12 @@ fun SongListScreen(
                                     }
                                 },
                                 actions = {
-                                    IconButton(onClick = { isSearchMode = true }) {
-                                        Icon(
-                                            imageVector = MiuixIcons.Search,
-                                            contentDescription = stringResource(R.string.cd_search)
+                                            IconButton(onClick = {
+                                                navigator.navigate(LocalSearchDestination)
+                                            }) {
+                                                Icon(
+                                                    imageVector = MiuixIcons.Search,
+                                                    contentDescription = stringResource(R.string.cd_search)
                                         )
                                     }
                                     Box {
@@ -654,115 +604,6 @@ fun SongListScreen(
                     songListViewModel.renameSong(song, newFileName)
                 }
             )
-            // 批量删除
-            YesNoDialog(
-                show = showBatchDeleteDialog,
-                onDismissRequest = {
-                    showBatchDeleteDialog = false
-                },
-                summary = stringResource(
-                    R.string.dialog_batch_delete_content,
-                    selectedSongUris.size
-                ),
-                onConfirm = {
-                    showBatchDeleteDialog = false
-                    songListViewModel.batchDelete(songs)
-                }
-            )
-            // 批量匹配配置BottomSheet
-            BatchMatchConfigBottomSheet(
-                show = batchMatchUiState.showBatchConfigDialog,
-                initialConfig = batchMatchConfig,
-                onDismissRequest = { config ->
-                    batchMatchViewModel.saveBatchMatchConfig(config)
-                    batchMatchViewModel.closeBatchMatchConfig()
-                },
-                onConfirm = { config ->
-                    batchMatchViewModel.saveBatchMatchConfig(config)
-                    batchMatchViewModel.batchMatch(songs, config)
-                }
-            )
-
-            // 批量匹配进度
-            BatchMatchBottomSheet(
-                onDismissRequest = {
-                    if (!batchMatchUiState.isRunning) batchMatchViewModel.closeBatchMatchDialog()
-                },
-                onDismissFinished = {
-                    if (!batchMatchUiState.isRunning) batchMatchViewModel.closeBatchMatchDialog()
-                },
-                enableNestedScroll = false,
-                uiState = batchMatchUiState,
-                onAbort = {
-                    batchMatchViewModel.abortBatchMatch()
-                }
-            )
-            // ReplayGain配置BottomSheet
-            BatchRGConfigBottomSheet(
-                show = batchReplayGainUiState.showConfigDialog,
-                initialConcurrency = batchReplayGainUiState.concurrency,
-                onDismissRequest = { concurrency ->
-                    batchReplayGainViewModel.setConcurrency(concurrency)
-                    batchReplayGainViewModel.closeReplayGainConfig()
-                },
-                onConfirm = { concurrency ->
-                    batchReplayGainViewModel.setConcurrency(concurrency)
-                    batchReplayGainViewModel.startBatchScan()
-                }
-            )
-
-            // 批量歌词格式转换配置BottomSheet
-            BatchLyricsFormatConfigBottomSheet(
-                show = batchLyricsFormatUiState.showConfigDialog,
-                initialConcurrency = batchLyricsFormatUiState.concurrency,
-                initialTargetFormat = batchLyricsFormatUiState.targetFormat,
-                onDismissRequest = { concurrency, targetFormat ->
-                    batchReplayGainViewModel.setConcurrency(concurrency)
-                    batchLyricsFormatViewModel.setConcurrency(concurrency)
-                    batchLyricsFormatViewModel.setTargetFormat(targetFormat)
-                    batchLyricsFormatViewModel.closeConfig()
-                },
-                onConfirm = { concurrency, targetFormat ->
-                    batchReplayGainViewModel.setConcurrency(concurrency)
-                    batchLyricsFormatViewModel.setConcurrency(concurrency)
-                    batchLyricsFormatViewModel.setTargetFormat(targetFormat)
-                    batchLyricsFormatViewModel.startBatchConvert()
-                }
-            )
-
-            // 批量计算ReplayGain进度
-            BatchRGBottomSheet(
-                batchReplayGainUiState = batchReplayGainUiState,
-                onDismissRequest = {
-                    batchReplayGainViewModel.closeProgressDialog()
-                },
-                onAbort = {
-                    batchReplayGainViewModel.abortBatchScan()
-                },
-                onDismissFinished = {
-                    if (batchReplayGainUiState.isSuccess) {
-                        batchReplayGainViewModel.closeProgressDialog()
-                    }
-                },
-            )
-
-            // 批量歌词格式转换进度
-            BatchLyricsFormatBottomSheet(
-                batchLyricsFormatUiState = batchLyricsFormatUiState,
-                onDismissRequest = {
-                    if (!batchLyricsFormatUiState.isRunning) {
-                        batchLyricsFormatViewModel.closeProgressDialog()
-                    }
-                },
-                onDismissFinished = {
-                    if (batchLyricsFormatUiState.isSuccess) {
-                        batchLyricsFormatViewModel.clearProgressDialog()
-                    }
-                },
-                onAbort = {
-                    batchLyricsFormatViewModel.abortBatchConvert()
-                }
-            )
         }
         ScrollToTopButton(
             visible = showFab,
@@ -776,88 +617,16 @@ fun SongListScreen(
             }
         )
 
-        ExpandableFabMenu(
-            visible = isSelectionMode,
+        SongBatchSelectionActions(
+            navigator = navigator,
+            songs = songs,
+            isSelectionMode = isSelectionMode,
             expanded = isFabMenuExpanded,
-            enabled = hasSelection,
-            style = ExpandableFabMenuStyle.default().copy(
-                mainIcon = MiuixIcons.Add
-            ),
-            onExpandedChange = { isFabMenuExpanded = it }
-        ) {
-            FabMenuItem(
-                label = stringResource(R.string.action_batch_replay_gain),
-                icon = MiuixIcons.Edit,
-                onClick = {
-                    isFabMenuExpanded = false
-                    batchReplayGainViewModel.setSelectionUris(
-                        songListViewModel.selectedSongUris.value.toList()
-                    )
-                    batchReplayGainViewModel.openReplayGainConfig()
-                }
-            )
-
-            FabMenuItem(
-                label = stringResource(R.string.action_batch_convert_lyrics_format),
-                icon = MiuixIcons.Edit,
-                onClick = {
-                    isFabMenuExpanded = false
-                    batchLyricsFormatViewModel.setSelectionUris(
-                        songListViewModel.selectedSongUris.value.toList()
-                    )
-                    batchLyricsFormatViewModel.openConfig(batchReplayGainUiState.concurrency)
-                }
-            )
-
-            FabMenuItem(
-                label = stringResource(R.string.action_batch_rename),
-                icon = MiuixIcons.Rename,
-                onClick = {
-                    isFabMenuExpanded = false
-                    if (songListViewModel.setSelectionUris()) {
-                        navigator.navigate(BatchRenameDestination)
-                    }
-                }
-            )
-
-            FabMenuItem(
-                label = stringResource(R.string.batch_edit_title),
-                icon = MiuixIcons.Edit,
-                onClick = {
-                    isFabMenuExpanded = false
-                    if (songListViewModel.setSelectionUris()) {
-                        navigator.navigate(BatchEditDestination())
-                    }
-                }
-            )
-
-            FabMenuItem(
-                label = stringResource(R.string.action_batch_match),
-                icon = MiuixIcons.Edit,
-                onClick = {
-                    isFabMenuExpanded = false
-                    songListViewModel.setSelectionUris()
-                    batchMatchViewModel.openBatchMatchConfig()
-                }
-            )
-
-            FabMenuItem(
-                label = stringResource(R.string.action_delete),
-                icon = MiuixIcons.Delete,
-                onClick = {
-                    isFabMenuExpanded = false
-                    showBatchDeleteDialog = true
-                }
-            )
-
-            FabMenuItem(
-                label = stringResource(R.string.action_share),
-                icon = MiuixIcons.Share,
-                onClick = {
-                    isFabMenuExpanded = false
-                    songListViewModel.batchShare(context, songs)
-                }
-            )
-        }
+            selectedSongUris = selectedSongUris,
+            onExpandedChange = { isFabMenuExpanded = it },
+            onSetSelectionUris = songListViewModel::setSelectionUris,
+            onBatchDelete = songListViewModel::batchDelete,
+            onBatchShare = songListViewModel::batchShare
+        )
     }
 }

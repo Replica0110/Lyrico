@@ -589,4 +589,16 @@
     <string name="edit_field_visibility_group_enabled_summary">关闭后，该分组下的字段不会出现在编辑页面中</string>
     <string name="edit_field_visibility_fields">字段</string>
     <string name="edit_field_visibility_group_summary">已启用 %1$d / %2$d 个字段</string>
+    <string name="local_search_title">本地搜索</string>
+    <string name="search_section_songs">单曲</string>
+    <string name="search_section_albums">专辑</string>
+    <string name="search_section_artists">艺术家</string>
+    <string name="search_empty">没有搜索结果</string>
+    <string name="album_detail_title">专辑</string>
+    <string name="artist_detail_title">艺术家</string>
+    <string name="artist_tab_songs">单曲</string>
+    <string name="artist_tab_albums">专辑</string>
+    <string name="song_count">%1$d 首</string>
+    <string name="album_count">%1$d 张专辑</string>
+    <string name="album_song_count">%1$d 张专辑 - %2$d 首</string>
 </resources>

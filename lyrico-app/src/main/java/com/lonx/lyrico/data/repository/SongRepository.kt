@@ -2,6 +2,8 @@ package com.lonx.lyrico.data.repository
 
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.LocalSearchType
+import com.lonx.lyrico.data.model.dao.AlbumSearchRow
+import com.lonx.lyrico.data.model.dao.ArtistSearchRow
 import com.lonx.lyrico.data.model.dao.SongFieldValue
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.viewmodel.SortBy
@@ -61,6 +63,21 @@ interface SongRepository {
      * @return 返回匹配的 [SongEntity] 列表 Flow 流。
      */
     fun searchSongs(query: String,type: LocalSearchType): Flow<List<SongEntity>>
+
+    fun searchSongsForLocalSearch(query: String): Flow<List<SongEntity>>
+
+    fun searchAlbumsForLocalSearch(query: String): Flow<List<AlbumSearchRow>>
+
+    fun searchArtistsForLocalSearch(query: String): Flow<List<ArtistSearchRow>>
+
+    fun observeSongsByAlbumForSearch(
+        album: String,
+        albumArtist: String?
+    ): Flow<List<SongEntity>>
+
+    fun observeSongsByArtistForSearch(artist: String): Flow<List<SongEntity>>
+
+    fun observeAlbumsByArtistForSearch(artist: String): Flow<List<AlbumSearchRow>>
 
     /**
      * 更新歌曲元数据（仅更新数据库）

@@ -25,6 +25,22 @@ data class SongFieldValue(
     val value: String
 )
 
+data class AlbumSearchRow(
+    val album: String,
+    val albumArtist: String?,
+    val songCount: Int,
+    val coverSongUri: String?,
+    val coverSongLastModified: Long
+)
+
+data class ArtistSearchRow(
+    val artist: String,
+    val songCount: Int,
+    val albumCount: Int,
+    val coverSongUri: String?,
+    val coverSongLastModified: Long
+)
+
 @Dao
 interface SongDao {
 
@@ -133,6 +149,170 @@ interface SongDao {
             s.title ASC
     """)
     fun searchSongsByType(query: String, searchType: String): Flow<List<SongEntity>>
+
+    @Query("""
+        SELECT s.* FROM songs AS s
+        INNER JOIN folders AS f ON s.folderId = f.id
+        WHERE f.isIgnored = 0
+          AND (
+              s.title LIKE '%' || :query || '%'
+              OR s.artist LIKE '%' || :query || '%'
+              OR s.album LIKE '%' || :query || '%'
+              OR s.fileName LIKE '%' || :query || '%'
+          )
+        ORDER BY
+            CASE
+                WHEN s.title LIKE :query || '%' THEN 0
+                WHEN s.fileName LIKE :query || '%' THEN 1
+                WHEN s.artist LIKE :query || '%' THEN 2
+                WHEN s.album LIKE :query || '%' THEN 3
+                ELSE 4
+            END,
+            s.title ASC,
+            s.fileName ASC
+    """)
+    fun searchSongsForLocalSearch(query: String): Flow<List<SongEntity>>
+
+    @Query("""
+        SELECT
+            album,
+            albumArtist,
+            COUNT(*) AS songCount,
+            coverSongUri,
+            coverSongLastModified
+        FROM (
+            SELECT
+                TRIM(s.album) AS album,
+                COALESCE(
+                    NULLIF(TRIM(s.albumArtist), ''),
+                    NULLIF(TRIM(s.artist), '')
+                ) AS albumArtist,
+                s.uri AS coverSongUri,
+                s.fileLastModified AS coverSongLastModified
+            FROM songs AS s
+            INNER JOIN folders AS f ON s.folderId = f.id
+            WHERE f.isIgnored = 0
+              AND s.album IS NOT NULL
+              AND TRIM(s.album) != ''
+              AND s.album LIKE '%' || :query || '%'
+            ORDER BY
+                CASE WHEN s.album LIKE :query || '%' THEN 0 ELSE 1 END,
+                s.album ASC,
+                COALESCE(s.discNumber, 0) ASC,
+                CAST(NULLIF(s.trackerNumber, '') AS INTEGER) ASC,
+                s.title ASC,
+                s.fileName ASC
+        )
+        GROUP BY album, albumArtist
+        ORDER BY
+            CASE WHEN album LIKE :query || '%' THEN 0 ELSE 1 END,
+            album ASC
+    """)
+    fun searchAlbumsForLocalSearch(query: String): Flow<List<AlbumSearchRow>>
+
+    @Query("""
+        SELECT
+            artist,
+            COUNT(*) AS songCount,
+            COUNT(DISTINCT NULLIF(album, '')) AS albumCount,
+            coverSongUri,
+            coverSongLastModified
+        FROM (
+            SELECT
+                TRIM(s.artist) AS artist,
+                TRIM(s.album) AS album,
+                s.uri AS coverSongUri,
+                s.fileLastModified AS coverSongLastModified
+            FROM songs AS s
+            INNER JOIN folders AS f ON s.folderId = f.id
+            WHERE f.isIgnored = 0
+              AND s.artist IS NOT NULL
+              AND TRIM(s.artist) != ''
+              AND s.artist LIKE '%' || :query || '%'
+            ORDER BY
+                CASE WHEN s.artist LIKE :query || '%' THEN 0 ELSE 1 END,
+                s.artist ASC,
+                s.album ASC,
+                COALESCE(s.discNumber, 0) ASC,
+                CAST(NULLIF(s.trackerNumber, '') AS INTEGER) ASC,
+                s.title ASC,
+                s.fileName ASC
+        )
+        GROUP BY artist
+        ORDER BY
+            CASE WHEN artist LIKE :query || '%' THEN 0 ELSE 1 END,
+            artist ASC
+    """)
+    fun searchArtistsForLocalSearch(query: String): Flow<List<ArtistSearchRow>>
+
+    @Query("""
+        SELECT s.* FROM songs AS s
+        INNER JOIN folders AS f ON s.folderId = f.id
+        WHERE f.isIgnored = 0
+          AND TRIM(s.album) = :album
+          AND (
+              :albumArtist IS NULL
+              OR TRIM(s.albumArtist) = :albumArtist
+              OR TRIM(s.artist) = :albumArtist
+          )
+        ORDER BY
+            COALESCE(s.discNumber, 0) ASC,
+            CAST(NULLIF(s.trackerNumber, '') AS INTEGER) ASC,
+            s.title ASC,
+            s.fileName ASC
+    """)
+    fun observeSongsByAlbumForSearch(
+        album: String,
+        albumArtist: String?
+    ): Flow<List<SongEntity>>
+
+    @Query("""
+        SELECT s.* FROM songs AS s
+        INNER JOIN folders AS f ON s.folderId = f.id
+        WHERE f.isIgnored = 0
+          AND TRIM(s.artist) = :artist
+        ORDER BY
+            s.album ASC,
+            COALESCE(s.discNumber, 0) ASC,
+            CAST(NULLIF(s.trackerNumber, '') AS INTEGER) ASC,
+            s.title ASC,
+            s.fileName ASC
+    """)
+    fun observeSongsByArtistForSearch(artist: String): Flow<List<SongEntity>>
+
+    @Query("""
+        SELECT
+            album,
+            albumArtist,
+            COUNT(*) AS songCount,
+            coverSongUri,
+            coverSongLastModified
+        FROM (
+            SELECT
+                TRIM(s.album) AS album,
+                COALESCE(
+                    NULLIF(TRIM(s.albumArtist), ''),
+                    NULLIF(TRIM(s.artist), '')
+                ) AS albumArtist,
+                s.uri AS coverSongUri,
+                s.fileLastModified AS coverSongLastModified
+            FROM songs AS s
+            INNER JOIN folders AS f ON s.folderId = f.id
+            WHERE f.isIgnored = 0
+              AND TRIM(s.artist) = :artist
+              AND s.album IS NOT NULL
+              AND TRIM(s.album) != ''
+            ORDER BY
+                s.album ASC,
+                COALESCE(s.discNumber, 0) ASC,
+                CAST(NULLIF(s.trackerNumber, '') AS INTEGER) ASC,
+                s.title ASC,
+                s.fileName ASC
+        )
+        GROUP BY album, albumArtist
+        ORDER BY album ASC
+    """)
+    fun observeAlbumsByArtistForSearch(artist: String): Flow<List<AlbumSearchRow>>
 
     /**
      * 获取所有歌曲 (默认排序)

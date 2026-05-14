@@ -19,14 +19,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.search.AlbumSongItem
 import com.lonx.lyrico.ui.components.search.ArtistSongItem
 import com.lonx.lyrico.ui.components.search.SearchSectionHeader
+import com.lonx.lyrico.ui.components.song.SongActionSheets
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
@@ -62,7 +65,13 @@ fun LocalSearchScreen(
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+    val context = LocalContext.current
     var isFabMenuExpanded by remember { mutableStateOf(false) }
+    var selectedSong by remember { mutableStateOf<SongEntity?>(null) }
+    var showMenuSheet by remember { mutableStateOf(false) }
+    var showDetailSheet by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
     val hasResults = uiState.songs.isNotEmpty() ||
         uiState.albums.isNotEmpty() ||
         uiState.artists.isNotEmpty()
@@ -211,21 +220,20 @@ fun LocalSearchScreen(
                             onToggleSelection = {
                                 selectionViewModel.toggleSelection(song.uri)
                             },
-                            trailingContent = if (isSelectionMode) {
-                                {
-                                    Box(modifier = Modifier.padding(end = 8.dp)) {
-                                        SongListItemActions(
-                                            isSelectionMode = true,
-                                            isSelected = selectedSongUris.contains(song.uri),
-                                            onToggleSelection = {
-                                                selectionViewModel.toggleSelection(song.uri)
-                                            },
-                                            onShowMenu = {}
-                                        )
-                                    }
+                            trailingContent = {
+                                Box(modifier = Modifier.padding(end = 8.dp)) {
+                                    SongListItemActions(
+                                        isSelectionMode = isSelectionMode,
+                                        isSelected = selectedSongUris.contains(song.uri),
+                                        onToggleSelection = {
+                                            selectionViewModel.toggleSelection(song.uri)
+                                        },
+                                        onShowMenu = {
+                                            selectedSong = song
+                                            showMenuSheet = true
+                                        }
+                                    )
                                 }
-                            } else {
-                                null
                             }
                         )
                     }
@@ -243,6 +251,27 @@ fun LocalSearchScreen(
             onSetSelectionUris = selectionViewModel::setSelectionUris,
             onBatchDelete = selectionViewModel::batchDelete,
             onBatchShare = selectionViewModel::batchShare
+        )
+
+        SongActionSheets(
+            selectedSong = selectedSong,
+            showMenuSheet = showMenuSheet,
+            showDetailSheet = showDetailSheet,
+            showDeleteDialog = showDeleteDialog,
+            showRenameDialog = showRenameDialog,
+            onDismissMenu = { showMenuSheet = false },
+            onDismissMenuFinished = { selectedSong = null },
+            onDismissDetail = { showDetailSheet = false },
+            onDismissDelete = { showDeleteDialog = false },
+            onDismissRename = { showRenameDialog = false },
+            onShowDetail = { showDetailSheet = true },
+            onShowDelete = { showDeleteDialog = true },
+            onShowRename = { showRenameDialog = true },
+            onPlay = { song -> selectionViewModel.play(context, song) },
+            onDelete = { song -> selectionViewModel.delete(song) },
+            onRename = { song, newFileName ->
+                selectionViewModel.renameSong(song, newFileName)
+            }
         )
     }
 }

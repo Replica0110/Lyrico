@@ -28,7 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.App.Companion.ACTION_EDIT_TAG
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.ui.dialog.UpdateDialog
+import com.lonx.lyrico.ui.components.update.UpdateDialog
 import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.ui.theme.LyricoTheme
 import com.lonx.lyrico.utils.UpdateManager

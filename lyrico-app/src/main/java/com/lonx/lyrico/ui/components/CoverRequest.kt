@@ -1,7 +1,6 @@
-package com.lonx.lyrico.utils.coil
+package com.lonx.lyrico.ui.components
 
 import android.net.Uri
-
 
 data class CoverRequest(val uri: Uri, val lastUpdate: Long) {
     companion object {

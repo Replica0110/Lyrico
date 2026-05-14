@@ -1,76 +1,40 @@
-package com.lonx.lyrico.ui.dialog
+package com.lonx.lyrico.ui.components.batch
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.LyricFormat
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import kotlin.math.roundToInt
 
 @Composable
-fun BatchLyricsFormatConfigBottomSheet(
+fun BatchRGConfigBottomSheet(
     show: Boolean,
     initialConcurrency: Int,
-    initialTargetFormat: LyricFormat,
-    onDismissRequest: (Int, LyricFormat) -> Unit,
-    onConfirm: (Int, LyricFormat) -> Unit
+    onDismissRequest: (Int) -> Unit,
+    onConfirm: (Int) -> Unit
 ) {
-    var concurrency by remember(initialConcurrency) { mutableIntStateOf(initialConcurrency) }
-    var targetFormat by remember(initialTargetFormat) { mutableStateOf(initialTargetFormat) }
+    var concurrency by remember { mutableIntStateOf(initialConcurrency) }
 
-    WindowBottomSheet(
+    YesNoBottomSheet(
         show = show,
-        onDismissRequest = { onDismissRequest(concurrency, targetFormat) },
-        title = stringResource(R.string.action_batch_convert_lyrics_format)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(bottom = 32.dp)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            Card(
-                modifier = Modifier.padding(bottom = 12.dp),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer,
-                )
-            ) {
-                LyricFormat.entries.forEach { format ->
-                    RadioButtonPreference(
-                        title = stringResource(format.labelRes),
-                        selected = format == targetFormat,
-                        onClick = { targetFormat = format }
-                    )
-                }
-            }
-
+        title = stringResource(R.string.action_batch_replay_gain),
+        content = {
             Card(
                 modifier = Modifier.padding(bottom = 12.dp),
                 colors = CardDefaults.defaultColors(
@@ -113,24 +77,10 @@ fun BatchLyricsFormatConfigBottomSheet(
                     }
                 )
             }
-
-            Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = { onDismissRequest(concurrency, targetFormat) },
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(20.dp))
-                TextButton(
-                    text = stringResource(R.string.confirm),
-                    onClick = {
-                        onDismissRequest(concurrency, targetFormat)
-                        onConfirm(concurrency, targetFormat)
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
+        },
+        onDismissRequest = { onDismissRequest(concurrency) },
+        onConfirm = {
+            onConfirm(concurrency)
         }
-    }
+    )
 }

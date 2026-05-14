@@ -1,7 +1,8 @@
-package com.lonx.lyrico.ui.components
+package com.lonx.lyrico.ui.components.song
 
 import android.annotation.SuppressLint
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,49 +35,55 @@ import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
+import com.lonx.lyrico.ui.components.CoverRequest
+import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
-import com.lonx.lyrico.utils.coil.CoverRequest
-import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @SuppressLint("DefaultLocale")
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SongListItem(
     song: SongEntity,
-    navigator: DestinationsNavigator,
     modifier: Modifier = Modifier,
     trailingContent: (@Composable () -> Unit)? = null,
-    isSelectionMode: Boolean? = null,
-    isSelected: Boolean? = null,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onClick: () -> Unit,
     onToggleSelection: (() -> Unit)? = null,
 ) {
     val view = LocalView.current
+
     val backgroundColor =
-        if (isSelected == true) MiuixTheme.colorScheme.primary.copy(alpha = 0.1f) else MiuixTheme.colorScheme.surface
+        if (isSelected) {
+            MiuixTheme.colorScheme.primary.copy(alpha = 0.1f)
+        } else {
+            MiuixTheme.colorScheme.surface
+        }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .background(backgroundColor)
             .combinedClickable(
                 onClick = {
-                    if (isSelectionMode == true) {
-                        onToggleSelection?.let { it() }
+                    if (isSelectionMode) {
+                        onToggleSelection?.invoke()
                     } else {
-                        navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                        onClick()
                     }
                 },
-                onLongClick = if (isSelectionMode == true) null else {
+                onLongClick = if (isSelectionMode) {
+                    null
+                } else {
                     {
                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        onToggleSelection?.let { it() }
+                        onToggleSelection?.invoke()
                     }
                 }
             )
             .padding(vertical = 8.dp)
     ) {
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -151,6 +159,7 @@ fun SongListItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
+
                     if (!song.album.isNullOrBlank()) {
                         Text(
                             text = " - ${song.album}",
@@ -188,6 +197,7 @@ fun SongListItem(
                     )
                 }
             }
+
             trailingContent?.let {
                 Box(
                     modifier = Modifier.size(36.dp),

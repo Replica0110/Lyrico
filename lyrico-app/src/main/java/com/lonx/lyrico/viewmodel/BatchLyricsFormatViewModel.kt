@@ -173,7 +173,13 @@ class BatchLyricsFormatViewModel(
     fun closeProgressDialog() {
         _uiState.update {
             it.copy(
-                showProgressDialog = false,
+                showProgressDialog = false
+            )
+        }
+    }
+    fun clearProgressDialog() {
+        _uiState.update {
+            it.copy(
                 progress = null,
                 isRunning = false
             )

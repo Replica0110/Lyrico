@@ -1,70 +1,53 @@
-package com.lonx.lyrico.ui.dialog
+package com.lonx.lyrico.ui.components.base
+
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import dev.jeziellago.compose.markdowntext.MarkdownText
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 @Composable
-fun UpdateDialog(
+fun YesNoDialog(
     show: Boolean,
-    versionName: String,
-    releaseNote: String,
+    title: String? = null,
+    summary: String? = null,
+    content: @Composable (() -> Unit)? = null,
     onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit
+    onDismissFinished: () -> Unit = {},
+    onConfirm: () -> Unit,
+    cancelText: String = stringResource(R.string.cancel),
+    confirmText: String = stringResource(R.string.confirm)
 ) {
-    val scrollState = rememberScrollState()
-
     WindowDialog(
         show = show,
+        summary = summary,
         onDismissRequest = onDismissRequest,
-        title = stringResource(
-            id = R.string.dialog_title_update_available,
-            versionName
-        )
+        onDismissFinished = onDismissFinished,
+        title = title
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
         ) {
 
-            Card(
-                modifier = Modifier.padding(bottom = 12.dp),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                MarkdownText(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .heightIn(max = 300.dp)
-                        .verticalScroll(scrollState),
-                    markdown = releaseNote
-                )
+            content?.let {
+                content()
+                Spacer(modifier = Modifier.height(12.dp))
             }
-
             Row {
                 TextButton(
-                    text = stringResource(R.string.cancel),
+                    text = cancelText,
                     onClick = onDismissRequest,
                     modifier = Modifier.weight(1f)
                 )
@@ -72,7 +55,7 @@ fun UpdateDialog(
                 Spacer(modifier = Modifier.width(20.dp))
 
                 TextButton(
-                    text = stringResource(R.string.dialog_action_go_update),
+                    text = confirmText,
                     onClick = {
                         onConfirm()
                         onDismissRequest()

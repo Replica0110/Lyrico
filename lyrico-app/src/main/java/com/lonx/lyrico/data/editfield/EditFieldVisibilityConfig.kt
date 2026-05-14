@@ -32,16 +32,13 @@ data class EditFieldVisibilityConfig(
                     return@mapNotNull null
                 }
 
-                val allVisibleFields = EditFieldRegistry.fieldsOf(group.code)
-                    .filter { isFieldActuallyVisible(it) }
+                val sceneVisibleFields = EditFieldRegistry.fieldsOf(group.code)
+                    .filter { isFieldVisibleInScene(it, scene) }
+                    .sortedBy { it.order }
 
-                if (allVisibleFields.isEmpty()) {
+                if (sceneVisibleFields.isEmpty()) {
                     return@mapNotNull null
                 }
-
-                val sceneVisibleFields = allVisibleFields
-                    .filter { it.scope.supports(scene) }
-                    .sortedBy { it.order }
 
                 VisibleEditFieldGroup(
                     group = group,

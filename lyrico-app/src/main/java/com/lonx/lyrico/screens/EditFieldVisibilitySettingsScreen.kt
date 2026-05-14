@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.editfield.EditFieldScope
 import com.lonx.lyrico.viewmodel.EditFieldVisibilityGroupUiState
 import com.lonx.lyrico.viewmodel.EditFieldVisibilitySettingsViewModel
 import com.ramcosta.composedestinations.annotation.Destination
@@ -225,6 +226,7 @@ private fun EditFieldGroupFieldsCard(
         groupState.fields.forEach { fieldState ->
             SwitchPreference(
                 title = stringResource(fieldState.field.titleRes),
+                summary = stringResource(R.string.edit_field_visibility_field_scope_summary,stringResource(fieldState.field.scope.toStringRes())),
                 checked = fieldState.checked,
                 enabled = groupState.checked && fieldState.enabled,
                 onCheckedChange = { checked ->

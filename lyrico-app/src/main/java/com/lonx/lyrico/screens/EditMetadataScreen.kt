@@ -369,6 +369,7 @@ fun EditMetadataScreen(
                                 ?: "",
                             artist = editingTagData?.artist ?: "",
                             rating = editingTagData?.rating ?: 0,
+                            showCover = visibleFieldCodes.contains("cover.picture"),
                             showRating = visibleFieldCodes.contains("cover.rating"),
                             isModified = uiState.coverUri != uiState.originalCover,
                             onCoverClick = { showCoverOptionsSheet = true },
@@ -780,7 +781,11 @@ fun EditMetadataScreen(
                     }
                 }
 
-                if (!editingTagData?.customFields.isNullOrEmpty()) {
+                if (
+                    visibleGroupCodes.contains(EditFieldRegistry.GROUP_CUSTOM_TAGS) &&
+                    visibleFieldCodes.contains("custom_tags.custom_tags") &&
+                    !editingTagData?.customFields.isNullOrEmpty()
+                ) {
                     item(key = "custom_fields") {
                         Column {
                             SmallTitle(text = stringResource(R.string.group_custom_tags))
@@ -1487,6 +1492,7 @@ private fun CoverSection(
     title: String,
     artist: String,
     rating: Int?,
+    showCover: Boolean,
     showRating: Boolean,
     isModified: Boolean,
     onCoverClick: () -> Unit,
@@ -1500,8 +1506,8 @@ private fun CoverSection(
     var imageSize by remember(coverUri) { mutableStateOf<Pair<Int, Int>?>(null) }
 
     // 加载图片尺寸
-    LaunchedEffect(coverUri) {
-        if (coverUri != null) {
+    LaunchedEffect(coverUri, showCover) {
+        if (showCover && coverUri != null) {
             imageSize = withContext(Dispatchers.IO) {
                 try {
                     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -1555,6 +1561,8 @@ private fun CoverSection(
                     null
                 }
             }
+        } else {
+            imageSize = null
         }
     }
 
@@ -1569,17 +1577,19 @@ private fun CoverSection(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .height(if (showCover) 220.dp else 120.dp)
             ) {
 
-                AsyncImage(
-                    model = coverUri,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer { alpha = 0.15f }
-                )
+                if (showCover) {
+                    AsyncImage(
+                        model = coverUri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer { alpha = 0.15f }
+                    )
+                }
 
                 Box(
                     modifier = Modifier
@@ -1601,92 +1611,94 @@ private fun CoverSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    Box(
-                        modifier = Modifier
-                            .size(160.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MiuixTheme.colorScheme.onSurfaceContainerVariant)
-                            .clickable { onCoverClick() }
-                    ) {
-                        AsyncImage(
-                            model = coverUri,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.matchParentSize(),
-                            placeholder = rememberTintedPainter(
-                                painter = painterResource(id = R.drawable.ic_album_24dp),
-                                tint = LyricoColors.coverPlaceholderIcon
-                            ),
-                            error = rememberTintedPainter(
-                                painter = painterResource(id = R.drawable.ic_album_24dp),
-                                tint = LyricoColors.coverPlaceholderIcon
-                            )
-                        )
-
-                        // 编辑提示
+                    if (showCover) {
                         Box(
                             modifier = Modifier
-                                .matchParentSize(),
-                            contentAlignment = Alignment.BottomCenter
+                                .size(160.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MiuixTheme.colorScheme.onSurfaceContainerVariant)
+                                .clickable { onCoverClick() }
                         ) {
-                            Text(
-                                text = stringResource(R.string.edit_cover),
-                                style = MiuixTheme.textStyles.footnote1,
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                            AsyncImage(
+                                model = coverUri,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.matchParentSize(),
+                                placeholder = rememberTintedPainter(
+                                    painter = painterResource(id = R.drawable.ic_album_24dp),
+                                    tint = LyricoColors.coverPlaceholderIcon
+                                ),
+                                error = rememberTintedPainter(
+                                    painter = painterResource(id = R.drawable.ic_album_24dp),
+                                    tint = LyricoColors.coverPlaceholderIcon
+                                )
                             )
-                        }
 
-                        // 尺寸标签
-                        imageSize?.let {
+                            // 编辑提示
                             Box(
                                 modifier = Modifier
-                                    .align(Alignment.TopStart)
+                                    .matchParentSize(),
+                                contentAlignment = Alignment.BottomCenter
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.edit_cover),
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+
+                            // 尺寸标签
+                            imageSize?.let {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(8.dp)
+                                        .background(
+                                            color = Color.Black.copy(alpha = 0.6f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "${it.first}×${it.second}",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = isModified,
+                                enter = scaleIn() + fadeIn(),
+                                exit = scaleOut() + fadeOut(),
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
                                     .padding(8.dp)
-                                    .background(
-                                        color = Color.Black.copy(alpha = 0.6f),
-                                        shape = RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
-                                Text(
-                                    text = "${it.first}×${it.second}",
-                                    color = Color.White,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(
+                                            LyricoColors.modifiedBadgeBackground.copy(alpha = 0.95f)
+                                        )
+                                        .clickable { onRevertCoverClick() }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.action_undo_changes),
+                                        fontSize = 10.sp,
+                                        color = LyricoColors.modifiedText,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
 
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = isModified,
-                            enter = scaleIn() + fadeIn(),
-                            exit = scaleOut() + fadeOut(),
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(
-                                        LyricoColors.modifiedBadgeBackground.copy(alpha = 0.95f)
-                                    )
-                                    .clickable { onRevertCoverClick() }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.action_undo_changes),
-                                    fontSize = 10.sp,
-                                    color = LyricoColors.modifiedText,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                        Spacer(modifier = Modifier.width(16.dp))
                     }
-
-                    Spacer(modifier = Modifier.width(16.dp))
 
                     Column(
                         modifier = Modifier.weight(1f),

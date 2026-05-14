@@ -589,6 +589,10 @@
     <string name="edit_field_visibility_group_enabled_summary">关闭后，该分组下的字段不会出现在编辑页面中</string>
     <string name="edit_field_visibility_fields">字段</string>
     <string name="edit_field_visibility_group_summary">已启用 %1$d / %2$d 个字段</string>
+    <string name="edit_field_visibility_field_scope_summary">作用域：%1$s</string>
+    <string name="edit_field_scope_single_edit">单曲编辑</string>
+    <string name="edit_field_scope_batch_edit">批量编辑</string>
+    <string name="edit_field_scope_both">单曲编辑和批量编辑</string>
     <string name="local_search_title">本地搜索</string>
     <string name="search_section_songs">单曲</string>
     <string name="search_section_albums">专辑</string>

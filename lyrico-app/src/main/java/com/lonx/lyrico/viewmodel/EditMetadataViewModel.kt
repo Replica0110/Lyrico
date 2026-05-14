@@ -475,8 +475,13 @@ class EditMetadataViewModel(
      * 保存元数据
      */
     fun saveMetadata() {
-        val uriString = _uiState.value.songInfo?.uriString ?: return
-        val audioTagData = _uiState.value.editingTagData ?: return
+        val state = _uiState.value
+        val uriString = state.songInfo?.uriString ?: return
+        val editingTagData = state.editingTagData ?: return
+        val audioTagData = editingTagData.filterHiddenEditFields(
+            original = state.originalTagData,
+            visibleFieldCodes = currentVisibleFieldCodes(),
+        )
 
         if (_uiState.value.isSaving) return
 
@@ -512,7 +517,14 @@ class EditMetadataViewModel(
                             it.copy(
                                 isSaving = false,
                                 saveSuccess = true,
-                                isEditing = false
+                                isEditing = false,
+                                originalTagData = audioTagData,
+                                editingTagData = audioTagData,
+                                originalCover = audioTagData.pictures.firstOrNull()?.data
+                                    ?: audioTagData.picUrl?.takeIf { picUrl -> picUrl.isNotBlank() },
+                                coverUri = audioTagData.pictures.firstOrNull()?.data
+                                    ?: audioTagData.picUrl?.takeIf { picUrl -> picUrl.isNotBlank() },
+                                picture = audioTagData.pictures.firstOrNull(),
                             )
                         }
                     } else {
@@ -573,6 +585,68 @@ class EditMetadataViewModel(
                 }
             }
         }
+    }
+
+    private fun currentVisibleFieldCodes(): Set<String> {
+        return visibleFieldGroups.value
+            .flatMap { it.fields }
+            .map { it.code }
+            .toSet()
+    }
+
+    private fun AudioTagData.filterHiddenEditFields(
+        original: AudioTagData?,
+        visibleFieldCodes: Set<String>,
+    ): AudioTagData {
+        val base = original ?: return this
+
+        fun visible(code: String): Boolean = code in visibleFieldCodes
+
+        return copy(
+            title = if (visible("basic_info.title")) title else base.title,
+            artist = if (visible("basic_info.artist")) artist else base.artist,
+            albumArtist = if (visible("basic_info.album_artist")) albumArtist else base.albumArtist,
+            album = if (visible("basic_info.album")) album else base.album,
+            date = if (visible("basic_info.date")) date else base.date,
+            language = if (visible("basic_info.language")) language else base.language,
+            genre = if (visible("basic_info.genre")) genre else base.genre,
+            trackNumber = if (visible("track_details.track_number")) trackNumber else base.trackNumber,
+            discNumber = if (visible("track_details.disc_number")) discNumber else base.discNumber,
+            composer = if (visible("credits_other.composer")) composer else base.composer,
+            lyricist = if (visible("credits_other.lyricist")) lyricist else base.lyricist,
+            copyright = if (visible("credits_other.copyright")) copyright else base.copyright,
+            comment = if (visible("credits_other.comment")) comment else base.comment,
+            replayGainTrackGain = if (visible("replay_gain.track_gain")) {
+                replayGainTrackGain
+            } else {
+                base.replayGainTrackGain
+            },
+            replayGainTrackPeak = if (visible("replay_gain.track_peak")) {
+                replayGainTrackPeak
+            } else {
+                base.replayGainTrackPeak
+            },
+            replayGainAlbumGain = if (visible("replay_gain.album_gain")) {
+                replayGainAlbumGain
+            } else {
+                base.replayGainAlbumGain
+            },
+            replayGainAlbumPeak = if (visible("replay_gain.album_peak")) {
+                replayGainAlbumPeak
+            } else {
+                base.replayGainAlbumPeak
+            },
+            replayGainReferenceLoudness = if (visible("replay_gain.reference_loudness")) {
+                replayGainReferenceLoudness
+            } else {
+                base.replayGainReferenceLoudness
+            },
+            customFields = if (visible("custom_tags.custom_tags")) customFields else base.customFields,
+            lyrics = if (visible("lyrics.lyrics")) lyrics else base.lyrics,
+            pictures = if (visible("cover.picture")) pictures else base.pictures,
+            picUrl = if (visible("cover.picture")) picUrl else base.picUrl,
+            rating = if (visible("cover.rating")) rating else base.rating,
+        )
     }
 
     private suspend fun recordSaveFailure(

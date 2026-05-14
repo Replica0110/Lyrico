@@ -310,11 +310,13 @@ fun BatchEditScreen(
                         SmallTitle(text = stringResource(R.string.edit_field_group_cover))
                         Card(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                             Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                                BatchEditCoverSection(
-                                    coverUri = uiState.coverUri,
-                                    isRemoved = uiState.removeCover,
-                                    onCoverClick = { showCoverOptionsSheet = true }
-                                )
+                                if (visibleFieldCodes.contains("cover.picture")) {
+                                    BatchEditCoverSection(
+                                        coverUri = uiState.coverUri,
+                                        isRemoved = uiState.removeCover,
+                                        onCoverClick = { showCoverOptionsSheet = true }
+                                    )
+                                }
                                 if (visibleFieldCodes.contains("cover.rating")) {
                                     BatchEditRatingItem(
                                         rating = uiState.rating,
@@ -525,7 +527,11 @@ fun BatchEditScreen(
             }
 
             // 自定义标签组
-            if (uiState.customFields.isNotEmpty()) {
+            if (
+                visibleGroupCodes.contains(EditFieldRegistry.GROUP_CUSTOM_TAGS) &&
+                visibleFieldCodes.contains("custom_tags.custom_tags") &&
+                uiState.customFields.isNotEmpty()
+            ) {
                 item(key = "custom_fields") {
                     SmallTitle(text = stringResource(R.string.group_custom_tags))
                     Card(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -553,28 +559,32 @@ fun BatchEditScreen(
                     SmallTitle(text = stringResource(R.string.label_lyrics))
                     Card(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                         Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                            TextField(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                value = uiState.lyricsOffset,
-                                onValueChange = { viewModel.updateLyricsOffset(it) },
-                                label = stringResource(R.string.label_lyrics_offset),
-                            )
-                            Text(
-                                text = stringResource(R.string.batch_edit_lyrics_offset_hint),
-                                style = MiuixTheme.textStyles.footnote1,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                modifier = Modifier
-                                    .padding(horizontal = 12.dp)
-                            )
-                            BatchEditFieldItem(
-                                field = BatchEditField.LYRICS,
-                                value = uiState.lyrics,
-                                onValueChange = { viewModel.updateLyrics(it) },
-                                onSelectFromSongs = { openSelectedValueSheet(BatchEditField.LYRICS) },
-                                isMultiline = true
-                            )
+                            if (visibleFieldCodes.contains("lyrics.lyrics_offset")) {
+                                TextField(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    value = uiState.lyricsOffset,
+                                    onValueChange = { viewModel.updateLyricsOffset(it) },
+                                    label = stringResource(R.string.label_lyrics_offset),
+                                )
+                                Text(
+                                    text = stringResource(R.string.batch_edit_lyrics_offset_hint),
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp)
+                                )
+                            }
+                            if (visibleFieldCodes.contains("lyrics.lyrics")) {
+                                BatchEditFieldItem(
+                                    field = BatchEditField.LYRICS,
+                                    value = uiState.lyrics,
+                                    onValueChange = { viewModel.updateLyrics(it) },
+                                    onSelectFromSongs = { openSelectedValueSheet(BatchEditField.LYRICS) },
+                                    isMultiline = true
+                                )
+                            }
                         }
                     }
                 }

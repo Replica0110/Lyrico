@@ -8,6 +8,7 @@ object EditFieldRegistry {
     const val GROUP_TRACK_DETAILS = "track_details"
     const val GROUP_CREDITS_OTHER = "credits_other"
     const val GROUP_REPLAY_GAIN = "replay_gain"
+    const val GROUP_CUSTOM_TAGS = "custom_tags"
     const val GROUP_LYRICS = "lyrics"
     const val GROUP_COVER = "cover"
 
@@ -35,6 +36,12 @@ object EditFieldRegistry {
             titleRes = R.string.group_replay_gain,
             defaultVisible = true,
             order = 40,
+        ),
+        EditFieldGroupDefinition(
+            code = GROUP_CUSTOM_TAGS,
+            titleRes = R.string.group_custom_tags,
+            defaultVisible = true,
+            order = 45,
         ),
         EditFieldGroupDefinition(
             code = GROUP_LYRICS,
@@ -200,12 +207,29 @@ object EditFieldRegistry {
         ),
 
         EditFieldDefinition(
+            code = "custom_tags.custom_tags",
+            groupCode = GROUP_CUSTOM_TAGS,
+            titleRes = R.string.label_custom_tag,
+            defaultVisible = true,
+            order = 10,
+            scope = EditFieldScope.Both,
+        ),
+
+        EditFieldDefinition(
             code = "lyrics.lyrics",
             groupCode = GROUP_LYRICS,
             titleRes = R.string.label_lyrics,
             defaultVisible = true,
             order = 10,
-            scope = EditFieldScope.SingleEdit,
+            scope = EditFieldScope.Both,
+        ),
+        EditFieldDefinition(
+            code = "lyrics.lyrics_offset",
+            groupCode = GROUP_LYRICS,
+            titleRes = R.string.label_lyrics_offset,
+            defaultVisible = true,
+            order = 20,
+            scope = EditFieldScope.BatchEdit,
         ),
 
         EditFieldDefinition(
@@ -214,7 +238,7 @@ object EditFieldRegistry {
             titleRes = R.string.label_cover,
             defaultVisible = true,
             order = 10,
-            scope = EditFieldScope.SingleEdit,
+            scope = EditFieldScope.Both,
         ),
         EditFieldDefinition(
             code = "cover.rating",

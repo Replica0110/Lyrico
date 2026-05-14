@@ -108,11 +108,12 @@ fun SongDetailBottomSheet(
                     color = MiuixTheme.colorScheme.secondaryContainer,
                 )
             ) {
+                val msg = stringResource(R.string.msg_copied_to_clipboard)
                 val copyToClipboard: (String) -> Unit = { text ->
                     clipboardManager.setText(AnnotatedString(text))
                     Toast.makeText(
                         context,
-                        context.getString(R.string.msg_copied_to_clipboard),
+                        msg,
                         Toast.LENGTH_SHORT
                     ).show()
                 }

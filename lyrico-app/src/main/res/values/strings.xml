@@ -578,6 +578,10 @@
     <string name="edit_field_visibility_group_enabled_summary">After closing, the fields under this group will not appear on the edit screen</string>
     <string name="edit_field_visibility_fields">Fields</string>
     <string name="edit_field_visibility_group_summary">" %1$d / %2$d enables"</string>
+    <string name="edit_field_visibility_field_scope_summary">Scope: %1$s</string>
+    <string name="edit_field_scope_single_edit">Single edit</string>
+    <string name="edit_field_scope_batch_edit">Batch edit</string>
+    <string name="edit_field_scope_both">Single edit and batch edit</string>
     <string name="local_search_title">Local Search</string>
     <string name="search_section_songs">Songs</string>
     <string name="search_section_albums">Albums</string>

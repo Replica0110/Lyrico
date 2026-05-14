@@ -2,6 +2,7 @@ package com.lonx.lyrico.ui.components.fab
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -22,61 +23,67 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun FabMenuItem(
+    modifier: Modifier = Modifier,
     label: String,
     icon: ImageVector,
     enabled: Boolean = true,
+    style: ExpandableFabMenuStyle = ExpandableFabMenuStyle.default(),
+    iconAlignmentPadding: PaddingValues = PaddingValues(
+        end = ((style.mainFabSize - style.itemFabSize) / 2).coerceAtLeast(0.dp)
+    ),
     onClick: () -> Unit
 ) {
     val textColor = if (enabled) {
-        MiuixTheme.colorScheme.onSurface
+        style.labelTextColor
     } else {
-        MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        style.labelDisabledTextColor
     }
 
     val iconColor = if (enabled) {
-        MiuixTheme.colorScheme.primary
+        style.itemContentColor
     } else {
-        MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        style.itemDisabledContentColor
     }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End,
-        modifier = Modifier.padding(end = 8.dp)
+        modifier = modifier.padding(iconAlignmentPadding)
     ) {
-        // 文字标签带阴影背景，避免与列表内容混淆
         Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MiuixTheme.colorScheme.surface,
-            shadowElevation = 2.dp,
+            shape = RoundedCornerShape(style.labelCornerRadius),
+            color = style.labelContainerColor,
+            shadowElevation = style.labelShadowElevation,
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(style.labelCornerRadius))
                 .clickable(enabled = enabled, onClick = onClick)
         ) {
             Text(
                 text = label,
                 style = MiuixTheme.textStyles.main,
                 color = textColor,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                modifier = Modifier.padding(
+                    horizontal = style.labelHorizontalPadding,
+                    vertical = style.labelVerticalPadding
+                )
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(style.labelToIconSpacing))
 
         // 小尺寸的 FAB
         SmallFloatingActionButton(
             onClick = {
-                if (enabled) {
-                    onClick()
-                }
+                if (enabled) onClick()
             },
-            containerColor = MiuixTheme.colorScheme.surface,
+            modifier = Modifier.size(style.itemFabSize),
+            containerColor = style.itemContainerColor,
             contentColor = iconColor
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(style.itemIconSize)
             )
         }
     }

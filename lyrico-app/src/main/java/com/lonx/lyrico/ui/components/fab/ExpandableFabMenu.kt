@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
@@ -32,12 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 
 enum class ExpandableFabMenuPosition {
@@ -53,8 +51,8 @@ fun BoxScope.ExpandableFabMenu(
     visible: Boolean,
     expanded: Boolean,
     enabled: Boolean,
-    icon: ImageVector,
     modifier: Modifier = Modifier,
+    style: ExpandableFabMenuStyle = ExpandableFabMenuStyle.default(),
     position: ExpandableFabMenuPosition = ExpandableFabMenuPosition.BottomEnd,
     onExpandedChange: (Boolean) -> Unit,
     menuContent: @Composable ColumnScope.() -> Unit
@@ -68,7 +66,7 @@ fun BoxScope.ExpandableFabMenu(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.2f))
+                .background(style.scrimColor)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -93,7 +91,7 @@ fun BoxScope.ExpandableFabMenu(
                 enabled = enabled,
                 position = position,
                 modifier = baseModifier,
-                icon = icon,
+                style = style,
                 onExpandedChange = onExpandedChange,
                 menuContent = menuContent
             )
@@ -106,7 +104,7 @@ fun BoxScope.ExpandableFabMenu(
                 enabled = enabled,
                 position = position,
                 modifier = baseModifier,
-                icon = icon,
+                style = style,
                 onExpandedChange = onExpandedChange,
                 menuContent = menuContent
             )
@@ -118,9 +116,9 @@ private fun VerticalExpandableFabMenu(
     visible: Boolean,
     expanded: Boolean,
     enabled: Boolean,
-    icon: ImageVector,
     position: ExpandableFabMenuPosition,
     modifier: Modifier = Modifier,
+    style: ExpandableFabMenuStyle = ExpandableFabMenuStyle.default(),
     onExpandedChange: (Boolean) -> Unit,
     menuContent: @Composable ColumnScope.() -> Unit
 ) {
@@ -139,13 +137,13 @@ private fun VerticalExpandableFabMenu(
 
         Column(
             horizontalAlignment = horizontalAlignment,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(style.fabToMenuSpacing)
         ) {
             if (position.expandTowardBottom) {
                 MainFab(
                     expanded = expanded,
                     enabled = enabled,
-                    icon = icon,
+                    style = style,
                     onExpandedChange = onExpandedChange
                 )
             }
@@ -161,10 +159,10 @@ private fun VerticalExpandableFabMenu(
             ) {
                 Column(
                     horizontalAlignment = horizontalAlignment,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(style.menuItemSpacing),
                     modifier = Modifier.padding(
-                        top = if (position.expandTowardBottom) 8.dp else 0.dp,
-                        bottom = if (position.expandTowardBottom) 0.dp else 8.dp
+                        top = if (position.expandTowardBottom) style.menuToFabPadding else 0.dp,
+                        bottom = if (position.expandTowardBottom) 0.dp else style.menuToFabPadding
                     ),
                     content = menuContent
                 )
@@ -174,7 +172,7 @@ private fun VerticalExpandableFabMenu(
                 MainFab(
                     expanded = expanded,
                     enabled = enabled,
-                    icon = icon,
+                    style = style,
                     onExpandedChange = onExpandedChange
                 )
             }
@@ -187,9 +185,9 @@ private fun HorizontalExpandableFabMenu(
     visible: Boolean,
     expanded: Boolean,
     enabled: Boolean,
-    icon: ImageVector,
     position: ExpandableFabMenuPosition,
     modifier: Modifier = Modifier,
+    style: ExpandableFabMenuStyle = ExpandableFabMenuStyle.default(),
     onExpandedChange: (Boolean) -> Unit,
     menuContent: @Composable ColumnScope.() -> Unit
 ) {
@@ -208,6 +206,7 @@ private fun HorizontalExpandableFabMenu(
                     expanded = expanded,
                     enabled = enabled,
                     expandTowardEnd = false,
+                    style = style,
                     menuContent = menuContent
                 )
             }
@@ -215,7 +214,7 @@ private fun HorizontalExpandableFabMenu(
             MainFab(
                 expanded = expanded,
                 enabled = enabled,
-                icon = icon,
+                style = style,
                 onExpandedChange = onExpandedChange
             )
 
@@ -223,7 +222,8 @@ private fun HorizontalExpandableFabMenu(
                 AnimatedHorizontalMenu(
                     expanded = expanded,
                     enabled = enabled,
-                    expandTowardEnd = true,
+                    expandTowardEnd = false,
+                    style = style,
                     menuContent = menuContent
                 )
             }
@@ -236,6 +236,7 @@ private fun AnimatedHorizontalMenu(
     expanded: Boolean,
     enabled: Boolean,
     expandTowardEnd: Boolean,
+    style: ExpandableFabMenuStyle,
     menuContent: @Composable ColumnScope.() -> Unit
 ) {
     AnimatedVisibility(
@@ -252,7 +253,7 @@ private fun AnimatedHorizontalMenu(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(style.menuItemSpacing),
                 horizontalAlignment = if (expandTowardEnd) Alignment.Start else Alignment.End,
                 content = menuContent
             )
@@ -263,8 +264,8 @@ private fun AnimatedHorizontalMenu(
 @Composable
 private fun MainFab(
     expanded: Boolean,
-    icon: ImageVector,
     enabled: Boolean,
+    style: ExpandableFabMenuStyle,
     onExpandedChange: (Boolean) -> Unit
 ) {
     FloatingActionButton(
@@ -272,18 +273,22 @@ private fun MainFab(
             if (enabled) {
                 onExpandedChange(!expanded)
             }
-        }
+        },
+        modifier = Modifier.size(style.mainFabSize),
+        containerColor = style.mainContainerColor
     ) {
         val rotation by animateFloatAsState(
-            targetValue = if (expanded) 45f else 0f,
+            targetValue = if (expanded) style.mainIconRotationWhenExpanded else 0f,
             label = "expandableFabRotation"
         )
 
         Icon(
-            imageVector = icon,
+            imageVector = style.mainIcon,
             contentDescription = "Actions",
-            tint = MiuixTheme.colorScheme.onPrimary,
-            modifier = Modifier.rotate(rotation)
+            tint = style.mainContentColor,
+            modifier = Modifier
+                .size(style.mainIconSize)
+                .rotate(rotation)
         )
     }
 }

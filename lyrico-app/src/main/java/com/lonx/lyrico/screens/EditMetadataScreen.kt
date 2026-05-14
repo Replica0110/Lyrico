@@ -85,7 +85,6 @@ import com.lonx.lyrico.ui.components.crop.ImageCropper
 import com.lonx.lyrico.ui.components.getBitmap
 import com.lonx.lyrico.ui.components.crop.rememberImageCropperState
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
-import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuPosition
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
@@ -123,7 +122,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Copy
@@ -907,7 +905,6 @@ fun EditMetadataScreen(
         ExpandableFabMenu(
             visible = isFloatingToolbarVisible,
             expanded = isFabMenuExpanded,
-            icon = MiuixIcons.Add,
             enabled = true,
             onExpandedChange = { isFabMenuExpanded = it }
         ) {

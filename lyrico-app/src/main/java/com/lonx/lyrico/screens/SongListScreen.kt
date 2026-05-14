@@ -72,6 +72,7 @@ import com.lonx.lyrico.ui.components.batch.BatchMatchConfigBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchRGBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchRGConfigBottomSheet
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
+import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
 import com.lonx.lyrico.ui.components.fab.ScrollToTopButton
 import com.lonx.lyrico.ui.components.search.LocalSearchTypeTabs
@@ -778,8 +779,10 @@ fun SongListScreen(
         ExpandableFabMenu(
             visible = isSelectionMode,
             expanded = isFabMenuExpanded,
-            icon = MiuixIcons.Add,
             enabled = hasSelection,
+            style = ExpandableFabMenuStyle.default().copy(
+                mainIcon = MiuixIcons.Add
+            ),
             onExpandedChange = { isFabMenuExpanded = it }
         ) {
             FabMenuItem(

@@ -29,6 +29,7 @@ import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrico.utils.UpdateManagerImpl
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.data.model.BatchTaskType
+import com.lonx.lyrico.worker.processor.BatchExportProcessor
 import com.lonx.lyrico.worker.processor.BatchTaskProcessorFactory
 import com.lonx.lyrico.worker.processor.EditTagsProcessor
 import com.lonx.lyrico.worker.processor.LyricsFormatProcessor
@@ -38,6 +39,7 @@ import com.lonx.lyrico.viewmodel.AboutViewModel
 import com.lonx.lyrico.viewmodel.AlbumDetailViewModel
 import com.lonx.lyrico.viewmodel.AppLogViewModel
 import com.lonx.lyrico.viewmodel.ArtistDetailViewModel
+import com.lonx.lyrico.viewmodel.BatchExportViewModel
 import com.lonx.lyrico.viewmodel.BatchEditViewModel
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
 import com.lonx.lyrico.viewmodel.BatchTaskDetailViewModel
@@ -252,12 +254,15 @@ val appModule = module {
     single { MatchMetadataProcessor(get(), get(), get()) }
     single { RenameFilesProcessor(get()) }
     single { EditTagsProcessor(get()) }
+    single { BatchExportProcessor(androidContext(), get()) }
     single { BatchTaskProcessorFactory(mapOf(
         BatchTaskType.CONVERT_LYRICS_FORMAT to get<LyricsFormatProcessor>(),
         BatchTaskType.SCAN_REPLAY_GAIN to get<ReplayGainProcessor>(),
         BatchTaskType.MATCH_METADATA to get<MatchMetadataProcessor>(),
         BatchTaskType.RENAME_FILES to get<RenameFilesProcessor>(),
-        BatchTaskType.EDIT_TAGS to get<EditTagsProcessor>()
+        BatchTaskType.EDIT_TAGS to get<EditTagsProcessor>(),
+        BatchTaskType.EXPORT_LYRICS to get<BatchExportProcessor>(),
+        BatchTaskType.EXPORT_COVER to get<BatchExportProcessor>()
     )) }
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
@@ -293,6 +298,7 @@ val appModule = module {
         )
     }
     viewModel { BatchRenameViewModel(get(), get(), get(), get(), get()) }
+    viewModel { BatchExportViewModel(get(), get(), get()) }
     viewModel { BatchEditViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { BatchReplayGainViewModel(get(), get(), get()) }
     viewModel { BatchLyricsFormatViewModel(get(), get(), get()) }

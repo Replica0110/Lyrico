@@ -178,7 +178,7 @@
     <string name="action_match_tags">Match Tags</string>
     <string name="action_share">Share</string>
     <string name="action_delete">Delete</string>
-    <string name="action_batch_match">Batch Match</string>
+    <string name="action_batch_match">Tags Matching</string>
 
     <!-- Song List Item -->
     <string name="unknown_artist">Unknown Artist</string>
@@ -357,7 +357,7 @@
 
     <string name="show_scroll_top_button">Back to top Btn</string>
     <string name="action_reset">Reset</string>
-    <string name="action_batch_rename">Batch Rename</string>
+    <string name="action_batch_rename">Rename</string>
     <string name="no_tag_data">Failed to load tag data for selected songs</string>
     <string name="batch_rename_title">Batch Rename</string>
     <string name="rename_format">Rename Format</string>
@@ -424,7 +424,7 @@
     <string name="lyrics_empty">Lyrics is empty</string>
 
     <!-- Batch Edit -->
-    <string name="batch_edit_title">Batch Edit</string>
+    <string name="batch_edit_title">Edit Tags</string>
     <string name="batch_edit_song_count">%d songs selected</string>
     <string name="batch_edit_add_field">Add Field</string>
     <string name="batch_edit_select_fields">Select Fields to Edit</string>
@@ -480,7 +480,7 @@
     <string name="msg_load_same_album_cover_failed">Failed to load same album cover</string>
 
     <!-- Batch ReplayGain -->
-    <string name="action_batch_replay_gain">Batch Compute ReplayGain</string>
+    <string name="action_batch_replay_gain">Compute ReplayGain</string>
     <string name="batch_replay_gain_concurrency">Concurrency</string>
     <string name="batch_replay_gain_concurrency_tip">Higher concurrency leads to faster scanning but may consume more CPU and memory resources.</string>
     <string name="batch_replay_gain_current">Scanning: %s</string>
@@ -494,7 +494,10 @@
     <string name="unknown_format">Unknown format</string>
     <string name="action_convert_lyrics_format">Convert format</string>
     <string name="action_convert_lyrics_format_title">Convert Lyrics Format</string>
-    <string name="action_batch_convert_lyrics_format">Batch Convert Lyrics Format</string>
+    <string name="action_batch_convert_lyrics_format">Convert Lyrics Format</string>
+    <string name="action_batch_export_lyrics">Export Lyrics</string>
+    <string name="action_batch_export_cover">Export Covers</string>
+    <string name="batch_export_running">Exporting</string>
     <string name="current_detected_format">Current detected format: %s</string>
     <string name="current_target_format">Target format: %s</string>
     <string name="current_selected">Selected</string>
@@ -509,6 +512,8 @@
     <string name="batch_task_rename_files">Rename Files</string>
     <string name="batch_task_convert_lyrics_format">Convert Lyrics Format</string>
     <string name="batch_task_scan_replay_gain">Scan ReplayGain</string>
+    <string name="batch_task_export_lyrics">Export Lyrics</string>
+    <string name="batch_task_export_cover">Export Covers</string>
 
     <!-- Batch Task Status -->
     <string name="batch_task_status_queued">Queued</string>

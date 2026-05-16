@@ -182,7 +182,7 @@
     <string name="action_match_tags">匹配标签</string>
     <string name="action_share">分享</string>
     <string name="action_delete">删除</string>
-    <string name="action_batch_match">批量匹配</string>
+    <string name="action_batch_match">标签匹配</string>
 
     <!-- 列表项 -->
     <string name="unknown_artist">未知艺术家</string>
@@ -345,7 +345,7 @@
 
 
     <string name="action_reset">点击重置</string>
-    <string name="action_batch_rename">批量重命名</string>
+    <string name="action_batch_rename">重命名</string>
     <string name="no_tag_data">音频标签加载失败</string>
     <string name="batch_rename_title">批量重命名</string>
     <string name="rename_format">命名格式</string>
@@ -421,7 +421,7 @@
     <string name="custom_tags_empty">还没有自定义标签，点击“添加标签”即可创建。</string>
 
     <!-- 批量编辑 -->
-    <string name="batch_edit_title">批量编辑</string>
+    <string name="batch_edit_title">编辑标签</string>
     <string name="batch_edit_song_count">已选择 %d 首歌曲</string>
     <string name="batch_edit_add_field">添加</string>
     <string name="batch_edit_select_fields">选择要编辑的标签</string>
@@ -477,7 +477,7 @@
     <string name="msg_load_same_album_cover_failed">加载同专辑封面失败</string>
 
     <!-- 批量 ReplayGain -->
-    <string name="action_batch_replay_gain">批量计算回放增益</string>
+    <string name="action_batch_replay_gain">计算回放增益</string>
     <string name="batch_replay_gain_concurrency">并发数</string>
     <string name="batch_replay_gain_concurrency_tip">并发数越高，扫描速度越快，但可能消耗更多 CPU 和内存资源。</string>
     <string name="batch_replay_gain_current">扫描: %s</string>
@@ -496,7 +496,10 @@
     <string name="label_plain_lyrics">歌词文本</string>
     <string name="action_view_plain_lyrics">查看歌词文本</string>
     <string name="copied_to_clipboard">已复制到剪切板</string>
-    <string name="action_batch_convert_lyrics_format">批量转换歌词格式</string>
+    <string name="action_batch_convert_lyrics_format">转换歌词格式</string>
+    <string name="action_batch_export_lyrics">导出歌词</string>
+    <string name="action_batch_export_cover">导出封面</string>
+    <string name="batch_export_running">正在导出</string>
     <string name="current_target_format">目标格式: %s</string>
     <string name="current_selected">当前选择</string>
 
@@ -506,6 +509,8 @@
     <string name="batch_task_rename_files">文件重命名</string>
     <string name="batch_task_convert_lyrics_format">歌词格式转换</string>
     <string name="batch_task_scan_replay_gain">回放增益计算</string>
+    <string name="batch_task_export_lyrics">导出歌词</string>
+    <string name="batch_task_export_cover">导出封面</string>
 
     <!-- Batch Task Status -->
     <string name="batch_task_status_queued">排队中</string>

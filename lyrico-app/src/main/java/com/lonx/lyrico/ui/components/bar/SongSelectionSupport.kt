@@ -1,6 +1,9 @@
 package com.lonx.lyrico.ui.components.bar
 
 import android.content.Context
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.material3.TextButton
@@ -14,8 +17,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.batch.BatchExportBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchLyricsFormatBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchLyricsFormatConfigBottomSheet
 import com.lonx.lyrico.ui.components.batch.BatchMatchBottomSheet
@@ -25,6 +30,7 @@ import com.lonx.lyrico.ui.components.batch.BatchRGConfigBottomSheet
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
+import com.lonx.lyrico.viewmodel.BatchExportViewModel
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
 import com.lonx.lyrico.viewmodel.BatchMatchViewModel
 import com.lonx.lyrico.viewmodel.BatchReplayGainViewModel
@@ -122,12 +128,30 @@ fun BoxScope.SongBatchSelectionActions(
     val batchMatchViewModel: BatchMatchViewModel = koinViewModel()
     val batchReplayGainViewModel: BatchReplayGainViewModel = koinViewModel()
     val batchLyricsFormatViewModel: BatchLyricsFormatViewModel = koinViewModel()
+    val batchExportViewModel: BatchExportViewModel = koinViewModel()
     val batchMatchUiState by batchMatchViewModel.uiState.collectAsStateWithLifecycle()
     val batchReplayGainUiState by batchReplayGainViewModel.uiState.collectAsStateWithLifecycle()
     val batchLyricsFormatUiState by batchLyricsFormatViewModel.uiState.collectAsStateWithLifecycle()
+    val batchExportUiState by batchExportViewModel.uiState.collectAsStateWithLifecycle()
     val batchMatchConfig by batchMatchViewModel.batchMatchConfig.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showBatchDeleteDialog by remember { mutableStateOf(false) }
+    var pendingExportTaskType by remember { mutableStateOf<BatchTaskType?>(null) }
+    val batchExportFolderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        val taskType = pendingExportTaskType
+        pendingExportTaskType = null
+        if (uri != null && taskType != null) {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, flags)
+            }
+            batchExportViewModel.setSelectionUris(selectedSongUris.toList())
+            batchExportViewModel.startBatchExport(taskType, uri)
+        }
+    }
 
     YesNoDialog(
         show = showBatchDeleteDialog,
@@ -222,6 +246,21 @@ fun BoxScope.SongBatchSelectionActions(
         onAbort = { batchLyricsFormatViewModel.abortBatchConvert() }
     )
 
+    BatchExportBottomSheet(
+        batchExportUiState = batchExportUiState,
+        onDismissRequest = {
+            if (!batchExportUiState.isRunning) {
+                batchExportViewModel.closeProgressDialog()
+            }
+        },
+        onDismissFinished = {
+            if (batchExportUiState.isSuccess) {
+                batchExportViewModel.clearProgressDialog()
+            }
+        },
+        onAbort = { batchExportViewModel.abortBatchExport() }
+    )
+
     ExpandableFabMenu(
         visible = isSelectionMode,
         expanded = expanded,
@@ -248,6 +287,26 @@ fun BoxScope.SongBatchSelectionActions(
                 onExpandedChange(false)
                 batchLyricsFormatViewModel.setSelectionUris(selectedSongUris.toList())
                 batchLyricsFormatViewModel.openConfig(batchReplayGainUiState.concurrency)
+            }
+        )
+
+        FabMenuItem(
+            label = stringResource(R.string.action_batch_export_lyrics),
+            icon = MiuixIcons.Share,
+            onClick = {
+                onExpandedChange(false)
+                pendingExportTaskType = BatchTaskType.EXPORT_LYRICS
+                batchExportFolderPickerLauncher.launch(null)
+            }
+        )
+
+        FabMenuItem(
+            label = stringResource(R.string.action_batch_export_cover),
+            icon = MiuixIcons.Share,
+            onClick = {
+                onExpandedChange(false)
+                pendingExportTaskType = BatchTaskType.EXPORT_COVER
+                batchExportFolderPickerLauncher.launch(null)
             }
         )
 

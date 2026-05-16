@@ -16,6 +16,7 @@ import com.lonx.lyrico.data.model.ExtraWriteMode
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.worker.processor.BatchTaskProcessorFactory
+import com.lonx.lyrico.worker.processor.BatchExportTaskConfig
 import com.lonx.lyrico.worker.processor.BatchTaskSkippedException
 import com.lonx.lyrico.worker.processor.EditTagsTaskConfig
 import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig
@@ -292,6 +293,8 @@ class BatchTaskWorker(
             BatchTaskType.RENAME_FILES -> applicationContext.getString(R.string.batch_task_rename_files)
             BatchTaskType.CONVERT_LYRICS_FORMAT -> applicationContext.getString(R.string.batch_task_convert_lyrics_format)
             BatchTaskType.SCAN_REPLAY_GAIN -> applicationContext.getString(R.string.batch_task_scan_replay_gain)
+            BatchTaskType.EXPORT_LYRICS -> applicationContext.getString(R.string.batch_task_export_lyrics)
+            BatchTaskType.EXPORT_COVER -> applicationContext.getString(R.string.batch_task_export_cover)
         }
     }
 
@@ -361,6 +364,8 @@ class BatchTaskWorker(
                 BatchTaskType.EDIT_TAGS -> summarizeEditTagsConfig(configJson)
                 BatchTaskType.CONVERT_LYRICS_FORMAT -> summarizeLyricsFormatConfig(configJson)
                 BatchTaskType.SCAN_REPLAY_GAIN -> summarizeReplayGainConfig(configJson)
+                BatchTaskType.EXPORT_LYRICS,
+                BatchTaskType.EXPORT_COVER -> summarizeExportConfig(configJson)
             }
         }.getOrElse { e ->
             buildString {
@@ -466,6 +471,14 @@ class BatchTaskWorker(
     private fun summarizeReplayGainConfig(configJson: String): String {
         val config = Json.decodeFromString<ReplayGainConfig>(configJson)
         return "concurrency=${config.concurrency}"
+    }
+
+    private fun summarizeExportConfig(configJson: String): String {
+        val config = Json.decodeFromString<BatchExportTaskConfig>(configJson)
+        return buildString {
+            appendLine("destinationTreeUri=${config.destinationTreeUri}")
+            appendLine("concurrency=${config.concurrency}")
+        }.trimEnd()
     }
 
     private fun StringBuilder.appendSanitizedValue(

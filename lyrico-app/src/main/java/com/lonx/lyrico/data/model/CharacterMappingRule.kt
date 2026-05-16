@@ -59,6 +59,51 @@ enum class ReplacementCharOption(
         labelRes = R.string.replacement_full_width_comma
     ),
 
+    FULL_WIDTH_BACKSLASH(
+        value = "＼",
+        labelRes = R.string.replacement_full_width_backslash
+    ),
+
+    FULL_WIDTH_SLASH(
+        value = "／",
+        labelRes = R.string.replacement_full_width_slash
+    ),
+
+    FULL_WIDTH_COLON(
+        value = "：",
+        labelRes = R.string.replacement_full_width_colon
+    ),
+
+    FULL_WIDTH_ASTERISK(
+        value = "＊",
+        labelRes = R.string.replacement_full_width_asterisk
+    ),
+
+    FULL_WIDTH_QUESTION_MARK(
+        value = "？",
+        labelRes = R.string.replacement_full_width_question_mark
+    ),
+
+    FULL_WIDTH_QUOTATION_MARK(
+        value = "＂",
+        labelRes = R.string.replacement_full_width_quotation_mark
+    ),
+
+    FULL_WIDTH_LESS_THAN_SIGN(
+        value = "＜",
+        labelRes = R.string.replacement_full_width_less_than_sign
+    ),
+
+    FULL_WIDTH_GREATER_THAN_SIGN(
+        value = "＞",
+        labelRes = R.string.replacement_full_width_greater_than_sign
+    ),
+
+    FULL_WIDTH_VERTICAL_BAR(
+        value = "｜",
+        labelRes = R.string.replacement_full_width_vertical_bar
+    ),
+
     AMPERSAND(
         value = "&",
         labelRes = R.string.replacement_ampersand
@@ -87,15 +132,15 @@ object CharacterMappingDefaults {
         id = "default_invalid_chars",
         name = "文件系统非法字符",
         charMappings = mapOf(
-            "\\" to "、",
-            "/" to "、",
-            ":" to "、",
-            "*" to "、",
-            "?" to "、",
-            "\"" to "、",
-            "<" to "、",
-            ">" to "、",
-            "|" to "、"
+            "\\" to "＼",
+            "/" to "／",
+            ":" to "：",
+            "*" to "＊",
+            "?" to "？",
+            "\"" to "＂",
+            "<" to "＜",
+            ">" to "＞",
+            "|" to "｜"
         ),
         description = "Windows/Linux文件系统中的非法字符",
         isBuiltIn = true,

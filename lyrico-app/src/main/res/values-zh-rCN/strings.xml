@@ -380,6 +380,15 @@
     <string name="replacement_ideographic_comma">顿号（、）</string>
     <string name="replacement_half_width_comma">半角逗号（,）</string>
     <string name="replacement_full_width_comma">全角逗号（，）</string>
+    <string name="replacement_full_width_backslash">全角反斜杠（＼）</string>
+    <string name="replacement_full_width_slash">全角斜杠（／）</string>
+    <string name="replacement_full_width_colon">全角冒号（：）</string>
+    <string name="replacement_full_width_asterisk">全角星号（＊）</string>
+    <string name="replacement_full_width_question_mark">全角问号（？）</string>
+    <string name="replacement_full_width_quotation_mark">全角双引号（＂）</string>
+    <string name="replacement_full_width_less_than_sign">全角小于号（＜）</string>
+    <string name="replacement_full_width_greater_than_sign">全角大于号（＞）</string>
+    <string name="replacement_full_width_vertical_bar">全角竖线（｜）</string>
     <string name="replacement_ampersand">与符号（&amp;）</string>
     <string name="replacement_not_selected">未选择</string>
     <string name="message_saving_tags">正在写入标签…</string>

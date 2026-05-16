@@ -390,6 +390,15 @@
     <string name="replacement_ideographic_comma">Ideographic comma (、)</string>
     <string name="replacement_half_width_comma">Half-width comma (,)</string>
     <string name="replacement_full_width_comma">Full-width comma (，)</string>
+    <string name="replacement_full_width_backslash">Full-width backslash (＼)</string>
+    <string name="replacement_full_width_slash">Full-width slash (／)</string>
+    <string name="replacement_full_width_colon">Full-width colon (：)</string>
+    <string name="replacement_full_width_asterisk">Full-width asterisk (＊)</string>
+    <string name="replacement_full_width_question_mark">Full-width question mark (？)</string>
+    <string name="replacement_full_width_quotation_mark">Full-width quotation mark (＂)</string>
+    <string name="replacement_full_width_less_than_sign">Full-width less-than sign (＜)</string>
+    <string name="replacement_full_width_greater_than_sign">Full-width greater-than sign (＞)</string>
+    <string name="replacement_full_width_vertical_bar">Full-width vertical bar (｜)</string>
     <string name="replacement_ampersand">Ampersand (&amp;)</string>
     <string name="replacement_not_selected">Not selected</string>
     <string name="message_saving_tags">Saving Tags…</string>

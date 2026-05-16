@@ -395,9 +395,11 @@ class SongRepositoryImpl(
                             deviceUris.add(deviceUriString)
 
                             val dbInfo = dbSongMap[deviceUriString]
-                            val needsUpdate = fullRescan || dbInfo == null
-                                    || dbInfo.fileLastModified != deviceSong.lastModified
-                                    || dbInfo.filePath != deviceSong.filePath
+                            val needsUpdate = fullRescan ||
+                                    dbInfo == null ||
+                                    dbInfo.fileLastModified != deviceSong.lastModified ||
+                                    dbInfo.fileSize != deviceSong.fileSize ||
+                                    dbInfo.filePath != deviceSong.filePath
 
                             if (needsUpdate) {
                                 try {

@@ -1,14 +1,15 @@
 package com.lonx.lyrico.utils
 
 import android.content.Context
+import android.database.Cursor
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.util.Log
-import androidx.documentfile.provider.DocumentFile
+import androidx.core.net.toUri
 import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import java.util.Locale
 import kotlin.math.abs
-import androidx.core.net.toUri
 
 data class SafScanResult(
     val songs: List<SafScannedSongFile>,
@@ -22,18 +23,28 @@ data class SafScannedSongFile(
     val rootFolderId: Long
 )
 
+private data class SafDocumentRow(
+    val documentId: String,
+    val displayName: String,
+    val mimeType: String?,
+    val size: Long,
+    val lastModified: Long,
+    val uri: Uri,
+    val isDirectory: Boolean
+)
+
 class MediaScanner(
     private val context: Context,
 ) {
 
-    private val TAG = "MediaScanner"
+    private val tag = "MediaScanner"
 
     fun querySongsFromSafFolders(folders: List<FolderEntity>): SafScanResult {
         val results = mutableListOf<SafScannedSongFile>()
         val successfulFolderIds = mutableSetOf<Long>()
         val failedFolderIds = mutableSetOf<Long>()
         val missingFolderIds = mutableSetOf<Long>()
-        val visitedUris = mutableSetOf<String>()
+        val visitedDocumentKeys = mutableSetOf<String>()
 
         for (folder in folders) {
             val treeUriString = folder.treeUri
@@ -45,26 +56,35 @@ class MediaScanner(
 
             try {
                 val treeUri = treeUriString.toUri()
-                val root = DocumentFile.fromTreeUri(context, treeUri)
+                val rootDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
 
-                if (root == null || !root.exists() || !root.isDirectory) {
-                    Log.w(TAG, "SAF 根目录不存在或已被删除: ${folder.path}, uri=$treeUriString")
+                // 用一次查询验证根目录是否可访问。不要用 DocumentFile.exists()
+                val rootUri = DocumentsContract.buildDocumentUriUsingTree(
+                    treeUri,
+                    rootDocumentId
+                )
+
+                if (!canQueryDocument(rootUri)) {
+                    Log.w(tag, "SAF 根目录不可访问或已被删除: ${folder.path}, uri=$treeUriString")
                     missingFolderIds.add(folder.id)
                     continue
                 }
 
-                scanDocumentDirectory(
-                    root = root,
+                scanTreeByDocumentsContract(
+                    treeUri = treeUri,
+                    rootDocumentId = rootDocumentId,
                     displayRootPath = folder.path,
-                    currentRelativePath = "",
                     rootFolderId = folder.id,
                     output = results,
-                    visitedUris = visitedUris
+                    visitedDocumentKeys = visitedDocumentKeys
                 )
 
                 successfulFolderIds.add(folder.id)
+            } catch (e: SecurityException) {
+                Log.e(tag, "扫描 SAF 文件夹权限不足: ${folder.path}", e)
+                failedFolderIds.add(folder.id)
             } catch (e: Exception) {
-                Log.e(TAG, "扫描 SAF 文件夹失败: ${folder.path}", e)
+                Log.e(tag, "扫描 SAF 文件夹失败: ${folder.path}", e)
                 failedFolderIds.add(folder.id)
             }
         }
@@ -77,67 +97,179 @@ class MediaScanner(
         )
     }
 
-    private fun scanDocumentDirectory(
-        root: DocumentFile,
+    private fun scanTreeByDocumentsContract(
+        treeUri: Uri,
+        rootDocumentId: String,
         displayRootPath: String,
-        currentRelativePath: String,
         rootFolderId: Long,
         output: MutableList<SafScannedSongFile>,
-        visitedUris: MutableSet<String>
+        visitedDocumentKeys: MutableSet<String>
     ) {
-        val children = try {
-            root.listFiles()
-        } catch (e: Exception) {
-            Log.w(TAG, "读取 SAF 子文件失败: ${root.uri}", e)
-            return
-        }
+        val stack = ArrayDeque<Pair<String, String>>()
+        stack.add(rootDocumentId to "")
 
-        for (child in children) {
-            try {
-                val name = child.name ?: continue
+        while (stack.isNotEmpty()) {
+            val (parentDocumentId, currentRelativePath) = stack.removeLast()
+
+            val children = queryChildren(
+                treeUri = treeUri,
+                parentDocumentId = parentDocumentId
+            )
+
+            for (child in children) {
+                val name = child.displayName
+                if (name.isBlank()) continue
 
                 if (child.isDirectory) {
                     if (shouldSkipDirectory(name)) continue
 
-                    val nextRelativePath =
-                        if (currentRelativePath.isBlank()) name else "$currentRelativePath/$name"
+                    val nextRelativePath = if (currentRelativePath.isBlank()) {
+                        name
+                    } else {
+                        "$currentRelativePath/$name"
+                    }
 
-                    scanDocumentDirectory(
-                        root = child,
-                        displayRootPath = displayRootPath,
-                        currentRelativePath = nextRelativePath,
+                    stack.add(child.documentId to nextRelativePath)
+                    continue
+                }
+
+                if (!isSupportedAudioFile(name, child.mimeType)) continue
+
+                // documentId 在同一个 treeUri 下稳定；这里比 uri 字符串更适合作去重 key
+                val documentKey = "${treeUri}|${child.documentId}"
+                if (!visitedDocumentKeys.add(documentKey)) continue
+
+                val filePath = buildDisplayPath(
+                    rootPath = displayRootPath,
+                    relativePath = currentRelativePath,
+                    fileName = name
+                )
+
+                output.add(
+                    SafScannedSongFile(
                         rootFolderId = rootFolderId,
-                        output = output,
-                        visitedUris = visitedUris
+                        songFile = SongFile(
+                            mediaId = createVirtualMediaId(child.uri.toString()),
+                            uri = child.uri,
+                            filePath = filePath,
+                            fileName = name,
+                            lastModified = child.lastModified,
+                            dateAdded = child.lastModified,
+                            duration = 0L,
+                            fileSize = child.size
+                        )
                     )
-                } else if (child.isFile) {
-                    if (!isSupportedAudioFile(name, child.type)) continue
+                )
+            }
+        }
+    }
 
-                    val uriString = child.uri.toString()
-                    if (!visitedUris.add(uriString)) continue
+    private fun queryChildren(
+        treeUri: Uri,
+        parentDocumentId: String
+    ): List<SafDocumentRow> {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+            treeUri,
+            parentDocumentId
+        )
 
-                    val filePath = buildDisplayPath(displayRootPath, currentRelativePath, name)
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_SIZE,
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED
+        )
 
-                    output.add(
-                        SafScannedSongFile(
-                            rootFolderId = rootFolderId,
-                            songFile = SongFile(
-                                mediaId = createVirtualMediaId(uriString),
-                                uri = child.uri,
-                                filePath = filePath,
-                                fileName = name,
-                                lastModified = child.lastModified(),
-                                dateAdded = child.lastModified(),
-                                duration = 0L,
-                                fileSize = child.length()
-                            )
+        val result = mutableListOf<SafDocumentRow>()
+
+        try {
+            context.contentResolver.query(
+                childrenUri,
+                projection,
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                val documentIdIndex = cursor.getColumnIndexOrThrow(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID
+                )
+                val displayNameIndex = cursor.getColumnIndexOrThrow(
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME
+                )
+                val mimeTypeIndex = cursor.getColumnIndexOrThrow(
+                    DocumentsContract.Document.COLUMN_MIME_TYPE
+                )
+                val sizeIndex = cursor.getColumnIndexOrThrow(
+                    DocumentsContract.Document.COLUMN_SIZE
+                )
+                val lastModifiedIndex = cursor.getColumnIndexOrThrow(
+                    DocumentsContract.Document.COLUMN_LAST_MODIFIED
+                )
+
+                while (cursor.moveToNext()) {
+                    val documentId = cursor.getStringOrNull(documentIdIndex)
+                        ?: continue
+                    val displayName = cursor.getStringOrNull(displayNameIndex)
+                        ?: continue
+                    val mimeType = cursor.getStringOrNull(mimeTypeIndex)
+                    val size = cursor.getLongOrZero(sizeIndex)
+                    val lastModified = cursor.getLongOrZero(lastModifiedIndex)
+
+                    val documentUri = DocumentsContract.buildDocumentUriUsingTree(
+                        treeUri,
+                        documentId
+                    )
+
+                    result.add(
+                        SafDocumentRow(
+                            documentId = documentId,
+                            displayName = displayName,
+                            mimeType = mimeType,
+                            size = size,
+                            lastModified = lastModified,
+                            uri = documentUri,
+                            isDirectory = mimeType == DocumentsContract.Document.MIME_TYPE_DIR
                         )
                     )
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "处理 SAF 文件失败: ${child.uri}", e)
             }
+        } catch (e: Exception) {
+            Log.w(tag, "读取 SAF 子文件失败: parentDocumentId=$parentDocumentId", e)
         }
+
+        return result
+    }
+
+    private fun canQueryDocument(documentUri: Uri): Boolean {
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_MIME_TYPE
+        )
+
+        return try {
+            context.contentResolver.query(
+                documentUri,
+                projection,
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                cursor.moveToFirst()
+            } == true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun Cursor.getStringOrNull(index: Int): String? {
+        if (index < 0 || isNull(index)) return null
+        return getString(index)
+    }
+
+    private fun Cursor.getLongOrZero(index: Int): Long {
+        if (index < 0 || isNull(index)) return 0L
+        return runCatching { getLong(index) }.getOrDefault(0L)
     }
 
     private val supportedAudioExtensions = setOf(

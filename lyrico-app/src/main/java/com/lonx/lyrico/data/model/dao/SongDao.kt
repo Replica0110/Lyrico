@@ -16,6 +16,7 @@ data class SongSyncInfo(
     val uri: String,
     val filePath: String,
     val fileLastModified: Long,
+    val fileSize: Long,
     val folderId: Long,
     val source: String
 )
@@ -97,7 +98,7 @@ interface SongDao {
      * 获取同步所需信息
      * 关键修改：确保 SELECT 的列名与 SongSyncInfo 的字段名匹配
      */
-    @Query("SELECT id, uri, filePath, fileLastModified, folderId, source FROM songs")
+    @Query("SELECT id, uri, filePath, fileLastModified, fileSize, folderId, source FROM songs")
     suspend fun getAllSyncInfo(): List<SongSyncInfo>
 
     /**

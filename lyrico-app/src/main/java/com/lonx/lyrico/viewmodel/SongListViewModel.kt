@@ -91,12 +91,10 @@ class SongListViewModel(
 
     private var preDragSelectedUris = emptySet<String>()
 
-    private val _selectedSongUris = MutableStateFlow<Set<String>>(emptySet())
-    val selectedSongUris = _selectedSongUris.asStateFlow()
+    val selectedSongUris = selectionManager.selectedUris
     private val _searchType = MutableStateFlow(LocalSearchType.ALL)
     val searchType = _searchType.asStateFlow()
-    private val _isSelectionMode = MutableStateFlow(false)
-    val isSelectionMode = _isSelectionMode.asStateFlow()
+    val isSelectionMode = selectionManager.isSelectionMode
     val songs: StateFlow<List<SongEntity>> = combine(
         sortInfo,
         _uiState.map { it.searchQuery }.distinctUntilChanged(),
@@ -112,8 +110,6 @@ class SongListViewModel(
     }.onEach {
         _uiState.update { it.copy(isSearching = false) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-
 
     fun renameSong(song: SongEntity, newFileName: String) {
         viewModelScope.launch {
@@ -143,11 +139,11 @@ class SongListViewModel(
 
     fun startDragSelection(index: Int, songs: List<SongEntity>) {
         val song = songs.getOrNull(index) ?: return
-        preDragSelectedUris = _selectedSongUris.value
+        preDragSelectedUris = selectedSongUris.value
 
         val rangeUris = setOf(song.uri)
 
-        _selectedSongUris.value = (preDragSelectedUris - rangeUris) + (rangeUris - preDragSelectedUris)
+        selectionManager.setUris((preDragSelectedUris - rangeUris) + (rangeUris - preDragSelectedUris))
     }
 
     fun updateDragSelection(startIndex: Int, endIndex: Int, songs: List<SongEntity>) {
@@ -157,7 +153,7 @@ class SongListViewModel(
 
         val rangeUris = songs.subList(start, end + 1).map { it.uri }.toSet()
 
-        _selectedSongUris.value = (preDragSelectedUris - rangeUris) + (rangeUris - preDragSelectedUris)
+        selectionManager.setUris((preDragSelectedUris - rangeUris) + (rangeUris - preDragSelectedUris))
     }
 
     fun endDragSelection() {
@@ -197,26 +193,24 @@ class SongListViewModel(
     }
 
     fun toggleSelection(uri: String) {
-        if (!_isSelectionMode.value) _isSelectionMode.value = true
-        _selectedSongUris.update { if (it.contains(uri)) it - uri else it + uri }
+        selectionManager.toggle(uri)
     }
 
     fun exitSelectionMode() {
-        _isSelectionMode.value = false
-        _selectedSongUris.value = emptySet()
+        selectionManager.exitSelectionMode()
     }
 
     fun deselectAll() {
-        _selectedSongUris.value = emptySet()
+        selectionManager.deselectAll()
     }
     fun selectAll(songs: List<SongEntity>) {
-        _selectedSongUris.value = songs.map { it.uri }.toSet()
+        selectionManager.selectAll(songs.map { it.uri }.toSet())
     }
 
 
 
     fun batchDelete(songs: List<SongEntity>) {
-        val selectedUris = _selectedSongUris.value
+        val selectedUris = selectedSongUris.value
         val toDelete = songs.filter { it.uri in selectedUris }
 
         viewModelScope.launch {
@@ -226,7 +220,7 @@ class SongListViewModel(
     }
 
     fun batchShare(context: Context, songs: List<SongEntity>) {
-        val selectedUris = _selectedSongUris.value
+        val selectedUris = selectedSongUris.value
         val toShare = songs.filter { it.uri in selectedUris }
         if (toShare.isEmpty()) return
 
@@ -244,7 +238,7 @@ class SongListViewModel(
     }
 
     fun setSelectionUris(): Boolean {
-        val selectedUris = _selectedSongUris.value
+        val selectedUris = selectedSongUris.value
         if (selectedUris.isEmpty()) return false
 
         selectionManager.setUris(selectedUris)

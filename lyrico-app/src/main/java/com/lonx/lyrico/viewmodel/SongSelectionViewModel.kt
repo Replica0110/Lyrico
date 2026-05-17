@@ -11,9 +11,6 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.data.repository.SongRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SongSelectionViewModel(
@@ -22,34 +19,27 @@ class SongSelectionViewModel(
     private val selectionManager: SharedSelectionManager
 ) : ViewModel() {
 
-    private val _selectedSongUris = MutableStateFlow<Set<String>>(emptySet())
-    val selectedSongUris = _selectedSongUris.asStateFlow()
-
-    private val _isSelectionMode = MutableStateFlow(false)
-    val isSelectionMode = _isSelectionMode.asStateFlow()
+    val selectedSongUris = selectionManager.selectedUris
+    val isSelectionMode = selectionManager.isSelectionMode
 
     fun toggleSelection(uri: String) {
-        if (!_isSelectionMode.value) _isSelectionMode.value = true
-        _selectedSongUris.update { selected ->
-            if (selected.contains(uri)) selected - uri else selected + uri
-        }
+        selectionManager.toggle(uri)
     }
 
     fun exitSelectionMode() {
-        _isSelectionMode.value = false
-        _selectedSongUris.value = emptySet()
+        selectionManager.exitSelectionMode()
     }
 
     fun deselectAll() {
-        _selectedSongUris.value = emptySet()
+        selectionManager.deselectAll()
     }
 
     fun selectAll(songs: List<SongEntity>) {
-        _selectedSongUris.value = songs.map { it.uri }.toSet()
+        selectionManager.selectAll(songs.map { it.uri }.toSet())
     }
 
     fun setSelectionUris(): Boolean {
-        val selectedUris = _selectedSongUris.value
+        val selectedUris = selectedSongUris.value
         if (selectedUris.isEmpty()) return false
 
         selectionManager.setUris(selectedUris)
@@ -67,7 +57,7 @@ class SongSelectionViewModel(
     }
 
     fun batchDelete(songs: List<SongEntity>) {
-        val selectedUris = _selectedSongUris.value
+        val selectedUris = selectedSongUris.value
         val toDelete = songs.filter { it.uri in selectedUris }
 
         viewModelScope.launch {
@@ -77,7 +67,7 @@ class SongSelectionViewModel(
     }
 
     fun batchShare(context: Context, songs: List<SongEntity>) {
-        val selectedUris = _selectedSongUris.value
+        val selectedUris = selectedSongUris.value
         val toShare = songs.filter { it.uri in selectedUris }
         if (toShare.isEmpty()) return
 

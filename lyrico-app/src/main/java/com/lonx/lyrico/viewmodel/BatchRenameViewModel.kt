@@ -274,10 +274,10 @@ class BatchRenameViewModel(
 
         setSongs(refreshedSongs)
 
-        val refreshedSelectedUris = selectionManager.selectedUris.value.map { uri ->
-            renamedByOriginalUri[uri]?.newUri ?: uri
-        }.toSet()
-        selectionManager.setUris(refreshedSelectedUris)
+        selectionManager.replaceUris(
+            renamedByOriginalUri.mapValues { (_, result) -> result.newUri ?: result.originalUri.orEmpty() }
+                .filterValues { it.isNotBlank() }
+        )
     }
 
     private fun setSongs(songs: List<SongForBatchRename>) {
@@ -411,8 +411,4 @@ class BatchRenameViewModel(
         )
     }
 
-    override fun onCleared() {
-        selectionManager.clearAll()
-        super.onCleared()
-    }
 }

@@ -170,6 +170,7 @@
     <string name="cd_search">Search</string>
     <string name="cd_sort">Sort</string>
     <string name="cd_info">Info</string>
+    <string name="cd_more_actions">More actions</string>
 
     <!-- Selection Mode -->
     <string name="selection_mode_selected_count">Selected %d items</string>
@@ -240,12 +241,15 @@
 
     <!-- Folder Item Info -->
     <string name="folder_song_count_format">Songs: %d</string>
+    <string name="folder_hidden_song_count_format">Hidden, Songs: %d</string>
     <string name="folder_source_manual">Manually Added</string>
     <string name="folder_source_auto">Auto Discovered</string>
 
     <!-- Folder Action Sheet -->
     <string name="folder_sheet_path_prefix">Path: %s</string>
     <string name="folder_action_remove">Remove Folder</string>
+    <string name="folder_action_hide">Hide Folder</string>
+    <string name="folder_action_show">Show Folder</string>
     <string name="folder_action_remove_sub">Remove this folder from Lyrico and clear its songs from the library. Local files will not be deleted.</string>
 
     <!-- General Actions -->

@@ -72,4 +72,10 @@ class FolderManagerViewModel(
     fun refreshFolder(folder: FolderEntity) {
         libraryScanManager.scanFolders(setOf(folder.id))
     }
+
+    fun setFolderIgnored(folder: FolderEntity, ignored: Boolean) {
+        appScope.launch {
+            folderDao.setIgnored(folder.id, ignored)
+        }
+    }
 }

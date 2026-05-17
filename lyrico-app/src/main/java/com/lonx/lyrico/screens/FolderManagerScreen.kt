@@ -42,6 +42,8 @@ import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
@@ -53,8 +55,8 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddFolder
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Delete
-import top.yukonga.miuix.kmp.icon.extended.Refresh
+import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -218,6 +220,9 @@ fun FolderManagerScreen(
                         },
                         onRefresh = {
                             viewModel.refreshFolder(folder)
+                        },
+                        onIgnoredChange = { ignored ->
+                            viewModel.setFolderIgnored(folder, ignored)
                         }
                     )
                 }
@@ -234,38 +239,53 @@ private fun FolderListItem(
     isQueued: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onIgnoredChange: (Boolean) -> Unit
 ) {
     val folderName = folder.path.substringAfterLast("/").ifBlank { folder.path }
     val isBusy = isScanning || isQueued
     val statusText = when {
         isScanning -> stringResource(R.string.folder_scanning)
         isQueued -> stringResource(R.string.folder_scan_queued)
+        folder.isIgnored -> stringResource(R.string.folder_hidden_song_count_format, folder.songCount)
         else -> stringResource(R.string.folder_song_count_format, folder.songCount)
     }
+    val actionEntry = DropdownEntry(
+        items = listOf(
+            DropdownItem(
+                text = if (folder.isIgnored) {
+                    stringResource(R.string.folder_action_show)
+                } else {
+                    stringResource(R.string.folder_action_hide)
+                },
+                selected = folder.isIgnored,
+                onClick = {
+                    onIgnoredChange(!folder.isIgnored)
+                }
+            ),
+            DropdownItem(
+                text = stringResource(R.string.action_refresh_folder),
+                onClick = onRefresh
+            ),
+            DropdownItem(
+                text = stringResource(R.string.folder_action_remove),
+                onClick = onDelete
+            )
+        )
+    )
 
     Card(
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
     ){
         BasicComponent(
             endActions = {
-                IconButton(
-                    enabled = !isBusy,
-                    onClick = onRefresh
+                OverlayIconDropdownMenu(
+                    entry = actionEntry,
+                    enabled = !isBusy
                 ) {
                     Icon(
-                        imageVector = MiuixIcons.Refresh,
-                        contentDescription = stringResource(R.string.action_refresh_folder)
-                    )
-                }
-                IconButton(
-                    enabled = !isBusy,
-                    onClick = onDelete
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Delete,
-                        contentDescription = stringResource(R.string.common_delete),
-                        tint = MiuixTheme.colorScheme.error
+                        imageVector = MiuixIcons.More,
+                        contentDescription = stringResource(R.string.cd_more_actions)
                     )
                 }
             },

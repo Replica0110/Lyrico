@@ -1,6 +1,7 @@
 package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
+import android.content.ClipData
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -46,6 +47,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -111,7 +114,7 @@ fun SearchResultsScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
 
 
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val pagerState = rememberPagerState { uiState.availableSources.size }
 
     /**
@@ -417,7 +420,11 @@ fun SearchResultsScreen(
                         if (!lyricsText.isNullOrBlank()) {
                             IconButton(
                                 onClick = {
-                                    clipboardManager.setText(AnnotatedString(lyricsText))
+                                    scope.launch {
+                                        val clipData = ClipData.newPlainText("copy lyrics", lyricsText)
+                                        val clipEntry = ClipEntry(clipData)
+                                        clipboardManager.setClipEntry(clipEntry)
+                                    }
                                 },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)

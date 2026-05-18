@@ -3,6 +3,7 @@ agp = "9.1.1"
 aboutLibraries = "14.2.0"
 coil = "3.4.0"
 core = "2.3.0"
+icu4j = "78.3"
 kotlin = "2.3.21"
 ksp = "2.3.6"
 composeMarkdown = "0.5.7"
@@ -29,7 +30,6 @@ deviceCompat = "2.6"
 documentfile = "1.1.0"
 room = "2.8.4"
 work = "2.11.2"
-tinypinyin = "2.0.3"
 monitor = "1.8.0"
 miuix = "0.9.1"
 
@@ -41,6 +41,7 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" 
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 compose-destinations-core = { module = "io.github.raamcosta.compose-destinations:core", version.ref = "core" }
 compose-markdown = { module = "com.github.jeziellago:compose-markdown", version.ref = "composeMarkdown" }
+icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -61,7 +62,6 @@ miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", ve
 opencc4j = { module = "com.github.houbb:opencc4j", version.ref = "opencc4j" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 shapes = { module = "io.github.kyant0:shapes", version.ref = "shapes" }
-tinypinyin = { module = "com.github.promeg:tinypinyin", version.ref = "tinypinyin" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }

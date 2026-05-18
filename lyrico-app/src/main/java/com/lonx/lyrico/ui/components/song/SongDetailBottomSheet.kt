@@ -1,6 +1,6 @@
 package com.lonx.lyrico.ui.components.song
 
-import android.annotation.SuppressLint
+import android.content.ClipData
 import android.text.format.Formatter
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -14,15 +14,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -31,6 +32,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.components.CoverRequest
+import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -51,7 +53,8 @@ fun SongDetailBottomSheet(
     onDismissRequest: () -> Unit
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
     val dateFormat = remember {
         SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     }
@@ -110,12 +113,16 @@ fun SongDetailBottomSheet(
             ) {
                 val msg = stringResource(R.string.msg_copied_to_clipboard)
                 val copyToClipboard: (String) -> Unit = { text ->
-                    clipboardManager.setText(AnnotatedString(text))
-                    Toast.makeText(
-                        context,
-                        msg,
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    coroutineScope.launch {
+                        val clipData = ClipData.newPlainText("copy detail", text)
+                        val clipEntry = ClipEntry(clipData)
+                        clipboardManager.setClipEntry(clipEntry)
+                        Toast.makeText(
+                            context,
+                            msg,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
                 SongDetailItem(
                     stringResource(R.string.label_album),

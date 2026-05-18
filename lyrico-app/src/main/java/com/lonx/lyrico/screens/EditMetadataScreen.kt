@@ -2,6 +2,7 @@ package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ClipData
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -63,6 +64,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -177,7 +180,7 @@ fun EditMetadataScreen(
     var isFabMenuExpanded by remember { mutableStateOf(false) }
     val currentShiftOffset by viewModel.currentShiftOffset.collectAsState()
 
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
 
     val imeVisible = WindowInsets.isImeVisible
     val isFloatingToolbarVisible = !imeVisible
@@ -345,7 +348,8 @@ fun EditMetadataScreen(
                     .padding(
                         start = paddingValues.calculateStartPadding(layoutDirection),
                         top = paddingValues.calculateTopPadding(),
-                        end = paddingValues.calculateEndPadding(layoutDirection))
+                        end = paddingValues.calculateEndPadding(layoutDirection)
+                    )
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
                     .overScrollVertical()
                     .imePadding()
@@ -1076,9 +1080,14 @@ fun EditMetadataScreen(
             IconButton(
                 onClick = {
                     showPlainLyricsSheet = false
-                    clipboardManager.setText(
-                        AnnotatedString(plainLyrics ?: "")
-                    )
+                    if (!plainLyrics.isNullOrEmpty()){
+                        scope.launch {
+                            val clipData =
+                                ClipData.newPlainText("copy plain lyrics", plainLyrics)
+                            val clipEntry = ClipEntry(clipData)
+                            clipboardManager.setClipEntry(clipEntry)
+                        }
+                    }
                 }
             ) {
                 Icon(

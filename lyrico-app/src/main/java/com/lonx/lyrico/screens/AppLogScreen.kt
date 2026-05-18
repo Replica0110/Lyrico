@@ -1,5 +1,6 @@
 package com.lonx.lyrico.screens
 
+import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -29,6 +30,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -82,7 +85,7 @@ fun AppLogScreen(
 ) {
     val viewModel: AppLogViewModel = koinViewModel()
     val logs by viewModel.logs.collectAsState()
-    val clipboardManager = LocalClipboardManager.current
+    val clipboardManager = LocalClipboard.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -251,8 +254,10 @@ fun AppLogScreen(
             selectedLog = null
         },
         onCopy = { log ->
-            clipboardManager.setText(AnnotatedString(log.formatForCopy()))
             scope.launch {
+                val clipData = ClipData.newPlainText("copy log", log.formatForCopy())
+                val clipEntry = ClipEntry(clipData)
+                clipboardManager.setClipEntry(clipEntry)
                 snackbarHostState.showSnackbar(copiedMessage)
             }
             showDetailSheet = false

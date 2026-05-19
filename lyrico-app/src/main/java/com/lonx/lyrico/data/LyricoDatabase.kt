@@ -8,8 +8,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.lonx.lyrico.data.model.dao.AppLogDao
 import com.lonx.lyrico.data.model.dao.BatchTaskDao
 import com.lonx.lyrico.data.model.dao.FolderDao
+import com.lonx.lyrico.data.model.dao.LibraryIndexDao
 import com.lonx.lyrico.data.model.dao.SongDao
+import com.lonx.lyrico.data.model.entity.AlbumEntity
+import com.lonx.lyrico.data.model.entity.AlbumSongCrossRef
 import com.lonx.lyrico.data.model.entity.AppLogEntity
+import com.lonx.lyrico.data.model.entity.ArtistEntity
+import com.lonx.lyrico.data.model.entity.ArtistSongCrossRef
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.model.entity.FolderEntity
@@ -21,9 +26,13 @@ import com.lonx.lyrico.data.model.entity.SongEntity
         FolderEntity::class,
         BatchTaskEntity::class,
         BatchTaskItemEntity::class,
-        AppLogEntity::class
+        AppLogEntity::class,
+        ArtistEntity::class,
+        ArtistSongCrossRef::class,
+        AlbumEntity::class,
+        AlbumSongCrossRef::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3),
@@ -39,6 +48,7 @@ abstract class LyricoDatabase : RoomDatabase() {
     abstract fun folderDao(): FolderDao
     abstract fun batchTaskDao(): BatchTaskDao
     abstract fun appLogDao(): AppLogDao
+    abstract fun libraryIndexDao(): LibraryIndexDao
 
     companion object {
         val MIGRATION_9_10 = object : Migration(9, 10) {
@@ -162,6 +172,76 @@ abstract class LyricoDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_app_logs_level ON app_logs(level)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_app_logs_type ON app_logs(type)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_app_logs_relatedId ON app_logs(relatedId)")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS artists (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        normalizedName TEXT NOT NULL,
+                        groupKey TEXT NOT NULL,
+                        sortKey TEXT NOT NULL,
+                        songCount INTEGER NOT NULL,
+                        albumCount INTEGER NOT NULL,
+                        coverSongUri TEXT,
+                        coverSongLastModified INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_artists_normalizedName ON artists(normalizedName)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_artists_groupKey_sortKey ON artists(groupKey, sortKey)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS artist_song (
+                        artistId INTEGER NOT NULL,
+                        songId INTEGER NOT NULL,
+                        PRIMARY KEY(artistId, songId),
+                        FOREIGN KEY(artistId) REFERENCES artists(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(songId) REFERENCES songs(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_artist_song_artistId ON artist_song(artistId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_artist_song_songId ON artist_song(songId)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS albums (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        albumArtist TEXT,
+                        normalizedKey TEXT NOT NULL,
+                        groupKey TEXT NOT NULL,
+                        sortKey TEXT NOT NULL,
+                        songCount INTEGER NOT NULL,
+                        coverSongUri TEXT,
+                        coverSongLastModified INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_albums_normalizedKey ON albums(normalizedKey)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_albums_groupKey_sortKey ON albums(groupKey, sortKey)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS album_song (
+                        albumId INTEGER NOT NULL,
+                        songId INTEGER NOT NULL,
+                        PRIMARY KEY(albumId, songId),
+                        FOREIGN KEY(albumId) REFERENCES albums(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(songId) REFERENCES songs(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_album_song_albumId ON album_song(albumId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_album_song_songId ON album_song(songId)")
             }
         }
     }

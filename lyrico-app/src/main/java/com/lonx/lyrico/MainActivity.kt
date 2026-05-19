@@ -25,8 +25,10 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.lonx.lyrico.App.Companion.ACTION_EDIT_TAG
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.data.repository.LibraryIndexRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.ui.components.update.UpdateDialog
 import com.lonx.lyrico.ui.theme.KeyColors
@@ -36,6 +38,7 @@ import com.lonx.lyrico.viewmodel.SongListViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.compose.koinInject
+import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
@@ -75,6 +78,7 @@ open class MainActivity : ComponentActivity() {
 
     private val songListViewModel: SongListViewModel by viewModel()
     private val settingsRepository: SettingsRepository by inject()
+    private val libraryIndexRepository: LibraryIndexRepository by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -85,6 +89,9 @@ open class MainActivity : ComponentActivity() {
             songListViewModel.checkForUpdate()
         }
         requestNotificationPermissionIfNeeded()
+        lifecycleScope.launch {
+            libraryIndexRepository.ensureIndexesCurrent()
+        }
 
         setContent {
             val themeMode by settingsRepository.themeMode.collectAsStateWithLifecycle(

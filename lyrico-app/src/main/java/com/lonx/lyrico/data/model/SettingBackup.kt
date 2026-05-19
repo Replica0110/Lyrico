@@ -1,6 +1,7 @@
 package com.lonx.lyrico.data.model
 
 
+import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
@@ -30,5 +31,6 @@ data class SettingsBackup(
     @SerialName("log_retention_option") val logRetentionOption: String? = null,
     @SerialName("key_theme_color") val keyThemeColor: Int? = null,
     @SerialName("monet_enable") val monetEnable: Boolean? = null,
+    @SerialName("artist_split_config") val artistSplitConfig: ArtistSplitConfig? = null,
     @SerialName("edit_field_visibility_overrides") val editFieldVisibilityOverrides: Map<String, Boolean>? = null
 )

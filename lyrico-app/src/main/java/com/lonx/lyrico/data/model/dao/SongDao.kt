@@ -87,6 +87,9 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE uri = :uri LIMIT 1")
     suspend fun getSongByUri(uri: String): SongEntity?
 
+    @Query("SELECT * FROM songs WHERE uri IN (:uris)")
+    suspend fun getSongsByUris(uris: List<String>): List<SongEntity>
+
     /**
      * 根据路径查询 (辅助查询方式)
      */
@@ -324,6 +327,9 @@ interface SongDao {
         WHERE f.isIgnored = 0
     """)
     fun getAllSongs(): Flow<List<SongEntity>>
+
+    @Query("SELECT * FROM songs")
+    suspend fun getAllSongsSnapshot(): List<SongEntity>
 
     /**
      * 按文件夹 ID 获取歌曲

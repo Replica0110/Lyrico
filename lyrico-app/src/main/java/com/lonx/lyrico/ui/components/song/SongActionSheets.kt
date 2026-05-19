@@ -43,6 +43,7 @@ fun SongActionSheets(
     val context = LocalContext.current
     val song = selectedSong ?: return
 
+    val shareTitle = stringResource(R.string.share_chooser_title)
     SongMenuBottomSheet(
         show = showMenuSheet,
         song = song,
@@ -63,7 +64,7 @@ fun SongActionSheets(
             context.startActivity(
                 Intent.createChooser(
                     intent,
-                    context.getString(R.string.share_chooser_title)
+                    shareTitle
                 )
             )
         }

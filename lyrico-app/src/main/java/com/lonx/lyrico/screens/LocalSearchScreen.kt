@@ -230,7 +230,7 @@ fun LocalSearchScreen(
                             coverUri = artist.coverSongUri,
                             coverLastModified = artist.coverSongLastModified,
                             onClick = {
-                                navigator.navigate(ArtistDetailDestination(artist = artist.artist))
+                                navigator.navigate(ArtistDetailDestination(artistId = artist.id))
                             }
                         )
                     }
@@ -257,10 +257,7 @@ fun LocalSearchScreen(
                             coverLastModified = album.coverSongLastModified,
                             onClick = {
                                 navigator.navigate(
-                                    AlbumDetailDestination(
-                                        album = album.album,
-                                        albumArtist = album.albumArtist
-                                    )
+                                    AlbumDetailDestination(albumId = album.id)
                                 )
                             }
                         )

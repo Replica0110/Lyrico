@@ -51,6 +51,7 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AboutDestination
 import com.ramcosta.composedestinations.generated.destinations.AppLogsDestination
+import com.ramcosta.composedestinations.generated.destinations.ArtistSplitSettingsDestination
 import com.ramcosta.composedestinations.generated.destinations.BatchTaskListDestination
 import com.ramcosta.composedestinations.generated.destinations.EditFieldVisibilityDestination
 import com.ramcosta.composedestinations.generated.destinations.ExtraMetadataWritesDestination
@@ -519,6 +520,11 @@ fun SettingsScreen(
                         onSelectedIndexChange = { index ->
                             settingsViewModel.setSeparator(artistSeparators[index])
                         }
+                    )
+                    ArrowPreference(
+                        title = stringResource(R.string.artist_split_settings_title),
+                        summary = stringResource(R.string.artist_split_settings_summary),
+                        onClick = { navigator.navigate(ArtistSplitSettingsDestination()) }
                     )
                     ArrowPreference(
                         title = stringResource(R.string.extra_metadata_writes_title),

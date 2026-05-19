@@ -2,6 +2,7 @@ package com.lonx.lyrico.data.utils
 
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.data.model.artist.CustomArtistSeparator
+import com.lonx.lyrico.data.model.artist.CustomNoSplitArtist
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -15,13 +16,14 @@ class ArtistNameSplitterTest {
     }
 
     @Test
-    fun splitArtists_keepsBuiltinNoSplitArtistBeforeSeparators() {
+    fun splitArtists_keepsCustomNoSplitArtistBeforeSeparators() {
         assertEquals(
             listOf("Simon & Garfunkel"),
             ArtistNameSplitter.splitArtists(
                 "Simon & Garfunkel",
                 ArtistSplitConfig(
-                    builtinSeparatorOverrides = mapOf("ampersand" to true)
+                    builtinSeparatorOverrides = mapOf("ampersand" to true),
+                    customNoSplitArtists = listOf(CustomNoSplitArtist("Simon & Garfunkel"))
                 )
             )
         )
@@ -54,6 +56,19 @@ class ArtistNameSplitterTest {
     }
 
     @Test
+    fun splitArtists_respectsDeletedBuiltinSeparator() {
+        assertEquals(
+            listOf("A / B"),
+            ArtistNameSplitter.splitArtists(
+                "A / B",
+                ArtistSplitConfig(
+                    hiddenBuiltinSeparatorIds = setOf("slash")
+                )
+            )
+        )
+    }
+
+    @Test
     fun splitArtists_splitsCustomSeparator() {
         assertEquals(
             listOf("A", "B"),
@@ -65,5 +80,18 @@ class ArtistNameSplitterTest {
             )
         )
     }
-}
 
+    @Test
+    fun splitArtists_respectsEnabledCustomNoSplitArtist() {
+        assertEquals(
+            listOf("A & B"),
+            ArtistNameSplitter.splitArtists(
+                "A & B",
+                ArtistSplitConfig(
+                    builtinSeparatorOverrides = mapOf("ampersand" to true),
+                    customNoSplitArtists = listOf(CustomNoSplitArtist("A & B"))
+                )
+            )
+        )
+    }
+}

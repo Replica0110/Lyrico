@@ -30,6 +30,7 @@ fun String.normalizedArtistKey(): String {
 
 fun ArtistSplitConfig.effectiveSeparators(): List<String> {
     val builtin = ArtistSplitDefaults.BUILTIN_SEPARATORS
+        .filter { item -> item.id !in hiddenBuiltinSeparatorIds }
         .filter { item -> builtinSeparatorOverrides[item.id] ?: item.defaultEnabled }
         .map { it.value }
 
@@ -38,18 +39,16 @@ fun ArtistSplitConfig.effectiveSeparators(): List<String> {
         .map { it.value }
 
     return (builtin + custom)
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .distinct()
+        .filter { it.isNotBlank() }
+        .distinctBy { it.trim() }
 }
 
 fun ArtistSplitConfig.effectiveNoSplitArtists(): Set<String> {
-    val builtin = ArtistSplitDefaults.BUILTIN_NO_SPLIT_ARTISTS
-        .filter { item -> builtinNoSplitArtistOverrides[item.id] ?: item.defaultEnabled }
+    val custom = customNoSplitArtists
+        .filter { it.enabled }
         .map { it.name }
 
-    return (builtin + customNoSplitArtists)
+    return custom
         .map { it.normalizedArtistKey() }
         .toSet()
 }
-

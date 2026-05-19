@@ -43,6 +43,7 @@ import com.lonx.lyrico.viewmodel.AlbumLibraryViewModel
 import com.lonx.lyrico.viewmodel.AppLogViewModel
 import com.lonx.lyrico.viewmodel.ArtistDetailViewModel
 import com.lonx.lyrico.viewmodel.ArtistLibraryViewModel
+import com.lonx.lyrico.viewmodel.ArtistSplitSettingsViewModel
 import com.lonx.lyrico.viewmodel.BatchExportViewModel
 import com.lonx.lyrico.viewmodel.BatchEditViewModel
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
@@ -290,6 +291,7 @@ val appModule = module {
         )
     }
     viewModel { ArtistLibraryViewModel(get(), get()) }
+    viewModel { ArtistSplitSettingsViewModel(get(), get()) }
     viewModel { AlbumLibraryViewModel(get(),get()) }
     viewModel { SettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get()) }

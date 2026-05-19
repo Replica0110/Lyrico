@@ -6,6 +6,7 @@ import com.lonx.lyrico.data.model.ArtistSortBy
 import com.lonx.lyrico.data.model.ArtistSortInfo
 import com.lonx.lyrico.data.model.dao.ArtistListItem
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
+import com.lonx.lyrico.utils.LibraryScanManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,11 +14,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 class ArtistLibraryViewModel(
-    libraryIndexRepository: LibraryIndexRepository
+    libraryIndexRepository: LibraryIndexRepository,
+    private val libraryScanManager: LibraryScanManager
 ) : ViewModel() {
     private val _sortInfo = MutableStateFlow(ArtistSortInfo())
     val sortInfo: StateFlow<ArtistSortInfo> = _sortInfo
-
+    val scanState = libraryScanManager.state
     val artists: StateFlow<List<ArtistListItem>> =
         combine(libraryIndexRepository.observeArtists(), sortInfo) { artists, sort ->
             val sorted = when (sort.sortBy) {
@@ -40,6 +42,10 @@ class ArtistLibraryViewModel(
 
     fun onSortChange(sortInfo: ArtistSortInfo) {
         _sortInfo.value = sortInfo
+    }
+
+    fun refreshSongs() {
+        libraryScanManager.scanAll()
     }
 }
 

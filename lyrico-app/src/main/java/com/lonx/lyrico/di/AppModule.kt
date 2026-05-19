@@ -289,8 +289,8 @@ val appModule = module {
             artistId = artistId
         )
     }
-    viewModel { ArtistLibraryViewModel(get()) }
-    viewModel { AlbumLibraryViewModel(get()) }
+    viewModel { ArtistLibraryViewModel(get(), get()) }
+    viewModel { AlbumLibraryViewModel(get(),get()) }
     viewModel { SettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { CoverSearchViewModel(get(), get()) }

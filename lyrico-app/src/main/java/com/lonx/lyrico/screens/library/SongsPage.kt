@@ -66,10 +66,8 @@ import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
-import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination.invoke
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
-import com.ramcosta.composedestinations.generated.destinations.SettingsDestination.invoke
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import my.nanihadesuka.compose.LazyColumnScrollbar
@@ -99,15 +97,15 @@ fun SongsPage(
     navigator: DestinationsNavigator,
     modifier: Modifier = Modifier
 ) {
-    val songListViewModel: SongListViewModel = koinActivityViewModel()
-    val scanState by songListViewModel.scanState.collectAsStateWithLifecycle()
+    val viewModel: SongListViewModel = koinActivityViewModel()
+    val scanState by viewModel.scanState.collectAsStateWithLifecycle()
 
-    val sortInfo by songListViewModel.sortInfo.collectAsState()
-    val songs by songListViewModel.songs.collectAsState()
-    val isSelectionMode by songListViewModel.isSelectionMode.collectAsState(initial = false)
-    val selectedSongUris by songListViewModel.selectedSongUris.collectAsState()
-    val hasFolders by songListViewModel.hasFolders.collectAsStateWithLifecycle()
-    val showScrollTopButton by songListViewModel.showScrollTopButton.collectAsStateWithLifecycle()
+    val sortInfo by viewModel.sortInfo.collectAsState()
+    val songs by viewModel.songs.collectAsState()
+    val isSelectionMode by viewModel.isSelectionMode.collectAsState(initial = false)
+    val selectedSongUris by viewModel.selectedSongUris.collectAsState()
+    val hasFolders by viewModel.hasFolders.collectAsStateWithLifecycle()
+    val showScrollTopButton by viewModel.showScrollTopButton.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -116,7 +114,7 @@ fun SongsPage(
     var selectedSong by remember { mutableStateOf<SongEntity?>(null) }
 
     LaunchedEffect(Unit) {
-        songListViewModel.clearSearch()
+        viewModel.clearSearch()
     }
 
     val showFab by remember {
@@ -142,7 +140,7 @@ fun SongsPage(
             }
 
             val path = UriUtils.getFileAbsolutePath(context, it) ?: it.toString()
-            songListViewModel.addSafFolderAndRefresh(
+            viewModel.addSafFolderAndRefresh(
                 path = path,
                 treeUri = it.toString()
             )
@@ -178,7 +176,7 @@ fun SongsPage(
         if (isFabMenuExpanded) {
             isFabMenuExpanded = false
         } else if (isSelectionMode) {
-            songListViewModel.exitSelectionMode()
+            viewModel.exitSelectionMode()
         }
     }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -233,9 +231,9 @@ fun SongsPage(
                                 songs = songs,
                                 selectedSongUris = selectedSongUris,
                                 scrollBehavior = topAppBarScrollBehavior,
-                                onSelectAll = songListViewModel::selectAll,
-                                onDeselectAll = songListViewModel::deselectAll,
-                                onClose = songListViewModel::exitSelectionMode
+                                onSelectAll = viewModel::selectAll,
+                                onDeselectAll = viewModel::deselectAll,
+                                onClose = viewModel::exitSelectionMode
                             )
                         }
 
@@ -285,7 +283,7 @@ fun SongsPage(
                                                     } else {
                                                         SortOrder.ASC
                                                     }
-                                                    songListViewModel.onSortChange(
+                                                    viewModel.onSortChange(
                                                         SortInfo(
                                                             sortBy,
                                                             newOrder
@@ -301,7 +299,7 @@ fun SongsPage(
                                                 text = stringResource(R.string.show_scroll_top_button),
                                                 selected = showScrollTopButton,
                                                 onClick = {
-                                                    songListViewModel.setScrollToTopButtonEnabled(
+                                                    viewModel.setScrollToTopButtonEnabled(
                                                         !showScrollTopButton
                                                     )
                                                 }
@@ -332,7 +330,7 @@ fun SongsPage(
             ) {
                 PullToRefresh(
                     isRefreshing = scanState.isScanning,
-                    onRefresh = { songListViewModel.refreshSongs() },
+                    onRefresh = { viewModel.refreshSongs() },
                     modifier = Modifier.fillMaxSize(),
                     topAppBarScrollBehavior = topAppBarScrollBehavior,
                     refreshTexts = refreshTexts
@@ -358,17 +356,17 @@ fun SongsPage(
                                     itemCount = songs.size,
                                     isSelectionMode = isSelectionMode,
                                     onDragSelectionStart = { index ->
-                                        songListViewModel.startDragSelection(index, songs)
+                                        viewModel.startDragSelection(index, songs)
                                     },
                                     onDragSelectionChange = { startIndex, endIndex ->
-                                        songListViewModel.updateDragSelection(
+                                        viewModel.updateDragSelection(
                                             startIndex,
                                             endIndex,
                                             songs
                                         )
                                     },
                                     onDragSelectionEnd = {
-                                        songListViewModel.endDragSelection()
+                                        viewModel.endDragSelection()
                                     }
                                 ),
                             state = listState,
@@ -392,7 +390,7 @@ fun SongsPage(
                                             navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
                                         },
                                         onToggleSelection = {
-                                            songListViewModel.toggleSelection(song.uri)
+                                            viewModel.toggleSelection(song.uri)
                                         },
                                         trailingContent = {
                                             Box(modifier = Modifier.padding(end = 8.dp)) {
@@ -400,7 +398,7 @@ fun SongsPage(
                                                     isSelectionMode = isSelectionMode,
                                                     isSelected = selectedSongUris.contains(song.uri),
                                                     onToggleSelection = {
-                                                        songListViewModel.toggleSelection(song.uri)
+                                                        viewModel.toggleSelection(song.uri)
                                                     },
                                                     onShowMenu = {
                                                         showMenuSheet = true
@@ -477,13 +475,13 @@ fun SongsPage(
                     onShowDelete = { showDeleteDialog = true },
                     onShowRename = { showRenameDialog = true },
                     onPlay = { song ->
-                        songListViewModel.play(context, song)
+                        viewModel.play(context, song)
                     },
                     onDelete = { song ->
-                        songListViewModel.delete(song)
+                        viewModel.delete(song)
                     },
                     onRename = { song, newFileName ->
-                        songListViewModel.renameSong(song, newFileName)
+                        viewModel.renameSong(song, newFileName)
                     }
                 )
             }
@@ -507,9 +505,9 @@ fun SongsPage(
             expanded = isFabMenuExpanded,
             selectedSongUris = selectedSongUris,
             onExpandedChange = { isFabMenuExpanded = it },
-            onSetSelectionUris = songListViewModel::setSelectionUris,
-            onBatchDelete = songListViewModel::batchDelete,
-            onBatchShare = songListViewModel::batchShare
+            onSetSelectionUris = viewModel::setSelectionUris,
+            onBatchDelete = viewModel::batchDelete,
+            onBatchShare = viewModel::batchShare
         )
     }
 }

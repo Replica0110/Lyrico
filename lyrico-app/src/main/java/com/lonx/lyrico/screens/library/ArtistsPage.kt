@@ -44,6 +44,7 @@ import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -64,6 +65,8 @@ fun ArtistsPage(
     modifier: Modifier = Modifier
 ) {
     val viewModel: ArtistLibraryViewModel = koinViewModel()
+    val scanState by viewModel.scanState.collectAsStateWithLifecycle()
+
     val artists by viewModel.artists.collectAsStateWithLifecycle()
     val sortInfo by viewModel.sortInfo.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -85,7 +88,12 @@ fun ArtistsPage(
         map
     }
     val enableIndex = artists.isNotEmpty() && sortInfo.sortBy.supportsIndex
-
+    val refreshTexts = listOf(
+        stringResource(R.string.pull_to_refresh),
+        stringResource(R.string.release_to_refresh),
+        stringResource(R.string.refreshing),
+        stringResource(R.string.refresh_success)
+    )
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -134,43 +142,51 @@ fun ArtistsPage(
                     summary = stringResource(R.string.building_library_index)
                 )
             } else {
-                LazyColumnScrollbar(
-                    state = listState,
-                    settings = ScrollbarSettings.Default.copy(
-                        enabled = !enableIndex,
-                        alwaysShowScrollbar = !enableIndex,
-                        selectionMode = ScrollbarSelectionMode.Full,
-                        thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                        thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions
-                    )
+                PullToRefresh(
+                    isRefreshing = scanState.isScanning,
+                    onRefresh = { viewModel.refreshSongs() },
+                    modifier = Modifier.fillMaxSize(),
+                    topAppBarScrollBehavior = topAppBarScrollBehavior,
+                    refreshTexts = refreshTexts
                 ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .scrollEndHaptic()
-                            .overScrollVertical()
-                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                            .fillMaxHeight(),
+                    LazyColumnScrollbar(
                         state = listState,
-                        overscrollEffect = null,
-                        contentPadding = PaddingValues()
+                        settings = ScrollbarSettings.Default.copy(
+                            enabled = !enableIndex,
+                            alwaysShowScrollbar = !enableIndex,
+                            selectionMode = ScrollbarSelectionMode.Full,
+                            thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions
+                        )
                     ) {
-                        items(
-                            items = artists,
-                            key = { it.id }
-                        ) { artist ->
-                            ArtistSongItem(
-                                name = artist.name,
-                                subtitle = stringResource(
-                                    R.string.album_song_count,
-                                    artist.albumCount,
-                                    artist.songCount
-                                ),
-                                coverUri = artist.coverSongUri,
-                                coverLastModified = artist.coverSongLastModified,
-                                onClick = {
-                                    navigator.navigate(ArtistDetailDestination(artistId = artist.id))
-                                }
-                            )
+                        LazyColumn(
+                            modifier = Modifier
+                                .scrollEndHaptic()
+                                .overScrollVertical()
+                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                                .fillMaxHeight(),
+                            state = listState,
+                            overscrollEffect = null,
+                            contentPadding = PaddingValues()
+                        ) {
+                            items(
+                                items = artists,
+                                key = { it.id }
+                            ) { artist ->
+                                ArtistSongItem(
+                                    name = artist.name,
+                                    subtitle = stringResource(
+                                        R.string.album_song_count,
+                                        artist.albumCount,
+                                        artist.songCount
+                                    ),
+                                    coverUri = artist.coverSongUri,
+                                    coverLastModified = artist.coverSongLastModified,
+                                    onClick = {
+                                        navigator.navigate(ArtistDetailDestination(artistId = artist.id))
+                                    }
+                                )
+                            }
                         }
                     }
                 }

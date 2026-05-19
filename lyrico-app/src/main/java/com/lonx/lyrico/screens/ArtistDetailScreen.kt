@@ -44,7 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.AlbumSearchResult
+import com.lonx.lyrico.data.model.entity.AlbumEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
@@ -82,14 +82,16 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 @Destination<RootGraph>(route = "artist_detail")
 fun ArtistDetailScreen(
     navigator: DestinationsNavigator,
-    artist: String
+    artistId: Long
 ) {
     val viewModel: ArtistDetailViewModel = koinViewModel(
-        parameters = { parametersOf(artist) }
+        parameters = { parametersOf(artistId) }
     )
     val selectionViewModel: SongSelectionViewModel = koinViewModel()
+    val artist by viewModel.artist.collectAsStateWithLifecycle()
     val songs by viewModel.songs.collectAsStateWithLifecycle()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
+    val artistName = artist?.name.orEmpty()
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -153,7 +155,7 @@ fun ArtistDetailScreen(
                         )
                     } else {
                         SmallTopAppBar(
-                            title = artist.ifBlank { stringResource(R.string.artist_detail_title) },
+                            title = artistName.ifBlank { stringResource(R.string.artist_detail_title) },
                             navigationIcon = {
                                 IconButton(onClick = { navigator.popBackStack() }) {
                                     Icon(
@@ -179,7 +181,7 @@ fun ArtistDetailScreen(
                         )
                 ) {
                     ArtistDetailHeader(
-                        artist = artist,
+                        artist = artistName,
                         songCount = songs.size,
                         albums = albums,
                         coverSong = songs.firstOrNull()
@@ -234,10 +236,7 @@ fun ArtistDetailScreen(
                                 topAppBarScrollBehavior = topAppBarScrollBehavior,
                                 onAlbumClick = { album ->
                                     navigator.navigate(
-                                        AlbumDetailDestination(
-                                            album = album.album,
-                                            albumArtist = album.albumArtist
-                                        )
+                                        AlbumDetailDestination(albumId = album.id)
                                     )
                                 }
                             )
@@ -328,9 +327,9 @@ private fun ArtistSongsPage(
 
 @Composable
 private fun ArtistAlbumsPage(
-    albums: List<AlbumSearchResult>,
+    albums: List<AlbumEntity>,
     topAppBarScrollBehavior: ScrollBehavior,
-    onAlbumClick: (AlbumSearchResult) -> Unit
+    onAlbumClick: (AlbumEntity) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -343,10 +342,10 @@ private fun ArtistAlbumsPage(
     ) {
         items(
             items = albums,
-            key = { album -> "${album.album}|${album.albumArtist.orEmpty()}" }
+            key = { album -> album.id }
         ) { album ->
             AlbumSongItem(
-                title = album.album,
+                title = album.name,
                 subtitle = listOfNotNull(
                     album.albumArtist,
                     stringResource(R.string.song_count, album.songCount)
@@ -363,7 +362,7 @@ private fun ArtistAlbumsPage(
 private fun ArtistDetailHeader(
     artist: String,
     songCount: Int,
-    albums: List<AlbumSearchResult>,
+    albums: List<AlbumEntity>,
     coverSong: SongEntity?
 ) {
     Row(

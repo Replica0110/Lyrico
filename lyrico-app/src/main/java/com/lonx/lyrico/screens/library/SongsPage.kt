@@ -1,17 +1,13 @@
-package com.lonx.lyrico.screens
+package com.lonx.lyrico.screens.library
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,34 +15,25 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,13 +46,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.screens.SECTIONS_ASC
+import com.lonx.lyrico.screens.SECTIONS_DESC
+import com.lonx.lyrico.screens.TopBarState
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
-import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.bar.findScrollIndex
 import com.lonx.lyrico.ui.components.fab.ScrollToTopButton
-import com.lonx.lyrico.ui.components.search.LocalSearchTypeTabs
 import com.lonx.lyrico.ui.components.selection.dragSelection
 import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
 import com.lonx.lyrico.ui.components.song.SongActionSheets
@@ -73,24 +61,20 @@ import com.lonx.lyrico.ui.components.song.SongListEmptyState
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
 import com.lonx.lyrico.utils.UriUtils
-import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
-import com.lonx.lyrico.viewmodel.BatchMatchViewModel
-import com.lonx.lyrico.viewmodel.BatchReplayGainViewModel
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
+import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination.invoke
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
+import com.ramcosta.composedestinations.generated.destinations.SettingsDestination.invoke
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import my.nanihadesuka.compose.LazyColumnScrollbar
 import my.nanihadesuka.compose.ScrollbarSelectionMode
 import my.nanihadesuka.compose.ScrollbarSettings
-import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.viewmodel.koinActivityViewModel
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -100,7 +84,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBarDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Search
@@ -111,30 +94,16 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
-private val SECTIONS_ASC = listOf(
-    "0"
-) + ('A'..'Z').map { it.toString() } + listOf("#")
-
-private val SECTIONS_DESC = SECTIONS_ASC.asReversed()
-
-enum class TopBarState {
-    Selection, Search, Default
-}
-
-@SuppressLint("LocalContextGetResourceValueCall")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Destination<RootGraph>(start = true, route = "song_list")
-fun SongListScreen(
-    navigator: DestinationsNavigator
+fun SongsPage(
+    navigator: DestinationsNavigator,
+    modifier: Modifier = Modifier
 ) {
     val songListViewModel: SongListViewModel = koinActivityViewModel()
-    val songListUiState by songListViewModel.uiState.collectAsState()
     val scanState by songListViewModel.scanState.collectAsStateWithLifecycle()
 
     val sortInfo by songListViewModel.sortInfo.collectAsState()
     val songs by songListViewModel.songs.collectAsState()
-    val searchType by songListViewModel.searchType.collectAsState()
     val isSelectionMode by songListViewModel.isSelectionMode.collectAsState(initial = false)
     val selectedSongUris by songListViewModel.selectedSongUris.collectAsState()
     val hasFolders by songListViewModel.hasFolders.collectAsStateWithLifecycle()
@@ -145,6 +114,10 @@ fun SongListScreen(
     var showMenuSheet by remember { mutableStateOf(false) }
     var showDetailSheet by remember { mutableStateOf(false) }
     var selectedSong by remember { mutableStateOf<SongEntity?>(null) }
+
+    LaunchedEffect(Unit) {
+        songListViewModel.clearSearch()
+    }
 
     val showFab by remember {
         derivedStateOf {
@@ -195,25 +168,17 @@ fun SongListScreen(
             SECTIONS_DESC
         }
     }
-    var isSearchMode by rememberSaveable { mutableStateOf(false) }
     val enableIndex = sections.isNotEmpty() && sortInfo.sortBy.supportsIndex
     val topPadding by animateDpAsState(
-        targetValue = if (isSearchMode) {
-            135.dp
-        } else {
-            TopAppBarDefaults.SmallTopAppBarCenterHeight + 12.dp
-        },
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        targetValue = TopAppBarDefaults.SmallTopAppBarCenterHeight + 12.dp,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "backToTopPadding"
     )
-    BackHandler(enabled = isSelectionMode || isSearchMode || isFabMenuExpanded) {
+    BackHandler(enabled = isSelectionMode || isFabMenuExpanded) {
         if (isFabMenuExpanded) {
             isFabMenuExpanded = false
         } else if (isSelectionMode) {
             songListViewModel.exitSelectionMode()
-        } else if (isSearchMode) {
-            isSearchMode = false
-            songListViewModel.clearSearch()
         }
     }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -223,13 +188,12 @@ fun SongListScreen(
         stringResource(R.string.refreshing),
         stringResource(R.string.refresh_success)
     )
-    Box {
+    Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 val topBarState = when {
                     isSelectionMode -> TopBarState.Selection
-                    isSearchMode -> TopBarState.Search
                     else -> TopBarState.Default
                 }
 
@@ -273,45 +237,6 @@ fun SongListScreen(
                                 onDeselectAll = songListViewModel::deselectAll,
                                 onClose = songListViewModel::exitSelectionMode
                             )
-                        }
-
-                        TopBarState.Search -> {
-                            Column(
-                                modifier = Modifier
-                                    .windowInsetsPadding(WindowInsets.statusBars)
-                                    .padding(vertical = 8.dp)
-                            ) {
-                                BoxWithConstraints {
-                                    val compactTopBar = maxWidth < 360.dp
-                                    SearchBar(
-                                        modifier = Modifier.padding(horizontal = 12.dp),
-                                        value = songListUiState.searchQuery,
-                                        onValueChange = {
-                                            songListViewModel.onSearchQueryChanged(it)
-                                        },
-                                        placeholder = stringResource(id = R.string.local_search_hint),
-                                        actions = if (compactTopBar) null else {
-                                            {
-                                                TextButton(
-                                                    onClick = {
-                                                        isSearchMode = false
-                                                        songListViewModel.clearSearch()
-                                                    }
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.action_close),
-                                                        color = MiuixTheme.colorScheme.primary,
-                                                        style = MiuixTheme.textStyles.main
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        onSearch = {
-                                            songListViewModel.onSearchQueryChanged(songListUiState.searchQuery)
-                                        }
-                                    )
-                                }
-                            }
                         }
 
                         TopBarState.Default -> {
@@ -398,184 +323,170 @@ fun SongListScreen(
                 }
             }
         ) { paddingValues ->
-            val navigationBarBottomInset =
-                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            PullToRefresh(
-                isRefreshing = scanState.isScanning,
-                onRefresh = { songListViewModel.refreshSongs() },
+            Box(
                 modifier = Modifier.padding(
                     start = paddingValues.calculateStartPadding(layoutDirection),
                     top = paddingValues.calculateTopPadding(),
                     end = paddingValues.calculateEndPadding(layoutDirection)
-                ),
-                topAppBarScrollBehavior = topAppBarScrollBehavior,
-                refreshTexts = refreshTexts
+                ).fillMaxSize()
             ) {
-                AnimatedVisibility(
-                    visible = isSearchMode,
-                    enter = slideInVertically(
-                        initialOffsetY = { -it }
-                    ) + fadeIn(),
-
-                    exit = slideOutVertically(
-                        targetOffsetY = { -it }
-                    ) + fadeOut()
+                PullToRefresh(
+                    isRefreshing = scanState.isScanning,
+                    onRefresh = { songListViewModel.refreshSongs() },
+                    modifier = Modifier.fillMaxSize(),
+                    topAppBarScrollBehavior = topAppBarScrollBehavior,
+                    refreshTexts = refreshTexts
                 ) {
-                    LocalSearchTypeTabs(
-                        selectedType = searchType,
-                        onTypeSelected = { songListViewModel.onSearchTypeChanged(it) }
-                    )
-                }
-                LazyColumnScrollbar(
-                    state = listState,
-                    settings = ScrollbarSettings.Default.copy(
-                        enabled = !enableIndex && songs.isNotEmpty(),
-                        alwaysShowScrollbar = !enableIndex,
-                        selectionMode = ScrollbarSelectionMode.Full,
-                        thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                        thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                    )
-                ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .scrollEndHaptic()
-                            .overScrollVertical()
-                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                            .fillMaxHeight()
-                            .dragSelection(
-                                listState = listState,
-                                itemCount = songs.size,
-                                isSelectionMode = isSelectionMode,
-                                onDragSelectionStart = { index ->
-                                    songListViewModel.startDragSelection(index, songs)
-                                },
-                                onDragSelectionChange = { startIndex, endIndex ->
-                                    songListViewModel.updateDragSelection(
-                                        startIndex,
-                                        endIndex,
-                                        songs
-                                    )
-                                },
-                                onDragSelectionEnd = {
-                                    songListViewModel.endDragSelection()
-                                }
-                            ),
+                    LazyColumnScrollbar(
                         state = listState,
-                        overscrollEffect = null,
-                        contentPadding = PaddingValues(bottom = navigationBarBottomInset)
+                        settings = ScrollbarSettings.Default.copy(
+                            enabled = !enableIndex && songs.isNotEmpty(),
+                            alwaysShowScrollbar = !enableIndex,
+                            selectionMode = ScrollbarSelectionMode.Full,
+                            thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        )
                     ) {
-                        if (songs.isNotEmpty()) {
-                            items(
-                                items = songs,
-                                key = { song ->
-                                    song.uri.takeIf { it.isNotBlank() && it != "0" }
-                                        ?: "song-${song.id}"
-                                }
-                            ) { song ->
-                                SongListItem(
-                                    song = song,
-                                    modifier = Modifier.animateItem(),
+                        LazyColumn(
+                            modifier = Modifier
+                                .scrollEndHaptic()
+                                .overScrollVertical()
+                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                                .fillMaxHeight()
+                                .dragSelection(
+                                    listState = listState,
+                                    itemCount = songs.size,
                                     isSelectionMode = isSelectionMode,
-                                    isSelected = selectedSongUris.contains(song.uri),
-                                    onClick = {
-                                        navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                                    onDragSelectionStart = { index ->
+                                        songListViewModel.startDragSelection(index, songs)
                                     },
-                                    onToggleSelection = {
-                                        songListViewModel.toggleSelection(song.uri)
+                                    onDragSelectionChange = { startIndex, endIndex ->
+                                        songListViewModel.updateDragSelection(
+                                            startIndex,
+                                            endIndex,
+                                            songs
+                                        )
                                     },
-                                    trailingContent = {
-                                        Box(modifier = Modifier.padding(end = 8.dp)) {
-                                            SongListItemActions(
-                                                isSelectionMode = isSelectionMode,
-                                                isSelected = selectedSongUris.contains(song.uri),
-                                                onToggleSelection = {
-                                                    songListViewModel.toggleSelection(song.uri)
-                                                },
-                                                onShowMenu = {
-                                                    showMenuSheet = true
-                                                    selectedSong = song
-                                                }
+                                    onDragSelectionEnd = {
+                                        songListViewModel.endDragSelection()
+                                    }
+                                ),
+                            state = listState,
+                            overscrollEffect = null,
+                            contentPadding = PaddingValues()
+                        ) {
+                            if (songs.isNotEmpty()) {
+                                items(
+                                    items = songs,
+                                    key = { song ->
+                                        song.uri.takeIf { it.isNotBlank() && it != "0" }
+                                            ?: "song-${song.id}"
+                                    }
+                                ) { song ->
+                                    SongListItem(
+                                        song = song,
+                                        modifier = Modifier.animateItem(),
+                                        isSelectionMode = isSelectionMode,
+                                        isSelected = selectedSongUris.contains(song.uri),
+                                        onClick = {
+                                            navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                                        },
+                                        onToggleSelection = {
+                                            songListViewModel.toggleSelection(song.uri)
+                                        },
+                                        trailingContent = {
+                                            Box(modifier = Modifier.padding(end = 8.dp)) {
+                                                SongListItemActions(
+                                                    isSelectionMode = isSelectionMode,
+                                                    isSelected = selectedSongUris.contains(song.uri),
+                                                    onToggleSelection = {
+                                                        songListViewModel.toggleSelection(song.uri)
+                                                    },
+                                                    onShowMenu = {
+                                                        showMenuSheet = true
+                                                        selectedSong = song
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            } else {
+                                item {
+                                    val scanProgress = scanState.progress
+                                    when {
+                                        scanProgress != null -> {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(420.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                LibraryScanProgressText(
+                                                    progress = scanProgress
+                                                )
+                                            }
+                                        }
+
+                                        !hasFolders -> {
+                                            SongListEmptyState(
+                                                onAddFolder = { folderPickerLauncher.launch(null) }
                                             )
                                         }
-                                    }
-                                )
-                            }
-                        } else {
-                            item {
-                                val scanProgress = scanState.progress
-                                when {
-                                    scanProgress != null -> {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(420.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            LibraryScanProgressText(
-                                                progress = scanProgress
+
+                                        else -> {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(240.dp)
                                             )
                                         }
-                                    }
-
-                                    !hasFolders && songListUiState.searchQuery.isBlank() -> {
-                                        SongListEmptyState(
-                                            onAddFolder = { folderPickerLauncher.launch(null) }
-                                        )
-                                    }
-
-                                    else -> {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(240.dp)
-                                        )
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-            if (enableIndex && songs.isNotEmpty()) {
-                AlphabetSideBar(
-                    sections = sections,
-                    onSectionSelected = { section ->
-                        val index = findScrollIndex(
-                            section = section,
-                            sectionIndexMap = sectionIndexMap,
-                            order = sortInfo.order
-                        )
-                        scope.launch { listState.scrollToItem(index) }
+                if (enableIndex && songs.isNotEmpty()) {
+                    AlphabetSideBar(
+                        sections = sections,
+                        onSectionSelected = { section ->
+                            val index = findScrollIndex(
+                                section = section,
+                                sectionIndexMap = sectionIndexMap,
+                                order = sortInfo.order
+                            )
+                            scope.launch { listState.scrollToItem(index) }
+                        },
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+                }
+
+                SongActionSheets(
+                    selectedSong = selectedSong,
+                    showMenuSheet = showMenuSheet,
+                    showDetailSheet = showDetailSheet,
+                    showDeleteDialog = showDeleteDialog,
+                    showRenameDialog = showRenameDialog,
+                    onDismissMenu = { showMenuSheet = false },
+                    onDismissMenuFinished = { selectedSong = null },
+                    onDismissDetail = { showDetailSheet = false },
+                    onDismissDelete = { showDeleteDialog = false },
+                    onDismissRename = { showRenameDialog = false },
+                    onShowDetail = { showDetailSheet = true },
+                    onShowDelete = { showDeleteDialog = true },
+                    onShowRename = { showRenameDialog = true },
+                    onPlay = { song ->
+                        songListViewModel.play(context, song)
                     },
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
+                    onDelete = { song ->
+                        songListViewModel.delete(song)
+                    },
+                    onRename = { song, newFileName ->
+                        songListViewModel.renameSong(song, newFileName)
+                    }
                 )
             }
-
-            SongActionSheets(
-                selectedSong = selectedSong,
-                showMenuSheet = showMenuSheet,
-                showDetailSheet = showDetailSheet,
-                showDeleteDialog = showDeleteDialog,
-                showRenameDialog = showRenameDialog,
-                onDismissMenu = { showMenuSheet = false },
-                onDismissMenuFinished = { selectedSong = null },
-                onDismissDetail = { showDetailSheet = false },
-                onDismissDelete = { showDeleteDialog = false },
-                onDismissRename = { showRenameDialog = false },
-                onShowDetail = { showDetailSheet = true },
-                onShowDelete = { showDeleteDialog = true },
-                onShowRename = { showRenameDialog = true },
-                onPlay = { song ->
-                    songListViewModel.play(context, song)
-                },
-                onDelete = { song ->
-                    songListViewModel.delete(song)
-                },
-                onRename = { song, newFileName ->
-                    songListViewModel.renameSong(song, newFileName)
-                }
-            )
         }
         ScrollToTopButton(
             visible = showFab,

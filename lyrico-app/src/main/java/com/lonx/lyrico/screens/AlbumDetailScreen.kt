@@ -72,14 +72,16 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 @Destination<RootGraph>(route = "album_detail")
 fun AlbumDetailScreen(
     navigator: DestinationsNavigator,
-    album: String,
-    albumArtist: String?
+    albumId: Long
 ) {
     val viewModel: AlbumDetailViewModel = koinViewModel(
-        parameters = { parametersOf(album, albumArtist) }
+        parameters = { parametersOf(albumId) }
     )
     val selectionViewModel: SongSelectionViewModel = koinViewModel()
+    val album by viewModel.album.collectAsStateWithLifecycle()
     val songs by viewModel.songs.collectAsStateWithLifecycle()
+    val albumName = album?.name.orEmpty()
+    val albumArtist = album?.albumArtist
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -141,7 +143,7 @@ fun AlbumDetailScreen(
                         )
                     } else {
                         SmallTopAppBar(
-                            title = album.ifBlank { stringResource(R.string.album_detail_title) },
+                            title = albumName.ifBlank { stringResource(R.string.album_detail_title) },
                             navigationIcon = {
                                 IconButton(onClick = { navigator.popBackStack() }) {
                                     Icon(
@@ -172,7 +174,7 @@ fun AlbumDetailScreen(
                 ) {
                     item {
                         AlbumDetailHeader(
-                            album = album,
+                            album = albumName,
                             albumArtist = albumArtist,
                             songCount = songs.size,
                             coverSong = songs.firstOrNull()

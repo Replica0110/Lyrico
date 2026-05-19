@@ -606,6 +606,17 @@
     <string name="search_empty">No search results</string>
     <string name="album_detail_title">Album</string>
     <string name="artist_detail_title">Artist</string>
+    <string name="library_tab_songs">Songs</string>
+    <string name="library_tab_artists">Artists</string>
+    <string name="library_tab_albums">Albums</string>
+    <string name="artist_list_title">Artists %1$d</string>
+    <string name="album_list_title">Albums %1$d</string>
+    <string name="label_name">Name</string>
+    <string name="label_song_count">Song count</string>
+    <string name="label_album_count">Album count</string>
+    <string name="empty_artists_title">No artists yet</string>
+    <string name="empty_albums_title">No albums yet</string>
+    <string name="building_library_index">The library index is still being built.</string>
     <string name="artist_tab_songs">Songs</string>
     <string name="artist_tab_albums">Albums</string>
     <string name="song_count">%1$d songs</string>

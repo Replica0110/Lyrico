@@ -10,6 +10,7 @@ import com.lonx.lyrico.data.model.LogRetentionOption
 import com.lonx.lyrico.data.model.SearchConfig
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrics.model.Source
@@ -50,6 +51,7 @@ interface SettingsRepository {
     val showScrollTopButton : Flow<Boolean>
 
     val characterMappingConfig: Flow<CharacterMappingConfig>
+    val artistSplitConfigFlow: Flow<ArtistSplitConfig>
     // Suspend functions for operations that might block or are one-off
     suspend fun getLastScanTime(): Long
     
@@ -86,4 +88,8 @@ interface SettingsRepository {
     suspend fun getCharacterMappingConfig(): CharacterMappingConfig
     suspend fun getBatchMatchConfig(): BatchMatchConfig
     suspend fun getExtraMetadataWriteRules(): List<ExtraMetadataWriteRule>
+    suspend fun saveArtistSplitConfig(config: ArtistSplitConfig)
+    suspend fun getArtistSplitConfig(): ArtistSplitConfig
+    suspend fun getLibraryIndexVersion(): Int
+    suspend fun saveLibraryIndexVersion(version: Int)
 }

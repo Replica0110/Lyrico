@@ -29,6 +29,7 @@ import com.lonx.lyrico.data.model.SearchConfig
 import com.lonx.lyrico.data.model.SettingsBackup
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.viewmodel.SortBy
@@ -113,6 +114,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val EXTRA_METADATA_WRITE_RULES = stringPreferencesKey("extra_metadata_write_rules")
         val CONVERSION_MODE = stringPreferencesKey("conversion_mode")
         val LOG_RETENTION_OPTION = stringPreferencesKey("log_retention_option")
+        val ARTIST_SPLIT_CONFIG = stringPreferencesKey("artist_split_config")
+        val LIBRARY_INDEX_VERSION = intPreferencesKey("library_index_version")
     }
 
     override val lyricFormat: Flow<LyricFormat>
@@ -486,6 +489,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val prefs = context.settingsDataStore.data.first()
         val charMapping = getCharacterMappingConfig()
         val batchMatchConfig = getBatchMatchConfig()
+        val artistSplitConfig = getArtistSplitConfig()
         val backup = SettingsBackup(
             removeEmptyLines = prefs[PreferencesKeys.REMOVE_EMPTY_LINES]
                 ?: SettingsDefaults.REMOVE_EMPTY_LINES,
@@ -543,6 +547,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 ?: SettingsDefaults.CONVERSION_MODE.name,
             logRetentionOption = prefs[PreferencesKeys.LOG_RETENTION_OPTION]
                 ?: SettingsDefaults.LOG_RETENTION_OPTION.name,
+            artistSplitConfig = artistSplitConfig,
             editFieldVisibilityOverrides = runCatching {
                 prefs[com.lonx.lyrico.data.editfield.EditFieldVisibilityRepository.EDIT_FIELD_VISIBILITY_OVERRIDES]
                     ?.let { json ->
@@ -614,6 +619,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                         .getOrNull()
                         ?.let { prefs[PreferencesKeys.LOG_RETENTION_OPTION] = it.name }
                 }
+                backup.artistSplitConfig?.let { config ->
+                    prefs[PreferencesKeys.ARTIST_SPLIT_CONFIG] = jsonFormatter.encodeToString(config)
+                    prefs[PreferencesKeys.LIBRARY_INDEX_VERSION] = 0
+                }
                 backup.editFieldVisibilityOverrides?.let { overrides ->
                     prefs[com.lonx.lyrico.data.editfield.EditFieldVisibilityRepository.EDIT_FIELD_VISIBILITY_OVERRIDES] =
                         jsonFormatter.encodeToString(
@@ -646,6 +655,18 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
             }
         }
+
+    override val artistSplitConfigFlow: Flow<ArtistSplitConfig>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.ARTIST_SPLIT_CONFIG]
+                ?.let { json ->
+                    runCatching {
+                        jsonFormatter.decodeFromString<ArtistSplitConfig>(json)
+                    }.getOrNull()
+                }
+                ?: ArtistSplitConfig()
+        }
+
     override val batchMatchConfig: Flow<BatchMatchConfig>
         get() = context.settingsDataStore.data.map { preferences ->
             val configJson = preferences[PreferencesKeys.BATCH_MATCH_CONFIG]
@@ -718,6 +739,29 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun getExtraMetadataWriteRules(): List<ExtraMetadataWriteRule> {
         return extraMetadataWriteRules.first()
+    }
+
+    override suspend fun saveArtistSplitConfig(config: ArtistSplitConfig) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.ARTIST_SPLIT_CONFIG] = jsonFormatter.encodeToString(config)
+            preferences[PreferencesKeys.LIBRARY_INDEX_VERSION] = 0
+        }
+    }
+
+    override suspend fun getArtistSplitConfig(): ArtistSplitConfig {
+        return artistSplitConfigFlow.first()
+    }
+
+    override suspend fun getLibraryIndexVersion(): Int {
+        return context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.LIBRARY_INDEX_VERSION] ?: 0
+        }.first()
+    }
+
+    override suspend fun saveLibraryIndexVersion(version: Int) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIBRARY_INDEX_VERSION] = version
+        }
     }
 
     private fun decodeBatchMatchConfig(configJson: String): BatchMatchConfig {

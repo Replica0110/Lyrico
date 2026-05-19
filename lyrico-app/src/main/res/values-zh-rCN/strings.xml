@@ -617,6 +617,17 @@
     <string name="search_empty">没有搜索结果</string>
     <string name="album_detail_title">专辑</string>
     <string name="artist_detail_title">艺术家</string>
+    <string name="library_tab_songs">歌曲</string>
+    <string name="library_tab_artists">艺术家</string>
+    <string name="library_tab_albums">专辑</string>
+    <string name="artist_list_title">艺术家 %1$d</string>
+    <string name="album_list_title">专辑 %1$d</string>
+    <string name="label_name">名称</string>
+    <string name="label_song_count">歌曲数量</string>
+    <string name="label_album_count">专辑数量</string>
+    <string name="empty_artists_title">暂无艺术家</string>
+    <string name="empty_albums_title">暂无专辑</string>
+    <string name="building_library_index">媒体库索引正在构建。</string>
     <string name="artist_tab_songs">单曲</string>
     <string name="artist_tab_albums">专辑</string>
     <string name="song_count">%1$d 首</string>

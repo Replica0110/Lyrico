@@ -1,6 +1,7 @@
 package com.lonx.lyrico.ui.components.song
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -48,7 +49,8 @@ fun SongMenuBottomSheet(
                 .verticalScroll(rememberScrollState()),
         ) {
             SmallTitle(
-                text = text
+                text = text,
+                insideMargin = PaddingValues(4.dp)
             )
             Card(
                 modifier = Modifier.padding(bottom = 12.dp),

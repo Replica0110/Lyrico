@@ -1,7 +1,9 @@
 package com.lonx.lyrico.data.model
 
 import com.lonx.lyrico.data.model.dao.AlbumSearchRow
+import com.lonx.lyrico.data.model.dao.ArtistListItem
 import com.lonx.lyrico.data.model.dao.ArtistSearchRow
+import com.lonx.lyrico.data.model.entity.AlbumEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 
 data class LocalSearchUiState(
@@ -13,6 +15,7 @@ data class LocalSearchUiState(
 )
 
 data class AlbumSearchResult(
+    val id: Long = 0,
     val album: String,
     val albumArtist: String?,
     val songCount: Int,
@@ -21,6 +24,7 @@ data class AlbumSearchResult(
 )
 
 data class ArtistSearchResult(
+    val id: Long = 0,
     val artist: String,
     val songCount: Int,
     val albumCount: Int,
@@ -38,9 +42,31 @@ fun AlbumSearchRow.toAlbumSearchResult(): AlbumSearchResult {
     )
 }
 
+fun AlbumEntity.toAlbumSearchResult(): AlbumSearchResult {
+    return AlbumSearchResult(
+        id = id,
+        album = name,
+        albumArtist = albumArtist,
+        songCount = songCount,
+        coverSongUri = coverSongUri,
+        coverSongLastModified = coverSongLastModified
+    )
+}
+
 fun ArtistSearchRow.toArtistSearchResult(): ArtistSearchResult {
     return ArtistSearchResult(
         artist = artist,
+        songCount = songCount,
+        albumCount = albumCount,
+        coverSongUri = coverSongUri,
+        coverSongLastModified = coverSongLastModified
+    )
+}
+
+fun ArtistListItem.toArtistSearchResult(): ArtistSearchResult {
+    return ArtistSearchResult(
+        id = id,
+        artist = name,
         songCount = songCount,
         albumCount = albumCount,
         coverSongUri = coverSongUri,

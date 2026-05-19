@@ -13,6 +13,8 @@ import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.AppLogRepositoryImpl
 import com.lonx.lyrico.data.repository.GhContributorRepository
 import com.lonx.lyrico.data.repository.GhContributorRepositoryImpl
+import com.lonx.lyrico.data.repository.LibraryIndexRepository
+import com.lonx.lyrico.data.repository.LibraryIndexRepositoryImpl
 import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.data.repository.PlaybackRepositoryImpl
 import com.lonx.lyrico.data.repository.SettingsRepository
@@ -37,8 +39,10 @@ import com.lonx.lyrico.worker.processor.MatchMetadataProcessor
 import com.lonx.lyrico.worker.processor.ReplayGainProcessor
 import com.lonx.lyrico.viewmodel.AboutViewModel
 import com.lonx.lyrico.viewmodel.AlbumDetailViewModel
+import com.lonx.lyrico.viewmodel.AlbumLibraryViewModel
 import com.lonx.lyrico.viewmodel.AppLogViewModel
 import com.lonx.lyrico.viewmodel.ArtistDetailViewModel
+import com.lonx.lyrico.viewmodel.ArtistLibraryViewModel
 import com.lonx.lyrico.viewmodel.BatchExportViewModel
 import com.lonx.lyrico.viewmodel.BatchEditViewModel
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
@@ -234,17 +238,20 @@ val appModule = module {
             "lyrico_database"
         )
             .addMigrations(
-                LyricoDatabase.MIGRATION_9_10
+                LyricoDatabase.MIGRATION_9_10,
+                LyricoDatabase.MIGRATION_10_11
             )
             .build()
     }
     single { get<LyricoDatabase>().batchTaskDao() }
     single { get<LyricoDatabase>().appLogDao() }
+    single { get<LyricoDatabase>().libraryIndexDao() }
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
     single { EditFieldVisibilityRepository(androidContext()) }
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
     single<PlaybackRepository> { PlaybackRepositoryImpl() }
-    single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get(), get()) }
+    single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
+    single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get(), get(), get()) }
     single<LibraryScanManager> { LibraryScanManagerImpl(get(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
     single<AppLogRepository> { AppLogRepositoryImpl(get(), get()) }
@@ -269,20 +276,21 @@ val appModule = module {
     viewModel { AboutViewModel(get(),get(), get()) }
     viewModel { SongListViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { SongSelectionViewModel(get(), get(), get()) }
-    viewModel { LocalSearchViewModel(get()) }
-    viewModel { (album: String, albumArtist: String?) ->
+    viewModel { LocalSearchViewModel(get(), get()) }
+    viewModel { (albumId: Long) ->
         AlbumDetailViewModel(
-            songRepository = get(),
-            album = album,
-            albumArtist = albumArtist
+            libraryIndexRepository = get(),
+            albumId = albumId
         )
     }
-    viewModel { (artist: String) ->
+    viewModel { (artistId: Long) ->
         ArtistDetailViewModel(
-            songRepository = get(),
-            artist = artist
+            libraryIndexRepository = get(),
+            artistId = artistId
         )
     }
+    viewModel { ArtistLibraryViewModel(get()) }
+    viewModel { AlbumLibraryViewModel(get()) }
     viewModel { SettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { CoverSearchViewModel(get(), get()) }

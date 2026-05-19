@@ -52,7 +52,8 @@ class SongRepositoryImpl(
     private val mediaScanner: MediaScanner,
     private val settingsRepository: SettingsRepository,
     private val okHttpClient: OkHttpClient,
-    private val appLogRepository: AppLogRepository
+    private val appLogRepository: AppLogRepository,
+    private val libraryIndexRepository: LibraryIndexRepository
 ) : SongRepository {
 
     private val songDao = database.songDao()
@@ -110,6 +111,7 @@ class SongRepositoryImpl(
                         folderDao.refreshSongCount(song.folderId)
                         folderDao.performPostScanCleanup()
                     }
+                    libraryIndexRepository.refreshAndPruneIndexes()
                 }
 
                 DeleteFileResult.Failed -> return@withContext
@@ -158,6 +160,7 @@ class SongRepositoryImpl(
 
                 folderDao.performPostScanCleanup()
             }
+            libraryIndexRepository.refreshAndPruneIndexes()
 
             logApp(
                 level = AppLogLevel.INFO,
@@ -497,6 +500,13 @@ class SongRepositoryImpl(
 
                         folderDao.performPostScanCleanup()
                     }
+                    if (songsToUpsert.isNotEmpty()) {
+                        val indexedSongs = songDao.getSongsByUris(songsToUpsert.map { it.uri })
+                        libraryIndexRepository.reindexSongs(indexedSongs)
+                    }
+                    if (allDeletedUris.isNotEmpty() || missingSafFolderIds.isNotEmpty()) {
+                        libraryIndexRepository.refreshAndPruneIndexes()
+                    }
                     onProgress?.invoke(
                         LibraryScanProgress(
                             stage = LibraryScanStage.WRITING_DATABASE,
@@ -560,6 +570,7 @@ class SongRepositoryImpl(
                     songDao.upsertAll(chunk)
                 }
             }
+            libraryIndexRepository.reindexSongs(updatedEntities)
 
             updatedEntities.map { it.folderId }.distinct().forEach { folderId ->
                 folderDao.refreshSongCount(folderId)
@@ -694,7 +705,10 @@ class SongRepositoryImpl(
                 fileLastModified = lastModified
             ).withSortKeysUpdated()
 
-            songDao.update(updatedSong)
+            database.withTransaction {
+                songDao.update(updatedSong)
+                libraryIndexRepository.reindexSongInTransaction(updatedSong)
+            }
 
             Log.d(TAG, "歌曲元数据已更新: $contentUri")
             true
@@ -1208,6 +1222,7 @@ class SongRepositoryImpl(
     override suspend fun clearAll() {
         withContext(Dispatchers.IO) {
             songDao.clear()
+            libraryIndexRepository.refreshAndPruneIndexes()
             Log.d(TAG, "所有歌曲数据已清空")
         }
     }
@@ -1329,8 +1344,11 @@ class SongRepositoryImpl(
             fileLastModified = System.currentTimeMillis()
         ).withSortKeysUpdated()
 
-        songDao.update(updatedSong)
-        folderDao.refreshSongCount(updatedSong.folderId)
+        database.withTransaction {
+            songDao.update(updatedSong)
+            libraryIndexRepository.reindexSongInTransaction(updatedSong)
+            folderDao.refreshSongCount(updatedSong.folderId)
+        }
 
         return RenameSongResult(
             oldUri = song.uri,
@@ -1360,8 +1378,11 @@ class SongRepositoryImpl(
                     fileLastModified = System.currentTimeMillis()
                 ).withSortKeysUpdated()
 
-                songDao.update(updatedSong)
-                folderDao.refreshSongCount(updatedSong.folderId)
+                database.withTransaction {
+                    songDao.update(updatedSong)
+                    libraryIndexRepository.reindexSongInTransaction(updatedSong)
+                    folderDao.refreshSongCount(updatedSong.folderId)
+                }
 
                 RenameSongResult(
                     oldUri = song.uri,

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.LocalSearchUiState
 import com.lonx.lyrico.data.model.toAlbumSearchResult
 import com.lonx.lyrico.data.model.toArtistSearchResult
+import com.lonx.lyrico.data.repository.LibraryIndexRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,8 @@ import kotlinx.coroutines.flow.stateIn
 
 @OptIn(FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class LocalSearchViewModel(
-    private val songRepository: SongRepository
+    private val songRepository: SongRepository,
+    private val libraryIndexRepository: LibraryIndexRepository
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
@@ -35,8 +37,8 @@ class LocalSearchViewModel(
             } else {
                 combine(
                     songRepository.searchSongsForLocalSearch(keyword),
-                    songRepository.searchAlbumsForLocalSearch(keyword),
-                    songRepository.searchArtistsForLocalSearch(keyword)
+                    libraryIndexRepository.searchAlbums(keyword),
+                    libraryIndexRepository.searchArtists(keyword)
                 ) { songs, albums, artists ->
                     LocalSearchUiState(
                         query = keyword,

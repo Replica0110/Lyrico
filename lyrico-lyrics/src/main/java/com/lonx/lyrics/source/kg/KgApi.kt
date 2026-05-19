@@ -79,7 +79,7 @@ interface KgApi {
         @Body body: RequestBody
     ): KgBaseResponse<RegisterDevData>
 
-    @GET("http://complexsearch.kugou.com/v2/search/song")
+    @GET("https://complexsearch.kugou.com/v2/search/song")
     @Headers("x-router: complexsearch.kugou.com")
     suspend fun searchSong(
         @QueryMap params: Map<String, String>
@@ -90,7 +90,7 @@ interface KgApi {
         @QueryMap params: Map<String, String>
     ): KgLyricSearchResponse
 
-    @GET("http://lyrics.kugou.com/download")
+    @GET("https://lyrics.kugou.com/download")
     suspend fun downloadLyrics(
         @QueryMap params: Map<String, String>
     ): KgLyricContent

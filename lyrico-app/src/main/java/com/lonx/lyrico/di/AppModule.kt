@@ -143,7 +143,7 @@ val appModule = module {
             .build()
 
         Retrofit.Builder()
-            .baseUrl("http://complexsearch.kugou.com/")
+            .baseUrl("https://complexsearch.kugou.com/")
             .client(kgClient)
             .addConverterFactory(get<Json>().asConverterFactory("application/json".toMediaType()))
             .build()

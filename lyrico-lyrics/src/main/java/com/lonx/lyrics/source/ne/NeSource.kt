@@ -343,7 +343,7 @@ class NeSource(
                     source = Source.NE,
                     date = song.publishTime?.let { formatMillisToDate(it) } ?: "",
                     trackerNumber = song.trackerNumber,
-                    picUrl = song.album.picUrl,
+                    picUrl = song.album.picUrl.replace("http:", "https:"),
                     extras = buildNeteaseExtras(song)
                 )
             } ?: emptyList()

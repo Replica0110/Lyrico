@@ -99,7 +99,7 @@ class KgSource(
                     source = Source.KG,
                     date = item.publishDate ?: "",
                     extras = mapOf("hash" to item.fileHash),
-                    picUrl = if (item.picUrl.isNotBlank()) item.picUrl.replace("{size}", "480") else "",
+                    picUrl = if (item.picUrl.isNotBlank()) item.picUrl.replace("{size}", "480").replace("http:", "https:") else "",
                 )
             } ?: emptyList()
         } catch (e: Exception) {

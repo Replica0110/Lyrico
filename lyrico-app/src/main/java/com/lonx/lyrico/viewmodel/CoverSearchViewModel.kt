@@ -55,6 +55,11 @@ private data class CoverSearchState(
     val error: UiMessage? = null
 )
 
+private data class CoverSourceSearchResult(
+    val covers: List<CoverSearchResult> = emptyList(),
+    val error: UiMessage? = null
+)
+
 class CoverSearchViewModel(
     private val sources: List<SearchSource>,
     private val settingsRepository: SettingsRepository
@@ -143,36 +148,47 @@ class CoverSearchViewModel(
                 .filter { it in searchConfig.enabledSearchSources }
 
             // 并行从所有启用的源搜索封面
-            val allCovers = enabledSources.map { source ->
+            val sourceResults = enabledSources.map { source ->
                 viewModelScope.async {
                     try {
                         val sourceImpl = findSource(source)
                         if (sourceImpl != null) {
                             val songs = sourceImpl.searchCover(keyword, pageSize)
-                            songs.filter { it.picUrl.isNotBlank() }.map { song ->
-                                CoverSearchResult(
-                                    id = song.id,
-                                    url = song.picUrl,
-                                    source = source,
-                                    title = song.title,
-                                    artist = song.artist,
-                                    album = song.album
-                                )
-                            }
+                            CoverSourceSearchResult(
+                                covers = songs.filter { it.picUrl.isNotBlank() }.map { song ->
+                                    CoverSearchResult(
+                                        id = song.id,
+                                        url = song.picUrl,
+                                        source = source,
+                                        title = song.title,
+                                        artist = song.artist,
+                                        album = song.album
+                                    )
+                                }
+                            )
                         } else {
-                            emptyList()
+                            CoverSourceSearchResult()
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        if (e is SodaRateLimitException) throw e
-                        emptyList()
+                        CoverSourceSearchResult(
+                            error = when (e) {
+                                is SodaRateLimitException -> e.toUiMessage()
+                                else -> null
+                            }
+                        )
                     }
                 }
-            }.awaitAll().flatten()
+            }.awaitAll()
+
+            val allCovers = sourceResults.flatMap { it.covers }
+            val allSourcesFailed = enabledSources.isNotEmpty() &&
+                sourceResults.all { it.error != null }
 
             coverSearchState.update {
                 it.copy(
                     results = allCovers.filter { cover -> cover.url.isNotBlank() },
+                    error = if (allSourcesFailed) sourceResults.firstNotNullOfOrNull { result -> result.error } else null,
                     isSearching = false
                 )
             }

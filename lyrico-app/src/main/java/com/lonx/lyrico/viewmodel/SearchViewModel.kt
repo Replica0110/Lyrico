@@ -45,6 +45,7 @@ data class SearchUiState(
     val availableSources: List<Source> = emptyList(),
     val isSearching: Boolean = false,
     val searchError: UiMessage? = null,
+    val searchErrors: Map<String, UiMessage> = emptyMap(),
     val lyricsState: LyricsUiState = LyricsUiState(),
     val isInitializing: Boolean = true
 )
@@ -56,7 +57,7 @@ private data class SearchSourceState(
     val keyword: String = "",
     val results: Map<String, List<SongSearchResult>> = emptyMap(),
     val isSearching: Boolean = false,
-    val error: UiMessage? = null
+    val errors: Map<String, UiMessage> = emptyMap()
 )
 
 class SearchViewModel(
@@ -124,7 +125,8 @@ class SearchViewModel(
                 searchKeyword = search.keyword,
                 searchResults = search.results,
                 isSearching = search.isSearching,
-                searchError = search.error,
+                searchError = selectedSource?.let { search.errors[it.name] },
+                searchErrors = search.errors,
 
                 availableSources = filteredSources,
                 selectedSearchSource = selectedSource,
@@ -166,7 +168,7 @@ class SearchViewModel(
             searchState.update {
                 it.copy(
                     results = it.results + (source.name to cached),
-                    error = null
+                    errors = it.errors - source.name
                 )
             }
         } else {
@@ -205,7 +207,7 @@ class SearchViewModel(
         source: Source,
         updateKeyword: Boolean
     ) {
-        searchState.update { it.copy(isSearching = true, error = null) }
+        searchState.update { it.copy(isSearching = true, errors = it.errors - source.name) }
 
         try {
             if (updateKeyword) {
@@ -218,14 +220,15 @@ class SearchViewModel(
             searchState.update {
                 it.copy(
                     results = it.results + (source.name to results),
-                    isSearching = false
+                    isSearching = false,
+                    errors = it.errors - source.name
                 )
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             searchState.update {
                 it.copy(
-                    error = e.toUiMessage(),
+                    errors = it.errors + (source.name to e.toUiMessage()),
                     isSearching = false
                 )
             }

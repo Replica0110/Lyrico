@@ -164,6 +164,11 @@ fun SearchCoverScreen(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
             ) { page ->
+                val source = if (page == 0) {
+                    null
+                } else {
+                    uiState.availableSources.getOrNull(page - 1)
+                }
                 val results = if (page == 0) {
 
                     uiState.coverResults
@@ -186,7 +191,6 @@ fun SearchCoverScreen(
                         )
                         .map { it.first }
                 } else {
-                    val source = uiState.availableSources.getOrNull(page - 1)
                     uiState.coverResults.filter { it.source == source }
                 }
 
@@ -197,11 +201,10 @@ fun SearchCoverScreen(
                         }
                     }
 
-                    uiState.searchError != null -> {
-                        val errorMessage = uiState.searchError
+                    page == 0 && uiState.searchError != null -> {
                         Box(Modifier.fillMaxSize(), Alignment.Center) {
                             Text(
-                                text = errorMessage?.asString().orEmpty(),
+                                text = uiState.searchError?.asString().orEmpty(),
                                 fontSize = 14.sp,
                                 color = MiuixTheme.colorScheme.error
                             )

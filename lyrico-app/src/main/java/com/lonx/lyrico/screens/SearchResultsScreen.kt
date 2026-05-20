@@ -247,8 +247,8 @@ fun SearchResultsScreen(
                         }
                     }
 
-                    uiState.searchError != null && source == uiState.selectedSearchSource -> {
-                        val errorMessage = uiState.searchError
+                    source != null && uiState.searchErrors[source.name] != null -> {
+                        val errorMessage = uiState.searchErrors[source.name]
                         Box(Modifier.fillMaxSize(), Alignment.Center) {
                             Text(
                                 text = errorMessage?.asString().orEmpty(),

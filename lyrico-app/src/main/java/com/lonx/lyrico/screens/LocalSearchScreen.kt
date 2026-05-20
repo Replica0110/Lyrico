@@ -183,6 +183,7 @@ fun LocalSearchScreen(
                             onValueChange = viewModel::onQueryChange,
                             placeholder = stringResource(R.string.local_search_hint),
                             onSearch = { viewModel.onQueryChange(searchQuery) },
+                            autoFocus = true,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 12.dp, vertical = 8.dp)

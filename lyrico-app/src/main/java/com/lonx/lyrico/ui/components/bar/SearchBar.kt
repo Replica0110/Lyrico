@@ -22,15 +22,25 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.kyant.shapes.Capsule
+import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.Search
 import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
@@ -50,12 +60,43 @@ fun InputField(
     onSearch: ((String) -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
+    autoFocus: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var textFieldValue by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = value,
+                selection = TextRange(value.length)
+            )
+        )
+    }
     val textColor = MiuixTheme.colorScheme.onSurface
     val textStyle = MiuixTheme.textStyles.paragraph.copy(
         color = textColor
     )
+
+    LaunchedEffect(value) {
+        if (value != textFieldValue.text) {
+            textFieldValue = TextFieldValue(
+                text = value,
+                selection = TextRange(value.length)
+            )
+        }
+    }
+
+    LaunchedEffect(autoFocus) {
+        if (autoFocus) {
+            delay(100)
+            textFieldValue = textFieldValue.copy(
+                selection = TextRange(textFieldValue.text.length)
+            )
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
 
     val actualLeadingIcon = leadingIcon ?: {
         Icon(
@@ -94,8 +135,13 @@ fun InputField(
     }
 
     BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
+        value = textFieldValue,
+        onValueChange = {
+            textFieldValue = it
+            if (value != it.text) {
+                onValueChange(it.text)
+            }
+        },
         enabled = enabled,
         singleLine = true,
         textStyle = textStyle,
@@ -105,7 +151,7 @@ fun InputField(
             onSearch = { onSearch?.invoke(value) }
         ),
         interactionSource = interactionSource,
-        modifier = modifier,
+        modifier = modifier.focusRequester(focusRequester),
         decorationBox = { innerTextField ->
             Box(
                 modifier = Modifier
@@ -155,6 +201,7 @@ fun SearchBar(
     actions: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     onSearch: ((String) -> Unit)? = null,
+    autoFocus: Boolean = false,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -165,6 +212,7 @@ fun SearchBar(
             onValueChange = onValueChange,
             placeholder = placeholder,
             onSearch = onSearch,
+            autoFocus = autoFocus,
             modifier = Modifier
                 .weight(1f, fill = true)
                 .fillMaxWidth(),

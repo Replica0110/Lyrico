@@ -281,7 +281,8 @@ private fun AlbumDetailHeader(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = albumArtist.orEmpty(),
+                text = albumArtist?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.unknown_album_artist),
                 style = MiuixTheme.textStyles.main,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 maxLines = 1,

@@ -187,6 +187,7 @@
 
     <!-- 列表项 -->
     <string name="unknown_artist">未知艺术家</string>
+    <string name="unknown_album_artist">未知专辑艺术家</string>
 
     <!-- 歌曲菜单 -->
     <string name="menu_play_music">播放音乐</string>

@@ -221,9 +221,9 @@ class LibraryIndexRepositoryImpl(
         val albumName = song.album?.trim().orEmpty()
         if (albumName.isBlank()) return
 
-        val albumArtist = song.albumArtist?.trim()
+        val albumArtist = song.albumArtist
+            ?.trim()
             ?.takeIf { it.isNotBlank() }
-            ?: song.artist?.trim()?.takeIf { it.isNotBlank() }
 
         val normalizedKey = normalizedAlbumKey(albumName, albumArtist)
         val sortKeys = SortKeyUtils.getSortKeys(albumName)
@@ -262,6 +262,6 @@ class LibraryIndexRepositoryImpl(
     }
 
     private companion object {
-        const val LIBRARY_INDEX_VERSION = 1
+        const val LIBRARY_INDEX_VERSION = 2
     }
 }

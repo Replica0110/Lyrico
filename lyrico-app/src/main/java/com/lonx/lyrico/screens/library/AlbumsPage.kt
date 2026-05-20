@@ -185,8 +185,9 @@ fun AlbumsPage(
                             ) { album ->
                                 AlbumSongItem(
                                     title = album.name,
-                                    subtitle = listOfNotNull(
-                                        album.albumArtist,
+                                    subtitle = listOf(
+                                        album.albumArtist?.takeIf { it.isNotBlank() }
+                                            ?: stringResource(R.string.unknown_album_artist),
                                         stringResource(R.string.song_count, album.songCount)
                                     ).joinToString(" - "),
                                     coverUri = album.coverSongUri,

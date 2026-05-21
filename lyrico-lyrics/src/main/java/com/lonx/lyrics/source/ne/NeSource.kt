@@ -7,7 +7,6 @@ import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchResultExtraKeys
 import com.lonx.lyrics.model.SearchResultExtraField
 import com.lonx.lyrics.model.SearchResultExtraTarget
-import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
 import com.lonx.lyrics.utils.NeCryptoUtils
@@ -41,9 +40,9 @@ class NeSource(
     private val api: NeApi,
     private val json: Json,
     private val context: Context
-): SearchSource {
-    override val sourceType = Source.NE
-    override val extraFields = listOf(
+){
+    private val sourceType = Source.NE
+    val extraFields = listOf(
         SearchResultExtraField(
             key = SearchResultExtraKeys.NETEASE_163_KEY,
             title = "网易云 163Key",
@@ -324,7 +323,7 @@ class NeSource(
         }
     }
 
-    override suspend fun search(keyword: String, page: Int, separator: String, pageSize: Int): List<SongSearchResult> = withContext(
+    suspend fun search(keyword: String, page: Int, separator: String, pageSize: Int): List<SongSearchResult> = withContext(
         Dispatchers.IO) {
         ensureInit()
 
@@ -368,7 +367,7 @@ class NeSource(
             return@withContext emptyList()
         }
     }
-    override suspend fun searchCover(
+    suspend fun searchCover(
         keyword: String,
         pageSize: Int
     ): List<SongSearchResult> = withContext(Dispatchers.IO) {
@@ -415,7 +414,7 @@ class NeSource(
             emptyList()
         }
     }
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
+    suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
         ensureInit()
         val path = "/eapi/song/lyric/v1"
         val params = buildJsonObject {

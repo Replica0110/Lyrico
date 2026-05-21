@@ -7,7 +7,6 @@ import com.lonx.lyrics.model.LyricsData
 import com.lonx.lyrics.model.SearchResultExtraKeys
 import com.lonx.lyrics.model.SearchResultExtraField
 import com.lonx.lyrics.model.SearchResultExtraTarget
-import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
 import com.lonx.lyrics.model.SourceConfigField
@@ -24,9 +23,9 @@ import kotlin.random.Random
 
 class QmSource(
     private val api: QmApi
-) : SearchSource {
-    override val sourceType: Source = Source.QM
-    override val extraFields = listOf(
+) {
+    private val sourceType: Source = Source.QM
+    val extraFields = listOf(
         SearchResultExtraField(
             key = SearchResultExtraKeys.REPLAY_GAIN_TRACK_GAIN,
             title = "ReplayGain Track Gain",
@@ -62,11 +61,11 @@ class QmSource(
     @Volatile
     private var runtimeConfig = SourceRuntimeConfig()
 
-    override fun applyConfig(config: SourceRuntimeConfig) {
+    fun applyConfig(config: SourceRuntimeConfig) {
         runtimeConfig = config
     }
 
-    override fun getConfigFields(): List<SourceConfigField> {
+    fun getConfigFields(): List<SourceConfigField> {
         return listOf(
             SourceConfigField(
                 key = QmSourceConfigKeys.COVER_SIZE,
@@ -94,7 +93,7 @@ class QmSource(
         "nettype" to "NETWORK_WIFI"
     )
 
-    override suspend fun search(keyword: String, page: Int, separator: String, pageSize: Int): List<SongSearchResult> = withContext(Dispatchers.IO) {
+    suspend fun search(keyword: String, page: Int, separator: String, pageSize: Int): List<SongSearchResult> = withContext(Dispatchers.IO) {
         val param = buildJsonObject {
             put("search_id", Random.nextLong(10000000000000000L, 90000000000000000L).toString())
             put("remoteplace", "search.android.keyboard")
@@ -167,7 +166,7 @@ class QmSource(
             emptyList()
         }
     }
-    override suspend fun searchCover(
+    suspend fun searchCover(
         keyword: String,
         pageSize: Int
     ): List<SongSearchResult> = withContext(Dispatchers.IO) {
@@ -224,7 +223,7 @@ class QmSource(
             emptyList()
         }
     }
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
+    suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
         if (song.id == "0") return@withContext null
 
         // 构造请求体逻辑...

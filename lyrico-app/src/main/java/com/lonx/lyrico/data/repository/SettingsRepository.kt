@@ -7,6 +7,7 @@ import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.LogRetentionOption
+import com.lonx.lyrico.data.model.MetadataFieldWriteRule
 import com.lonx.lyrico.data.model.SearchConfig
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
@@ -23,7 +24,9 @@ import kotlinx.coroutines.flow.Flow
 interface SettingsRepository {
     val batchMatchConfig: Flow<BatchMatchConfig>
     val extraMetadataWriteRules: Flow<List<ExtraMetadataWriteRule>>
+    val metadataFieldWriteRules: Flow<List<MetadataFieldWriteRule>>
     val sourceSettingsFlow: Flow<Map<Source, SourceRuntimeConfig>>
+    val sourceSettingsByIdFlow: Flow<Map<String, SourceRuntimeConfig>>
 
     val renameFormat: Flow<String>
 
@@ -91,7 +94,10 @@ interface SettingsRepository {
     suspend fun importSettings(jsonString: String): Boolean
     suspend fun saveBatchMatchConfig(config: BatchMatchConfig)
     suspend fun saveExtraMetadataWriteRules(rules: List<ExtraMetadataWriteRule>)
+    suspend fun saveMetadataFieldWriteRules(rules: List<MetadataFieldWriteRule>)
+    suspend fun saveSourceSettings(sourceId: String, values: Map<String, String>)
     suspend fun saveSourceSettings(source: Source, values: Map<String, String>)
+    suspend fun getSourceSettings(sourceId: String): SourceRuntimeConfig
     suspend fun getSourceSettings(source: Source): SourceRuntimeConfig
     suspend fun saveRenameFormat(format: String)
     suspend fun saveCharacterMappingConfig(config: CharacterMappingConfig)
@@ -100,6 +106,7 @@ interface SettingsRepository {
     suspend fun getCharacterMappingConfig(): CharacterMappingConfig
     suspend fun getBatchMatchConfig(): BatchMatchConfig
     suspend fun getExtraMetadataWriteRules(): List<ExtraMetadataWriteRule>
+    suspend fun getMetadataFieldWriteRules(): List<MetadataFieldWriteRule>
     suspend fun saveArtistSplitConfig(config: ArtistSplitConfig)
     suspend fun getArtistSplitConfig(): ArtistSplitConfig
     suspend fun getLibraryIndexVersion(): Int

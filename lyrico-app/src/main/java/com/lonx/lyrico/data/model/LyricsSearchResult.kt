@@ -15,5 +15,20 @@ data class LyricsSearchResult(
     val picUrl: String?,
     val source: Source? = null,
     val lyricsOnly: Boolean = false,
-    val extras: Map<String, String> = emptyMap()
-) : Parcelable
+    val extras: Map<String, String> = emptyMap(),
+    val fields: Map<String, String> = emptyMap()
+) : Parcelable {
+    fun normalizedFields(): Map<String, String> {
+        return buildMap {
+            putAll(extras)
+            putAll(fields)
+
+            title?.takeIf { it.isNotBlank() }?.let { putIfAbsent("title", it) }
+            artist?.takeIf { it.isNotBlank() }?.let { putIfAbsent("artist", it) }
+            album?.takeIf { it.isNotBlank() }?.let { putIfAbsent("album", it) }
+            date?.takeIf { it.isNotBlank() }?.let { putIfAbsent("date", it) }
+            trackerNumber?.takeIf { it.isNotBlank() }?.let { putIfAbsent("track_number", it) }
+            picUrl?.takeIf { it.isNotBlank() }?.let { putIfAbsent("cover_url", it) }
+        }
+    }
+}

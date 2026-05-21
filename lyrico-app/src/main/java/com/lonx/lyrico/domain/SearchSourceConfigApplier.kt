@@ -1,32 +1,39 @@
 package com.lonx.lyrico.domain
 
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.model.Source
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrics.model.SourceRuntimeConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 class SearchSourceConfigApplier(
     private val settingsRepository: SettingsRepository,
-    private val searchSources: List<SearchSource>
+    private val searchSourceProvider: SearchSourceProvider
 ) {
     suspend fun applyOnce() {
-        apply(settingsRepository.sourceSettingsFlow.first())
+        apply(settingsRepository.sourceSettingsByIdFlow.first())
     }
 
-    fun apply(configs: Map<Source, SourceRuntimeConfig>) {
-        searchSources.forEach { source ->
-            source.applyConfig(configs[source.sourceType] ?: SourceRuntimeConfig())
+    suspend fun apply(configs: Map<String, SourceRuntimeConfig>) {
+        searchSourceProvider.getAllSources().forEach { source ->
+            source.applyConfig(configs[source.id] ?: SourceRuntimeConfig())
         }
     }
 
     fun observeIn(scope: CoroutineScope): Job {
-        return settingsRepository.sourceSettingsFlow
-            .onEach(::apply)
+        return combine(
+            settingsRepository.sourceSettingsByIdFlow,
+            searchSourceProvider.observeAllSources()
+        ) { configs, sources -> configs to sources }
+            .onEach { (configs, sources) ->
+                sources.forEach { source ->
+                    source.applyConfig(configs[source.id] ?: SourceRuntimeConfig())
+                }
+            }
             .launchIn(scope)
     }
 }

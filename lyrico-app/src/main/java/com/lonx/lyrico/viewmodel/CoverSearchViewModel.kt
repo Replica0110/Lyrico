@@ -5,9 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.model.Source
 import com.lonx.lyrics.source.soda.SodaRateLimitException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -28,7 +28,7 @@ import kotlin.coroutines.cancellation.CancellationException
 data class CoverSearchResult(
     val id: String,
     val url: String,
-    val source: Source,
+    val source: SearchSourceUiModel,
     val title: String = "",
     val artist: String = "",
     val album: String = ""
@@ -40,7 +40,7 @@ data class CoverSearchResult(
 data class CoverSearchUiState(
     val searchKeyword: String = "",
     val coverResults: List<CoverSearchResult> = emptyList(),
-    val availableSources: List<Source> = emptyList(),
+    val availableSources: List<SearchSourceUiModel> = emptyList(),
     val isSearching: Boolean = false,
     val searchError: UiMessage? = null,
     val isInitializing: Boolean = true
@@ -62,7 +62,7 @@ private data class CoverSourceSearchResult(
 )
 
 class CoverSearchViewModel(
-    private val sources: List<SearchSource>,
+    private val searchSourceProvider: SearchSourceProvider,
     private val settingsRepository: SettingsRepository,
     searchSourceConfigApplier: SearchSourceConfigApplier
 ) : ViewModel() {
@@ -80,16 +80,22 @@ class CoverSearchViewModel(
                 SharingStarted.WhileSubscribed(5000),
                 null
             )
+    private val allSourcesFlow =
+        searchSourceProvider.observeAllSources()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptyList()
+            )
 
     val coverUiState: StateFlow<CoverSearchUiState> =
         combine(
             coverSearchState,
-            searchConfigFlow
-        ) { search, searchConfig ->
+            searchConfigFlow,
+            allSourcesFlow
+        ) { search, searchConfig, allSources ->
 
-            val sourcesOrder = searchConfig?.searchSourceOrder.orEmpty()
-            val enabledSources = searchConfig?.enabledSearchSources.orEmpty()
-            val filteredSources = sourcesOrder.filter { it in enabledSources }
+            val filteredSources = buildOrderedSources(searchConfig, allSources).map { it.toUiModel() }
 
             CoverSearchUiState(
                 searchKeyword = search.keyword,
@@ -150,31 +156,26 @@ class CoverSearchViewModel(
             val searchConfig = searchConfigFlow.filterNotNull().first()
             val pageSize = settingsRepository.searchPageSize.first()
             
-            val enabledSources = searchConfig.searchSourceOrder
-                .filter { it in searchConfig.enabledSearchSources }
+            val enabledSources = buildOrderedSources(searchConfig, allSourcesFlow.value)
 
             // 并行从所有启用的源搜索封面
-            val sourceResults = enabledSources.map { source ->
+            val sourceResults = enabledSources.map { sourceImpl ->
                 viewModelScope.async {
                     try {
-                        val sourceImpl = findSource(source)
-                        if (sourceImpl != null) {
-                            val songs = sourceImpl.searchCover(keyword, pageSize)
-                            CoverSourceSearchResult(
-                                covers = songs.filter { it.picUrl.isNotBlank() }.map { song ->
-                                    CoverSearchResult(
-                                        id = song.id,
-                                        url = song.picUrl,
-                                        source = source,
-                                        title = song.title,
-                                        artist = song.artist,
-                                        album = song.album
-                                    )
-                                }
-                            )
-                        } else {
-                            CoverSourceSearchResult()
-                        }
+                        val source = sourceImpl.toUiModel()
+                        val songs = sourceImpl.searchCover(keyword, pageSize)
+                        CoverSourceSearchResult(
+                            covers = songs.filter { it.picUrl.isNotBlank() }.map { song ->
+                                CoverSearchResult(
+                                    id = song.id,
+                                    url = song.picUrl,
+                                    source = source,
+                                    title = song.title,
+                                    artist = song.artist,
+                                    album = song.album
+                                )
+                            }
+                        )
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         CoverSourceSearchResult(
@@ -210,11 +211,13 @@ class CoverSearchViewModel(
         }
     }
 
-    /**
-     * 根据 Source 类型查找对应的 SearchSource 实现
-     */
-    private fun findSource(source: Source): SearchSource? {
-        return sources.firstOrNull { it.sourceType == source }
+    private fun buildOrderedSources(
+        searchConfig: com.lonx.lyrico.data.model.SearchConfig?,
+        allSources: List<SearchSource>
+    ): List<SearchSource> {
+        if (searchConfig == null) return emptyList()
+
+        return allSources.sortedBy { it.name }
     }
 
     private fun Throwable.toUiMessage(): UiMessage {

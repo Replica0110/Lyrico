@@ -238,6 +238,7 @@
     <string name="label_date_modified">Date Modified</string>
     <string name="label_file_path">File Path</string>
     <string name="label_cover">Cover</string>
+    <string name="label_custom">Custom</string>
     <string name="label_extension">Extension</string>
     <!-- Screen Titles -->
     <string name="folder_manager_title">Folder Management</string>
@@ -666,4 +667,41 @@
     <string name="artist_split_delete_rule_title">Delete rule?</string>
     <string name="artist_split_delete_rule_message">Delete \"%1$s\"? This change takes effect after rebuilding the artist index.</string>
     <string name="album_grid_columns_format">%1$d columns</string>
+
+    <!-- QuickJS Test -->
+    <string name="quickjs_test_title">QuickJS Test</string>
+    <string name="quickjs_test_description">Test Description</string>
+    <string name="quickjs_test_description_summary">Run tests to verify QuickJS runtime functionality including eval, function calls, timeout handling, and memory limits.</string>
+    <string name="quickjs_test_run">Run Test</string>
+    
+    <string name="quickjs_test_eval_title">Eval Test</string>
+    <string name="quickjs_test_eval_desc">Test basic JavaScript evaluation: \"hello\".toUpperCase()</string>
+    
+    <string name="quickjs_test_call_title">Function Call Test</string>
+    <string name="quickjs_test_call_desc">Test calling JavaScript functions with JSON parameters</string>
+    
+    <string name="quickjs_test_timeout_title">Timeout Test</string>
+    <string name="quickjs_test_timeout_desc">Test infinite loop interruption (while(true){}) - should timeout in 2 seconds</string>
+    
+    <string name="quickjs_test_memory_title">Memory Limit Test</string>
+    <string name="quickjs_test_memory_desc">Test memory limit enforcement with large array allocation (4MB limit)</string>
+
+    <!-- Plugin Debug -->
+    <string name="plugin_debug_title">Plugin Debug</string>
+    <string name="plugin_debug_settings_summary">Install mock or .lyrico-source plugins for runtime testing</string>
+    <string name="plugin_debug_actions">Actions</string>
+    <string name="plugin_debug_install_mock">Install Mock Plugin</string>
+    <string name="plugin_debug_install_mock_summary">Create and enable a local script source for search, lyrics, and cover tests</string>
+    <string name="plugin_debug_install_kugou">Install Kugou Experimental Plugin</string>
+    <string name="plugin_debug_install_kugou_summary">Create a script source that uses public Host APIs for HTTP, MD5, Base64, bytes, and zlib</string>
+    <string name="plugin_debug_import_archive">Import Plugin Package</string>
+    <string name="plugin_debug_import_archive_summary">Select a .lyrico-source or zip package containing manifest.json and source.js</string>
+    <string name="plugin_debug_run_smoke">Run Smoke Test</string>
+    <string name="plugin_debug_run_smoke_summary">Call searchSongs, getLyrics, and searchCovers on the first enabled plugin</string>
+    <string name="plugin_debug_installed_plugins">Installed Plugins</string>
+    <string name="plugin_debug_empty">No source plugins installed yet.</string>
+    <string name="plugin_debug_smoke_result">Smoke Test Result</string>
+    <string name="plugin_debug_busy">Working...</string>
+    <string name="plugin_debug_configure">Config</string>
+    <string name="plugin_debug_test_this">Test this</string>
 </resources>

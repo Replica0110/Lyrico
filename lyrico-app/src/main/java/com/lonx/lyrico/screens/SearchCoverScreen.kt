@@ -144,7 +144,9 @@ fun SearchCoverScreen(
                     .padding(horizontal = 12.dp)
                     .padding(bottom = 12.dp)
             ) {
-                val tabs = listOf(stringResource(id = R.string.search_type_all)) + uiState.availableSources.map { stringResource(id = it.labelRes) }
+                val tabs = listOf(stringResource(id = R.string.search_type_all)) + uiState.availableSources.map { source ->
+                    source.labelRes?.let { stringResource(id = it) } ?: source.name
+                }
                 TabRowWithContour(
                     tabs = tabs,
                     minWidth = 80.dp,
@@ -321,7 +323,7 @@ fun CoverGridItem(
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = cover.source.labelRes.let { stringResource(it) },
+                        text = cover.source.labelRes?.let { stringResource(it) } ?: cover.source.name,
                         color = textColor,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold

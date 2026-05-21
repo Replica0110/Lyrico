@@ -5,16 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRuleFactory
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig
-import com.lonx.lyrics.model.Source
 import com.lonx.lyrics.model.SourceRuntimeConfig
 import com.lonx.lyrics.model.SearchSource
 import kotlinx.coroutines.Job
@@ -47,7 +46,7 @@ class BatchMatchViewModel(
     private val selectionManager: SharedSelectionManager,
     private val batchTaskRepository: BatchTaskRepository,
     private val batchTaskScheduler: BatchTaskScheduler,
-    private val searchSources: List<SearchSource>
+    private val searchSourceProvider: SearchSourceProvider
 ) : ViewModel() {
 
     val batchMatchConfig: StateFlow<BatchMatchConfig> = settingsRepository.batchMatchConfig
@@ -58,22 +57,12 @@ class BatchMatchViewModel(
             .combineWithDefaults()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    private val searchSourceOrder: StateFlow<List<Source>> = settingsRepository.searchSourceOrder
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    private val enabledSearchSources: StateFlow<Set<Source>> = settingsRepository.enabledSearchSources
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
-
-    private val sourceSettings: StateFlow<Map<Source, SourceRuntimeConfig>> =
-        settingsRepository.sourceSettingsFlow
+    private val sourceSettings: StateFlow<Map<String, SourceRuntimeConfig>> =
+        settingsRepository.sourceSettingsByIdFlow
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-
-    val enabledSourceOrder: StateFlow<List<Source>> = combine(
-        searchSourceOrder,
-        enabledSearchSources
-    ) { order, enabled ->
-        order.filter { it in enabled }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    private val allSources: StateFlow<List<SearchSource>> =
+        searchSourceProvider.observeAllSources()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val separator: StateFlow<String> = settingsRepository.separator
         .stateIn(viewModelScope, SharingStarted.Eagerly, "/")
@@ -185,16 +174,15 @@ class BatchMatchViewModel(
                 return@launch
             }
 
-            val currentOrder = enabledSourceOrder.value
+            val currentOrderIds = buildEnabledSourceOrderIds()
             val configJson = Json.encodeToString(
                 MatchMetadataTaskConfig.serializer(),
                 MatchMetadataTaskConfig(
                     matchConfig = matchConfig,
                     separator = separator.value,
-                    enabledSourceOrderIds = currentOrder.map { it.id },
+                    enabledSourceOrderIds = currentOrderIds,
                     extraWriteRules = extraMetadataWriteRules.value,
-                    sourceSettings = sourceSettings.value.mapKeys { it.key.name }
-                        .mapValues { it.value.values },
+                    sourceSettings = sourceSettings.value.mapValues { it.value.values },
                     concurrency = matchConfig.concurrency
                 )
             )
@@ -242,5 +230,9 @@ class BatchMatchViewModel(
     }
 
     private fun kotlinx.coroutines.flow.Flow<List<ExtraMetadataWriteRule>>.combineWithDefaults() =
-        map { savedRules -> ExtraMetadataWriteRuleFactory.mergeWithDeclaredFields(savedRules, searchSources) }
+        map { savedRules -> savedRules }
+
+    private fun buildEnabledSourceOrderIds(): List<String> {
+        return allSources.value.map { it.id }
+    }
 }

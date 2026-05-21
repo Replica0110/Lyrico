@@ -5,7 +5,6 @@ import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchResultExtraField
 import com.lonx.lyrics.model.SearchResultExtraKeys
 import com.lonx.lyrics.model.SearchResultExtraTarget
-import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
 import com.lonx.lyrics.utils.SodaParser
@@ -17,17 +16,17 @@ import retrofit2.Response
 
 class SodaSource(
     private val api: SodaApi
-) : SearchSource {
+) {
     private val json = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true
         isLenient = true
     }
 
-    override val sourceType: Source
+    private val sourceType: Source
         get() = Source.SODA
 
-    override val extraFields = listOf(
+    val extraFields = listOf(
         SearchResultExtraField(
             key = SearchResultExtraKeys.SODA_TRACK_ID,
             title = "Track ID",
@@ -60,7 +59,7 @@ class SodaSource(
         )
     )
 
-    override suspend fun search(
+    suspend fun search(
         keyword: String,
         page: Int,
         separator: String,
@@ -116,7 +115,7 @@ class SodaSource(
             )
         }
     }
-    override suspend fun searchCover(
+    suspend fun searchCover(
         keyword: String,
         pageSize: Int
     ): List<SongSearchResult> = withContext(Dispatchers.IO) {
@@ -154,7 +153,7 @@ class SodaSource(
             emptyList()
         }
     }
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult =
+    suspend fun getLyrics(song: SongSearchResult): LyricsResult =
         withContext(Dispatchers.IO) {
 
             val trackId = song.extras[SearchResultExtraKeys.SODA_TRACK_ID] ?: song.id

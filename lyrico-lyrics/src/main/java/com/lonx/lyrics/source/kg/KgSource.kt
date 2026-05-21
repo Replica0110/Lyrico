@@ -6,7 +6,6 @@ import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchResultExtraField
 import com.lonx.lyrics.model.SearchResultExtraKeys
 import com.lonx.lyrics.model.SearchResultExtraTarget
-import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
 import com.lonx.lyrics.utils.KgCryptoUtils
@@ -21,9 +20,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class KgSource(
     private val api: KgApi
-): SearchSource {
-    override val sourceType = Source.KG
-    override val extraFields = listOf(
+){
+    private val sourceType = Source.KG
+    val extraFields = listOf(
         SearchResultExtraField(
             key = SearchResultExtraKeys.KG_HASH,
             title = "Hash",
@@ -93,7 +92,7 @@ class KgSource(
 
 
 
-    override suspend fun search(keyword: String, page: Int, separator: String, pageSize: Int): List<SongSearchResult> = withContext(Dispatchers.IO) {
+    suspend fun search(keyword: String, page: Int, separator: String, pageSize: Int): List<SongSearchResult> = withContext(Dispatchers.IO) {
         val params = mapOf(
             "keyword" to keyword,
             "page" to page.toString(),
@@ -127,7 +126,7 @@ class KgSource(
         }
     }
 
-    override suspend fun searchCover(
+    suspend fun searchCover(
         keyword: String,
         pageSize: Int
     ): List<SongSearchResult> = withContext(Dispatchers.IO) {
@@ -204,7 +203,7 @@ class KgSource(
         baseParams
     }
 
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
+    suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
         val hash = song.extras[SearchResultExtraKeys.KG_HASH] ?: return@withContext null
 
         try {

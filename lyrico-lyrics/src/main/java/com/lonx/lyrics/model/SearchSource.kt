@@ -1,12 +1,17 @@
 package com.lonx.lyrics.model
 
 interface SearchSource {
-    val sourceType: Source
+    val id: String
+    val name: String
+    val capabilities: Set<SearchSourceCapability>
+        get() = SearchSourceCapability.entries.toSet()
     val extraFields: List<SearchResultExtraField>
         get() = emptyList()
+    val metadataFields: List<SearchResultExtraField>
+        get() = extraFields
 
     val supportedExtras: Set<String>
-        get() = extraFields
+        get() = metadataFields
             .filter { it.writeable }
             .mapTo(mutableSetOf()) { it.key }
 
@@ -17,6 +22,12 @@ interface SearchSource {
     suspend fun search(keyword: String, page: Int = 1, separator: String = "/", pageSize: Int = 20): List<SongSearchResult>
     suspend fun getLyrics(song: SongSearchResult): LyricsResult?
     suspend fun searchCover(keyword: String, pageSize: Int = 5): List<SongSearchResult>
+}
+
+enum class SearchSourceCapability {
+    SEARCH_SONGS,
+    GET_LYRICS,
+    SEARCH_COVERS
 }
 
 object SearchResultExtraKeys {

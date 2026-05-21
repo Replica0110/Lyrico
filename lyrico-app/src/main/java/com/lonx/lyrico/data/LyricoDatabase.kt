@@ -10,6 +10,7 @@ import com.lonx.lyrico.data.model.dao.BatchTaskDao
 import com.lonx.lyrico.data.model.dao.FolderDao
 import com.lonx.lyrico.data.model.dao.LibraryIndexDao
 import com.lonx.lyrico.data.model.dao.SongDao
+import com.lonx.lyrico.data.model.dao.SourcePluginDao
 import com.lonx.lyrico.data.model.entity.AlbumEntity
 import com.lonx.lyrico.data.model.entity.AlbumSongCrossRef
 import com.lonx.lyrico.data.model.entity.AppLogEntity
@@ -19,6 +20,7 @@ import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 
 @Database(
     entities = [
@@ -30,9 +32,10 @@ import com.lonx.lyrico.data.model.entity.SongEntity
         ArtistEntity::class,
         ArtistSongCrossRef::class,
         AlbumEntity::class,
-        AlbumSongCrossRef::class
+        AlbumSongCrossRef::class,
+        SourcePluginEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3),
@@ -49,6 +52,7 @@ abstract class LyricoDatabase : RoomDatabase() {
     abstract fun batchTaskDao(): BatchTaskDao
     abstract fun appLogDao(): AppLogDao
     abstract fun libraryIndexDao(): LibraryIndexDao
+    abstract fun sourcePluginDao(): SourcePluginDao
 
     companion object {
         val MIGRATION_9_10 = object : Migration(9, 10) {
@@ -242,6 +246,32 @@ abstract class LyricoDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_album_song_albumId ON album_song(albumId)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_album_song_songId ON album_song(songId)")
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS source_plugins (
+                        id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        versionCode INTEGER NOT NULL,
+                        versionName TEXT NOT NULL,
+                        author TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        apiVersion INTEGER NOT NULL,
+                        pluginDir TEXT NOT NULL,
+                        entryFile TEXT NOT NULL,
+                        iconPath TEXT,
+                        enabled INTEGER NOT NULL,
+                        sortOrder INTEGER NOT NULL,
+                        installedAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent()
+                )
             }
         }
     }

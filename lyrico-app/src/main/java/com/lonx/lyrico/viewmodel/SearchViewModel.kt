@@ -7,6 +7,7 @@ import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrics.model.LyricsResult
@@ -42,8 +43,8 @@ data class LyricsUiState(
 data class SearchUiState(
     val searchKeyword: String = "",
     val searchResults: Map<String, List<SongSearchResult>> = emptyMap(),
-    val selectedSearchSource: Source? = null,
-    val availableSources: List<Source> = emptyList(),
+    val selectedSearchSource: SearchSourceUiModel? = null,
+    val availableSources: List<SearchSourceUiModel> = emptyList(),
     val isSearching: Boolean = false,
     val searchError: UiMessage? = null,
     val searchErrors: Map<String, UiMessage> = emptyMap(),
@@ -62,7 +63,7 @@ private data class SearchSourceState(
 )
 
 class SearchViewModel(
-    private val sources: List<SearchSource>,
+    private val searchSourceProvider: SearchSourceProvider,
     private val settingsRepository: SettingsRepository,
     searchSourceConfigApplier: SearchSourceConfigApplier
 ) : ViewModel() {
@@ -75,7 +76,7 @@ class SearchViewModel(
     private val searchState = MutableStateFlow(SearchSourceState())
     private val lyricsState = MutableStateFlow(LyricsUiState())
 
-    private val selectedSourceId = MutableStateFlow<Source?>(null)
+    private val selectedSourceId = MutableStateFlow<String?>(null)
 
     val lyricConfigFlow =
         settingsRepository.lyricRenderConfigFlow
@@ -108,6 +109,13 @@ class SearchViewModel(
                 SharingStarted.WhileSubscribed(5000),
                 null
             )
+    private val allSourcesFlow =
+        searchSourceProvider.observeAllSources()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                emptyList()
+            )
 
 
     val uiState: StateFlow<SearchUiState> =
@@ -115,30 +123,30 @@ class SearchViewModel(
             searchState,
             searchConfigFlow,
             renderedLyricsFlow,
-            selectedSourceId
-        ) { search, searchConfig, renderedLyrics, selectedId ->
+            selectedSourceId,
+            allSourcesFlow
+        ) { search, searchConfig, renderedLyrics, selectedId, allSources ->
 
-            val sourcesOrder = searchConfig?.searchSourceOrder.orEmpty()
+            val sourceImpls = buildOrderedSources(searchConfig, allSources)
+            val filteredSources = sourceImpls.map { it.toUiModel() }
             val enabledSources = searchConfig?.enabledSearchSources.orEmpty()
 
-            val filteredSources = sourcesOrder.filter { it in enabledSources }
-
             val selectedSource =
-                filteredSources.find { it == selectedId }
+                filteredSources.find { it.id == selectedId }
                     ?: filteredSources.firstOrNull()
 
             SearchUiState(
                 searchKeyword = search.keyword,
                 searchResults = search.results,
                 isSearching = search.isSearching,
-                searchError = selectedSource?.let { search.errors[it.name] },
+                searchError = selectedSource?.let { search.errors[it.id] },
                 searchErrors = search.errors,
 
                 availableSources = filteredSources,
                 selectedSearchSource = selectedSource,
 
                 lyricsState = renderedLyrics,
-                isInitializing = searchConfig == null
+                isInitializing = searchConfig == null || (allSources.isEmpty() && enabledSources.isNotEmpty())
             )
         }.stateIn(
             viewModelScope,
@@ -148,7 +156,7 @@ class SearchViewModel(
 
 
     private val searchResultCache =
-        mutableMapOf<String, MutableMap<Source, List<SongSearchResult>>>()
+        mutableMapOf<String, MutableMap<String, List<SongSearchResult>>>()
 
     private var searchJob: Job? = null
     private var lyricsJob: Job? = null
@@ -159,22 +167,22 @@ class SearchViewModel(
         searchState.update { it.copy(keyword = keyword) }
     }
     private suspend fun getLyricsResult(song: SongSearchResult): LyricsResult? {
-        val impl = findSource(song.source) ?: return null
+        val impl = findSource(song.pluginId) ?: return null
         return impl.getLyrics(song)
     }
 
-    fun onSearchSourceSelected(source: Source) {
-        selectedSourceId.value = source
+    fun onSearchSourceSelected(source: SearchSourceUiModel) {
+        selectedSourceId.value = source.id
 
         val keyword = searchState.value.keyword
         if (keyword.isBlank()) return
 
-        val cached = getCachedResults(keyword, source)
+        val cached = getCachedResults(keyword, source.id)
         if (cached != null) {
             searchState.update {
                 it.copy(
-                    results = it.results + (source.name to cached),
-                    errors = it.errors - source.name
+                    results = it.results + (source.id to cached),
+                    errors = it.errors - source.id
                 )
             }
         } else {
@@ -190,10 +198,11 @@ class SearchViewModel(
         searchJob = viewModelScope.launch {
 
             val searchConfig = searchConfigFlow.filterNotNull().first()
+            val sourceImpls = buildOrderedSources(searchConfig, allSourcesFlow.value)
 
             val source =
                 selectedSourceId.value
-                    ?: searchConfig.searchSourceOrder.firstOrNull { it in searchConfig.enabledSearchSources }
+                    ?: sourceImpls.firstOrNull()?.id
 
             if (source == null) return@launch
 
@@ -210,31 +219,31 @@ class SearchViewModel(
      */
     private suspend fun executeSearch(
         keyword: String,
-        source: Source,
+        sourceId: String,
         updateKeyword: Boolean
     ) {
-        searchState.update { it.copy(isSearching = true, errors = it.errors - source.name) }
+        searchState.update { it.copy(isSearching = true, errors = it.errors - sourceId) }
 
         try {
             if (updateKeyword) {
                 searchState.update { it.copy(keyword = keyword) }
             }
 
-            val results = searchFromSource(keyword, source)
-            cacheSearchResults(keyword, source, results)
+            val results = searchFromSource(keyword, sourceId)
+            cacheSearchResults(keyword, sourceId, results)
 
             searchState.update {
                 it.copy(
-                    results = it.results + (source.name to results),
+                    results = it.results + (sourceId to results),
                     isSearching = false,
-                    errors = it.errors - source.name
+                    errors = it.errors - sourceId
                 )
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             searchState.update {
                 it.copy(
-                    errors = it.errors + (source.name to e.toUiMessage()),
+                    errors = it.errors + (sourceId to e.toUiMessage()),
                     isSearching = false
                 )
             }
@@ -246,9 +255,9 @@ class SearchViewModel(
      */
     private suspend fun searchFromSource(
         keyword: String,
-        source: Source
+        sourceId: String
     ): List<SongSearchResult> {
-        val sourceImpl = findSource(source) ?: return emptyList()
+        val sourceImpl = findSource(sourceId) ?: return emptyList()
 
         val separator = settingsRepository.separator.first()
         val pageSize = settingsRepository.searchPageSize.first()
@@ -322,7 +331,7 @@ class SearchViewModel(
     private suspend fun loadFormattedLyrics(
         song: SongSearchResult
     ): String? {
-        val sourceImpl = findSource(song.source) ?: return null
+        val sourceImpl = findSource(song.pluginId) ?: return null
         val lyricsResult = sourceImpl.getLyrics(song) ?: return null
 
         val config = settingsRepository.getLyricRenderConfig()
@@ -339,10 +348,10 @@ class SearchViewModel(
     // -------------------------------------------------------------------------
 
     /**
-     * 根据 Source 类型查找对应的 SearchSource 实现
+     * 根据 sourceId 查找对应的 SearchSource 实现
      */
-    private fun findSource(source: Source): SearchSource? {
-        return sources.firstOrNull { it.sourceType == source }
+    private fun findSource(sourceId: String): SearchSource? {
+        return allSourcesFlow.value.firstOrNull { it.id == sourceId }
     }
 
     /**
@@ -350,11 +359,11 @@ class SearchViewModel(
      */
     private fun cacheSearchResults(
         keyword: String,
-        source: Source,
+        sourceId: String,
         results: List<SongSearchResult>
     ) {
         val keywordCache = searchResultCache.getOrPut(keyword) { mutableMapOf() }
-        keywordCache[source] = results
+        keywordCache[sourceId] = results
     }
 
     /**
@@ -362,9 +371,18 @@ class SearchViewModel(
      */
     private fun getCachedResults(
         keyword: String,
-        source: Source
+        sourceId: String
     ): List<SongSearchResult>? {
-        return searchResultCache[keyword]?.get(source)
+        return searchResultCache[keyword]?.get(sourceId)
+    }
+
+    private fun buildOrderedSources(
+        searchConfig: com.lonx.lyrico.data.model.SearchConfig?,
+        allSources: List<SearchSource>
+    ): List<SearchSource> {
+        if (searchConfig == null) return emptyList()
+
+        return allSources.sortedBy { it.name }
     }
 
     fun setLyricFormat(format: LyricFormat) {

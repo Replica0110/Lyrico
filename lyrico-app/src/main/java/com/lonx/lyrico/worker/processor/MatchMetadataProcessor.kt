@@ -13,13 +13,12 @@ import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.ExtraMetadataResolver
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.MatchScoreDetail
 import com.lonx.lyrico.utils.MusicMatchUtils
-import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SearchResultExtraKeys
-import com.lonx.lyrics.model.Source
 import com.lonx.lyrics.model.SourceRuntimeConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -31,7 +30,7 @@ import kotlinx.serialization.json.Json
 class MatchMetadataProcessor(
     private val songRepository: SongRepository,
     private val settingsRepository: SettingsRepository,
-    private val sources: List<SearchSource>
+    private val searchSourceProvider: SearchSourceProvider
 ) : BatchTaskProcessor {
     private val extraMetadataResolver = ExtraMetadataResolver()
 
@@ -45,8 +44,9 @@ class MatchMetadataProcessor(
         } ?: throw BatchTaskSkippedException("No config")
 
         val matchConfig = config.matchConfig
+        val sources = searchSourceProvider.getAllSources()
         sources.forEach { source ->
-            val values = config.sourceSettings[source.sourceType.name].orEmpty()
+            val values = config.sourceSettings[source.id].orEmpty()
             source.applyConfig(SourceRuntimeConfig(values))
         }
         val song = songRepository.getSongByUri(item.songUri)
@@ -64,9 +64,7 @@ class MatchMetadataProcessor(
         } else {
             null
         }
-        val enabledSourceOrder = config.enabledSourceOrderIds.mapNotNull { id ->
-            Source.entries.find { it.id == id }
-        }
+        val enabledSourceOrder = config.enabledSourceOrderIds
         val queries = MusicMatchUtils.buildSearchQueries(
             song = song,
             preferFileName = matchConfig.preferFileName
@@ -74,10 +72,10 @@ class MatchMetadataProcessor(
 
         val orderedSources = sources
             .filter { source ->
-                enabledSourceOrder.isEmpty() || source.sourceType in enabledSourceOrder
+                enabledSourceOrder.isEmpty() || source.id in enabledSourceOrder
             }
             .sortedBy { source ->
-                enabledSourceOrder.indexOf(source.sourceType).let { if (it == -1) Int.MAX_VALUE else it }
+                enabledSourceOrder.indexOf(source.id).let { if (it == -1) Int.MAX_VALUE else it }
             }
 
         var bestMatch: ScoredSearchResult? = null
@@ -179,7 +177,7 @@ class MatchMetadataProcessor(
         val newGenre = resolveValue(plan, BatchMatchField.GENRE, null)
         val newLyricsResolved = resolveValue(plan, BatchMatchField.LYRICS, newLyrics)
         val newComment = resolveValue(plan, BatchMatchField.COMMENT,
-            finalMatch.result.extras["subtitle"]
+            finalMatch.result.normalizedFields()["subtitle"]
         )
         val picUrl = if (plan.shouldUpdateCover) finalMatch.result.picUrl else null
 

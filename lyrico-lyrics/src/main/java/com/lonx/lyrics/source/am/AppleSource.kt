@@ -7,7 +7,6 @@ import com.lonx.lyrics.model.LyricsWord
 import com.lonx.lyrics.model.SearchResultExtraField
 import com.lonx.lyrics.model.SearchResultExtraKeys
 import com.lonx.lyrics.model.SearchResultExtraTarget
-import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
 import com.lonx.lyrics.model.SourceConfigDependency
@@ -33,9 +32,9 @@ class AppleSource(
     private val api: AppleApi,
     private val json: Json,
     private val appUserAgent: String
-) : SearchSource {
-    override val sourceType: Source = Source.AM
-    override val extraFields = listOf(
+) {
+    private val sourceType: Source = Source.AM
+    val extraFields = listOf(
         SearchResultExtraField(
             key = SearchResultExtraKeys.APPLE_ID,
             title = "Apple ID",
@@ -66,11 +65,11 @@ class AppleSource(
     private var cachedToken: String = ""
     private var config = SourceRuntimeConfig()
 
-    override fun applyConfig(config: SourceRuntimeConfig) {
+    fun applyConfig(config: SourceRuntimeConfig) {
         this.config = config
     }
 
-    override fun getConfigFields(): List<SourceConfigField> {
+    fun getConfigFields(): List<SourceConfigField> {
         return listOf(
             SourceConfigField(
                 key = AppleSourceConfigKeys.LYRICS_PROVIDER,
@@ -125,7 +124,7 @@ class AppleSource(
         )
     }
 
-    override suspend fun search(
+    suspend fun search(
         keyword: String,
         page: Int,
         separator: String,
@@ -147,11 +146,11 @@ class AppleSource(
         }
     }
 
-    override suspend fun searchCover(keyword: String, pageSize: Int): List<SongSearchResult> =
+    suspend fun searchCover(keyword: String, pageSize: Int): List<SongSearchResult> =
         search(keyword = keyword, page = 1, separator = "/", pageSize = pageSize)
             .filter { it.picUrl.isNotBlank() }
 
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? {
+    suspend fun getLyrics(song: SongSearchResult): LyricsResult? {
         return when (config.getString(AppleSourceConfigKeys.LYRICS_PROVIDER, "third_party")) {
             "official" -> getOfficialLyrics(song)
             else -> getThirdPartyLyrics(song)

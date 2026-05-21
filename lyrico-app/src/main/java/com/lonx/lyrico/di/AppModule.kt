@@ -2,7 +2,6 @@ package com.lonx.lyrico.di
 
 import androidx.room.Room
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.network.NetworkLoggingInterceptor
@@ -21,9 +20,15 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.data.repository.SongRepositoryImpl
+import com.lonx.lyrico.data.repository.SourcePluginRepository
+import com.lonx.lyrico.data.repository.SourcePluginRepositoryImpl
 import com.lonx.lyrico.data.repository.UpdateRepository
 import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
+import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
+import com.lonx.lyrico.plugin.source.ScriptSearchSourceFactory
+import com.lonx.lyrico.plugin.source.SourcePluginInstaller
 import com.lonx.lyrico.utils.MediaScanner
 import com.lonx.lyrico.utils.ReplayGainScanner
 import com.lonx.lyrico.utils.LibraryScanManager
@@ -60,6 +65,7 @@ import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
+import com.lonx.lyrico.viewmodel.PluginDebugViewModel
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
@@ -68,15 +74,10 @@ import com.lonx.lyrico.viewmodel.SongSelectionViewModel
 import com.lonx.lyrico.worker.processor.RenameFilesProcessor
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.source.am.AppleApi
-import com.lonx.lyrics.source.am.AppleSource
 import com.lonx.lyrics.source.kg.KgApi
-import com.lonx.lyrics.source.kg.KgSource
 import com.lonx.lyrics.source.ne.NeApi
-import com.lonx.lyrics.source.ne.NeSource
 import com.lonx.lyrics.source.qm.QmApi
-import com.lonx.lyrics.source.qm.QmSource
 import com.lonx.lyrics.source.soda.SodaApi
-import com.lonx.lyrics.source.soda.SodaSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -87,7 +88,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
-import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import retrofit2.Retrofit
 import java.io.File
@@ -203,29 +203,13 @@ val appModule = module {
     }
 
     single { SharedSelectionManager() }
-    // 歌词源
-    single<SearchSource>(named("Qm")) { QmSource(
-        api = get()
-    ) }
-    single<SearchSource>(named("Kg")) { KgSource(
-        api = get()
-    ) }
-    single<SearchSource>(named("Ne")) { NeSource(
-        api = get(),
-        json = get(),
-        context = androidContext()
-    ) }
-    single<SearchSource>(named("Soda")) { SodaSource(
-        api = get()
-    ) }
-    single<SearchSource>(named("Apple")) { AppleSource(
-        api = get(),
-        json = get(),
-        appUserAgent = "Lyrico/${BuildConfig.VERSION_NAME}"
-    ) }
+    single { ScriptSearchSourceFactory(json = get()) }
+    single { PluginSearchSourceManager(repository = get(), factory = get()) }
+    single { SourcePluginInstaller(repository = get(), json = get()) }
+    single { SearchSourceProvider(pluginManager = get()) }
 
     single { getAll<SearchSource>() }
-    single { SearchSourceConfigApplier(get(), getAll<SearchSource>()) }
+    single { SearchSourceConfigApplier(get(), get()) }
 
     single { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
     single { NetworkLoggingInterceptor(get(), get()) }
@@ -238,24 +222,27 @@ val appModule = module {
     single {
         Room.databaseBuilder(
             androidContext(),
-            LyricoDatabase::class.java,
-            "lyrico_database"
+                LyricoDatabase::class.java,
+                "lyrico_database"
         )
             .addMigrations(
                 LyricoDatabase.MIGRATION_9_10,
-                LyricoDatabase.MIGRATION_10_11
+                LyricoDatabase.MIGRATION_10_11,
+                LyricoDatabase.MIGRATION_11_12
             )
             .build()
     }
     single { get<LyricoDatabase>().batchTaskDao() }
     single { get<LyricoDatabase>().appLogDao() }
     single { get<LyricoDatabase>().libraryIndexDao() }
+    single { get<LyricoDatabase>().sourcePluginDao() }
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
     single { EditFieldVisibilityRepository(androidContext()) }
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
     single<PlaybackRepository> { PlaybackRepositoryImpl() }
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
     single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get(), get(), get()) }
+    single<SourcePluginRepository> { SourcePluginRepositoryImpl(get()) }
     single<LibraryScanManager> { LibraryScanManagerImpl(get(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
     single<AppLogRepository> { AppLogRepositoryImpl(get(), get()) }
@@ -299,11 +286,12 @@ val appModule = module {
     viewModel { SettingsViewModel(get(), get(), get(), getAll<SearchSource>()) }
     viewModel { SearchViewModel(get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get()) }
-    viewModel { SearchSourceConfigViewModel(get(), getAll<SearchSource>()) }
+    viewModel { SearchSourceConfigViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), getAll<SearchSource>()) }
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
-    viewModel { BatchMatchViewModel(get(), get(), get(), get(), getAll<SearchSource>()) }
+    viewModel { BatchMatchViewModel(get(), get(), get(), get(), get()) }
     viewModel { AppLogViewModel(get(),get()) }
+    viewModel { PluginDebugViewModel(get(), get(), get(), get()) }
 
     viewModel { FolderManagerViewModel(get(), get(), get(), get(), get()) }
     viewModel { (folderId: Long) ->

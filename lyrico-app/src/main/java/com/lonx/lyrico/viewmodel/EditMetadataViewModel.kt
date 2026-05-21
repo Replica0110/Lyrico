@@ -261,7 +261,7 @@ class EditMetadataViewModel(
                 trackNumber = result.trackerNumber?.takeIf { it.isNotBlank() }
                     ?: current.trackNumber,
                 picUrl = result.picUrl?.takeIf { it.isNotBlank() } ?: current.picUrl,
-                comment = result.extras["subtitle"]?.takeIf { it.isNotBlank() } ?: current.comment,
+                comment = result.normalizedFields()["subtitle"]?.takeIf { it.isNotBlank() } ?: current.comment,
             )
             val extraTagData = currentSong?.let { song ->
                 val source = result.source

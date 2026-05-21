@@ -217,7 +217,9 @@ fun SearchResultsScreen(
                     .padding(bottom = 12.dp)
             ) {
                 TabRowWithContour(
-                    tabs = uiState.availableSources.map { stringResource(id = it.labelRes) },
+                    tabs = uiState.availableSources.map { source ->
+                        source.labelRes?.let { stringResource(id = it) } ?: source.name
+                    },
                     selectedTabIndex = pagerState.currentPage,
                     onTabSelected = { index ->
                         scope.launch {
@@ -238,7 +240,7 @@ fun SearchResultsScreen(
                 val source = uiState.availableSources.getOrNull(page)
 
                 val results =
-                    uiState.searchResults[source?.name] ?: emptyList()
+                    uiState.searchResults[source?.id] ?: emptyList()
 
                 when {
                     uiState.isSearching && source == uiState.selectedSearchSource -> {
@@ -247,8 +249,8 @@ fun SearchResultsScreen(
                         }
                     }
 
-                    source != null && uiState.searchErrors[source.name] != null -> {
-                        val errorMessage = uiState.searchErrors[source.name]
+                    source != null && uiState.searchErrors[source.id] != null -> {
+                        val errorMessage = uiState.searchErrors[source.id]
                         Box(Modifier.fillMaxSize(), Alignment.Center) {
                             Text(
                                 text = errorMessage?.asString().orEmpty(),
@@ -271,7 +273,7 @@ fun SearchResultsScreen(
                                 .fillMaxSize()
                                 .padding(horizontal = 12.dp)
                         ) {
-                            items(results, key = { "${it.source}_${it.id}" }) { song ->
+                            items(results, key = { "${it.pluginId}_${it.id}" }) { song ->
 
                                 SearchResultItem(
                                     song = song,
@@ -294,7 +296,8 @@ fun SearchResultsScreen(
                                                         picUrl = song.picUrl,
                                                         source = song.source,
                                                         lyricsOnly = false,
-                                                        extras = song.extras
+                                                        extras = song.extras,
+                                                        fields = song.fields
                                                     )
                                                 )
                                             } else {

@@ -25,7 +25,6 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -50,7 +49,6 @@ fun SearchSourceConfigScreen(
 ) {
     val viewModel: SearchSourceConfigViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
-    val searchSources: List<SearchSource> = koinInject()
     val context = LocalContext.current
     val topAppBarScrollBehavior = MiuixScrollBehavior()
 
@@ -66,7 +64,8 @@ fun SearchSourceConfigScreen(
     }
 
     val source = uiState.source
-    val title = source?.let { stringResource(it.labelRes) } ?: stringResource(R.string.search_source_config)
+    val title = source?.let { stringResource(it.labelRes) }
+        ?: uiState.title.ifBlank { stringResource(R.string.search_source_config) }
 
     Scaffold(
         topBar = {
@@ -145,7 +144,6 @@ fun SearchSourceConfigScreen(
                 }
 
                 if (source != null && uiState.extraRules.isNotEmpty()) {
-                    val sourceImpl = searchSources.firstOrNull { it.sourceType == source }
                     item("extra_title") {
                         SmallTitle(text = stringResource(R.string.source_config_extra_metadata))
                     }
@@ -154,7 +152,7 @@ fun SearchSourceConfigScreen(
                             uiState.extraRules.forEach { rule ->
                                 ExtraRulePreference(
                                     source = source,
-                                    sourceImpl = sourceImpl,
+                                    sourceImpl = null,
                                     rule = rule,
                                     onRuleChanged = viewModel::updateExtraRule
                                 )

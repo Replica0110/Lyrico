@@ -22,11 +22,14 @@ import com.lonx.lyrico.data.model.ExtraWriteMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.LogRetentionOption
+import com.lonx.lyrico.data.model.MetadataFieldWriteRule
 import com.lonx.lyrico.data.model.SearchConfig
 import com.lonx.lyrico.data.model.SettingsBackup
 import com.lonx.lyrico.data.model.SourceSettingsStore
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.data.model.toExtraMetadataWriteRuleOrNull
+import com.lonx.lyrico.data.model.toMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.AlbumSortBy
 import com.lonx.lyrico.data.model.AlbumSortInfo
 import com.lonx.lyrico.data.model.ArtistSortBy
@@ -125,6 +128,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val CHARACTER_MAPPING_CONFIG = stringPreferencesKey("character_mapping_config")
         val BATCH_MATCH_CONFIG = stringPreferencesKey("batch_match_config")
         val EXTRA_METADATA_WRITE_RULES = stringPreferencesKey("extra_metadata_write_rules")
+        val METADATA_FIELD_WRITE_RULES = stringPreferencesKey("metadata_field_write_rules")
         val SOURCE_SETTINGS = stringPreferencesKey("source_settings")
         val CONVERSION_MODE = stringPreferencesKey("conversion_mode")
         val LOG_RETENTION_OPTION = stringPreferencesKey("log_retention_option")
@@ -408,13 +412,20 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override val sourceSettingsFlow: Flow<Map<Source, SourceRuntimeConfig>>
+    override val sourceSettingsByIdFlow: Flow<Map<String, SourceRuntimeConfig>>
         get() = context.settingsDataStore.data.map { preferences ->
             decodeSourceSettingsStore(preferences[PreferencesKeys.SOURCE_SETTINGS])
                 .values
-                .mapNotNull { (sourceName, values) ->
-                    val source = Source.fromNameOrNull(sourceName) ?: return@mapNotNull null
-                    source to SourceRuntimeConfig(values)
+                .mapKeys { (sourceId, _) -> sourceId.toStableSourceId() }
+                .mapValues { (_, values) -> SourceRuntimeConfig(values) }
+        }
+
+    override val sourceSettingsFlow: Flow<Map<Source, SourceRuntimeConfig>>
+        get() = sourceSettingsByIdFlow.map { settings ->
+            settings
+                .mapNotNull { (sourceId, config) ->
+                    val source = Source.fromIdOrNameOrNull(sourceId) ?: return@mapNotNull null
+                    source to config
                 }
                 .toMap()
         }
@@ -796,11 +807,17 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val extraMetadataWriteRules: Flow<List<ExtraMetadataWriteRule>>
         get() = context.settingsDataStore.data.map { preferences ->
-            val rulesJson = preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES]
-            if (rulesJson.isNullOrBlank()) {
-                emptyList()
+            decodeExtraMetadataWriteRules(preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES].orEmpty())
+        }
+
+    override val metadataFieldWriteRules: Flow<List<MetadataFieldWriteRule>>
+        get() = context.settingsDataStore.data.map { preferences ->
+            val rulesJson = preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES]
+            if (!rulesJson.isNullOrBlank()) {
+                decodeMetadataFieldWriteRules(rulesJson)
             } else {
-                decodeExtraMetadataWriteRules(rulesJson)
+                decodeExtraMetadataWriteRules(preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES].orEmpty())
+                    .map { it.toMetadataFieldWriteRule() }
             }
         }
 
@@ -830,14 +847,29 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun saveSourceSettings(source: Source, values: Map<String, String>) {
+    override suspend fun saveMetadataFieldWriteRules(rules: List<MetadataFieldWriteRule>) {
+        context.settingsDataStore.edit { preferences ->
+            val normalizedRules = rules.map { it.copy(fieldKey = it.normalizedKey) }
+            preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES] =
+                jsonFormatter.encodeToString(normalizedRules)
+            val legacyRules = normalizedRules.mapNotNull { it.toExtraMetadataWriteRuleOrNull() }
+            preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES] =
+                jsonFormatter.encodeToString(legacyRules)
+        }
+    }
+
+    override suspend fun saveSourceSettings(sourceId: String, values: Map<String, String>) {
         context.settingsDataStore.edit { preferences ->
             val currentStore = decodeSourceSettingsStore(preferences[PreferencesKeys.SOURCE_SETTINGS])
             val newStore = currentStore.copy(
-                values = currentStore.values + (source.name to values)
+                values = currentStore.values + (sourceId.toStableSourceId() to values)
             )
             preferences[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(newStore)
         }
+    }
+
+    override suspend fun saveSourceSettings(source: Source, values: Map<String, String>) {
+        saveSourceSettings(source.id, values)
     }
 
     override suspend fun updateCharacterMappingInRule(ruleId: String, charMappings: Map<String, String?>) {
@@ -861,8 +893,16 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         return extraMetadataWriteRules.first()
     }
 
+    override suspend fun getMetadataFieldWriteRules(): List<MetadataFieldWriteRule> {
+        return metadataFieldWriteRules.first()
+    }
+
+    override suspend fun getSourceSettings(sourceId: String): SourceRuntimeConfig {
+        return sourceSettingsByIdFlow.first()[sourceId.toStableSourceId()] ?: SourceRuntimeConfig()
+    }
+
     override suspend fun getSourceSettings(source: Source): SourceRuntimeConfig {
-        return sourceSettingsFlow.first()[source] ?: SourceRuntimeConfig()
+        return getSourceSettings(source.id)
     }
 
     override suspend fun saveArtistSplitConfig(config: ArtistSplitConfig) {
@@ -921,6 +961,14 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }.getOrDefault(emptyList())
     }
 
+    private fun decodeMetadataFieldWriteRules(raw: String): List<MetadataFieldWriteRule> {
+        if (raw.isBlank()) return emptyList()
+        return runCatching {
+            jsonFormatter.decodeFromString<List<MetadataFieldWriteRule>>(raw)
+                .map { it.copy(fieldKey = it.normalizedKey) }
+        }.getOrDefault(emptyList())
+    }
+
     private fun decodeSourceSettingsStore(raw: String?): SourceSettingsStore {
         return raw
             ?.takeIf { it.isNotBlank() }
@@ -931,5 +979,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             }
             ?: SourceSettingsStore()
     }
-}
 
+    private fun String.toStableSourceId(): String {
+        return Source.fromIdOrNameOrNull(this)?.id ?: trim()
+    }
+}

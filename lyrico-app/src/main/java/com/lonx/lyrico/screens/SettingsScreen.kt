@@ -55,6 +55,8 @@ import com.ramcosta.composedestinations.generated.destinations.ArtistSplitSettin
 import com.ramcosta.composedestinations.generated.destinations.BatchTaskListDestination
 import com.ramcosta.composedestinations.generated.destinations.EditFieldVisibilityDestination
 import com.ramcosta.composedestinations.generated.destinations.FolderManagerDestination
+import com.ramcosta.composedestinations.generated.destinations.PluginDebugDestination
+import com.ramcosta.composedestinations.generated.destinations.QuickjsTestDestination
 import com.ramcosta.composedestinations.generated.destinations.SearchSourcePriorityDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
@@ -421,6 +423,11 @@ fun SettingsScreen(
                         onClick = { navigator.navigate(SearchSourcePriorityDestination()) }
                     )
                     ArrowPreference(
+                        title = stringResource(R.string.plugin_debug_title),
+                        summary = stringResource(R.string.plugin_debug_settings_summary),
+                        onClick = { navigator.navigate(PluginDebugDestination()) }
+                    )
+                    ArrowPreference(
                         title = stringResource(R.string.search_limit),
                         endActions = {
                             Text(
@@ -562,6 +569,13 @@ fun SettingsScreen(
                         summary = stringResource(R.string.app_log_summary),
                         onClick = { navigator.navigate(AppLogsDestination()) }
                     )
+                    if (BuildConfig.DEBUG) {
+                        ArrowPreference(
+                            title = stringResource(R.string.quickjs_test_title),
+                            summary = stringResource(R.string.quickjs_test_description_summary),
+                            onClick = { navigator.navigate(QuickjsTestDestination()) }
+                        )
+                    }
 
                     val cacheSummary = stringResource(
                         R.string.cache_size_label,

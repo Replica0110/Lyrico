@@ -71,7 +71,7 @@ class ExtraMetadataResolver(
             }
             .filter { it.score >= minimumScore }
             .sortedByDescending { it.score }
-            .mapNotNull { it.result.extras[rule.normalizedKey]?.takeIf(String::isNotBlank) }
+            .mapNotNull { it.result.normalizedFields()[rule.normalizedKey]?.takeIf(String::isNotBlank) }
             .firstOrNull()
     }
 

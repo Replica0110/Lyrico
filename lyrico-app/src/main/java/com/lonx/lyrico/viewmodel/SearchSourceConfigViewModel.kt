@@ -2,9 +2,9 @@ package com.lonx.lyrico.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRuleFactory
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.isSatisfied
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.Source
@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 
 data class SearchSourceConfigUiState(
     val source: Source? = null,
+    val sourceId: String = "",
     val title: String = "",
     val fields: List<SourceConfigField> = emptyList(),
     val values: Map<String, String> = emptyMap(),
@@ -29,7 +30,7 @@ data class SearchSourceConfigUiState(
 
 class SearchSourceConfigViewModel(
     private val settingsRepository: SettingsRepository,
-    private val searchSources: List<SearchSource>
+    private val searchSourceProvider: SearchSourceProvider
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchSourceConfigUiState())
     val uiState: StateFlow<SearchSourceConfigUiState> = _uiState.asStateFlow()
@@ -38,36 +39,27 @@ class SearchSourceConfigViewModel(
 
     fun load(sourceName: String) {
         viewModelScope.launch {
-            val source = Source.fromNameOrNull(sourceName)
-            val sourceImpl = source?.let(::findSource)
-            if (source == null || sourceImpl == null) {
+            val allSources = searchSourceProvider.getAllSources()
+            val sourceImpl = findSource(sourceName, allSources)
+            if (sourceImpl == null) {
                 _uiState.update {
                     it.copy(isLoading = false, errorMessage = "无效的搜索源")
                 }
                 return@launch
             }
-
             val fields = sourceImpl.getConfigFields()
             val defaults = fields.associate { it.key to it.defaultValue }
-            val saved = settingsRepository.getSourceSettings(source).values
-            allExtraRules = ExtraMetadataWriteRuleFactory.mergeWithDeclaredFields(
-                savedRules = settingsRepository.getExtraMetadataWriteRules(),
-                searchSources = searchSources
-            )
-            val writeableExtraKeys = sourceImpl.extraFields
-                .filter { it.writeable }
-                .mapTo(mutableSetOf()) { it.key }
-            val extraRules = allExtraRules.filter {
-                it.source == source && it.normalizedKey in writeableExtraKeys
-            }
+            val saved = settingsRepository.getSourceSettings(sourceImpl.id).values
+            allExtraRules = emptyList()
 
             _uiState.update {
                 it.copy(
-                    source = source,
-                    title = sourceImpl.sourceType.name,
+                    source = null,
+                    sourceId = sourceImpl.id,
+                    title = sourceImpl.name,
                     fields = fields,
                     values = defaults + saved,
-                    extraRules = extraRules,
+                    extraRules = emptyList(),
                     validationErrors = emptyMap(),
                     isLoading = false,
                     saved = false,
@@ -104,7 +96,7 @@ class SearchSourceConfigViewModel(
 
     fun save(requiredMessage: String = "必填") {
         val state = _uiState.value
-        val source = state.source ?: return
+        val sourceId = state.sourceId.takeIf { it.isNotBlank() } ?: return
         val visibleFields = state.fields.filter { it.dependency.isSatisfied(state.values) }
         val errors = visibleFields
             .filter { it.required && state.values[it.key].isNullOrBlank() }
@@ -115,7 +107,7 @@ class SearchSourceConfigViewModel(
         }
 
         viewModelScope.launch {
-            settingsRepository.saveSourceSettings(source, state.values)
+            settingsRepository.saveSourceSettings(sourceId, state.values)
             val updatedRules = allExtraRules.map { old ->
                 state.extraRules.firstOrNull {
                     it.source == old.source && it.normalizedKey == old.normalizedKey
@@ -127,7 +119,10 @@ class SearchSourceConfigViewModel(
         }
     }
 
-    private fun findSource(source: Source): SearchSource? {
-        return searchSources.firstOrNull { it.sourceType == source }
+    private fun findSource(sourceNameOrId: String, sources: List<SearchSource>): SearchSource? {
+        return sources.firstOrNull { searchSource ->
+            searchSource.id == sourceNameOrId ||
+                searchSource.name == sourceNameOrId
+        }
     }
 }

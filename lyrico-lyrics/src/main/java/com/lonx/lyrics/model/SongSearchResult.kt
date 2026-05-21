@@ -22,12 +22,16 @@ enum class Source(
         private val NAME_MAP = entries.associateBy { it.name }
 
         fun fromNameOrNull(name: String?): Source? = NAME_MAP[name?.trim()]
+        fun fromIdOrNameOrNull(value: String?): Source? {
+            val normalized = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            return entries.firstOrNull { it.id == normalized || it.name == normalized }
+        }
     }
 }
 
 /** 核心解析逻辑，统一处理 CSV 或 List<String> */
 private fun Iterable<String>.parseSourceList(): List<Source> {
-    val parsed = mapNotNull { Source.fromNameOrNull(it) }
+    val parsed = mapNotNull { Source.fromIdOrNameOrNull(it) }
     if (parsed.isEmpty()) return Source.DEFAULT_ORDER
 
     val result = parsed.distinct().toMutableList()
@@ -59,10 +63,27 @@ data class SongSearchResult(
     val artist: String,
     val album: String,
     val duration: Long, // 毫秒
-    val source: Source,
+    val source: Source? = null,
     val date: String = "",
     val trackerNumber: String = "",
     val picUrl: String = "",
-    val extras: Map<String, String> = emptyMap()
-) : Parcelable
+    val extras: Map<String, String> = emptyMap(),
+    val pluginId: String = source?.id.orEmpty(),
+    val pluginName: String = source?.name.orEmpty(),
+    val fields: Map<String, String> = emptyMap()
+) : Parcelable {
+    fun normalizedFields(): Map<String, String> {
+        return buildMap {
+            putAll(extras)
+            putAll(fields)
 
+            if (title.isNotBlank()) putIfAbsent("title", title)
+            if (artist.isNotBlank()) putIfAbsent("artist", artist)
+            if (album.isNotBlank()) putIfAbsent("album", album)
+            if (duration > 0) putIfAbsent("duration", duration.toString())
+            if (date.isNotBlank()) putIfAbsent("date", date)
+            if (trackerNumber.isNotBlank()) putIfAbsent("track_number", trackerNumber)
+            if (picUrl.isNotBlank()) putIfAbsent("cover_url", picUrl)
+        }
+    }
+}

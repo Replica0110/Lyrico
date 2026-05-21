@@ -8,18 +8,7 @@ object ExtraMetadataWriteRuleFactory {
     fun buildDefaultRules(
         searchSources: List<SearchSource>
     ): List<ExtraMetadataWriteRule> {
-        return searchSources.flatMap { source ->
-            source.extraFields
-                .filter { it.writeable }
-                .map { field ->
-                    ExtraMetadataWriteRule(
-                        key = field.key,
-                        source = source.sourceType,
-                        target = field.defaultTarget.toAppTarget(),
-                        mode = field.defaultMode.toAppMode()
-                    )
-                }
-        }
+        return emptyList()
     }
 
     fun mergeWithDeclaredFields(

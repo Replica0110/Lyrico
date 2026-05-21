@@ -242,6 +242,7 @@
     <string name="label_date_modified">修改时间</string>
     <string name="label_file_path">文件路径</string>
     <string name="label_cover">封面</string>
+    <string name="label_custom">自定义</string>
     <!-- 标题 -->
     <string name="label_extension">后缀</string>
     <string name="folder_manager_title">文件夹管理</string>
@@ -677,4 +678,41 @@
     <string name="artist_split_delete_rule_title">删除规则？</string>
     <string name="artist_split_delete_rule_message">确定删除「%1$s」吗？重建艺术家索引后生效。</string>
     <string name="album_grid_columns_format">%1$d 列显示</string>
+
+    <!-- QuickJS Test -->
+    <string name="quickjs_test_title">QuickJS 测试</string>
+    <string name="quickjs_test_description">测试说明</string>
+    <string name="quickjs_test_description_summary">运行测试以验证 QuickJS 运行时功能，包括 eval、函数调用、超时处理和内存限制。</string>
+    <string name="quickjs_test_run">运行测试</string>
+    
+    <string name="quickjs_test_eval_title">Eval 测试</string>
+    <string name="quickjs_test_eval_desc">测试基础 JavaScript 执行：\"hello\".toUpperCase()</string>
+    
+    <string name="quickjs_test_call_title">函数调用测试</string>
+    <string name="quickjs_test_call_desc">测试使用 JSON 参数调用 JavaScript 函数</string>
+    
+    <string name="quickjs_test_timeout_title">超时测试</string>
+    <string name="quickjs_test_timeout_desc">测试无限循环中断 (while(true){}) - 应在 2 秒后超时</string>
+    
+    <string name="quickjs_test_memory_title">内存限制测试</string>
+    <string name="quickjs_test_memory_desc">测试大数组分配的内存限制（4MB 限制）</string>
+
+    <!-- Plugin Debug -->
+    <string name="plugin_debug_title">插件调试</string>
+    <string name="plugin_debug_settings_summary">安装 Mock 或 .lyrico-source 插件用于运行时测试</string>
+    <string name="plugin_debug_actions">操作</string>
+    <string name="plugin_debug_install_mock">安装 Mock 插件</string>
+    <string name="plugin_debug_install_mock_summary">创建并启用本地脚本源，用于测试搜索、歌词和封面链路</string>
+    <string name="plugin_debug_install_kugou">安装酷狗实验插件</string>
+    <string name="plugin_debug_install_kugou_summary">创建一个使用公共 Host API 的脚本源：HTTP、MD5、Base64、字节和 zlib</string>
+    <string name="plugin_debug_import_archive">导入插件包</string>
+    <string name="plugin_debug_import_archive_summary">选择包含 manifest.json 和 source.js 的 .lyrico-source 或 zip 包</string>
+    <string name="plugin_debug_run_smoke">运行冒烟测试</string>
+    <string name="plugin_debug_run_smoke_summary">调用第一个启用插件的 searchSongs、getLyrics 和 searchCovers</string>
+    <string name="plugin_debug_installed_plugins">已安装插件</string>
+    <string name="plugin_debug_empty">尚未安装搜索源插件。</string>
+    <string name="plugin_debug_smoke_result">冒烟测试结果</string>
+    <string name="plugin_debug_busy">处理中...</string>
+    <string name="plugin_debug_configure">配置</string>
+    <string name="plugin_debug_test_this">测试此插件</string>
 </resources>

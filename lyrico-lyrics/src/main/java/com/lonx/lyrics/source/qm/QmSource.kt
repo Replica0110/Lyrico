@@ -5,9 +5,15 @@ import android.util.Base64
 import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.LyricsData
 import com.lonx.lyrics.model.SearchResultExtraKeys
+import com.lonx.lyrics.model.SearchResultExtraField
+import com.lonx.lyrics.model.SearchResultExtraTarget
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.SourceConfigField
+import com.lonx.lyrics.model.SourceConfigFieldType
+import com.lonx.lyrics.model.SourceConfigOption
+import com.lonx.lyrics.model.SourceRuntimeConfig
 import com.lonx.lyrics.utils.QmCryptoUtils
 import com.lonx.lyrics.utils.QrcParser
 import kotlinx.coroutines.Dispatchers
@@ -20,11 +26,63 @@ class QmSource(
     private val api: QmApi
 ) : SearchSource {
     override val sourceType: Source = Source.QM
-    override val supportedExtras = setOf(
-        SearchResultExtraKeys.REPLAY_GAIN_TRACK_GAIN,
-        SearchResultExtraKeys.REPLAY_GAIN_TRACK_PEAK,
-        SearchResultExtraKeys.REPLAY_GAIN_REFERENCE_LOUDNESS
+    override val extraFields = listOf(
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.REPLAY_GAIN_TRACK_GAIN,
+            title = "ReplayGain Track Gain",
+            summary = "QQ 音乐返回的 Track Gain",
+            defaultTarget = SearchResultExtraTarget.REPLAY_GAIN_TRACK_GAIN
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.REPLAY_GAIN_TRACK_PEAK,
+            title = "ReplayGain Track Peak",
+            summary = "QQ 音乐返回的 Track Peak",
+            defaultTarget = SearchResultExtraTarget.REPLAY_GAIN_TRACK_PEAK
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.REPLAY_GAIN_REFERENCE_LOUDNESS,
+            title = "ReplayGain Reference Loudness",
+            summary = "ReplayGain 参考响度",
+            defaultTarget = SearchResultExtraTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.REPLAY_GAIN_LOUDNESS_RANGE,
+            title = "ReplayGain Loudness Range",
+            summary = "响度范围，当前默认写入备注",
+            defaultTarget = SearchResultExtraTarget.COMMENT
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.SUBTITLE,
+            title = "副标题",
+            summary = "QQ 音乐返回的 subtitle 或 desc",
+            defaultTarget = SearchResultExtraTarget.SUBTITLE
+        )
     )
+
+    @Volatile
+    private var runtimeConfig = SourceRuntimeConfig()
+
+    override fun applyConfig(config: SourceRuntimeConfig) {
+        runtimeConfig = config
+    }
+
+    override fun getConfigFields(): List<SourceConfigField> {
+        return listOf(
+            SourceConfigField(
+                key = QmSourceConfigKeys.COVER_SIZE,
+                title = "封面大小",
+                summary = "QQ 音乐封面图片尺寸",
+                type = SourceConfigFieldType.DROPDOWN,
+                required = true,
+                defaultValue = "1200",
+                options = listOf(
+                    SourceConfigOption("500", "500 x 500"),
+                    SourceConfigOption("800", "800 x 800"),
+                    SourceConfigOption("1200", "1200 x 1200")
+                )
+            )
+        )
+    }
 
     private val comm = mapOf(
         "ct" to "11",
@@ -66,7 +124,7 @@ class QmSource(
             songs.map { item ->
                 val singerList = item.singer.map { it.name }
                 val picUrl = if (item.album.name.isNotEmpty()) {
-                    "https://y.gtimg.cn/music/photo_new/T002R1200x1200M000${item.album.mid}.jpg"
+                    buildCoverUrl(item.album.mid)
                 } else {
                     ""
                 }
@@ -80,7 +138,7 @@ class QmSource(
                         extrasMap[SearchResultExtraKeys.REPLAY_GAIN_TRACK_GAIN] = "${"%.3f".format(it)} dB"
                     }
                     v.lra.toDoubleOrNull()?.let {
-                        extrasMap["replaygain_loudness_range"] = "${"%.3f".format(it)} LU"
+                        extrasMap[SearchResultExtraKeys.REPLAY_GAIN_LOUDNESS_RANGE] = "${"%.3f".format(it)} LU"
                     }
                     peak?.let {
                         extrasMap[SearchResultExtraKeys.REPLAY_GAIN_TRACK_PEAK] = "%.6f".format(it)
@@ -90,7 +148,7 @@ class QmSource(
                 // 优先使用 subtitle，如果为空则使用 desc
                 val subtitle = item.subtitle.takeIf { it.isNotEmpty() } ?: item.desc.takeIf { it.isNotEmpty() }
                 subtitle?.let {
-                    extrasMap["subtitle"] = it
+                    extrasMap[SearchResultExtraKeys.SUBTITLE] = it
                 }
                 SongSearchResult(
                     id = item.id,
@@ -142,7 +200,7 @@ class QmSource(
 
             songs.take(pageSize).mapNotNull { item ->
                 val picUrl = if (item.album.mid.isNotEmpty()) {
-                    "https://y.gtimg.cn/music/photo_new/T002R1200x1200M000${item.album.mid}.jpg"
+                    buildCoverUrl(item.album.mid)
                 } else {
                     ""
                 }
@@ -220,5 +278,14 @@ class QmSource(
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun buildCoverUrl(albumMid: String): String {
+        val size = runtimeConfig.getString(QmSourceConfigKeys.COVER_SIZE, "1200")
+        return "https://y.gtimg.cn/music/photo_new/T002R${size}x${size}M000${albumMid}.jpg"
+    }
+
+    private object QmSourceConfigKeys {
+        const val COVER_SIZE = "cover_size"
     }
 }

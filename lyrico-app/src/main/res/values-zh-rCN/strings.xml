@@ -223,6 +223,16 @@
     <string name="label_year">年份</string>
     <string name="label_language">语言</string>
     <string name="label_genre">流派</string>
+    <string name="label_date">日期</string>
+    <string name="label_subtitle">副标题</string>
+    <string name="search_source_config">搜索源配置</string>
+    <string name="source_config_basic">基础配置</string>
+    <string name="source_config_extra_metadata">扩展元数据写入</string>
+    <string name="source_config_required_error">此项为必填项</string>
+    <string name="source_config_save">保存</string>
+    <string name="source_config_saved">已保存</string>
+    <string name="source_config_invalid_source">无效的搜索源</string>
+    <string name="source_config_empty">暂无可配置项</string>
     <string name="label_track_number">音轨号</string>
     <string name="label_duration">时长</string>
     <string name="label_bitrate">比特率</string>
@@ -550,9 +560,6 @@
     <string name="label_replaygain_track_gain_summary">从 QQ 音乐写入 ReplayGain 曲目增益</string>
     <string name="label_replaygain_track_peak_summary">从 QQ 音乐写入 ReplayGain 曲目峰值</string>
     <string name="label_replaygain_reference_loudness_summary">从 QQ 音乐写入 ReplayGain 参考响度</string>
-    <string name="extra_metadata_writes_title">扩展元数据写入</string>
-    <string name="extra_metadata_writes_entry_summary">控制网易云 163 key、QQ ReplayGain 等来源专有字段</string>
-    <string name="extra_metadata_writes_summary">控制搜索源提供的额外字段是否写入到音频标签。保持禁用时，匹配行为不变</string>
     <string name="extra_metadata_comment_warning">补充模式只会在注释为空或已有 163 key 时写入。覆盖模式会替换注释</string>
     <string name="extra_write_mode_disabled">禁用</string>
     <string name="extra_write_mode_supplement">补充</string>

@@ -219,6 +219,16 @@
     <string name="label_year">Year</string>
     <string name="label_language">Language</string>
     <string name="label_genre">Genre</string>
+    <string name="label_date">Date</string>
+    <string name="label_subtitle">Subtitle</string>
+    <string name="search_source_config">Search source settings</string>
+    <string name="source_config_basic">Basic settings</string>
+    <string name="source_config_extra_metadata">Extra metadata writing</string>
+    <string name="source_config_required_error">This field is required</string>
+    <string name="source_config_save">Save</string>
+    <string name="source_config_saved">Saved</string>
+    <string name="source_config_invalid_source">Invalid search source</string>
+    <string name="source_config_empty">No configurable items</string>
     <string name="label_track_number">Track Number</string>
     <string name="label_duration">Duration</string>
     <string name="label_bitrate">Bitrate</string>
@@ -291,9 +301,6 @@
     <string name="label_replaygain_track_gain_summary">Writes ReplayGain track gain from QQ Music.</string>
     <string name="label_replaygain_track_peak_summary">Writes ReplayGain track peak from QQ Music.</string>
     <string name="label_replaygain_reference_loudness_summary">Writes ReplayGain reference loudness from QQ Music.</string>
-    <string name="extra_metadata_writes_title">Extra Metadata Writes</string>
-    <string name="extra_metadata_writes_entry_summary">Control source-specific fields such as NetEase 163 key and QQ ReplayGain.</string>
-    <string name="extra_metadata_writes_summary">Control whether source-specific metadata is written to audio tags. Disabled keeps matching behavior unchanged.</string>
     <string name="extra_metadata_comment_warning">Supplement mode writes only when the comment is empty or already contains a 163 key. Overwrite replaces the comment.</string>
     <string name="extra_write_mode_disabled">Disabled</string>
     <string name="extra_write_mode_supplement">Supplement</string>

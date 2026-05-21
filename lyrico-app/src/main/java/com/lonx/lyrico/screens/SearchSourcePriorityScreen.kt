@@ -2,16 +2,18 @@ package com.lonx.lyrico.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,22 +32,24 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.lonx.lyrics.model.Source
+import com.ramcosta.composedestinations.generated.destinations.SearchSourceConfigDestination
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -166,7 +170,9 @@ fun SearchSourcePriorityScreen(
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     viewModel.setEnabledSearchSources(enabledSources)
                                 },
-                                showDivider = index != currentList.lastIndex
+                                onClick = {
+                                    navigator.navigate(SearchSourceConfigDestination(source.name))
+                                }
                             )
                         }
                     }
@@ -186,44 +192,31 @@ fun ReorderableSourceItem(
     source: Source,
     isEnabled: Boolean = true,
     onEnabledChanged: (Boolean) -> Unit = {},
-    showDivider: Boolean = false
+    onClick: () -> Unit = {}
 ) {
-    Column() {
-        SwitchPreference(
-            modifier = modifier,
-            title = stringResource(id = source.labelRes),
-            checked = isEnabled,
-            onCheckedChange = onEnabledChanged,
-            startAction = {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "${index + 1}",
-                        color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = MiuixTheme.textStyles.body1.fontSize
-                    )
-                }
-            },
-            endActions = {
-                Icon(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .align(Alignment.CenterVertically),
-                    painter = painterResource(R.drawable.ic_draghandle_24dp),
-                    contentDescription = stringResource(R.string.cd_drag_to_reorder),
-                    tint = MiuixTheme.colorScheme.onSurfaceVariantActions
+    BasicComponent(
+        modifier = modifier,
+        title = stringResource(id = source.labelRes),
+        onClick = {
+            onClick()
+        },
+        startAction = {
+            Text(
+                text = "${index + 1}",
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                fontWeight = FontWeight.Bold,
+                fontSize = MiuixTheme.textStyles.body1.fontSize
+            )
+        },
+        endActions = {
+            Row(
+             verticalAlignment = Alignment.CenterVertically,
+            ){
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = onEnabledChanged
                 )
             }
-        )
-        if (showDivider) {
-            HorizontalDivider(
-                color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                thickness = 0.5.dp
-            )
         }
-    }
+    )
 }

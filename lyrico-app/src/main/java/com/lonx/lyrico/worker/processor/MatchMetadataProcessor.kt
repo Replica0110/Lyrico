@@ -4,7 +4,6 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchField
 import com.lonx.lyrico.data.model.BatchMatchMode
-import com.lonx.lyrico.data.model.ExtraMetadataKey
 import com.lonx.lyrico.data.model.ExtraMetadataTarget
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.ExtraWriteMode
@@ -19,7 +18,9 @@ import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.MatchScoreDetail
 import com.lonx.lyrico.utils.MusicMatchUtils
 import com.lonx.lyrics.model.SearchSource
+import com.lonx.lyrics.model.SearchResultExtraKeys
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.SourceRuntimeConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -44,6 +45,10 @@ class MatchMetadataProcessor(
         } ?: throw BatchTaskSkippedException("No config")
 
         val matchConfig = config.matchConfig
+        sources.forEach { source ->
+            val values = config.sourceSettings[source.sourceType.name].orEmpty()
+            source.applyConfig(SourceRuntimeConfig(values))
+        }
         val song = songRepository.getSongByUri(item.songUri)
             ?: throw BatchTaskSkippedException("Song not found")
 
@@ -266,8 +271,19 @@ class MatchMetadataProcessor(
             ExtraMetadataTarget.COMMENT -> {
                 val currentComment = song.comment
                 currentComment.isNullOrBlank() ||
-                        (rule.key == ExtraMetadataKey.NETEASE_163_KEY && isNetease163Key(currentComment))
+                        (rule.normalizedKey == SearchResultExtraKeys.NETEASE_163_KEY && isNetease163Key(currentComment))
             }
+            ExtraMetadataTarget.TITLE -> song.title.isNullOrBlank()
+            ExtraMetadataTarget.ARTIST -> song.artist.isNullOrBlank()
+            ExtraMetadataTarget.ALBUM -> song.album.isNullOrBlank()
+            ExtraMetadataTarget.ALBUM_ARTIST -> song.albumArtist.isNullOrBlank()
+            ExtraMetadataTarget.GENRE -> song.genre.isNullOrBlank()
+            ExtraMetadataTarget.DATE -> song.date.isNullOrBlank()
+            ExtraMetadataTarget.TRACK_NUMBER -> song.trackerNumber.isNullOrBlank()
+            ExtraMetadataTarget.DISC_NUMBER -> song.discNumber == null
+            ExtraMetadataTarget.COMPOSER -> song.composer.isNullOrBlank()
+            ExtraMetadataTarget.LYRICIST -> song.lyricist.isNullOrBlank()
+            ExtraMetadataTarget.SUBTITLE -> song.comment.isNullOrBlank()
             ExtraMetadataTarget.REPLAY_GAIN_TRACK_GAIN -> song.replayGainTrackGain.isNullOrBlank()
             ExtraMetadataTarget.REPLAY_GAIN_TRACK_PEAK -> song.replayGainTrackPeak.isNullOrBlank()
             ExtraMetadataTarget.REPLAY_GAIN_REFERENCE_LOUDNESS -> song.replayGainReferenceLoudness.isNullOrBlank()
@@ -288,8 +304,10 @@ class MatchMetadataProcessor(
 
     private fun AudioTagData.isEmpty(): Boolean {
         return title == null && artist == null && album == null && genre == null &&
-                date == null && trackNumber == null && lyrics == null && picUrl == null &&
-                comment == null && replayGainTrackGain == null && replayGainTrackPeak == null &&
+                albumArtist == null && date == null && trackNumber == null &&
+                discNumber == null && composer == null && lyricist == null &&
+                lyrics == null && picUrl == null && comment == null &&
+                replayGainTrackGain == null && replayGainTrackPeak == null &&
                 replayGainAlbumGain == null && replayGainAlbumPeak == null &&
                 replayGainReferenceLoudness == null
     }
@@ -315,5 +333,6 @@ data class MatchMetadataTaskConfig(
     val separator: String,
     val enabledSourceOrderIds: List<String>,
     val extraWriteRules: List<ExtraMetadataWriteRule> = emptyList(),
+    val sourceSettings: Map<String, Map<String, String>> = emptyMap(),
     val concurrency: Int = 3
 )

@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
-import com.lonx.lyrico.data.model.ExtraMetadataWriteDefaults
+import com.lonx.lyrico.data.model.ExtraMetadataWriteRuleFactory
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.BatchTaskType
@@ -15,12 +15,15 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.SourceRuntimeConfig
+import com.lonx.lyrics.model.SearchSource
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -43,7 +46,8 @@ class BatchMatchViewModel(
     private val settingsRepository: SettingsRepository,
     private val selectionManager: SharedSelectionManager,
     private val batchTaskRepository: BatchTaskRepository,
-    private val batchTaskScheduler: BatchTaskScheduler
+    private val batchTaskScheduler: BatchTaskScheduler,
+    private val searchSources: List<SearchSource>
 ) : ViewModel() {
 
     val batchMatchConfig: StateFlow<BatchMatchConfig> = settingsRepository.batchMatchConfig
@@ -51,13 +55,18 @@ class BatchMatchViewModel(
 
     private val extraMetadataWriteRules: StateFlow<List<ExtraMetadataWriteRule>> =
         settingsRepository.extraMetadataWriteRules
-            .stateIn(viewModelScope, SharingStarted.Eagerly, ExtraMetadataWriteDefaults.DEFAULT_RULES)
+            .combineWithDefaults()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val searchSourceOrder: StateFlow<List<Source>> = settingsRepository.searchSourceOrder
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val enabledSearchSources: StateFlow<Set<Source>> = settingsRepository.enabledSearchSources
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    private val sourceSettings: StateFlow<Map<Source, SourceRuntimeConfig>> =
+        settingsRepository.sourceSettingsFlow
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     val enabledSourceOrder: StateFlow<List<Source>> = combine(
         searchSourceOrder,
@@ -184,6 +193,8 @@ class BatchMatchViewModel(
                     separator = separator.value,
                     enabledSourceOrderIds = currentOrder.map { it.id },
                     extraWriteRules = extraMetadataWriteRules.value,
+                    sourceSettings = sourceSettings.value.mapKeys { it.key.name }
+                        .mapValues { it.value.values },
                     concurrency = matchConfig.concurrency
                 )
             )
@@ -229,4 +240,7 @@ class BatchMatchViewModel(
             )
         }
     }
+
+    private fun kotlinx.coroutines.flow.Flow<List<ExtraMetadataWriteRule>>.combineWithDefaults() =
+        map { savedRules -> ExtraMetadataWriteRuleFactory.mergeWithDeclaredFields(savedRules, searchSources) }
 }

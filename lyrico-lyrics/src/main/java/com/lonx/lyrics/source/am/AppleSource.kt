@@ -4,9 +4,17 @@ import android.util.Log
 import com.lonx.lyrics.model.LyricsLine
 import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.LyricsWord
+import com.lonx.lyrics.model.SearchResultExtraField
+import com.lonx.lyrics.model.SearchResultExtraKeys
+import com.lonx.lyrics.model.SearchResultExtraTarget
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.SourceConfigDependency
+import com.lonx.lyrics.model.SourceConfigField
+import com.lonx.lyrics.model.SourceConfigFieldType
+import com.lonx.lyrics.model.SourceConfigOption
+import com.lonx.lyrics.model.SourceRuntimeConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,9 +35,95 @@ class AppleSource(
     private val appUserAgent: String
 ) : SearchSource {
     override val sourceType: Source = Source.AM
+    override val extraFields = listOf(
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.APPLE_ID,
+            title = "Apple ID",
+            summary = "Apple Music 请求所需的内部字段",
+            writeable = false
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.COMPOSER,
+            title = "作曲",
+            summary = "Apple Music composerName 字段",
+            defaultTarget = SearchResultExtraTarget.COMPOSER
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.GENRE,
+            title = "流派",
+            summary = "Apple Music genreNames 字段",
+            defaultTarget = SearchResultExtraTarget.GENRE
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.DISC_NUMBER,
+            title = "碟号",
+            summary = "Apple Music discNumber 字段",
+            defaultTarget = SearchResultExtraTarget.DISC_NUMBER
+        )
+    )
 
     private val tokenMutex = Mutex()
     private var cachedToken: String = ""
+    private var config = SourceRuntimeConfig()
+
+    override fun applyConfig(config: SourceRuntimeConfig) {
+        this.config = config
+    }
+
+    override fun getConfigFields(): List<SourceConfigField> {
+        return listOf(
+            SourceConfigField(
+                key = AppleSourceConfigKeys.LYRICS_PROVIDER,
+                title = "歌词源",
+                summary = "选择第三方歌词接口或 Apple 官方接口",
+                type = SourceConfigFieldType.DROPDOWN,
+                required = true,
+                defaultValue = "third_party",
+                options = listOf(
+                    SourceConfigOption("third_party", "第三方"),
+                    SourceConfigOption("official", "官方")
+                )
+            ),
+            SourceConfigField(
+                key = AppleSourceConfigKeys.TOKEN,
+                title = "Token",
+                summary = "使用官方歌词源时必填",
+                type = SourceConfigFieldType.PASSWORD,
+                required = true,
+                dependency = SourceConfigDependency.Match(
+                    key = AppleSourceConfigKeys.LYRICS_PROVIDER,
+                    value = "official"
+                )
+            ),
+            SourceConfigField(
+                key = AppleSourceConfigKeys.REGION,
+                title = "地区",
+                summary = "用于 Apple Music 请求的语言/地区参数",
+                type = SourceConfigFieldType.DROPDOWN,
+                required = true,
+                defaultValue = "zh-CN",
+                options = listOf(
+                    SourceConfigOption("zh-CN", "zh-CN"),
+                    SourceConfigOption("en-US", "en-US"),
+                    SourceConfigOption("ja-JP", "ja-JP"),
+                    SourceConfigOption("ko-KR", "ko-KR")
+                )
+            ),
+            SourceConfigField(
+                key = AppleSourceConfigKeys.COVER_SIZE,
+                title = "封面大小",
+                summary = "Apple Music 封面图片尺寸",
+                type = SourceConfigFieldType.DROPDOWN,
+                required = true,
+                defaultValue = "3000",
+                options = listOf(
+                    SourceConfigOption("500", "500 x 500"),
+                    SourceConfigOption("1000", "1000 x 1000"),
+                    SourceConfigOption("3000", "3000 x 3000")
+                )
+            )
+        )
+    }
 
     override suspend fun search(
         keyword: String,
@@ -40,8 +134,8 @@ class AppleSource(
         val token = getToken() ?: return@withContext emptyList()
         val offset = (page - 1).coerceAtLeast(0) * pageSize
         val query = URLEncoder.encode(keyword, "UTF-8")
-        val url = "https://amp-api.music.apple.com/v1/catalog/us/search" +
-            "?term=$query&types=songs&limit=$pageSize&offset=$offset&l=zh-CN&platform=web&format[resources]=map"
+        val url = "https://amp-api.music.apple.com/v1/catalog/${storefront()}/search" +
+            "?term=$query&types=songs&limit=$pageSize&offset=$offset&l=${languageTag()}&platform=web&format[resources]=map"
 
         try {
             val body = requestText(url, appleMusicHeaders(token)) ?: return@withContext emptyList()
@@ -57,8 +151,15 @@ class AppleSource(
         search(keyword = keyword, page = 1, separator = "/", pageSize = pageSize)
             .filter { it.picUrl.isNotBlank() }
 
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
-        val appleId = song.extras[EXTRA_APPLE_ID] ?: song.id
+    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? {
+        return when (config.getString(AppleSourceConfigKeys.LYRICS_PROVIDER, "third_party")) {
+            "official" -> getOfficialLyrics(song)
+            else -> getThirdPartyLyrics(song)
+        }
+    }
+
+    private suspend fun getThirdPartyLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
+        val appleId = song.extras[SearchResultExtraKeys.APPLE_ID] ?: song.id
         if (appleId.isBlank()) return@withContext null
 
         try {
@@ -75,6 +176,32 @@ class AppleSource(
             Log.e(TAG, "Lyrics exception", e)
             null
         }
+    }
+
+    private suspend fun getOfficialLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
+        val token = config.getString(AppleSourceConfigKeys.TOKEN)
+        if (token.isBlank() || song.id.isBlank()) return@withContext null
+
+        // Official lyrics API is intentionally left unimplemented until a stable endpoint is available.
+        null
+    }
+
+    private fun languageTag(): String {
+        return config.getString(AppleSourceConfigKeys.REGION, "zh-CN")
+    }
+
+    private fun storefront(): String {
+        return when (languageTag()) {
+            "zh-CN" -> "cn"
+            "ja-JP" -> "jp"
+            "ko-KR" -> "kr"
+            "en-US" -> "us"
+            else -> "us"
+        }
+    }
+
+    private fun coverSize(): String {
+        return config.getString(AppleSourceConfigKeys.COVER_SIZE, "3000")
     }
 
     private suspend fun getToken(): String? {
@@ -167,19 +294,23 @@ class AppleSource(
                 date = attrs.string("releaseDate"),
                 trackerNumber = attrs["trackNumber"]?.jsonPrimitive?.intOrNull?.toString().orEmpty(),
                 picUrl = attrs["artwork"]?.jsonObject?.string("url")
-                    ?.replace("{w}", "3000")
-                    ?.replace("{h}", "3000")
+                    ?.replace("{w}", coverSize())
+                    ?.replace("{h}", coverSize())
                     ?.replace("{f}", "jpg")
                     .orEmpty(),
                 extras = buildMap {
-                    put(EXTRA_APPLE_ID, appleId)
-                    attrs.string("composerName").takeIf { it.isNotBlank() }?.let { put("composer", it) }
+                    put(SearchResultExtraKeys.APPLE_ID, appleId)
+                    attrs.string("composerName").takeIf { it.isNotBlank() }?.let {
+                        put(SearchResultExtraKeys.COMPOSER, it)
+                    }
                     val genres = attrs["genreNames"]?.jsonArray
                         ?.mapNotNull { it.jsonPrimitive.content.takeIf(String::isNotBlank) }
                         ?.joinToString(" / ")
                         .orEmpty()
-                    if (genres.isNotBlank()) put("genre", genres)
-                    attrs["discNumber"]?.jsonPrimitive?.intOrNull?.let { put("disc_number", it.toString()) }
+                    if (genres.isNotBlank()) put(SearchResultExtraKeys.GENRE, genres)
+                    attrs["discNumber"]?.jsonPrimitive?.intOrNull?.let {
+                        put(SearchResultExtraKeys.DISC_NUMBER, it.toString())
+                    }
                 }
             )
         }
@@ -281,10 +412,16 @@ class AppleSource(
 
     private companion object {
         const val TAG = "AppleSource"
-        const val EXTRA_APPLE_ID = "apple_id"
         const val WEB_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         val INDEX_JS_REGEX = Regex("""/assets/index~[^/]+\.js""")
         val TOKEN_REGEX = Regex("""eyJh[^"]*""")
+    }
+
+    private object AppleSourceConfigKeys {
+        const val LYRICS_PROVIDER = "lyrics_provider"
+        const val TOKEN = "token"
+        const val REGION = "region"
+        const val COVER_SIZE = "cover_size"
     }
 }

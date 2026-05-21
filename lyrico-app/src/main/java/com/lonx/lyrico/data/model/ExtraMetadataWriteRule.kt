@@ -35,13 +35,34 @@ enum class ExtraMetadataKey(
         labelRes = R.string.label_replaygain_reference_loudness,
         summaryRes = R.string.label_replaygain_reference_loudness_summary,
         defaultTarget = ExtraMetadataTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
-    )
+    );
+
+    companion object {
+        fun fromPersistedKey(key: String): ExtraMetadataKey? {
+            return entries.firstOrNull { it.rawKey == key || it.name == key }
+        }
+
+        fun normalize(key: String): String {
+            return fromPersistedKey(key)?.rawKey ?: key
+        }
+    }
 }
 
 @Serializable
 enum class ExtraMetadataTarget(
     @field:StringRes val labelRes: Int
 ) {
+    TITLE(R.string.label_title),
+    ARTIST(R.string.label_artists),
+    ALBUM(R.string.label_album),
+    ALBUM_ARTIST(R.string.label_album_artist),
+    GENRE(R.string.label_genre),
+    DATE(R.string.label_date),
+    TRACK_NUMBER(R.string.label_track_number),
+    DISC_NUMBER(R.string.label_disc_number),
+    COMPOSER(R.string.label_composer),
+    LYRICIST(R.string.label_lyricist),
+    SUBTITLE(R.string.label_subtitle),
     COMMENT(R.string.label_comment),
     REPLAY_GAIN_TRACK_GAIN(R.string.label_replaygain_track_gain),
     REPLAY_GAIN_TRACK_PEAK(R.string.label_replaygain_track_peak),
@@ -59,31 +80,35 @@ enum class ExtraWriteMode(
 
 @Serializable
 data class ExtraMetadataWriteRule(
-    val key: ExtraMetadataKey,
+    val key: String,
     val source: Source,
-    val target: ExtraMetadataTarget = key.defaultTarget,
+    val target: ExtraMetadataTarget = ExtraMetadataKey.fromPersistedKey(key)?.defaultTarget
+        ?: ExtraMetadataTarget.COMMENT,
     val mode: ExtraWriteMode = ExtraWriteMode.DISABLED
-)
+) {
+    val normalizedKey: String
+        get() = ExtraMetadataKey.normalize(key)
+}
 
 object ExtraMetadataWriteDefaults {
     val DEFAULT_RULES = listOf(
         ExtraMetadataWriteRule(
-            key = ExtraMetadataKey.NETEASE_163_KEY,
+            key = ExtraMetadataKey.NETEASE_163_KEY.rawKey,
             source = Source.NE,
             target = ExtraMetadataTarget.COMMENT
         ),
         ExtraMetadataWriteRule(
-            key = ExtraMetadataKey.REPLAY_GAIN_TRACK_GAIN,
+            key = ExtraMetadataKey.REPLAY_GAIN_TRACK_GAIN.rawKey,
             source = Source.QM,
             target = ExtraMetadataTarget.REPLAY_GAIN_TRACK_GAIN
         ),
         ExtraMetadataWriteRule(
-            key = ExtraMetadataKey.REPLAY_GAIN_TRACK_PEAK,
+            key = ExtraMetadataKey.REPLAY_GAIN_TRACK_PEAK.rawKey,
             source = Source.QM,
             target = ExtraMetadataTarget.REPLAY_GAIN_TRACK_PEAK
         ),
         ExtraMetadataWriteRule(
-            key = ExtraMetadataKey.REPLAY_GAIN_REFERENCE_LOUDNESS,
+            key = ExtraMetadataKey.REPLAY_GAIN_REFERENCE_LOUDNESS.rawKey,
             source = Source.QM,
             target = ExtraMetadataTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
         )

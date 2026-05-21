@@ -5,6 +5,8 @@ import android.util.Base64
 import android.util.Log
 import com.lonx.lyrics.model.LyricsResult
 import com.lonx.lyrics.model.SearchResultExtraKeys
+import com.lonx.lyrics.model.SearchResultExtraField
+import com.lonx.lyrics.model.SearchResultExtraTarget
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
@@ -41,7 +43,20 @@ class NeSource(
     private val context: Context
 ): SearchSource {
     override val sourceType = Source.NE
-    override val supportedExtras = setOf(SearchResultExtraKeys.NETEASE_163_KEY)
+    override val extraFields = listOf(
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.NETEASE_163_KEY,
+            title = "网易云 163Key",
+            summary = "网易云播放器使用的 163Key，默认写入备注",
+            defaultTarget = SearchResultExtraTarget.COMMENT
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.SUBTITLE,
+            title = "副标题",
+            summary = "网易云 alia 别名",
+            defaultTarget = SearchResultExtraTarget.SUBTITLE
+        )
+    )
 
 
     // Cookie 管理
@@ -463,7 +478,7 @@ class NeSource(
         
         // 将 alia 作为 subtitle
         song.alia?.takeIf { it.isNotEmpty() }?.let { aliasList ->
-            extras["subtitle"] = aliasList.joinToString(" / ")
+            extras[SearchResultExtraKeys.SUBTITLE] = aliasList.joinToString(" / ")
         }
         
         // 添加网易云 163 key

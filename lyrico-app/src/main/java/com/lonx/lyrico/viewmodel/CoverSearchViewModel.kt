@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.Source
@@ -62,8 +63,13 @@ private data class CoverSourceSearchResult(
 
 class CoverSearchViewModel(
     private val sources: List<SearchSource>,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    searchSourceConfigApplier: SearchSourceConfigApplier
 ) : ViewModel() {
+
+    init {
+        searchSourceConfigApplier.observeIn(viewModelScope)
+    }
 
     private val coverSearchState = MutableStateFlow(CoverSearchState())
 

@@ -385,7 +385,7 @@ class BatchTaskWorker(
             appendLine("fields=${config.matchConfig.fields.toSortedMap(compareBy { it.name }).entries.joinToString(", ") { "${it.key.name}:${it.value.name}" }}")
             val extraRules = config.extraWriteRules
                 .filter { it.mode != ExtraWriteMode.DISABLED }
-                .map { "${it.source.name}.${it.key.name}:${it.mode.name}" }
+                .map { "${it.source.name}.${it.normalizedKey}:${it.mode.name}" }
             appendLine("extraWriteRules=${extraRules.joinToString(", ").ifBlank { "(none)" }}")
         }.trimEnd()
     }

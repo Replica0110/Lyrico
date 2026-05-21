@@ -17,9 +17,6 @@ import com.lonx.lyrico.data.model.BatchMatchMode
 import com.lonx.lyrico.data.model.CharacterMappingConfig
 import com.lonx.lyrico.data.model.CharacterMappingDefaults
 import com.lonx.lyrico.data.model.ConversionMode
-import com.lonx.lyrico.data.model.ExtraMetadataKey
-import com.lonx.lyrico.data.model.ExtraMetadataTarget
-import com.lonx.lyrico.data.model.ExtraMetadataWriteDefaults
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.ExtraWriteMode
 import com.lonx.lyrico.data.model.LyricFormat
@@ -27,6 +24,7 @@ import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.LogRetentionOption
 import com.lonx.lyrico.data.model.SearchConfig
 import com.lonx.lyrico.data.model.SettingsBackup
+import com.lonx.lyrico.data.model.SourceSettingsStore
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.model.AlbumSortBy
@@ -40,6 +38,7 @@ import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.SourceRuntimeConfig
 import com.lonx.lyrics.model.toSourceCsv
 import com.lonx.lyrics.model.toSourceList
 import kotlinx.coroutines.flow.Flow
@@ -126,6 +125,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val CHARACTER_MAPPING_CONFIG = stringPreferencesKey("character_mapping_config")
         val BATCH_MATCH_CONFIG = stringPreferencesKey("batch_match_config")
         val EXTRA_METADATA_WRITE_RULES = stringPreferencesKey("extra_metadata_write_rules")
+        val SOURCE_SETTINGS = stringPreferencesKey("source_settings")
         val CONVERSION_MODE = stringPreferencesKey("conversion_mode")
         val LOG_RETENTION_OPTION = stringPreferencesKey("log_retention_option")
         val ARTIST_SPLIT_CONFIG = stringPreferencesKey("artist_split_config")
@@ -408,6 +408,17 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
+    override val sourceSettingsFlow: Flow<Map<Source, SourceRuntimeConfig>>
+        get() = context.settingsDataStore.data.map { preferences ->
+            decodeSourceSettingsStore(preferences[PreferencesKeys.SOURCE_SETTINGS])
+                .values
+                .mapNotNull { (sourceName, values) ->
+                    val source = Source.fromNameOrNull(sourceName) ?: return@mapNotNull null
+                    source to SourceRuntimeConfig(values)
+                }
+                .toMap()
+        }
+
     override suspend fun saveAlbumSortInfo(sortInfo: AlbumSortInfo) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.ALBUM_SORT_BY] = sortInfo.sortBy.name
@@ -634,6 +645,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 ?: SettingsDefaults.LIMIT_LYRICS_INPUT_LINES,
             characterMappingConfig = charMapping,
             extraMetadataWriteRules = getExtraMetadataWriteRules(),
+            sourceSettings = decodeSourceSettingsStore(prefs[PreferencesKeys.SOURCE_SETTINGS]),
             renameFormat = prefs[PreferencesKeys.RENAME_FORMAT]
                 ?: SettingsDefaults.RENAME_FORMAT,
             batchMatchConfig = batchMatchConfig,
@@ -708,7 +720,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                     prefs[PreferencesKeys.CHARACTER_MAPPING_CONFIG] = jsonFormatter.encodeToString(config)
                 }
                 backup.extraMetadataWriteRules?.let { rules ->
-                    prefs[PreferencesKeys.EXTRA_METADATA_WRITE_RULES] = jsonFormatter.encodeToString(rules)
+                    prefs[PreferencesKeys.EXTRA_METADATA_WRITE_RULES] =
+                        jsonFormatter.encodeToString(rules.map { it.copy(key = it.normalizedKey) })
+                }
+                backup.sourceSettings?.let { store ->
+                    prefs[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(store)
                 }
                 backup.renameFormat?.let { prefs[PreferencesKeys.RENAME_FORMAT]  = it }
                 backup.batchMatchConfig?.let { config ->
@@ -781,17 +797,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override val extraMetadataWriteRules: Flow<List<ExtraMetadataWriteRule>>
         get() = context.settingsDataStore.data.map { preferences ->
             val rulesJson = preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES]
-            val legacyBatchJson = preferences[PreferencesKeys.BATCH_MATCH_CONFIG]
             if (rulesJson.isNullOrBlank()) {
-                defaultExtraRulesWithLegacyReplayGain(legacyBatchJson)
+                emptyList()
             } else {
-                try {
-                    mergeExtraRulesWithDefaults(
-                        jsonFormatter.decodeFromString<List<ExtraMetadataWriteRule>>(rulesJson)
-                    )
-                } catch (e: Exception) {
-                    defaultExtraRulesWithLegacyReplayGain(legacyBatchJson)
-                }
+                decodeExtraMetadataWriteRules(rulesJson)
             }
         }
 
@@ -817,7 +826,17 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun saveExtraMetadataWriteRules(rules: List<ExtraMetadataWriteRule>) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES] =
-                jsonFormatter.encodeToString(mergeExtraRulesWithDefaults(rules))
+                jsonFormatter.encodeToString(rules.map { it.copy(key = it.normalizedKey) })
+        }
+    }
+
+    override suspend fun saveSourceSettings(source: Source, values: Map<String, String>) {
+        context.settingsDataStore.edit { preferences ->
+            val currentStore = decodeSourceSettingsStore(preferences[PreferencesKeys.SOURCE_SETTINGS])
+            val newStore = currentStore.copy(
+                values = currentStore.values + (source.name to values)
+            )
+            preferences[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(newStore)
         }
     }
 
@@ -840,6 +859,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun getExtraMetadataWriteRules(): List<ExtraMetadataWriteRule> {
         return extraMetadataWriteRules.first()
+    }
+
+    override suspend fun getSourceSettings(source: Source): SourceRuntimeConfig {
+        return sourceSettingsFlow.first()[source] ?: SourceRuntimeConfig()
     }
 
     override suspend fun saveArtistSplitConfig(config: ArtistSplitConfig) {
@@ -890,44 +913,23 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    private fun defaultExtraRulesWithLegacyReplayGain(configJson: String?): List<ExtraMetadataWriteRule> {
-        val legacyMode = findLegacyBatchFieldMode(configJson, "REPLAY_GAIN")?.toExtraWriteMode()
-            ?: ExtraWriteMode.DISABLED
-        return ExtraMetadataWriteDefaults.DEFAULT_RULES.map { rule ->
-            if (rule.source == Source.QM && rule.target != ExtraMetadataTarget.COMMENT) {
-                rule.copy(mode = legacyMode)
-            } else {
-                rule
+    private fun decodeExtraMetadataWriteRules(raw: String): List<ExtraMetadataWriteRule> {
+        if (raw.isBlank()) return emptyList()
+        return runCatching {
+            jsonFormatter.decodeFromString<List<ExtraMetadataWriteRule>>(raw)
+                .map { it.copy(key = it.normalizedKey) }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun decodeSourceSettingsStore(raw: String?): SourceSettingsStore {
+        return raw
+            ?.takeIf { it.isNotBlank() }
+            ?.let {
+                runCatching {
+                    jsonFormatter.decodeFromString<SourceSettingsStore>(it)
+                }.getOrNull()
             }
-        }
-    }
-
-    private fun findLegacyBatchFieldMode(configJson: String?, fieldName: String): BatchMatchMode? {
-        if (configJson.isNullOrBlank()) return null
-        return try {
-            val root = jsonFormatter.parseToJsonElement(configJson).jsonObject
-            val modeName = root["fields"]?.jsonObject?.get(fieldName)?.jsonPrimitive?.contentOrNull
-            modeName?.let { BatchMatchMode.valueOf(it) }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun BatchMatchMode.toExtraWriteMode(): ExtraWriteMode {
-        return when (this) {
-            BatchMatchMode.SUPPLEMENT -> ExtraWriteMode.SUPPLEMENT
-            BatchMatchMode.OVERWRITE -> ExtraWriteMode.OVERWRITE
-        }
-    }
-
-    private fun mergeExtraRulesWithDefaults(
-        rules: List<ExtraMetadataWriteRule>
-    ): List<ExtraMetadataWriteRule> {
-        return ExtraMetadataWriteDefaults.DEFAULT_RULES.map { defaultRule ->
-            rules.firstOrNull {
-                it.key == defaultRule.key && it.source == defaultRule.source
-            } ?: defaultRule
-        }
+            ?: SourceSettingsStore()
     }
 }
 

@@ -23,7 +23,7 @@ import com.lonx.lyrico.data.exception.RequiresUserPermissionException
 import com.lonx.lyrico.data.model.AppLogLevel
 import com.lonx.lyrico.data.model.AppLogType
 import com.lonx.lyrico.data.model.ConversionMode
-import com.lonx.lyrico.data.model.ExtraMetadataWriteDefaults
+import com.lonx.lyrico.data.model.ExtraMetadataWriteRuleFactory
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.LyricsSearchResult
@@ -44,6 +44,7 @@ import com.lonx.lyrico.utils.ReplayGainScanner
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.utils.getCoverSourceType
 import com.lonx.lyrics.model.SongSearchResult
+import com.lonx.lyrics.model.SearchSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -100,6 +101,7 @@ class EditMetadataViewModel(
     private val replayGainScanner: ReplayGainScanner,
     private val appLogRepository: AppLogRepository,
     private val editFieldVisibilityRepository: EditFieldVisibilityRepository,
+    private val searchSources: List<SearchSource>
 ) : ViewModel() {
 
     private val TAG = "EditMetadataVM"
@@ -113,7 +115,7 @@ class EditMetadataViewModel(
     private val extraMetadataWriteRules = settingsRepository.extraMetadataWriteRules.stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
-        ExtraMetadataWriteDefaults.DEFAULT_RULES
+        emptyList()
     )
     private var currentSong: SongEntity? = null
 
@@ -285,7 +287,10 @@ class EditMetadataViewModel(
                                 score = 1.0
                             )
                         ),
-                        rules = extraMetadataWriteRules.value,
+                        rules = ExtraMetadataWriteRuleFactory.mergeWithDeclaredFields(
+                            savedRules = extraMetadataWriteRules.value,
+                            searchSources = searchSources
+                        ),
                         currentTagData = current
                     )
                 }

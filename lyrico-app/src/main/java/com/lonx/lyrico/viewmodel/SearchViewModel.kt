@@ -6,6 +6,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrics.model.LyricsResult
@@ -62,8 +63,13 @@ private data class SearchSourceState(
 
 class SearchViewModel(
     private val sources: List<SearchSource>,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    searchSourceConfigApplier: SearchSourceConfigApplier
 ) : ViewModel() {
+
+    init {
+        searchSourceConfigApplier.observeIn(viewModelScope)
+    }
 
 
     private val searchState = MutableStateFlow(SearchSourceState())

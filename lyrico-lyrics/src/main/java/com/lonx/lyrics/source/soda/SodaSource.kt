@@ -2,6 +2,9 @@ package com.lonx.lyrics.source.soda
 
 import com.lonx.lyrics.model.LyricsData
 import com.lonx.lyrics.model.LyricsResult
+import com.lonx.lyrics.model.SearchResultExtraField
+import com.lonx.lyrics.model.SearchResultExtraKeys
+import com.lonx.lyrics.model.SearchResultExtraTarget
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
@@ -23,6 +26,39 @@ class SodaSource(
 
     override val sourceType: Source
         get() = Source.SODA
+
+    override val extraFields = listOf(
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.SODA_TRACK_ID,
+            title = "Track ID",
+            summary = "汽水歌词请求所需的内部字段",
+            writeable = false
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.COMPOSER,
+            title = "作曲",
+            summary = "汽水返回的 composer 字段",
+            defaultTarget = SearchResultExtraTarget.COMPOSER
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.LYRICIST,
+            title = "作词",
+            summary = "汽水返回的 lyricist 字段",
+            defaultTarget = SearchResultExtraTarget.LYRICIST
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.SUBTITLE,
+            title = "副标题",
+            summary = "汽水返回的 relationMedia 字段",
+            defaultTarget = SearchResultExtraTarget.SUBTITLE
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.GENRE,
+            title = "流派",
+            summary = "汽水 tags 中的 Genre 字段",
+            defaultTarget = SearchResultExtraTarget.GENRE
+        )
+    )
 
     override suspend fun search(
         keyword: String,
@@ -62,16 +98,16 @@ class SodaSource(
                 source = sourceType,
                 picUrl = cover,
                 extras = buildMap {
-                    put("track_id", track.id)
+                    put(SearchResultExtraKeys.SODA_TRACK_ID, track.id)
 
                     if (composers.isNotEmpty()) {
-                        put("composer", composers)
+                        put(SearchResultExtraKeys.COMPOSER, composers)
                     }
                     if (lyricists.isNotEmpty()) {
-                        put("lyricist", lyricists)
+                        put(SearchResultExtraKeys.LYRICIST, lyricists)
                     }
                     if (subtitle.isNotEmpty()) {
-                        put("subtitle", subtitle)
+                        put(SearchResultExtraKeys.SUBTITLE, subtitle)
                      }
                     tagMap.forEach { (k, v) ->
                         put(k, v) // e.g. genre
@@ -121,7 +157,7 @@ class SodaSource(
     override suspend fun getLyrics(song: SongSearchResult): LyricsResult =
         withContext(Dispatchers.IO) {
 
-            val trackId = song.extras["track_id"] ?: song.id
+            val trackId = song.extras[SearchResultExtraKeys.SODA_TRACK_ID] ?: song.id
 
             val resp = requestLyrics(trackId)
             val raw = resp.lyric?.content

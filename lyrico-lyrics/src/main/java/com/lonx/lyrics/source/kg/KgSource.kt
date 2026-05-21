@@ -3,6 +3,9 @@ package com.lonx.lyrics.source.kg
 import android.util.Base64
 import android.util.Log
 import com.lonx.lyrics.model.LyricsResult
+import com.lonx.lyrics.model.SearchResultExtraField
+import com.lonx.lyrics.model.SearchResultExtraKeys
+import com.lonx.lyrics.model.SearchResultExtraTarget
 import com.lonx.lyrics.model.SearchSource
 import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.Source
@@ -20,6 +23,20 @@ class KgSource(
     private val api: KgApi
 ): SearchSource {
     override val sourceType = Source.KG
+    override val extraFields = listOf(
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.KG_HASH,
+            title = "Hash",
+            summary = "酷狗歌词请求所需的内部字段",
+            writeable = false
+        ),
+        SearchResultExtraField(
+            key = SearchResultExtraKeys.SUBTITLE,
+            title = "副标题",
+            summary = "酷狗 auxiliary 字段",
+            defaultTarget = SearchResultExtraTarget.SUBTITLE
+        )
+    )
     private val deviceMid by lazy {
         KgCryptoUtils.md5(System.currentTimeMillis().toString())
     }
@@ -98,7 +115,10 @@ class KgSource(
                     duration = (item.duration * 1000).toLong(),
                     source = Source.KG,
                     date = item.publishDate ?: "",
-                    extras = mapOf("hash" to item.fileHash,"subtitle" to item.auxiliary),
+                    extras = mapOf(
+                        SearchResultExtraKeys.KG_HASH to item.fileHash,
+                        SearchResultExtraKeys.SUBTITLE to item.auxiliary
+                    ),
                     picUrl = if (item.picUrl.isNotBlank()) item.picUrl.replace("{size}", "480").replace("http:", "https:") else "",
                 )
             } ?: emptyList()
@@ -137,7 +157,7 @@ class KgSource(
                     duration = (item.duration * 1000).toLong(),
                     source = Source.KG,
                     date = item.publishDate ?: "",
-                    extras = mapOf("hash" to item.fileHash),
+                    extras = mapOf(SearchResultExtraKeys.KG_HASH to item.fileHash),
                     picUrl = picUrl
                 )
             } ?: emptyList()
@@ -185,7 +205,7 @@ class KgSource(
     }
 
     override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.IO) {
-        val hash = song.extras["hash"] ?: return@withContext null
+        val hash = song.extras[SearchResultExtraKeys.KG_HASH] ?: return@withContext null
 
         try {
             val searchParams = mapOf(

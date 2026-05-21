@@ -23,6 +23,7 @@ import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.data.repository.SongRepositoryImpl
 import com.lonx.lyrico.data.repository.UpdateRepository
 import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
+import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.utils.MediaScanner
 import com.lonx.lyrico.utils.ReplayGainScanner
 import com.lonx.lyrico.utils.LibraryScanManager
@@ -60,6 +61,7 @@ import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
 import com.lonx.lyrico.viewmodel.SearchViewModel
+import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
@@ -223,6 +225,7 @@ val appModule = module {
     ) }
 
     single { getAll<SearchSource>() }
+    single { SearchSourceConfigApplier(get(), getAll<SearchSource>()) }
 
     single { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
     single { NetworkLoggingInterceptor(get(), get()) }
@@ -293,12 +296,13 @@ val appModule = module {
     viewModel { ArtistLibraryViewModel(get(), get(), get()) }
     viewModel { ArtistSplitSettingsViewModel(get(), get()) }
     viewModel { AlbumLibraryViewModel(get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get(), get()) }
-    viewModel { SearchViewModel(get(), get()) }
-    viewModel { CoverSearchViewModel(get(), get()) }
-    viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), getAll<SearchSource>()) }
+    viewModel { SearchViewModel(get(), get(), get()) }
+    viewModel { CoverSearchViewModel(get(), get(), get()) }
+    viewModel { SearchSourceConfigViewModel(get(), getAll<SearchSource>()) }
+    viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), getAll<SearchSource>()) }
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
-    viewModel { BatchMatchViewModel(get(), get(), get(), get()) }
+    viewModel { BatchMatchViewModel(get(), get(), get(), get(), getAll<SearchSource>()) }
     viewModel { AppLogViewModel(get(),get()) }
 
     viewModel { FolderManagerViewModel(get(), get(), get(), get(), get()) }

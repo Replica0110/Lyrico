@@ -1,12 +1,12 @@
 package com.lonx.lyrico.utils
 
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.ExtraMetadataKey
 import com.lonx.lyrico.data.model.ExtraMetadataTarget
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.ExtraWriteMode
 import com.lonx.lyrico.data.model.ScoredSearchResult
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrics.model.SearchResultExtraKeys
 
 class ExtraMetadataResolver(
     private val minimumScore: Double = 0.35
@@ -39,6 +39,7 @@ class ExtraMetadataResolver(
             date = second.date ?: first.date,
             language = second.language ?: first.language,
             trackNumber = second.trackNumber ?: first.trackNumber,
+            discNumber = second.discNumber ?: first.discNumber,
             composer = second.composer ?: first.composer,
             lyricist = second.lyricist ?: first.lyricist,
             comment = second.comment ?: first.comment,
@@ -64,10 +65,13 @@ class ExtraMetadataResolver(
         return scoredResults
             .asSequence()
             .filter { it.result.source == rule.source }
-            .filter { it.source?.supportedExtras?.contains(rule.key.rawKey) != false }
+            .filter { source ->
+                source.source?.extraFields
+                    ?.any { it.key == rule.normalizedKey && it.writeable } != false
+            }
             .filter { it.score >= minimumScore }
             .sortedByDescending { it.score }
-            .mapNotNull { it.result.extras[rule.key.rawKey]?.takeIf(String::isNotBlank) }
+            .mapNotNull { it.result.extras[rule.normalizedKey]?.takeIf(String::isNotBlank) }
             .firstOrNull()
     }
 
@@ -79,6 +83,17 @@ class ExtraMetadataResolver(
         value: String
     ): AudioTagData {
         return when (rule.target) {
+            ExtraMetadataTarget.TITLE -> if (canWriteText(rule.mode, currentTagData?.title ?: currentSong.title)) currentOutput.copy(title = value) else currentOutput
+            ExtraMetadataTarget.ARTIST -> if (canWriteText(rule.mode, currentTagData?.artist ?: currentSong.artist)) currentOutput.copy(artist = value) else currentOutput
+            ExtraMetadataTarget.ALBUM -> if (canWriteText(rule.mode, currentTagData?.album ?: currentSong.album)) currentOutput.copy(album = value) else currentOutput
+            ExtraMetadataTarget.ALBUM_ARTIST -> if (canWriteText(rule.mode, currentTagData?.albumArtist ?: currentSong.albumArtist)) currentOutput.copy(albumArtist = value) else currentOutput
+            ExtraMetadataTarget.GENRE -> if (canWriteText(rule.mode, currentTagData?.genre ?: currentSong.genre)) currentOutput.copy(genre = value) else currentOutput
+            ExtraMetadataTarget.DATE -> if (canWriteText(rule.mode, currentTagData?.date ?: currentSong.date)) currentOutput.copy(date = value) else currentOutput
+            ExtraMetadataTarget.TRACK_NUMBER -> if (canWriteText(rule.mode, currentTagData?.trackNumber ?: currentSong.trackerNumber)) currentOutput.copy(trackNumber = value) else currentOutput
+            ExtraMetadataTarget.DISC_NUMBER -> if (canWriteText(rule.mode, (currentTagData?.discNumber ?: currentSong.discNumber)?.toString())) currentOutput.copy(discNumber = value.toIntOrNull()) else currentOutput
+            ExtraMetadataTarget.COMPOSER -> if (canWriteText(rule.mode, currentTagData?.composer ?: currentSong.composer)) currentOutput.copy(composer = value) else currentOutput
+            ExtraMetadataTarget.LYRICIST -> if (canWriteText(rule.mode, currentTagData?.lyricist ?: currentSong.lyricist)) currentOutput.copy(lyricist = value) else currentOutput
+            ExtraMetadataTarget.SUBTITLE -> writeGenericComment(currentOutput, currentSong, rule.mode, value)
             ExtraMetadataTarget.COMMENT -> writeComment(currentOutput, currentSong, rule, value)
             ExtraMetadataTarget.REPLAY_GAIN_TRACK_GAIN -> {
                 val currentValue = currentTagData?.replayGainTrackGain
@@ -110,7 +125,7 @@ class ExtraMetadataResolver(
         rule: ExtraMetadataWriteRule,
         value: String
     ): AudioTagData {
-        if (rule.key != ExtraMetadataKey.NETEASE_163_KEY) return currentOutput
+        if (rule.normalizedKey != SearchResultExtraKeys.NETEASE_163_KEY) return currentOutput
         val currentComment = currentSong.comment
         val canWrite = when (rule.mode) {
             ExtraWriteMode.DISABLED -> false
@@ -120,7 +135,32 @@ class ExtraMetadataResolver(
         return if (canWrite) currentOutput.copy(comment = value) else currentOutput
     }
 
+    private fun writeGenericComment(
+        currentOutput: AudioTagData,
+        currentSong: SongEntity,
+        mode: ExtraWriteMode,
+        value: String
+    ): AudioTagData {
+        val canWrite = when (mode) {
+            ExtraWriteMode.DISABLED -> false
+            ExtraWriteMode.OVERWRITE -> true
+            ExtraWriteMode.SUPPLEMENT -> currentSong.comment.isNullOrBlank()
+        }
+        return if (canWrite) currentOutput.copy(comment = value) else currentOutput
+    }
+
     private fun canWriteReplayGain(
+        mode: ExtraWriteMode,
+        currentValue: String?
+    ): Boolean {
+        return when (mode) {
+            ExtraWriteMode.DISABLED -> false
+            ExtraWriteMode.SUPPLEMENT -> currentValue.isNullOrBlank()
+            ExtraWriteMode.OVERWRITE -> true
+        }
+    }
+
+    private fun canWriteText(
         mode: ExtraWriteMode,
         currentValue: String?
     ): Boolean {

@@ -16,12 +16,14 @@ import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrics.model.Source
+import com.lonx.lyrics.model.SourceRuntimeConfig
 import kotlinx.coroutines.flow.Flow
 
 
 interface SettingsRepository {
     val batchMatchConfig: Flow<BatchMatchConfig>
     val extraMetadataWriteRules: Flow<List<ExtraMetadataWriteRule>>
+    val sourceSettingsFlow: Flow<Map<Source, SourceRuntimeConfig>>
 
     val renameFormat: Flow<String>
 
@@ -89,6 +91,8 @@ interface SettingsRepository {
     suspend fun importSettings(jsonString: String): Boolean
     suspend fun saveBatchMatchConfig(config: BatchMatchConfig)
     suspend fun saveExtraMetadataWriteRules(rules: List<ExtraMetadataWriteRule>)
+    suspend fun saveSourceSettings(source: Source, values: Map<String, String>)
+    suspend fun getSourceSettings(source: Source): SourceRuntimeConfig
     suspend fun saveRenameFormat(format: String)
     suspend fun saveCharacterMappingConfig(config: CharacterMappingConfig)
     // 更新指定规则中的字符映射

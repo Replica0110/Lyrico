@@ -31,6 +31,7 @@ data class SettingsBackup(
     @SerialName("character_mapping_config") val characterMappingConfig: CharacterMappingConfig? = null,
     @SerialName("batch_match_config") val batchMatchConfig: BatchMatchConfig? = null,
     @SerialName("extra_metadata_write_rules") val extraMetadataWriteRules: List<ExtraMetadataWriteRule>? = null,
+    @SerialName("source_settings") val sourceSettings: SourceSettingsStore? = null,
     @SerialName("rename_format") val renameFormat: String? = null,
     @SerialName("conversion_mode") val conversionMode: String? = null,
     @SerialName("log_retention_option") val logRetentionOption: String? = null,

@@ -54,7 +54,6 @@ import com.ramcosta.composedestinations.generated.destinations.AppLogsDestinatio
 import com.ramcosta.composedestinations.generated.destinations.ArtistSplitSettingsDestination
 import com.ramcosta.composedestinations.generated.destinations.BatchTaskListDestination
 import com.ramcosta.composedestinations.generated.destinations.EditFieldVisibilityDestination
-import com.ramcosta.composedestinations.generated.destinations.ExtraMetadataWritesDestination
 import com.ramcosta.composedestinations.generated.destinations.FolderManagerDestination
 import com.ramcosta.composedestinations.generated.destinations.SearchSourcePriorityDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -522,11 +521,6 @@ fun SettingsScreen(
                         title = stringResource(R.string.artist_split_settings_title),
                         summary = stringResource(R.string.artist_split_settings_summary),
                         onClick = { navigator.navigate(ArtistSplitSettingsDestination()) }
-                    )
-                    ArrowPreference(
-                        title = stringResource(R.string.extra_metadata_writes_title),
-                        summary = stringResource(R.string.extra_metadata_writes_entry_summary),
-                        onClick = { navigator.navigate(ExtraMetadataWritesDestination()) }
                     )
                     ArrowPreference(
                         title = stringResource(R.string.edit_field_visibility_settings),

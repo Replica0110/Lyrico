@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.model
 
 import android.os.Parcelable
-import com.lonx.lyrics.model.Source
+import com.lonx.lyrico.data.model.lyrics.Source
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -14,6 +14,8 @@ data class LyricsSearchResult(
     val trackerNumber: String?,
     val picUrl: String?,
     val source: Source? = null,
+    val pluginId: String = source?.id.orEmpty(),
+    val pluginName: String = source?.name.orEmpty(),
     val lyricsOnly: Boolean = false,
     val extras: Map<String, String> = emptyMap(),
     val fields: Map<String, String> = emptyMap()

@@ -2,7 +2,7 @@ package com.lonx.lyrico.plugin.source
 
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.repository.SourcePluginRepository
-import com.lonx.lyrics.model.SearchSource
+import com.lonx.lyrico.data.model.lyrics.SearchSource
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.Flow

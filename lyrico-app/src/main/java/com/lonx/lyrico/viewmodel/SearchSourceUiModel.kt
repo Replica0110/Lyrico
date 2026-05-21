@@ -1,7 +1,7 @@
 package com.lonx.lyrico.viewmodel
 
 import androidx.annotation.StringRes
-import com.lonx.lyrics.model.SearchSource
+import com.lonx.lyrico.data.model.lyrics.SearchSource
 
 data class SearchSourceUiModel(
     val id: String,

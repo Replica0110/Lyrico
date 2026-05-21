@@ -1,22 +1,22 @@
 package com.lonx.lyrico.plugin.source
 
+import android.util.Log
 import com.lonx.lyrico.data.model.plugin.PluginManifest
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
-import com.lonx.lyrics.model.LyricsResult
-import com.lonx.lyrics.model.SearchResultExtraField
-import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.model.SearchSourceCapability
-import com.lonx.lyrics.model.SongSearchResult
-import com.lonx.lyrics.model.SourceConfigField
-import com.lonx.lyrics.model.SourceRuntimeConfig
-import kotlinx.coroutines.Dispatchers
+import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.SearchResultExtraField
+import com.lonx.lyrico.data.model.lyrics.SearchSource
+import com.lonx.lyrico.data.model.lyrics.SearchSourceCapability
+import com.lonx.lyrico.data.model.lyrics.SongSearchResult
+import com.lonx.lyrico.data.model.lyrics.SourceConfigField
+import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class ScriptSearchSource(
     private val manifest: PluginManifest,
@@ -66,55 +66,79 @@ class ScriptSearchSource(
         separator: String,
         pageSize: Int
     ): List<SongSearchResult> = withContext(quickJsDispatcher) {
-        if (SearchSourceCapability.SEARCH_SONGS !in capabilities) return@withContext emptyList()
+        runCatching {
+            if (SearchSourceCapability.SEARCH_SONGS !in capabilities) {
+                return@withContext emptyList()
+            }
 
-        val request = PluginSearchSongsRequest(
-            keyword = keyword,
-            page = page,
-            pageSize = pageSize,
-            separator = separator,
-            config = config.values
-        )
-        val raw = runtime.call(FUNCTION_SEARCH_SONGS, json.encodeToString(request))
-        parser.parseSongResults(
-            rawJson = raw,
-            pluginId = id,
-            pluginName = name
-        )
-    }
-
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(quickJsDispatcher) {
-        if (SearchSourceCapability.GET_LYRICS !in capabilities) return@withContext null
-
-        val request = PluginGetLyricsRequest(
-            song = song.toPluginSongRequest(),
-            config = config.values
-        )
-        val raw = runtime.call(FUNCTION_GET_LYRICS, json.encodeToString(request))
-        parser.parseLyrics(raw)
-    }
-
-    override suspend fun searchCover(keyword: String, pageSize: Int): List<SongSearchResult> =
-        withContext(quickJsDispatcher) {
-            if (SearchSourceCapability.SEARCH_COVERS !in capabilities) return@withContext emptyList()
-
-            val request = PluginSearchCoversRequest(
+            val request = PluginSearchSongsRequest(
                 keyword = keyword,
+                page = page,
                 pageSize = pageSize,
+                separator = separator,
                 config = config.values
             )
-            val raw = runtime.call(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
+            val raw = runtime.call(FUNCTION_SEARCH_SONGS, json.encodeToString(request))
             parser.parseSongResults(
                 rawJson = raw,
                 pluginId = id,
                 pluginName = name
             )
+        }.onFailure { throwable ->
+            Log.w(TAG, "search failed for plugin $id (${manifest.name})", throwable)
+        }.getOrDefault(emptyList())
+    }
+
+    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(quickJsDispatcher) {
+        runCatching {
+            if (SearchSourceCapability.GET_LYRICS !in capabilities) {
+                return@withContext null
+            }
+
+            val request = PluginGetLyricsRequest(
+                song = song.toPluginSongRequest(),
+                config = config.values
+            )
+            val raw = runtime.call(FUNCTION_GET_LYRICS, json.encodeToString(request))
+            parser.parseLyrics(raw)
+        }.onFailure { throwable ->
+            Log.w(TAG, "getLyrics failed for plugin $id (${manifest.name})", throwable)
+        }.getOrNull()
+    }
+
+    override suspend fun searchCover(keyword: String, pageSize: Int): List<SongSearchResult> =
+        withContext(quickJsDispatcher) {
+            runCatching {
+                if (SearchSourceCapability.SEARCH_COVERS !in capabilities) {
+                    return@withContext emptyList()
+                }
+
+                val request = PluginSearchCoversRequest(
+                    keyword = keyword,
+                    pageSize = pageSize,
+                    config = config.values
+                )
+                val raw = runtime.call(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
+                parser.parseSongResults(
+                    rawJson = raw,
+                    pluginId = id,
+                    pluginName = name
+                )
+            }.onFailure { throwable ->
+                Log.w(TAG, "searchCover failed for plugin $id (${manifest.name})", throwable)
+            }.getOrDefault(emptyList())
         }
 
     override fun close() {
-        if (runtimeDelegate.isInitialized()) {
-            runtime.close()
+        runCatching {
+            if (runtimeDelegate.isInitialized()) {
+                executor.submit {
+                    runtime.close()
+                }.get(3, TimeUnit.SECONDS)
+            }
         }
+        quickJsDispatcher.close()
+        executor.shutdown()
     }
 
     private fun SongSearchResult.toPluginSongRequest(): PluginSongRequest {
@@ -134,6 +158,7 @@ class ScriptSearchSource(
         const val FUNCTION_SEARCH_SONGS = "searchSongs"
         const val FUNCTION_GET_LYRICS = "getLyrics"
         const val FUNCTION_SEARCH_COVERS = "searchCovers"
+        const val TAG = "LyricoPlugin"
 
         val defaultJson: Json = Json {
             ignoreUnknownKeys = true

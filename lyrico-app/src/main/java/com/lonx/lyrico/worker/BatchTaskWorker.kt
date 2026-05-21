@@ -12,7 +12,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.AppLogLevel
 import com.lonx.lyrico.data.model.AppLogType
 import com.lonx.lyrico.data.model.BatchTaskType
-import com.lonx.lyrico.data.model.ExtraWriteMode
+import com.lonx.lyrico.data.model.MetadataWriteMode
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.worker.processor.BatchTaskProcessorFactory
@@ -383,10 +383,10 @@ class BatchTaskWorker(
             appendLine("preferFileName=${config.matchConfig.preferFileName}")
             appendLine("enabledSources=${config.enabledSourceOrderIds.joinToString(" > ").ifBlank { "(default)" }}")
             appendLine("fields=${config.matchConfig.fields.toSortedMap(compareBy { it.name }).entries.joinToString(", ") { "${it.key.name}:${it.value.name}" }}")
-            val extraRules = config.extraWriteRules
-                .filter { it.mode != ExtraWriteMode.DISABLED }
-                .map { "${it.source.name}.${it.normalizedKey}:${it.mode.name}" }
-            appendLine("extraWriteRules=${extraRules.joinToString(", ").ifBlank { "(none)" }}")
+            val metadataRules = config.metadataWriteRules
+                .filter { it.mode != MetadataWriteMode.DISABLED }
+                .map { "${it.sourceId}.${it.normalizedKey}:${it.mode.name}" }
+            appendLine("metadataWriteRules=${metadataRules.joinToString(", ").ifBlank { "(none)" }}")
         }.trimEnd()
     }
 

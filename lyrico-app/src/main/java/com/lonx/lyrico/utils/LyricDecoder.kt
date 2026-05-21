@@ -1,11 +1,10 @@
 package com.lonx.lyrico.utils
 
-import android.util.Log
 import com.lonx.lyrico.data.model.LyricFormat
-import com.lonx.lyrics.model.LyricsLine
-import com.lonx.lyrics.model.LyricsResult
-import com.lonx.lyrics.model.LyricsWord
-import com.lonx.lyrics.model.isWordByWord
+import com.lonx.lyrico.data.model.lyrics.LyricsLine
+import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.LyricsWord
+import com.lonx.lyrico.data.model.lyrics.isWordByWord
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader

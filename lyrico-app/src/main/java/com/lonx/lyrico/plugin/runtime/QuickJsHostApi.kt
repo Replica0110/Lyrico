@@ -1,6 +1,7 @@
 package com.lonx.lyrico.plugin.runtime
 
 import android.util.Base64
+import android.util.Log
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -16,6 +17,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.util.zip.Inflater
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
 
 class QuickJsHostApi(
     private val json: Json = Json { ignoreUnknownKeys = true }
@@ -26,6 +29,9 @@ class QuickJsHostApi(
 
         return when (name) {
             "crypto.md5" -> text(md5(payload.string("text")))
+            "crypto.aesEcbPkcs5EncryptBase64" -> text(aesEcbPkcs5EncryptBase64(payload.string("text"), payload.string("key")))
+            "crypto.aesEcbPkcs5EncryptHex" -> text(aesEcbPkcs5Encrypt(payload.string("text"), payload.string("key")).toHex())
+            "crypto.aesEcbPkcs5DecryptBase64ToText" -> text(aesEcbPkcs5DecryptBase64ToText(payload.string("base64"), payload.string("key")))
             "base64.encodeText" -> text(
                 Base64.encodeToString(payload.string("text").toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
             )
@@ -54,6 +60,20 @@ class QuickJsHostApi(
                 inflate(Base64.decode(payload.string("base64"), Base64.DEFAULT))
             )
             "http.getText" -> text(httpGetText(payload))
+            "http.postText" -> text(httpPostText(payload))
+            "http.postBytes" -> text(httpPostBytes(payload))
+            "log.debug" -> {
+                Log.d(payload.logTag(), payload.string("message"))
+                text("")
+            }
+            "log.warn" -> {
+                Log.w(payload.logTag(), payload.string("message"))
+                text("")
+            }
+            "log.error" -> {
+                Log.e(payload.logTag(), payload.string("message"))
+                text("")
+            }
             else -> error("Unsupported host api: $name")
         }
     }
@@ -81,9 +101,83 @@ class QuickJsHostApi(
         }
     }
 
+    private fun httpPostText(payload: JsonObject): String {
+        val url = URL(payload.string("url"))
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doOutput = true
+            connectTimeout = payload.intOrNull("connectTimeoutMs") ?: 8000
+            readTimeout = payload.intOrNull("readTimeoutMs") ?: 12000
+            setRequestProperty("Content-Type", payload.string("contentType").ifBlank { "application/json; charset=utf-8" })
+            payload.obj("headers")?.forEach { (key, value) ->
+                setRequestProperty(key, value.jsonPrimitive.contentOrNull.orEmpty())
+            }
+        }
+
+        return try {
+            connection.outputStream.use { output ->
+                output.write(payload.string("body").toByteArray(Charsets.UTF_8))
+            }
+            val stream = if (connection.responseCode in 200..299) {
+                connection.inputStream
+            } else {
+                connection.errorStream ?: connection.inputStream
+            }
+            stream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun httpPostBytes(payload: JsonObject): String {
+        val url = URL(payload.string("url"))
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doOutput = true
+            connectTimeout = payload.intOrNull("connectTimeoutMs") ?: 8000
+            readTimeout = payload.intOrNull("readTimeoutMs") ?: 12000
+            setRequestProperty("Content-Type", payload.string("contentType").ifBlank { "application/octet-stream" })
+            payload.obj("headers")?.forEach { (key, value) ->
+                setRequestProperty(key, value.jsonPrimitive.contentOrNull.orEmpty())
+            }
+        }
+
+        return try {
+            connection.outputStream.use { output ->
+                output.write(payload.string("body").toByteArray(Charsets.UTF_8))
+            }
+            val stream = if (connection.responseCode in 200..299) {
+                connection.inputStream
+            } else {
+                connection.errorStream ?: connection.inputStream
+            }
+            Base64.encodeToString(stream.use { it.readBytes() }, Base64.NO_WRAP)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private fun md5(text: String): String {
         val digest = MessageDigest.getInstance("MD5").digest(text.toByteArray(Charsets.UTF_8))
         return digest.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun aesEcbPkcs5EncryptBase64(text: String, key: String): String {
+        return Base64.encodeToString(aesEcbPkcs5Encrypt(text, key), Base64.NO_WRAP)
+    }
+
+    private fun aesEcbPkcs5Encrypt(text: String, key: String): ByteArray {
+        val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+        val secretKey = SecretKeySpec(key.toByteArray(Charsets.UTF_8), "AES")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        return cipher.doFinal(text.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun aesEcbPkcs5DecryptBase64ToText(base64: String, key: String): String {
+        val cipher = Cipher.getInstance("AES/ECB/PKCS5Padding")
+        val secretKey = SecretKeySpec(key.toByteArray(Charsets.UTF_8), "AES")
+        cipher.init(Cipher.DECRYPT_MODE, secretKey)
+        return String(cipher.doFinal(Base64.decode(base64, Base64.DEFAULT)), Charsets.UTF_8)
     }
 
     private fun xor(bytes: ByteArray, key: ByteArray): ByteArray {
@@ -141,4 +235,14 @@ private fun JsonObject.bytes(key: String): ByteArray {
     return ByteArray(array.size) { index ->
         array[index].jsonPrimitive.int.toByte()
     }
+}
+
+private fun ByteArray.toHex(): String {
+    return joinToString("") { "%02X".format(it) }
+}
+
+private fun JsonObject.logTag(): String {
+    return string("tag")
+        .ifBlank { "LyricoPlugin" }
+        .take(48)
 }

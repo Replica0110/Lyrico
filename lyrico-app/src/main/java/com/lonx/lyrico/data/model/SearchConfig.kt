@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.model
 
 import com.lonx.lyrico.data.repository.SettingsDefaults
-import com.lonx.lyrics.model.Source
+import com.lonx.lyrico.data.model.lyrics.Source
 
 /**
  * 搜索相关配置，用于 SearchViewModel 等需要搜索参数的消费者

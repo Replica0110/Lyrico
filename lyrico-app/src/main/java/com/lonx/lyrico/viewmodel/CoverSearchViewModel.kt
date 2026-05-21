@@ -2,13 +2,11 @@ package com.lonx.lyrico.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.R
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.UiMessage
-import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.source.soda.SodaRateLimitException
+import com.lonx.lyrico.data.model.lyrics.SearchSource
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -179,10 +177,7 @@ class CoverSearchViewModel(
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         CoverSourceSearchResult(
-                            error = when (e) {
-                                is SodaRateLimitException -> e.toUiMessage()
-                                else -> null
-                            }
+                            error = e.toUiMessage()
                         )
                     }
                 }
@@ -221,9 +216,6 @@ class CoverSearchViewModel(
     }
 
     private fun Throwable.toUiMessage(): UiMessage {
-        return when (this) {
-            is SodaRateLimitException -> UiMessage.StringResource(R.string.soda_rate_limited)
-            else -> UiMessage.DynamicString(message ?: javaClass.simpleName)
-        }
+        return UiMessage.DynamicString(message ?: javaClass.simpleName)
     }
 }

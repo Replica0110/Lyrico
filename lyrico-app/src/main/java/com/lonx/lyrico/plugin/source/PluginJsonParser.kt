@@ -1,10 +1,10 @@
 package com.lonx.lyrico.plugin.source
 
-import com.lonx.lyrics.model.LyricsLine
-import com.lonx.lyrics.model.LyricsResult
-import com.lonx.lyrics.model.LyricsWord
-import com.lonx.lyrics.model.SongSearchResult
-import com.lonx.lyrics.model.isWordByWord
+import com.lonx.lyrico.data.model.lyrics.LyricsLine
+import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.LyricsWord
+import com.lonx.lyrico.data.model.lyrics.SongSearchResult
+import com.lonx.lyrico.data.model.lyrics.isWordByWord
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -12,7 +12,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 
 class PluginJsonParser(

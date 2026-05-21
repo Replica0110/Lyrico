@@ -1,8 +1,8 @@
 package com.lonx.lyrico.data.model
 
-import com.lonx.lyrics.model.SearchResultExtraTarget
-import com.lonx.lyrics.model.SearchResultExtraWriteMode
-import com.lonx.lyrics.model.SearchSource
+import com.lonx.lyrico.data.model.lyrics.SearchResultExtraTarget
+import com.lonx.lyrico.data.model.lyrics.SearchResultExtraWriteMode
+import com.lonx.lyrico.data.model.lyrics.SearchSource
 
 object MetadataFieldWriteRuleFactory {
     fun buildDefaultRules(searchSources: List<SearchSource>): List<MetadataFieldWriteRule> {
@@ -35,15 +35,24 @@ object MetadataFieldWriteRuleFactory {
 
 fun SearchResultExtraTarget.toMetadataFieldTarget(): MetadataFieldTarget {
     return when (this) {
+        SearchResultExtraTarget.TITLE -> MetadataFieldTarget.TITLE
+        SearchResultExtraTarget.ARTIST -> MetadataFieldTarget.ARTIST
+        SearchResultExtraTarget.ALBUM -> MetadataFieldTarget.ALBUM
+        SearchResultExtraTarget.ALBUM_ARTIST -> MetadataFieldTarget.ALBUM_ARTIST
+        SearchResultExtraTarget.DATE -> MetadataFieldTarget.DATE
+        SearchResultExtraTarget.TRACK_NUMBER -> MetadataFieldTarget.TRACK_NUMBER
         SearchResultExtraTarget.COMMENT -> MetadataFieldTarget.COMMENT
         SearchResultExtraTarget.SUBTITLE -> MetadataFieldTarget.SUBTITLE
         SearchResultExtraTarget.COMPOSER -> MetadataFieldTarget.COMPOSER
         SearchResultExtraTarget.LYRICIST -> MetadataFieldTarget.LYRICIST
         SearchResultExtraTarget.GENRE -> MetadataFieldTarget.GENRE
         SearchResultExtraTarget.DISC_NUMBER -> MetadataFieldTarget.DISC_NUMBER
+        SearchResultExtraTarget.LYRICS -> MetadataFieldTarget.LYRICS
+        SearchResultExtraTarget.COVER -> MetadataFieldTarget.COVER
         SearchResultExtraTarget.REPLAY_GAIN_TRACK_GAIN -> MetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN
         SearchResultExtraTarget.REPLAY_GAIN_TRACK_PEAK -> MetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK
         SearchResultExtraTarget.REPLAY_GAIN_REFERENCE_LOUDNESS -> MetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
+        SearchResultExtraTarget.CUSTOM -> MetadataFieldTarget.CUSTOM
     }
 }
 

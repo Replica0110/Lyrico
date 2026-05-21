@@ -40,7 +40,7 @@ class QuickJsRuntime(
     }
 
     private companion object {
-        const val DEFAULT_MEMORY_LIMIT_BYTES = 16L * 1024L * 1024L
+        const val DEFAULT_MEMORY_LIMIT_BYTES = 64L * 1024L * 1024L
         const val DEFAULT_STACK_SIZE_BYTES = 2L * 1024L * 1024L
         const val DEFAULT_TIMEOUT_MS = 15_000L
 
@@ -51,7 +51,25 @@ class QuickJsRuntime(
               }
               globalThis.Lyrico = {
                 crypto: {
-                  md5: function(text) { return hostCall("crypto.md5", { text: String(text || "") }); }
+                  md5: function(text) { return hostCall("crypto.md5", { text: String(text || "") }); },
+                  aesEcbPkcs5EncryptBase64: function(text, key) {
+                    return hostCall("crypto.aesEcbPkcs5EncryptBase64", {
+                      text: String(text || ""),
+                      key: String(key || "")
+                    });
+                  },
+                  aesEcbPkcs5EncryptHex: function(text, key) {
+                    return hostCall("crypto.aesEcbPkcs5EncryptHex", {
+                      text: String(text || ""),
+                      key: String(key || "")
+                    });
+                  },
+                  aesEcbPkcs5DecryptBase64ToText: function(base64, key) {
+                    return hostCall("crypto.aesEcbPkcs5DecryptBase64ToText", {
+                      base64: String(base64 || ""),
+                      key: String(key || "")
+                    });
+                  }
                 },
                 base64: {
                   encodeText: function(text) { return hostCall("base64.encodeText", { text: String(text || "") }); },
@@ -77,6 +95,39 @@ class QuickJsRuntime(
                       connectTimeoutMs: options.connectTimeoutMs,
                       readTimeoutMs: options.readTimeoutMs
                     });
+                  },
+                  postText: function(url, body, options) {
+                    options = options || {};
+                    return hostCall("http.postText", {
+                      url: String(url || ""),
+                      body: String(body || ""),
+                      contentType: options.contentType || "application/json; charset=utf-8",
+                      headers: options.headers || {},
+                      connectTimeoutMs: options.connectTimeoutMs,
+                      readTimeoutMs: options.readTimeoutMs
+                    });
+                  },
+                  postBytes: function(url, body, options) {
+                    options = options || {};
+                    return hostCall("http.postBytes", {
+                      url: String(url || ""),
+                      body: String(body || ""),
+                      contentType: options.contentType || "application/octet-stream",
+                      headers: options.headers || {},
+                      connectTimeoutMs: options.connectTimeoutMs,
+                      readTimeoutMs: options.readTimeoutMs
+                    });
+                  }
+                },
+                log: {
+                  debug: function(tag, message) {
+                    return hostCall("log.debug", { tag: String(tag || "LyricoPlugin"), message: String(message || "") });
+                  },
+                  warn: function(tag, message) {
+                    return hostCall("log.warn", { tag: String(tag || "LyricoPlugin"), message: String(message || "") });
+                  },
+                  error: function(tag, message) {
+                    return hostCall("log.error", { tag: String(tag || "LyricoPlugin"), message: String(message || "") });
                   }
                 }
               };

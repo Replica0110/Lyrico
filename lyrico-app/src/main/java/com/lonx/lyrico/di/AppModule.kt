@@ -1,7 +1,6 @@
 package com.lonx.lyrico.di
 
 import androidx.room.Room
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.network.NetworkLoggingInterceptor
@@ -72,24 +71,16 @@ import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
 import com.lonx.lyrico.worker.processor.RenameFilesProcessor
-import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.source.am.AppleApi
-import com.lonx.lyrics.source.kg.KgApi
-import com.lonx.lyrics.source.ne.NeApi
-import com.lonx.lyrics.source.qm.QmApi
-import com.lonx.lyrics.source.soda.SodaApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import okhttp3.Cache
 import okhttp3.ConnectionPool
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
-import retrofit2.Retrofit
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -117,98 +108,12 @@ val appModule = module {
             .cache(cache)
             .build()
     }
-    single<NeApi> {
-        Retrofit.Builder()
-            .baseUrl("https://interface.music.163.com/")
-            .client(get())
-            .build()
-            .create(NeApi::class.java)
-    }
-    single<KgApi> {
-        // 使用 .newBuilder() 基于全局 client 创建一个派生 client
-        // 这样它们会共享相同的 ConnectionPool
-        val kgClient = get<OkHttpClient>().newBuilder()
-            .addInterceptor { chain ->
-                val original = chain.request()
-                val module = if (original.url.encodedPath.contains("search")) "SearchSong" else "Lyric"
-
-                val requestBuilder = original.newBuilder()
-                    .header("User-Agent", "Android14-1070-11070-201-0-$module-wifi")
-                    .header("KG-Rec", "1")
-                    .header("KG-RC", "1")
-                    .header("KG-CLIENTTIMEMS", System.currentTimeMillis().toString())
-                // 注意：这里的 mid 逻辑可以通过拦截器或手动传参。
-                // 为了简化并保持源内一致，可以把 mid 逻辑移到 API 参数中，
-                // 或者在这里通过某种方式获取。
-                chain.proceed(requestBuilder.build())
-            }
-            .build()
-
-        Retrofit.Builder()
-            .baseUrl("https://complexsearch.kugou.com/")
-            .client(kgClient)
-            .addConverterFactory(get<Json>().asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(KgApi::class.java)
-    }
-    single<QmApi> {
-        val qmClient = get<OkHttpClient>().newBuilder()
-            .addInterceptor { chain ->
-                val req = chain.request().newBuilder()
-                    .addHeader("User-Agent", "okhttp/3.14.9")
-                    .addHeader("Referer", "https://y.qq.com/")
-                    .build()
-                chain.proceed(req)
-            }
-            .build()
-
-        Retrofit.Builder()
-            .baseUrl("https://u.y.qq.com/")
-            .client(qmClient)
-            .addConverterFactory(get<Json>().asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(QmApi::class.java)
-    }
-    single<SodaApi> {
-
-        val sodaClient = get<OkHttpClient>().newBuilder()
-            .addInterceptor { chain ->
-                val req = chain.request().newBuilder()
-                    .header(
-                        "User-Agent",
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/134 Safari/537.36"
-                    )
-                    // .header("Cookie", get<SodaCookieProvider>().cookie)
-                    .build()
-
-                chain.proceed(req)
-            }
-            .build()
-
-        Retrofit.Builder()
-            .baseUrl("https://api.qishui.com/")
-            .client(sodaClient)
-            .addConverterFactory(get<Json>().asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(SodaApi::class.java)
-    }
-
-    // 全局共享一个已选歌曲列表
-    single<AppleApi> {
-        Retrofit.Builder()
-            .baseUrl("https://music.apple.com/")
-            .client(get())
-            .build()
-            .create(AppleApi::class.java)
-    }
-
     single { SharedSelectionManager() }
     single { ScriptSearchSourceFactory(json = get()) }
     single { PluginSearchSourceManager(repository = get(), factory = get()) }
     single { SourcePluginInstaller(repository = get(), json = get()) }
     single { SearchSourceProvider(pluginManager = get()) }
 
-    single { getAll<SearchSource>() }
     single { SearchSourceConfigApplier(get(), get()) }
 
     single { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
@@ -283,11 +188,11 @@ val appModule = module {
     viewModel { ArtistLibraryViewModel(get(), get(), get()) }
     viewModel { ArtistSplitSettingsViewModel(get(), get()) }
     viewModel { AlbumLibraryViewModel(get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get(), get(), getAll<SearchSource>()) }
+    viewModel { SettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get()) }
     viewModel { SearchSourceConfigViewModel(get(), get()) }
-    viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), getAll<SearchSource>()) }
+    viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get()) }
     viewModel { AppLogViewModel(get(),get()) }

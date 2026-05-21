@@ -5,8 +5,8 @@ import com.github.houbb.opencc4j.util.ZhHkConverterUtil
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat.*
 import com.lonx.lyrico.data.model.LyricRenderConfig
-import com.lonx.lyrics.model.LyricsLine
-import com.lonx.lyrics.model.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.LyricsLine
+import com.lonx.lyrico.data.model.lyrics.LyricsResult
 
 object LyricEncoder {
     // 匹配 TTML 格式: begin="00:01:23.456" 或 end="00:01:23.456"

@@ -14,13 +14,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
-import com.lonx.lyrico.data.model.ExtraWriteMode
+import com.lonx.lyrico.data.model.MetadataFieldWriteRule
+import com.lonx.lyrico.data.model.MetadataWriteMode
 import com.lonx.lyrico.ui.components.preference.SourceConfigFieldPreference
 import com.lonx.lyrico.utils.isSatisfied
 import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
-import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.model.Source
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -63,9 +61,7 @@ fun SearchSourceConfigScreen(
         }
     }
 
-    val source = uiState.source
-    val title = source?.let { stringResource(it.labelRes) }
-        ?: uiState.title.ifBlank { stringResource(R.string.search_source_config) }
+    val title = uiState.title.ifBlank { stringResource(R.string.search_source_config) }
 
     Scaffold(
         topBar = {
@@ -115,7 +111,7 @@ fun SearchSourceConfigScreen(
                         color = MiuixTheme.colorScheme.onSurfaceVariantActions
                     )
                 }
-            } else if (!uiState.isLoading && visibleFields.isEmpty() && uiState.extraRules.isEmpty()) {
+            } else if (!uiState.isLoading && visibleFields.isEmpty() && uiState.metadataRules.isEmpty()) {
                 item("empty") {
                     Text(
                         text = stringResource(R.string.source_config_empty),
@@ -143,18 +139,16 @@ fun SearchSourceConfigScreen(
                     }
                 }
 
-                if (source != null && uiState.extraRules.isNotEmpty()) {
+                if (uiState.metadataRules.isNotEmpty()) {
                     item("extra_title") {
                         SmallTitle(text = stringResource(R.string.source_config_extra_metadata))
                     }
                     item("extra_card") {
                         Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                            uiState.extraRules.forEach { rule ->
-                                ExtraRulePreference(
-                                    source = source,
-                                    sourceImpl = null,
+                            uiState.metadataRules.forEach { rule ->
+                                MetadataRulePreference(
                                     rule = rule,
-                                    onRuleChanged = viewModel::updateExtraRule
+                                    onRuleChanged = viewModel::updateMetadataRule
                                 )
                             }
                         }
@@ -166,22 +160,19 @@ fun SearchSourceConfigScreen(
 }
 
 @Composable
-private fun ExtraRulePreference(
-    source: Source,
-    sourceImpl: SearchSource?,
-    rule: ExtraMetadataWriteRule,
-    onRuleChanged: (ExtraMetadataWriteRule) -> Unit
+private fun MetadataRulePreference(
+    rule: MetadataFieldWriteRule,
+    onRuleChanged: (MetadataFieldWriteRule) -> Unit
 ) {
-    val field = sourceImpl?.extraFields?.firstOrNull { it.key == rule.normalizedKey }
-    val modeItems = ExtraWriteMode.entries.map { stringResource(it.labelRes) }
-    val selectedModeIndex = ExtraWriteMode.entries.indexOf(rule.mode).coerceAtLeast(0)
+    val modeItems = MetadataWriteMode.entries.map { stringResource(it.labelRes) }
+    val selectedModeIndex = MetadataWriteMode.entries.indexOf(rule.mode).coerceAtLeast(0)
     WindowDropdownPreference(
-        title = field?.title ?: rule.normalizedKey,
-        summary = field?.summary.orEmpty().ifBlank { stringResource(source.labelRes) },
+        title = rule.normalizedKey,
+        summary = stringResource(rule.target.labelRes),
         items = modeItems,
         selectedIndex = selectedModeIndex,
         onSelectedIndexChange = { index ->
-            onRuleChanged(rule.copy(key = rule.normalizedKey, mode = ExtraWriteMode.entries[index]))
+            onRuleChanged(rule.copy(fieldKey = rule.normalizedKey, mode = MetadataWriteMode.entries[index]))
         }
     )
 }

@@ -9,8 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrics.model.SourceConfigField
-import com.lonx.lyrics.model.SourceConfigFieldType
+import com.lonx.lyrico.data.model.lyrics.SourceConfigField
+import com.lonx.lyrico.data.model.lyrics.SourceConfigFieldType
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.SwitchPreference

@@ -108,11 +108,6 @@ fun PluginDebugScreen(
                         onClick = { if (!uiState.isBusy) viewModel.installMockPlugin(context) }
                     )
                     BasicComponent(
-                        title = stringResource(R.string.plugin_debug_install_kugou),
-                        summary = stringResource(R.string.plugin_debug_install_kugou_summary),
-                        onClick = { if (!uiState.isBusy) viewModel.installKugouPlugin(context) }
-                    )
-                    BasicComponent(
                         title = stringResource(R.string.plugin_debug_import_archive),
                         summary = stringResource(R.string.plugin_debug_import_archive_summary),
                         onClick = { if (!uiState.isBusy) importLauncher.launch(arrayOf("*/*")) }

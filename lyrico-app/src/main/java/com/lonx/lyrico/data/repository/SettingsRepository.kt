@@ -16,8 +16,8 @@ import com.lonx.lyrico.data.model.ArtistSortInfo
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.viewmodel.SortInfo
-import com.lonx.lyrics.model.Source
-import com.lonx.lyrics.model.SourceRuntimeConfig
+import com.lonx.lyrico.data.model.lyrics.Source
+import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import kotlinx.coroutines.flow.Flow
 
 

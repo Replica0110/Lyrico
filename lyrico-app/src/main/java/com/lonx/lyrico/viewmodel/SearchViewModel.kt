@@ -10,11 +10,9 @@ import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.UiMessage
-import com.lonx.lyrics.model.LyricsResult
-import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.model.SongSearchResult
-import com.lonx.lyrics.model.Source
-import com.lonx.lyrics.source.soda.SodaRateLimitException
+import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.SearchSource
+import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -129,8 +127,6 @@ class SearchViewModel(
 
             val sourceImpls = buildOrderedSources(searchConfig, allSources)
             val filteredSources = sourceImpls.map { it.toUiModel() }
-            val enabledSources = searchConfig?.enabledSearchSources.orEmpty()
-
             val selectedSource =
                 filteredSources.find { it.id == selectedId }
                     ?: filteredSources.firstOrNull()
@@ -146,7 +142,7 @@ class SearchViewModel(
                 selectedSearchSource = selectedSource,
 
                 lyricsState = renderedLyrics,
-                isInitializing = searchConfig == null || (allSources.isEmpty() && enabledSources.isNotEmpty())
+                isInitializing = searchConfig == null
             )
         }.stateIn(
             viewModelScope,
@@ -422,9 +418,6 @@ class SearchViewModel(
     }
 
     private fun Throwable.toUiMessage(): UiMessage {
-        return when (this) {
-            is SodaRateLimitException -> UiMessage.StringResource(R.string.soda_rate_limited)
-            else -> UiMessage.DynamicString(message ?: javaClass.simpleName)
-        }
+        return UiMessage.DynamicString(message ?: javaClass.simpleName)
     }
 }

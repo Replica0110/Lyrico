@@ -49,13 +49,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -71,7 +69,7 @@ import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.lonx.lyrico.viewmodel.SearchViewModel
-import com.lonx.lyrics.model.SongSearchResult
+import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.result.ResultBackNavigator
@@ -207,6 +205,16 @@ fun SearchResultsScreen(
                 return@Column
             }
 
+            if (uiState.availableSources.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(stringResource(R.string.plugin_debug_empty))
+                }
+                return@Column
+            }
+
             /**
              * Tabs
              */
@@ -295,6 +303,8 @@ fun SearchResultsScreen(
                                                         trackerNumber = song.trackerNumber,
                                                         picUrl = song.picUrl,
                                                         source = song.source,
+                                                        pluginId = song.pluginId,
+                                                        pluginName = song.pluginName,
                                                         lyricsOnly = false,
                                                         extras = song.extras,
                                                         fields = song.fields
@@ -484,8 +494,11 @@ fun SearchResultsScreen(
                                     trackerNumber = currentSong.trackerNumber,
                                     picUrl = currentSong.picUrl,
                                     source = currentSong.source,
+                                    pluginId = currentSong.pluginId,
+                                    pluginName = currentSong.pluginName,
                                     lyricsOnly = false,
-                                    extras = currentSong.extras
+                                    extras = currentSong.extras,
+                                    fields = currentSong.fields
                                 )
                             )
                         },

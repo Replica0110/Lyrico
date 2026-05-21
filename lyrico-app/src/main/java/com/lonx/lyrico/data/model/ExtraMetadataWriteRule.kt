@@ -2,7 +2,7 @@ package com.lonx.lyrico.data.model
 
 import androidx.annotation.StringRes
 import com.lonx.lyrico.R
-import com.lonx.lyrics.model.Source
+import com.lonx.lyrico.data.model.lyrics.Source
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -90,27 +90,3 @@ data class ExtraMetadataWriteRule(
         get() = ExtraMetadataKey.normalize(key)
 }
 
-object ExtraMetadataWriteDefaults {
-    val DEFAULT_RULES = listOf(
-        ExtraMetadataWriteRule(
-            key = ExtraMetadataKey.NETEASE_163_KEY.rawKey,
-            source = Source.NE,
-            target = ExtraMetadataTarget.COMMENT
-        ),
-        ExtraMetadataWriteRule(
-            key = ExtraMetadataKey.REPLAY_GAIN_TRACK_GAIN.rawKey,
-            source = Source.QM,
-            target = ExtraMetadataTarget.REPLAY_GAIN_TRACK_GAIN
-        ),
-        ExtraMetadataWriteRule(
-            key = ExtraMetadataKey.REPLAY_GAIN_TRACK_PEAK.rawKey,
-            source = Source.QM,
-            target = ExtraMetadataTarget.REPLAY_GAIN_TRACK_PEAK
-        ),
-        ExtraMetadataWriteRule(
-            key = ExtraMetadataKey.REPLAY_GAIN_REFERENCE_LOUDNESS.rawKey,
-            source = Source.QM,
-            target = ExtraMetadataTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
-        )
-    )
-}

@@ -1,4 +1,9 @@
 <resources>
+    <string name="kg_source_name">Kugou Music</string>
+    <string name="qm_source_name">QQ Music</string>
+    <string name="ne_source_name">NetEase Cloud Music</string>
+    <string name="soda_source_name">Soda Music</string>
+    <string name="am_source_name">Apple Music</string>
     <string name="app_name" translatable="false">Lyrico</string>
     <string name="search_settings">Search Settings</string>
     <string name="search_source_priority">Search Source Priority</string>
@@ -692,8 +697,6 @@
     <string name="plugin_debug_actions">Actions</string>
     <string name="plugin_debug_install_mock">Install Mock Plugin</string>
     <string name="plugin_debug_install_mock_summary">Create and enable a local script source for search, lyrics, and cover tests</string>
-    <string name="plugin_debug_install_kugou">Install Kugou Experimental Plugin</string>
-    <string name="plugin_debug_install_kugou_summary">Create a script source that uses public Host APIs for HTTP, MD5, Base64, bytes, and zlib</string>
     <string name="plugin_debug_import_archive">Import Plugin Package</string>
     <string name="plugin_debug_import_archive_summary">Select a .lyrico-source or zip package containing manifest.json and source.js</string>
     <string name="plugin_debug_run_smoke">Run Smoke Test</string>

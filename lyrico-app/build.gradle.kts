@@ -69,7 +69,6 @@ ksp {
 dependencies {
     // Project Modules
     implementation(project(":lyrico-audiotag"))
-    implementation(project(":lyrico-lyrics"))
 
 
     // network

@@ -12,13 +12,10 @@ import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.CacheCategory
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRuleFactory
 import com.lonx.lyrico.data.model.LyricFormat
-import com.lonx.lyrico.data.model.LogRetentionOption
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrics.model.Source
-import com.lonx.lyrics.model.SearchSource
+import com.lonx.lyrico.data.model.lyrics.Source
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
@@ -67,8 +64,7 @@ sealed class SettingsEvent {
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val database: LyricoDatabase,
-    private val appLogRepository: AppLogRepository,
-    private val searchSources: List<SearchSource>
+    private val appLogRepository: AppLogRepository
 ) : ViewModel() {
     private val folder = database.folderDao()
     private val _categorizedCacheSize = MutableStateFlow<Map<CacheCategory, Long>>(emptyMap())
@@ -112,10 +108,7 @@ class SettingsViewModel(
             totalCacheSize = cacheMap.values.sum(),
             removeEmptyLines = base.lyric.removeEmptyLines,
             conversionMode = base.lyric.conversionMode,
-            extraMetadataWriteRules = ExtraMetadataWriteRuleFactory.mergeWithDeclaredFields(
-                savedRules = base.extraRules,
-                searchSources = searchSources
-            )
+            extraMetadataWriteRules = base.extraRules
         )
     }
 

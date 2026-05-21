@@ -414,12 +414,9 @@ fun SettingsScreen(
             item(key = "search"){
                 SmallTitle(text = stringResource(R.string.section_search))
                 Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    val searchSourceSummary = settingsUiState.filteredSearchSources
-                        .map { stringResource(it.labelRes) }
-                        .joinToString(" > ")
                     ArrowPreference(
                         title = stringResource(R.string.search_source_priority),
-                        summary = searchSourceSummary,
+                        summary = stringResource(R.string.plugin_debug_settings_summary),
                         onClick = { navigator.navigate(SearchSourcePriorityDestination()) }
                     )
                     ArrowPreference(

@@ -27,5 +27,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Lyrico"
 include(":lyrico-app")
-include(":lyrico-lyrics")
 include(":lyrico-audiotag")

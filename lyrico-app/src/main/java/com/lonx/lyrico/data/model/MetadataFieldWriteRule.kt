@@ -2,7 +2,7 @@ package com.lonx.lyrico.data.model
 
 import androidx.annotation.StringRes
 import com.lonx.lyrico.R
-import com.lonx.lyrics.model.Source
+import com.lonx.lyrico.data.model.lyrics.Source
 import kotlinx.serialization.Serializable
 
 @Serializable

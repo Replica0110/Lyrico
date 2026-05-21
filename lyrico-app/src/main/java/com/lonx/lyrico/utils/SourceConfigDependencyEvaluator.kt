@@ -1,6 +1,6 @@
 package com.lonx.lyrico.utils
 
-import com.lonx.lyrics.model.SourceConfigDependency
+import com.lonx.lyrico.data.model.lyrics.SourceConfigDependency
 
 fun SourceConfigDependency?.isSatisfied(values: Map<String, String>): Boolean {
     return when (this) {

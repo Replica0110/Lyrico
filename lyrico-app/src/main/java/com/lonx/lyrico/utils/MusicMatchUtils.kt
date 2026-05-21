@@ -1,6 +1,7 @@
 package com.lonx.lyrico.utils
 
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -325,7 +326,7 @@ object MusicMatchUtils {
      * 歌曲搜索结果的综合匹配分数
      */
     fun calculateMatchScore(
-        result: com.lonx.lyrics.model.SongSearchResult,
+        result: SongSearchResult,
         song: SongEntity,
         preferFileName: Boolean = false,
         queryTitle: String? = null,
@@ -401,7 +402,7 @@ object MusicMatchUtils {
 
     // ==================== 10. 封面搜索排序 ====================
     fun calculateMatchScoreDetail(
-        result: com.lonx.lyrics.model.SongSearchResult,
+        result: SongSearchResult,
         song: SongEntity,
         preferFileName: Boolean = false,
         queryTitle: String? = null,

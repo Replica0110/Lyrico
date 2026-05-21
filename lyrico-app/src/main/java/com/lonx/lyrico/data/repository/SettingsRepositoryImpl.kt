@@ -18,7 +18,6 @@ import com.lonx.lyrico.data.model.CharacterMappingConfig
 import com.lonx.lyrico.data.model.CharacterMappingDefaults
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
-import com.lonx.lyrico.data.model.ExtraWriteMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.LogRetentionOption
@@ -40,17 +39,15 @@ import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
-import com.lonx.lyrics.model.Source
-import com.lonx.lyrics.model.SourceRuntimeConfig
-import com.lonx.lyrics.model.toSourceCsv
-import com.lonx.lyrics.model.toSourceList
+import com.lonx.lyrico.data.model.lyrics.Source
+import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
+import com.lonx.lyrico.data.model.lyrics.toSourceCsv
+import com.lonx.lyrico.data.model.lyrics.toSourceList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -656,6 +653,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 ?: SettingsDefaults.LIMIT_LYRICS_INPUT_LINES,
             characterMappingConfig = charMapping,
             extraMetadataWriteRules = getExtraMetadataWriteRules(),
+            metadataFieldWriteRules = getMetadataFieldWriteRules(),
             sourceSettings = decodeSourceSettingsStore(prefs[PreferencesKeys.SOURCE_SETTINGS]),
             renameFormat = prefs[PreferencesKeys.RENAME_FORMAT]
                 ?: SettingsDefaults.RENAME_FORMAT,
@@ -733,6 +731,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.extraMetadataWriteRules?.let { rules ->
                     prefs[PreferencesKeys.EXTRA_METADATA_WRITE_RULES] =
                         jsonFormatter.encodeToString(rules.map { it.copy(key = it.normalizedKey) })
+                }
+                backup.metadataFieldWriteRules?.let { rules ->
+                    val normalizedRules = rules.map { it.copy(fieldKey = it.normalizedKey) }
+                    prefs[PreferencesKeys.METADATA_FIELD_WRITE_RULES] =
+                        jsonFormatter.encodeToString(normalizedRules)
                 }
                 backup.sourceSettings?.let { store ->
                     prefs[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(store)

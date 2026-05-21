@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="kg_source_name">酷狗音乐</string>
+    <string name="qm_source_name">QQ 音乐</string>
+    <string name="ne_source_name">网易云音乐</string>
+    <string name="soda_source_name">汽水音乐</string>
+    <string name="am_source_name">Apple Music</string>
     <string name="search_settings">搜索设置</string>
     <string name="search_source_priority">搜索源优先级</string>
     <string name="search_source_priority_tip">长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源</string>
@@ -703,8 +708,6 @@
     <string name="plugin_debug_actions">操作</string>
     <string name="plugin_debug_install_mock">安装 Mock 插件</string>
     <string name="plugin_debug_install_mock_summary">创建并启用本地脚本源，用于测试搜索、歌词和封面链路</string>
-    <string name="plugin_debug_install_kugou">安装酷狗实验插件</string>
-    <string name="plugin_debug_install_kugou_summary">创建一个使用公共 Host API 的脚本源：HTTP、MD5、Base64、字节和 zlib</string>
     <string name="plugin_debug_import_archive">导入插件包</string>
     <string name="plugin_debug_import_archive_summary">选择包含 manifest.json 和 source.js 的 .lyrico-source 或 zip 包</string>
     <string name="plugin_debug_run_smoke">运行冒烟测试</string>

@@ -7,14 +7,14 @@ import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
 import com.lonx.lyrico.data.model.plugin.PluginConfigOption
 import com.lonx.lyrico.data.model.plugin.PluginMetadataField
 import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
-import com.lonx.lyrics.model.SearchResultExtraField
-import com.lonx.lyrics.model.SearchResultExtraTarget
-import com.lonx.lyrics.model.SearchResultExtraWriteMode
-import com.lonx.lyrics.model.SearchSourceCapability
-import com.lonx.lyrics.model.SourceConfigDependency
-import com.lonx.lyrics.model.SourceConfigField
-import com.lonx.lyrics.model.SourceConfigFieldType
-import com.lonx.lyrics.model.SourceConfigOption
+import com.lonx.lyrico.data.model.lyrics.SearchResultExtraField
+import com.lonx.lyrico.data.model.lyrics.SearchResultExtraTarget
+import com.lonx.lyrico.data.model.lyrics.SearchResultExtraWriteMode
+import com.lonx.lyrico.data.model.lyrics.SearchSourceCapability
+import com.lonx.lyrico.data.model.lyrics.SourceConfigDependency
+import com.lonx.lyrico.data.model.lyrics.SourceConfigField
+import com.lonx.lyrico.data.model.lyrics.SourceConfigFieldType
+import com.lonx.lyrico.data.model.lyrics.SourceConfigOption
 
 fun PluginCapability.toSearchSourceCapability(): SearchSourceCapability {
     return when (this) {

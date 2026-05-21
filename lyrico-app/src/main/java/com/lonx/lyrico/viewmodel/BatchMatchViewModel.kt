@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
+import com.lonx.lyrico.data.model.MetadataFieldWriteRule
+import com.lonx.lyrico.data.model.MetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.entity.SongEntity
@@ -14,8 +15,8 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig
-import com.lonx.lyrics.model.SourceRuntimeConfig
-import com.lonx.lyrics.model.SearchSource
+import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
+import com.lonx.lyrico.data.model.lyrics.SearchSource
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,8 +53,8 @@ class BatchMatchViewModel(
     val batchMatchConfig: StateFlow<BatchMatchConfig> = settingsRepository.batchMatchConfig
         .stateIn(viewModelScope, SharingStarted.Eagerly, BatchMatchConfigDefaults.DEFAULT_CONFIG)
 
-    private val extraMetadataWriteRules: StateFlow<List<ExtraMetadataWriteRule>> =
-        settingsRepository.extraMetadataWriteRules
+    private val metadataFieldWriteRules: StateFlow<List<MetadataFieldWriteRule>> =
+        settingsRepository.metadataFieldWriteRules
             .combineWithDefaults()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -181,7 +182,7 @@ class BatchMatchViewModel(
                     matchConfig = matchConfig,
                     separator = separator.value,
                     enabledSourceOrderIds = currentOrderIds,
-                    extraWriteRules = extraMetadataWriteRules.value,
+                    metadataWriteRules = metadataFieldWriteRules.value,
                     sourceSettings = sourceSettings.value.mapValues { it.value.values },
                     concurrency = matchConfig.concurrency
                 )
@@ -229,8 +230,13 @@ class BatchMatchViewModel(
         }
     }
 
-    private fun kotlinx.coroutines.flow.Flow<List<ExtraMetadataWriteRule>>.combineWithDefaults() =
-        map { savedRules -> savedRules }
+    private fun kotlinx.coroutines.flow.Flow<List<MetadataFieldWriteRule>>.combineWithDefaults() =
+        map { savedRules ->
+            MetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
+                savedRules = savedRules,
+                searchSources = allSources.value
+            )
+        }
 
     private fun buildEnabledSourceOrderIds(): List<String> {
         return allSources.value.map { it.id }

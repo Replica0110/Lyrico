@@ -2,13 +2,13 @@ package com.lonx.lyrico.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
+import com.lonx.lyrico.data.model.MetadataFieldWriteRule
+import com.lonx.lyrico.data.model.MetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.isSatisfied
-import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.model.Source
-import com.lonx.lyrics.model.SourceConfigField
+import com.lonx.lyrico.data.model.lyrics.SearchSource
+import com.lonx.lyrico.data.model.lyrics.SourceConfigField
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,12 +16,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class SearchSourceConfigUiState(
-    val source: Source? = null,
     val sourceId: String = "",
     val title: String = "",
     val fields: List<SourceConfigField> = emptyList(),
     val values: Map<String, String> = emptyMap(),
-    val extraRules: List<ExtraMetadataWriteRule> = emptyList(),
+    val metadataRules: List<MetadataFieldWriteRule> = emptyList(),
     val validationErrors: Map<String, String> = emptyMap(),
     val isLoading: Boolean = true,
     val saved: Boolean = false,
@@ -35,7 +34,7 @@ class SearchSourceConfigViewModel(
     private val _uiState = MutableStateFlow(SearchSourceConfigUiState())
     val uiState: StateFlow<SearchSourceConfigUiState> = _uiState.asStateFlow()
 
-    private var allExtraRules: List<ExtraMetadataWriteRule> = emptyList()
+    private var allMetadataRules: List<MetadataFieldWriteRule> = emptyList()
 
     fun load(sourceName: String) {
         viewModelScope.launch {
@@ -50,16 +49,18 @@ class SearchSourceConfigViewModel(
             val fields = sourceImpl.getConfigFields()
             val defaults = fields.associate { it.key to it.defaultValue }
             val saved = settingsRepository.getSourceSettings(sourceImpl.id).values
-            allExtraRules = emptyList()
+            allMetadataRules = MetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
+                savedRules = settingsRepository.getMetadataFieldWriteRules(),
+                searchSources = allSources
+            )
 
             _uiState.update {
                 it.copy(
-                    source = null,
                     sourceId = sourceImpl.id,
                     title = sourceImpl.name,
                     fields = fields,
                     values = defaults + saved,
-                    extraRules = emptyList(),
+                    metadataRules = allMetadataRules.filter { rule -> rule.sourceId == sourceImpl.id },
                     validationErrors = emptyMap(),
                     isLoading = false,
                     saved = false,
@@ -79,11 +80,11 @@ class SearchSourceConfigViewModel(
         }
     }
 
-    fun updateExtraRule(rule: ExtraMetadataWriteRule) {
+    fun updateMetadataRule(rule: MetadataFieldWriteRule) {
         _uiState.update {
             it.copy(
-                extraRules = it.extraRules.map { old ->
-                    if (old.source == rule.source && old.normalizedKey == rule.normalizedKey) rule else old
+                metadataRules = it.metadataRules.map { old ->
+                    if (old.sourceId == rule.sourceId && old.normalizedKey == rule.normalizedKey) rule else old
                 },
                 saved = false
             )
@@ -108,13 +109,13 @@ class SearchSourceConfigViewModel(
 
         viewModelScope.launch {
             settingsRepository.saveSourceSettings(sourceId, state.values)
-            val updatedRules = allExtraRules.map { old ->
-                state.extraRules.firstOrNull {
-                    it.source == old.source && it.normalizedKey == old.normalizedKey
+            val updatedRules = allMetadataRules.map { old ->
+                state.metadataRules.firstOrNull {
+                    it.sourceId == old.sourceId && it.normalizedKey == old.normalizedKey
                 } ?: old
             }
-            settingsRepository.saveExtraMetadataWriteRules(updatedRules)
-            allExtraRules = settingsRepository.getExtraMetadataWriteRules()
+            settingsRepository.saveMetadataFieldWriteRules(updatedRules)
+            allMetadataRules = settingsRepository.getMetadataFieldWriteRules()
             _uiState.update { it.copy(saved = true, validationErrors = emptyMap()) }
         }
     }

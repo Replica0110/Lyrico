@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.model
 
-import com.lonx.lyrics.model.SearchSource
-import com.lonx.lyrics.model.SongSearchResult
+import com.lonx.lyrico.data.model.lyrics.SearchSource
+import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 
 data class ScoredSearchResult(
     val result: SongSearchResult,

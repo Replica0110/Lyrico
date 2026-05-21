@@ -2,7 +2,7 @@ package com.lonx.lyrico.domain
 
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
-import com.lonx.lyrics.model.SourceRuntimeConfig
+import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine

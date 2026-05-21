@@ -7,12 +7,12 @@ import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.isWordByWord
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 
 class PluginJsonParser(
@@ -71,7 +71,7 @@ class PluginJsonParser(
 
         val tags = obj.stringMap("tags").orEmpty()
 
-        val rawPlainLrc = obj.primitiveString(
+        val rawPlain = obj.primitiveString(
             "rawPlainLrc",
             "raw_plain_lrc",
             "plainLrc",
@@ -90,32 +90,21 @@ class PluginJsonParser(
             "raw_multi_person_enhanced_lrc"
         ).orEmpty()
 
-        val originalLines = obj.array(
-            "original",
-            "originalLines",
-            "original_lines",
-            "lines"
-        ).parseLyricsLines()
+        val originalLines = obj.array("original", "lines").parseCompactWordLines()
 
         val translatedLines = obj.array(
             "translated",
             "translation",
-            "translations",
-            "translatedLines",
-            "translated_lines"
-        ).parseLyricsLines().takeIf { it.isNotEmpty() }
+            "translations"
+        ).parseCompactTextLines().takeIf { it.isNotEmpty() }
 
         val romanizationLines = obj.array(
             "romanization",
             "romanized",
-            "romanizedLines",
-            "romanized_lines",
-            "roma",
-            "romaLines",
-            "roma_lines"
-        ).parseLyricsLines().takeIf { it.isNotEmpty() }
+            "roma"
+        ).parseCompactTextLines().takeIf { it.isNotEmpty() }
 
-        val plain = rawPlainLrc.ifBlank { rawOriginal }
+        val plain = rawPlain.ifBlank { rawOriginal }
 
         if (
             plain.isBlank() &&
@@ -130,23 +119,18 @@ class PluginJsonParser(
             return null
         }
 
-        val explicitWordByWord = obj.boolean("isWordByWord")
+        val isWordByWord = obj.boolean("isWordByWord")
             ?: obj.boolean("is_word_by_word")
             ?: obj.boolean("wordByWord")
             ?: obj.boolean("word_by_word")
-
-        val inferredWordByWord = if (originalLines.isNotEmpty()) {
-            originalLines.isWordByWord()
-        } else {
-            enhanced.isNotBlank() || multiPerson.isNotBlank()
-        }
+            ?: originalLines.isWordByWord()
 
         return LyricsResult(
             tags = tags,
             original = originalLines,
             translated = translatedLines,
             romanization = romanizationLines,
-            isWordByWord = explicitWordByWord ?: inferredWordByWord,
+            isWordByWord = isWordByWord,
             rawPlainLrc = plain,
             rawVerbatimLrc = verbatim,
             rawEnhancedLrc = enhanced,
@@ -167,151 +151,112 @@ class PluginJsonParser(
     }
 }
 
-private data class RawLyricsLine(
-    val start: Long,
-    val end: Long?,
-    val words: List<RawLyricsWord>
-)
+/**
+ * original 紧凑格式：
+ *
+ * [
+ *   [lineStart, lineEnd, [[wordStart, wordEnd, text], ...]]
+ * ]
+ *
+ * 也兼容：
+ *
+ * [
+ *   [lineStart, lineEnd, text]
+ * ]
+ */
+private fun JsonArray?.parseCompactWordLines(): List<LyricsLine> {
+    return this?.mapNotNull { element ->
+        val line = element as? JsonArray ?: return@mapNotNull null
+        val start = line.longAt(0) ?: return@mapNotNull null
+        val end = line.longAt(1) ?: start
+        val wordsArray = line.arrayAt(2)
+        val text = line.stringAt(2)
 
-private data class RawLyricsWord(
-    val start: Long?,
-    val end: Long?,
-    val text: String
-)
+        val words = when {
+            wordsArray != null -> {
+                wordsArray.mapNotNull { wordElement ->
+                    val word = wordElement as? JsonArray ?: return@mapNotNull null
+                    val wordStart = word.longAt(0) ?: start
+                    val wordEnd = word.longAt(1) ?: end
+                    val wordText = word.stringAt(2).orEmpty()
 
-private fun JsonArray?.parseLyricsLines(): List<LyricsLine> {
-    val rawLines = this
-        ?.mapNotNull { element -> element.toRawLyricsLine() }
-        .orEmpty()
+                    if (wordText.isEmpty()) {
+                        return@mapNotNull null
+                    }
 
-    if (rawLines.isEmpty()) return emptyList()
+                    LyricsWord(
+                        start = wordStart,
+                        end = wordEnd,
+                        text = wordText
+                    )
+                }
+            }
 
-    return rawLines.mapIndexed { index, line ->
-        val nextLineStart = rawLines.getOrNull(index + 1)?.start
-        val lineEnd = listOfNotNull(
-            line.end,
-            nextLineStart,
-            line.words.lastOrNull()?.end
-        ).firstOrNull { it >= line.start } ?: line.start
+            !text.isNullOrEmpty() -> {
+                listOf(
+                    LyricsWord(
+                        start = start,
+                        end = end,
+                        text = text
+                    )
+                )
+            }
+
+            else -> emptyList()
+        }
+
+        if (words.isEmpty()) return@mapNotNull null
 
         LyricsLine(
-            start = line.start,
-            end = lineEnd,
-            words = line.words.normalizeWords(
-                lineStart = line.start,
-                lineEnd = lineEnd
+            start = start,
+            end = end,
+            words = words
+        )
+    }.orEmpty()
+}
+
+/**
+ * translated / romanization 紧凑格式：
+ *
+ * [
+ *   [lineStart, lineEnd, text]
+ * ]
+ */
+private fun JsonArray?.parseCompactTextLines(): List<LyricsLine> {
+    return this?.mapNotNull { element ->
+        val line = element as? JsonArray ?: return@mapNotNull null
+        val start = line.longAt(0) ?: return@mapNotNull null
+        val end = line.longAt(1) ?: start
+        val text = line.stringAt(2).orEmpty()
+
+        if (text.isBlank()) return@mapNotNull null
+
+        LyricsLine(
+            start = start,
+            end = end,
+            words = listOf(
+                LyricsWord(
+                    start = start,
+                    end = end,
+                    text = text
+                )
             )
         )
+    }.orEmpty()
+}
+
+private fun JsonArray.longAt(index: Int): Long? {
+    return (getOrNull(index) as? JsonPrimitive)?.let { primitive ->
+        primitive.longOrNull ?: primitive.contentOrNull?.toLongOrNull()
     }
 }
 
-private fun JsonElement.toRawLyricsLine(): RawLyricsLine? {
-    val obj = this as? JsonObject ?: return null
-
-    val rawWords = obj.array("words", "word", "tokens", "chars")
-        ?.mapNotNull { element -> element.toRawLyricsWord(obj) }
-        .orEmpty()
-
-    val text = obj.primitiveString("text", "content", "lyric", "line").orEmpty()
-
-    val start = obj.long("start", "startMs", "start_ms", "time", "timeMs", "time_ms")
-        ?: rawWords.firstNotNullOfOrNull { it.start }
-        ?: return null
-
-    val end = obj.long("end", "endMs", "end_ms")
-        ?: obj.long("duration", "durationMs", "duration_ms")?.let { start + it }
-        ?: rawWords.lastOrNull()?.end
-
-    val words = if (rawWords.isNotEmpty()) {
-        rawWords
-    } else if (text.isNotEmpty()) {
-        listOf(
-            RawLyricsWord(
-                start = start,
-                end = end,
-                text = text
-            )
-        )
-    } else {
-        emptyList()
-    }
-
-    return RawLyricsLine(
-        start = start,
-        end = end,
-        words = words
-    )
+private fun JsonArray.stringAt(index: Int): String? {
+    return (getOrNull(index) as? JsonPrimitive)?.contentOrNull
 }
 
-private fun JsonElement.toRawLyricsWord(lineObj: JsonObject): RawLyricsWord? {
-    return when (this) {
-        is JsonPrimitive -> {
-            val text = contentOrNull ?: return null
-            RawLyricsWord(
-                start = null,
-                end = null,
-                text = text
-            )
-        }
-
-        is JsonObject -> {
-            val lineStart = lineObj.long(
-                "start",
-                "startMs",
-                "start_ms",
-                "time",
-                "timeMs",
-                "time_ms"
-            ) ?: 0L
-
-            val start = long("start", "startMs", "start_ms", "time", "timeMs", "time_ms")
-                ?: long("offset", "offsetMs", "offset_ms", "startOffset", "start_offset")
-                    ?.let { lineStart + it }
-
-            val end = long("end", "endMs", "end_ms")
-                ?: long("duration", "durationMs", "duration_ms")?.let { duration ->
-                    start?.plus(duration)
-                }
-
-            val text = primitiveString("text", "content", "word", "value", "lyric")
-                ?: return null
-
-            RawLyricsWord(
-                start = start,
-                end = end,
-                text = text
-            )
-        }
-
-        else -> null
-    }
-}
-
-private fun List<RawLyricsWord>.normalizeWords(
-    lineStart: Long,
-    lineEnd: Long
-): List<LyricsWord> {
-    if (isEmpty()) return emptyList()
-
-    return mapIndexed { index, word ->
-        val previousWordEnd = getOrNull(index - 1)?.end
-        val wordStart = word.start
-            ?: previousWordEnd
-            ?: lineStart
-
-        val nextWordStart = getOrNull(index + 1)?.start
-        val wordEnd = listOfNotNull(
-            word.end,
-            nextWordStart,
-            lineEnd
-        ).firstOrNull { it >= wordStart } ?: wordStart
-
-        LyricsWord(
-            start = wordStart,
-            end = wordEnd,
-            text = word.text
-        )
-    }
+private fun JsonArray.arrayAt(index: Int): JsonArray? {
+    return getOrNull(index) as? JsonArray
 }
 
 private fun JsonObject.string(vararg keys: String): String? {
@@ -319,6 +264,7 @@ private fun JsonObject.string(vararg keys: String): String? {
         val value = this[key] ?: return@firstNotNullOfOrNull null
         when (value) {
             is JsonPrimitive -> value.contentOrNull
+
             is JsonArray -> value.joinToString("/") { item ->
                 when (item) {
                     is JsonPrimitive -> item.contentOrNull.orEmpty()

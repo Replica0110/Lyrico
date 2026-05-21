@@ -41,7 +41,7 @@ class QuickJsRuntime(
 
     private companion object {
         const val DEFAULT_MEMORY_LIMIT_BYTES = 16L * 1024L * 1024L
-        const val DEFAULT_STACK_SIZE_BYTES = 16L * 1024L * 1024L
+        const val DEFAULT_STACK_SIZE_BYTES = 2L * 1024L * 1024L
         const val DEFAULT_TIMEOUT_MS = 15_000L
 
         val HOST_API_BOOTSTRAP = """

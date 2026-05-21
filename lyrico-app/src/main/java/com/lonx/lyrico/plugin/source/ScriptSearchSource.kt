@@ -11,9 +11,12 @@ import com.lonx.lyrics.model.SongSearchResult
 import com.lonx.lyrics.model.SourceConfigField
 import com.lonx.lyrics.model.SourceRuntimeConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class ScriptSearchSource(
     private val manifest: PluginManifest,
@@ -30,7 +33,16 @@ class ScriptSearchSource(
         manifest.metadataFields.map { it.toSearchResultExtraField() }
     override val extraFields: List<SearchResultExtraField>
         get() = metadataFields
+    private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
+        Thread(
+            null,
+            runnable,
+            "QuickJS-$id",
+            4L * 1024L * 1024L
+        )
+    }
 
+    private val quickJsDispatcher = executor.asCoroutineDispatcher()
     private val parser = PluginJsonParser(json)
     private var config = SourceRuntimeConfig()
     private val runtimeDelegate = lazy {
@@ -53,7 +65,7 @@ class ScriptSearchSource(
         page: Int,
         separator: String,
         pageSize: Int
-    ): List<SongSearchResult> = withContext(Dispatchers.Default) {
+    ): List<SongSearchResult> = withContext(quickJsDispatcher) {
         if (SearchSourceCapability.SEARCH_SONGS !in capabilities) return@withContext emptyList()
 
         val request = PluginSearchSongsRequest(
@@ -71,7 +83,7 @@ class ScriptSearchSource(
         )
     }
 
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(Dispatchers.Default) {
+    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(quickJsDispatcher) {
         if (SearchSourceCapability.GET_LYRICS !in capabilities) return@withContext null
 
         val request = PluginGetLyricsRequest(
@@ -83,7 +95,7 @@ class ScriptSearchSource(
     }
 
     override suspend fun searchCover(keyword: String, pageSize: Int): List<SongSearchResult> =
-        withContext(Dispatchers.Default) {
+        withContext(quickJsDispatcher) {
             if (SearchSourceCapability.SEARCH_COVERS !in capabilities) return@withContext emptyList()
 
             val request = PluginSearchCoversRequest(

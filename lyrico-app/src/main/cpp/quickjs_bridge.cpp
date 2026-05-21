@@ -263,6 +263,7 @@ Java_com_lonx_lyrico_plugin_runtime_QuickJsNative_eval(
     }
 
     std::lock_guard<std::mutex> lock(state->mutex);
+    JS_UpdateStackTop(state->runtime);
     state->deadlineMs = state->timeoutMs > 0 ? nowMs() + state->timeoutMs : 0;
 
     JSValue result = JS_Eval(
@@ -317,6 +318,7 @@ Java_com_lonx_lyrico_plugin_runtime_QuickJsNative_call(
     }
 
     std::lock_guard<std::mutex> lock(state->mutex);
+    JS_UpdateStackTop(state->runtime);
     state->deadlineMs = state->timeoutMs > 0 ? nowMs() + state->timeoutMs : 0;
 
     JSValue global = JS_GetGlobalObject(state->context);

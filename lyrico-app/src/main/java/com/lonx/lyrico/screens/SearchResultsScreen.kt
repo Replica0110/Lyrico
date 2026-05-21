@@ -210,7 +210,7 @@ fun SearchResultsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(stringResource(R.string.plugin_debug_empty))
+                    Text(stringResource(R.string.plugin_empty))
                 }
                 return@Column
             }

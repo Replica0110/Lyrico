@@ -690,21 +690,8 @@
     
     <string name="quickjs_test_memory_title">Memory Limit Test</string>
     <string name="quickjs_test_memory_desc">Test memory limit enforcement with large array allocation (4MB limit)</string>
+    <string name="plugin_empty">No Plugin Installed</string>
+    <string name="plugin_import_archive">Import Plugin</string>
 
-    <!-- Plugin Debug -->
-    <string name="plugin_debug_title">Plugin Debug</string>
-    <string name="plugin_debug_settings_summary">Install mock or .lyrico-source plugins for runtime testing</string>
-    <string name="plugin_debug_actions">Actions</string>
-    <string name="plugin_debug_install_mock">Install Mock Plugin</string>
-    <string name="plugin_debug_install_mock_summary">Create and enable a local script source for search, lyrics, and cover tests</string>
-    <string name="plugin_debug_import_archive">Import Plugin Package</string>
-    <string name="plugin_debug_import_archive_summary">Select a .lyrico-source or zip package containing manifest.json and source.js</string>
-    <string name="plugin_debug_run_smoke">Run Smoke Test</string>
-    <string name="plugin_debug_run_smoke_summary">Call searchSongs, getLyrics, and searchCovers on the first enabled plugin</string>
-    <string name="plugin_debug_installed_plugins">Installed Plugins</string>
-    <string name="plugin_debug_empty">No source plugins installed yet.</string>
-    <string name="plugin_debug_smoke_result">Smoke Test Result</string>
-    <string name="plugin_debug_busy">Working...</string>
-    <string name="plugin_debug_configure">Config</string>
-    <string name="plugin_debug_test_this">Test this</string>
+
 </resources>

@@ -39,7 +39,6 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
-import com.lonx.lyrico.data.model.LogRetentionOption
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.ui.components.RoundedRectanglePainter
 import com.lonx.lyrico.ui.components.getSystemWallpaperColor
@@ -55,7 +54,6 @@ import com.ramcosta.composedestinations.generated.destinations.ArtistSplitSettin
 import com.ramcosta.composedestinations.generated.destinations.BatchTaskListDestination
 import com.ramcosta.composedestinations.generated.destinations.EditFieldVisibilityDestination
 import com.ramcosta.composedestinations.generated.destinations.FolderManagerDestination
-import com.ramcosta.composedestinations.generated.destinations.PluginDebugDestination
 import com.ramcosta.composedestinations.generated.destinations.QuickjsTestDestination
 import com.ramcosta.composedestinations.generated.destinations.SearchSourcePriorityDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -416,13 +414,7 @@ fun SettingsScreen(
                 Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                     ArrowPreference(
                         title = stringResource(R.string.search_source_priority),
-                        summary = stringResource(R.string.plugin_debug_settings_summary),
                         onClick = { navigator.navigate(SearchSourcePriorityDestination()) }
-                    )
-                    ArrowPreference(
-                        title = stringResource(R.string.plugin_debug_title),
-                        summary = stringResource(R.string.plugin_debug_settings_summary),
-                        onClick = { navigator.navigate(PluginDebugDestination()) }
                     )
                     ArrowPreference(
                         title = stringResource(R.string.search_limit),

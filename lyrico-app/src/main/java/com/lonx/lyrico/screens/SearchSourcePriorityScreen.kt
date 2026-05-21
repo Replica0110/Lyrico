@@ -1,5 +1,8 @@
 package com.lonx.lyrico.screens
 
+import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
@@ -21,16 +24,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
-import com.lonx.lyrico.viewmodel.PluginDebugViewModel
+import com.lonx.lyrico.viewmodel.PluginViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
-import com.ramcosta.composedestinations.generated.destinations.PluginDebugDestination
 import com.ramcosta.composedestinations.generated.destinations.SearchSourceConfigDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
@@ -47,6 +50,7 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -57,8 +61,10 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 fun SearchSourcePriorityScreen(
     navigator: DestinationsNavigator
 ) {
-    val viewModel: PluginDebugViewModel = koinViewModel()
+    val viewModel: PluginViewModel = koinViewModel()
     val plugins by viewModel.plugins.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val context: Context = LocalContext.current
     var currentList by remember(plugins) { mutableStateOf(plugins) }
     val lazyListState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
@@ -69,7 +75,11 @@ fun SearchSourcePriorityScreen(
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
-
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.importPlugin(context, it) }
+    }
     Scaffold(
         topBar = {
             SmallTopAppBar(
@@ -79,6 +89,18 @@ fun SearchSourcePriorityScreen(
                         Icon(
                             imageVector = MiuixIcons.Back,
                             contentDescription = stringResource(R.string.action_back)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            if (!uiState.isBusy) importLauncher.launch(arrayOf("*/*"))
+                        }
+                    ){
+                        Icon(
+                            imageVector = MiuixIcons.Add,
+                            contentDescription = null
                         )
                     }
                 },
@@ -113,12 +135,14 @@ fun SearchSourcePriorityScreen(
                         Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = stringResource(R.string.plugin_debug_empty),
+                                    text = stringResource(R.string.plugin_empty),
                                     color = MiuixTheme.colorScheme.onSurfaceVariantActions
                                 )
                                 TextButton(
-                                    text = stringResource(R.string.plugin_debug_import_archive),
-                                    onClick = { navigator.navigate(PluginDebugDestination()) },
+                                    text = stringResource(R.string.plugin_import_archive),
+                                    onClick = {
+                                        if (!uiState.isBusy) importLauncher.launch(arrayOf("*/*"))
+                                    },
                                     modifier = Modifier.padding(top = 8.dp)
                                 )
                             }

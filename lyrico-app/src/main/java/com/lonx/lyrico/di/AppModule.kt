@@ -64,7 +64,7 @@ import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
-import com.lonx.lyrico.viewmodel.PluginDebugViewModel
+import com.lonx.lyrico.viewmodel.PluginViewModel
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
 import com.lonx.lyrico.viewmodel.SettingsViewModel
@@ -196,7 +196,7 @@ val appModule = module {
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get()) }
     viewModel { AppLogViewModel(get(),get()) }
-    viewModel { PluginDebugViewModel(get(), get(), get(), get()) }
+    viewModel { PluginViewModel(get(), get(), get(), get()) }
 
     viewModel { FolderManagerViewModel(get(), get(), get(), get(), get()) }
     viewModel { (folderId: Long) ->

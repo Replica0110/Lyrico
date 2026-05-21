@@ -14,6 +14,8 @@ import com.lonx.lyrico.utils.UiMessage
 import com.hjq.device.compat.DeviceMarketName
 import com.hjq.device.compat.DeviceOs
 import com.hjq.device.compat.SystemPropertyCompat
+import com.lonx.lyrico.data.model.LogRetentionOption
+import com.lonx.lyrico.data.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,10 +27,21 @@ import kotlinx.coroutines.launch
 sealed class AppLogEvent {
     data class ShowMessage(val message: UiMessage) : AppLogEvent()
 }
+data class AppLogUiState(
+    val logRetentionOption: LogRetentionOption = LogRetentionOption.THIRTY_DAYS,
+)
 
 class AppLogViewModel(
-    private val appLogRepository: AppLogRepository
+    private val appLogRepository: AppLogRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    val logRetentionOption: StateFlow<LogRetentionOption> = settingsRepository.logRetentionOption
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = LogRetentionOption.THIRTY_DAYS
+        )
     val logs: StateFlow<List<AppLogEntity>> = appLogRepository.observeLatest().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -101,6 +114,13 @@ class AppLogViewModel(
 
     private fun String?.takeIfNotBlank(): String? =
         this?.trim()?.takeIf { it.isNotBlank() }
+
+    fun setLogRetentionOption(option: LogRetentionOption) {
+        viewModelScope.launch {
+            settingsRepository.saveLogRetentionOption(option)
+            appLogRepository.applyRetentionPolicy()
+        }
+    }
 
     companion object {
         private const val TAG = "AppLogViewModel"

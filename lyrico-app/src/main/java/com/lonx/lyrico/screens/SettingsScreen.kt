@@ -110,9 +110,8 @@ fun SettingsScreen(
     val folders = folderUiState.folders
     val totalFolders = folders.size
     val conversionMode = settingsUiState.conversionMode
-    val logRetentionOption = settingsUiState.logRetentionOption
+
     val ignoredFolders = folders.count { it.isIgnored }
-    val searchSourceOrder = settingsUiState.searchSourceOrder
     val searchPageSize = settingsUiState.searchPageSize
     val scope = rememberCoroutineScope()
 
@@ -134,9 +133,7 @@ fun SettingsScreen(
     val conversionModeItems = ConversionMode.entries.map { stringResource(it.labelRes) }
     val selectedConversionModeIndex =
         ConversionMode.entries.indexOf(conversionMode).coerceAtLeast(0)
-    val logRetentionItems = LogRetentionOption.entries.map { stringResource(it.labelRes) }
-    val selectedLogRetentionIndex =
-        LogRetentionOption.entries.indexOf(logRetentionOption).coerceAtLeast(0)
+
     val artistSeparators = remember {
         listOf(
             ArtistSeparator.ENUMERATION_COMMA,
@@ -571,15 +568,7 @@ fun SettingsScreen(
                         summary = stringResource(R.string.app_log_summary),
                         onClick = { navigator.navigate(AppLogsDestination()) }
                     )
-                    WindowDropdownPreference(
-                        title = stringResource(R.string.log_retention_title),
-                        summary = stringResource(R.string.log_retention_summary),
-                        items = logRetentionItems,
-                        selectedIndex = selectedLogRetentionIndex,
-                        onSelectedIndexChange = { index ->
-                            settingsViewModel.setLogRetentionOption(LogRetentionOption.entries[index])
-                        }
-                    )
+
                     val cacheSummary = stringResource(
                         R.string.cache_size_label,
                         Formatter.formatFileSize(context, settingsUiState.totalCacheSize)

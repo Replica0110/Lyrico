@@ -32,10 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.AppLogLevel
 import com.lonx.lyrico.data.model.AppLogType
+import com.lonx.lyrico.data.model.LogRetentionOption
 import com.lonx.lyrico.data.model.entity.AppLogEntity
 import com.lonx.lyrico.viewmodel.AppLogEvent
 import com.lonx.lyrico.viewmodel.AppLogViewModel
@@ -78,6 +77,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
 @Composable
 @Destination<RootGraph>(route = "app_logs")
 fun AppLogScreen(
@@ -99,7 +99,9 @@ fun AppLogScreen(
     var pendingDeleteIds by remember { mutableStateOf<List<Long>>(emptyList()) }
     var pendingExportIds by remember { mutableStateOf<List<Long>?>(null) }
     val copiedMessage = stringResource(R.string.msg_copied_to_clipboard)
-
+    val logRetentionOption by viewModel.logRetentionOption.collectAsState()
+    val logRetentionItems = LogRetentionOption.entries.map { stringResource(it.labelRes) }
+    val selectedLogRetentionIndex = LogRetentionOption.entries.indexOf(logRetentionOption).coerceAtLeast(0)
     val filteredLogs = remember(logs, selectedLevel, selectedType) {
         logs.filter { log ->
             (selectedLevel == null || log.level == selectedLevel) &&
@@ -220,6 +222,15 @@ fun AppLogScreen(
                         selectedIndex = selectedTypeIndex,
                         onSelectedIndexChange = { index ->
                             selectedType = if (index == 0) null else AppLogType.entries[index - 1]
+                        }
+                    )
+                    WindowDropdownPreference(
+                        title = stringResource(R.string.log_retention_title),
+                        summary = stringResource(R.string.log_retention_summary),
+                        items = logRetentionItems,
+                        selectedIndex = selectedLogRetentionIndex,
+                        onSelectedIndexChange = { index ->
+                            viewModel.setLogRetentionOption(LogRetentionOption.entries[index])
                         }
                     )
                 }

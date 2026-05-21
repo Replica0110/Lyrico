@@ -51,7 +51,6 @@ data class SettingsUiState(
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
     val conversionMode: ConversionMode = ConversionMode.NONE,
-    val logRetentionOption: LogRetentionOption = LogRetentionOption.THIRTY_DAYS,
     val extraMetadataWriteRules: List<ExtraMetadataWriteRule> = emptyList()
 ) {
     /**
@@ -91,9 +90,8 @@ class SettingsViewModel(
 
     private val baseUiState = combine(
         settingsBaseState,
-        _categorizedCacheSize,
-        settingsRepository.logRetentionOption
-    ) { base, cacheMap, logRetentionOption ->
+        _categorizedCacheSize
+    ) { base, cacheMap ->
         SettingsUiState(
             lyricFormat = base.lyric.format,
             romaEnabled = base.lyric.showRomanization,
@@ -111,7 +109,6 @@ class SettingsViewModel(
             totalCacheSize = cacheMap.values.sum(),
             removeEmptyLines = base.lyric.removeEmptyLines,
             conversionMode = base.lyric.conversionMode,
-            logRetentionOption = logRetentionOption,
             extraMetadataWriteRules = base.extraRules
         )
     }
@@ -222,12 +219,7 @@ class SettingsViewModel(
         }
     }
 
-    fun setLogRetentionOption(option: LogRetentionOption) {
-        viewModelScope.launch {
-            settingsRepository.saveLogRetentionOption(option)
-            appLogRepository.applyRetentionPolicy()
-        }
-    }
+
 
     fun exportSettings(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {

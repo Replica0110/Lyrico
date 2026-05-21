@@ -299,7 +299,7 @@ val appModule = module {
     viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get()) }
-    viewModel { AppLogViewModel(get()) }
+    viewModel { AppLogViewModel(get(),get()) }
 
     viewModel { FolderManagerViewModel(get(), get(), get(), get(), get()) }
     viewModel { (folderId: Long) ->

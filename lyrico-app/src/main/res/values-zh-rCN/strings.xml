@@ -7,7 +7,7 @@
     <string name="am_source_name">Apple Music</string>
     <string name="search_settings">搜索设置</string>
     <string name="plugin_manager_title">插件管理</string>
-    <string name="search_source_priority_tip">长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源</string>
+    <string name="search_source_priority_tip">插件顺序会影响搜索和批量匹配时的源调用顺序。拖动插件可调整优先级，关闭插件后不会参与搜索。</string>
 
     <!-- 搜索 -->
     <string name="search_lyrics_placeholder">搜索歌词…</string>
@@ -232,11 +232,15 @@
     <string name="label_subtitle">副标题</string>
     <string name="plugin_config_title">插件配置</string>
     <string name="source_config_basic">基础配置</string>
-    <string name="source_config_extra_metadata">扩展元数据写入</string>
+    <string name="source_config_extra_metadata">字段写入规则</string>
+    <string name="source_config_metadata_rules">字段写入规则</string>
+    <string name="source_config_write_mode">写入模式</string>
+    <string name="source_config_write_target">写入目标</string>
+    <string name="source_config_custom_tag_key">自定义标签名</string>
     <string name="source_config_required_error">此项为必填项</string>
     <string name="source_config_save">保存</string>
     <string name="source_config_saved">已保存</string>
-    <string name="source_config_invalid_source">无效的搜索源</string>
+    <string name="source_config_invalid_source">无效的插件</string>
     <string name="source_config_empty">暂无可配置项</string>
     <string name="label_track_number">音轨号</string>
     <string name="label_duration">时长</string>

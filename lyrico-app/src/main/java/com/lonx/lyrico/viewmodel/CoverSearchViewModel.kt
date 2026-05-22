@@ -161,7 +161,7 @@ class CoverSearchViewModel(
                 viewModelScope.async {
                     try {
                         val source = sourceImpl.toUiModel()
-                        val songs = sourceImpl.searchCover(keyword, pageSize)
+                        val songs = sourceImpl.searchCovers(keyword, pageSize)
                         CoverSourceSearchResult(
                             covers = songs.filter { it.picUrl.isNotBlank() }.map { song ->
                                 CoverSearchResult(

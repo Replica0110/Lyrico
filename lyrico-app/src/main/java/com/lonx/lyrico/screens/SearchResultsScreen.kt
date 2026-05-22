@@ -301,13 +301,11 @@ fun SearchResultsScreen(
                                                         album = song.album,
                                                         lyrics = lyrics,
                                                         date = song.date,
-                                                        trackerNumber = song.trackerNumber,
+                                                        trackerNumber = song.trackNumber,
                                                         picUrl = song.picUrl,
-                                                        source = song.source,
                                                         pluginId = song.pluginId,
                                                         pluginName = song.pluginName,
                                                         lyricsOnly = false,
-                                                        extras = song.extras,
                                                         fields = song.fields
                                                     )
                                                 )
@@ -492,13 +490,11 @@ fun SearchResultsScreen(
                                     album = currentSong.album,
                                     lyrics = uiState.lyricsState.content,
                                     date = currentSong.date,
-                                    trackerNumber = currentSong.trackerNumber,
+                                    trackerNumber = currentSong.trackNumber,
                                     picUrl = currentSong.picUrl,
-                                    source = currentSong.source,
                                     pluginId = currentSong.pluginId,
                                     pluginName = currentSong.pluginName,
                                     lyricsOnly = false,
-                                    extras = currentSong.extras,
                                     fields = currentSong.fields
                                 )
                             )
@@ -716,7 +712,7 @@ fun SearchResultItem(
 
                     val extraInfo = buildList {
                         if (song.date.isNotBlank()) add(song.date)
-                        if (song.trackerNumber.isNotBlank()) add("Track ${song.trackerNumber}")
+                        if (song.trackNumber.isNotBlank()) add("Track ${song.trackNumber}")
                     }.joinToString(" • ")
 
                     if (extraInfo.isNotEmpty()) {

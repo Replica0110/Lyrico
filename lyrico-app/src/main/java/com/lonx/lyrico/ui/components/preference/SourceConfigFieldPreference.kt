@@ -9,8 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.lyrics.SourceConfigField
-import com.lonx.lyrico.data.model.lyrics.SourceConfigFieldType
+import com.lonx.lyrico.data.model.plugin.PluginConfigField
+import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.SwitchPreference
@@ -19,14 +19,14 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SourceConfigFieldPreference(
-    field: SourceConfigField,
+    field: PluginConfigField,
     value: String,
     values: Map<String, String>,
     error: String?,
     onValueChange: (String) -> Unit
 ) {
     when (field.type) {
-        SourceConfigFieldType.SWITCH -> {
+        PluginConfigFieldType.SWITCH -> {
             SwitchPreference(
                 title = field.title,
                 summary = summaryText(field, error),
@@ -34,7 +34,7 @@ fun SourceConfigFieldPreference(
                 onCheckedChange = { onValueChange(it.toString()) }
             )
         }
-        SourceConfigFieldType.DROPDOWN -> {
+        PluginConfigFieldType.DROPDOWN -> {
             val selectedIndex = field.options.indexOfFirst { it.value == value }.coerceAtLeast(0)
             WindowDropdownPreference(
                 title = field.title,
@@ -46,9 +46,9 @@ fun SourceConfigFieldPreference(
                 }
             )
         }
-        SourceConfigFieldType.TEXT,
-        SourceConfigFieldType.PASSWORD,
-        SourceConfigFieldType.NUMBER -> {
+        PluginConfigFieldType.TEXT,
+        PluginConfigFieldType.PASSWORD,
+        PluginConfigFieldType.NUMBER -> {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -75,7 +75,7 @@ fun SourceConfigFieldPreference(
                     maxLines = 1,
                     onValueChange = { newValue ->
                         onValueChange(
-                            if (field.type == SourceConfigFieldType.NUMBER) {
+                            if (field.type == PluginConfigFieldType.NUMBER) {
                                 newValue.filter(Char::isDigit)
                             } else {
                                 newValue
@@ -88,6 +88,6 @@ fun SourceConfigFieldPreference(
     }
 }
 
-private fun summaryText(field: SourceConfigField, error: String?): String {
+private fun summaryText(field: PluginConfigField, error: String?): String {
     return listOfNotNull(field.summary.takeIf { it.isNotBlank() }, error).joinToString("\n")
 }

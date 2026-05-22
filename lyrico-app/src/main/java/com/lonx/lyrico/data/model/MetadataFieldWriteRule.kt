@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class MetadataFieldWriteRule(
-    val sourceId: String,
+    val pluginId: String,
     val fieldKey: String,
     val target: MetadataFieldTarget = MetadataFieldTarget.COMMENT,
     val mode: MetadataWriteMode = MetadataWriteMode.DISABLED,
@@ -56,8 +56,13 @@ enum class MetadataFieldTarget(
     SUBTITLE(R.string.label_subtitle),
     LYRICS(R.string.label_lyrics),
     COVER(R.string.label_cover),
+    LANGUAGE(R.string.label_language),
+    COPYRIGHT(R.string.label_copyright),
+    RATING(R.string.label_rating),
     REPLAY_GAIN_TRACK_GAIN(R.string.label_replaygain_track_gain),
     REPLAY_GAIN_TRACK_PEAK(R.string.label_replaygain_track_peak),
+    REPLAY_GAIN_ALBUM_GAIN(R.string.label_replaygain_album_gain),
+    REPLAY_GAIN_ALBUM_PEAK(R.string.label_replaygain_album_peak),
     REPLAY_GAIN_REFERENCE_LOUDNESS(R.string.label_replaygain_reference_loudness),
     CUSTOM(R.string.label_custom)
 }

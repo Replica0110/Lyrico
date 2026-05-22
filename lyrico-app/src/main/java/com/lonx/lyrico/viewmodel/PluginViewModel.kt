@@ -4,7 +4,9 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lonx.lyrico.data.model.MetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
 import com.lonx.lyrico.plugin.source.PluginImportSession
@@ -36,6 +38,7 @@ data class PluginUiState(
 
 class PluginViewModel(
     private val repository: SourcePluginRepository,
+    private val settingsRepository: SettingsRepository,
     private val installer: SourcePluginInstaller,
     private val pluginManager: PluginSearchSourceManager
 ) : ViewModel() {
@@ -112,6 +115,7 @@ class PluginViewModel(
             result.installed.forEach { plugin ->
                 pluginManager.invalidate(plugin.id)
             }
+            syncMetadataRules()
             if (result.installed.isEmpty()) {
                 error(result.failed.firstOrNull()?.reason ?: "No installable plugin found")
             }
@@ -206,11 +210,20 @@ class PluginViewModel(
             if (plugin != null) {
                 repository.uninstallPlugin(id)
                 pluginManager.invalidate(plugin.id)
+                settingsRepository.removePluginSettings(plugin.id)
                 File(plugin.pluginDir).deleteRecursively()
             }
         }
     }
 
+    private suspend fun syncMetadataRules() {
+        val sources = pluginManager.getEnabledSources()
+        val mergedRules = MetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
+            savedRules = settingsRepository.getMetadataFieldWriteRules(),
+            searchSources = sources
+        )
+        settingsRepository.saveMetadataFieldWriteRules(mergedRules)
+    }
 
     private companion object {
         const val ACTION_TIMEOUT_MS = 30_000L

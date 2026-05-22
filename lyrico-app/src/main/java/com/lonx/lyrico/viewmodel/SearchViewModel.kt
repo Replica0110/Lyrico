@@ -270,7 +270,7 @@ class SearchViewModel(
         val separator = settingsRepository.separator.first()
         val pageSize = settingsRepository.searchPageSize.first()
 
-        return sourceImpl.search(
+        return sourceImpl.searchSongs(
             keyword = keyword,
             page = 1,
             separator = separator,

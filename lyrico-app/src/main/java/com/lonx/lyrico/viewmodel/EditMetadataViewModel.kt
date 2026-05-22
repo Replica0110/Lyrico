@@ -278,17 +278,15 @@ class EditMetadataViewModel(
                             ScoredSearchResult(
                                 result = SongSearchResult(
                                     id = "",
+                                    pluginId = result.pluginId,
+                                    pluginName = result.pluginName,
                                     title = result.title.orEmpty(),
                                     artist = result.artist.orEmpty(),
                                     album = result.album.orEmpty(),
                                     duration = 0L,
-                                    source = result.source,
                                     date = result.date.orEmpty(),
-                                    trackerNumber = result.trackerNumber.orEmpty(),
+                                    trackNumber = result.trackerNumber.orEmpty(),
                                     picUrl = result.picUrl.orEmpty(),
-                                    extras = result.extras,
-                                    pluginId = result.pluginId,
-                                    pluginName = result.pluginName,
                                     fields = result.fields
                                 ),
                                 score = 1.0

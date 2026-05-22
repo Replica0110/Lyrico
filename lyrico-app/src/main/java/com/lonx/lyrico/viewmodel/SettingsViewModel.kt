@@ -15,7 +15,6 @@ import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.MetadataFieldWriteRule
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.model.lyrics.Source
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.toArtistSeparator
@@ -39,8 +38,8 @@ data class SettingsUiState(
     val romaEnabled: Boolean = false,
     val translationEnabled: Boolean = false,
     val ignoreShortAudio: Boolean = false,
-    val searchSourceOrder: List<Source> = emptyList(),
-    val enabledSearchSources: Set<Source> = emptySet(),
+    val searchSourceOrder: List<String> = emptyList(),
+    val enabledSearchSources: Set<String> = emptySet(),
     val searchPageSize: Int = 20,
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val monetEnable: Boolean = false,
@@ -55,7 +54,7 @@ data class SettingsUiState(
     /**
      * 返回按优先级排序且启用的搜索源列表
      */
-    val filteredSearchSources: List<Source>
+    val filteredSearchSources: List<String>
         get() = searchSourceOrder.filter { it in enabledSearchSources }
 }
 sealed class SettingsEvent {
@@ -189,13 +188,13 @@ class SettingsViewModel(
             settingsRepository.saveIgnoreShortAudio(enabled)
         }
     }
-    fun setSearchSourceOrder(sources: List<Source>) {
+    fun setSearchSourceOrder(sources: List<String>) {
         viewModelScope.launch {
             settingsRepository.saveSearchSourceOrder(sources)
         }
     }
 
-    fun setEnabledSearchSources(sources: Set<Source>) {
+    fun setEnabledSearchSources(sources: Set<String>) {
         viewModelScope.launch {
             settingsRepository.saveEnabledSearchSources(sources)
         }

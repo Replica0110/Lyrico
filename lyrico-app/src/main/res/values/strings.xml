@@ -7,7 +7,7 @@
     <string name="app_name" translatable="false">Lyrico</string>
     <string name="search_settings">Search Settings</string>
     <string name="plugin_manager_title">Plugins Manager</string>
-    <string name="search_source_priority_tip">Long press and drag to reorder search source priority. This affects the source order used in batch matching and the default source for single searches.</string>
+    <string name="search_source_priority_tip">Plugin order affects search and batch matching priority. Drag plugins to reorder them. Disabled plugins will not be used.</string>
 
 
     <!-- Search -->
@@ -228,11 +228,15 @@
     <string name="label_subtitle">Subtitle</string>
     <string name="plugin_config_title">Plugin Configuration</string>
     <string name="source_config_basic">Basic settings</string>
-    <string name="source_config_extra_metadata">Extra metadata writing</string>
+    <string name="source_config_extra_metadata">Metadata write rules</string>
+    <string name="source_config_metadata_rules">Metadata write rules</string>
+    <string name="source_config_write_mode">Write mode</string>
+    <string name="source_config_write_target">Write target</string>
+    <string name="source_config_custom_tag_key">Custom tag name</string>
     <string name="source_config_required_error">This field is required</string>
     <string name="source_config_save">Save</string>
     <string name="source_config_saved">Saved</string>
-    <string name="source_config_invalid_source">Invalid search source</string>
+    <string name="source_config_invalid_source">Invalid plugin</string>
     <string name="source_config_empty">No configurable items</string>
     <string name="label_track_number">Track Number</string>
     <string name="label_duration">Duration</string>

@@ -36,10 +36,7 @@ import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
-import com.lonx.lyrico.data.model.lyrics.Source
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
-import com.lonx.lyrico.data.model.lyrics.toSourceCsv
-import com.lonx.lyrico.data.model.lyrics.toSourceList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -77,10 +74,8 @@ object SettingsDefaults {
     const val LIMIT_LYRICS_INPUT_LINES = false
     val LOG_RETENTION_OPTION = LogRetentionOption.THIRTY_DAYS
 
-    // 搜索源顺序默认值
-    val SEARCH_SOURCE_ORDER = Source.entries.toList()
-    // 启用的搜索源默认值（默认启用所有源）
-    val DEFAULT_ENABLED_SEARCH_SOURCES = Source.entries.toSet()
+    val SEARCH_SOURCE_ORDER = emptyList<String>()
+    val DEFAULT_ENABLED_SEARCH_SOURCES = emptySet<String>()
     const val SEARCH_PAGE_SIZE = 10
 
     val THEME_MODE = ThemeMode.AUTO
@@ -232,19 +227,14 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.IGNORE_SHORT_AUDIO] ?: SettingsDefaults.IGNORE_SHORT_AUDIO
         }
 
-    override val searchSourceOrder: Flow<List<Source>>
+    override val searchSourceOrder: Flow<List<String>>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.SEARCH_SOURCE_ORDER].toSourceList()
+            preferences[PreferencesKeys.SEARCH_SOURCE_ORDER].csvToIds()
         }
 
-    override val enabledSearchSources: Flow<Set<Source>>
+    override val enabledSearchSources: Flow<Set<String>>
         get() = context.settingsDataStore.data.map { preferences ->
-            val enabledCsv = preferences[PreferencesKeys.ENABLED_SEARCH_SOURCES]
-            if (enabledCsv.isNullOrBlank()) {
-                Source.entries.toSet()
-            } else {
-                enabledCsv.split(",").mapNotNull { Source.fromNameOrNull(it) }.toSet()
-            }
+            preferences[PreferencesKeys.ENABLED_SEARCH_SOURCES].csvToIds().toSet()
         }
 
     override val searchPageSize: Flow<Int>
@@ -413,16 +403,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 .mapValues { (_, values) -> SourceRuntimeConfig(values) }
         }
 
-    override val sourceSettingsFlow: Flow<Map<Source, SourceRuntimeConfig>>
-        get() = sourceSettingsByIdFlow.map { settings ->
-            settings
-                .mapNotNull { (sourceId, config) ->
-                    val source = Source.fromIdOrNameOrNull(sourceId) ?: return@mapNotNull null
-                    source to config
-                }
-                .toMap()
-        }
-
     override suspend fun saveAlbumSortInfo(sortInfo: AlbumSortInfo) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.ALBUM_SORT_BY] = sortInfo.sortBy.name
@@ -479,17 +459,16 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun saveSearchSourceOrder(sources: List<Source>) {
+    override suspend fun saveSearchSourceOrder(sources: List<String>) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.SEARCH_SOURCE_ORDER] =
-                sources.toSourceCsv()
+                sources.idsToCsv()
         }
     }
 
-    override suspend fun saveEnabledSearchSources(sources: Set<Source>) {
+    override suspend fun saveEnabledSearchSources(sources: Set<String>) {
         context.settingsDataStore.edit { preferences ->
-            val csv = sources.joinToString(",") { it.name }
-            preferences[PreferencesKeys.ENABLED_SEARCH_SOURCES] = csv
+            preferences[PreferencesKeys.ENABLED_SEARCH_SOURCES] = sources.idsToCsv()
         }
     }
 
@@ -627,9 +606,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             ignoreShortAudio = prefs[PreferencesKeys.IGNORE_SHORT_AUDIO]
                 ?: SettingsDefaults.IGNORE_SHORT_AUDIO,
 
-            searchSourceOrder = (prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.toSourceCsv()).toSourceList().map { it.name },
+            searchSourceOrder = (prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.idsToCsv()).csvToIds(),
 
-            enabledSearchSources = (prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.toSourceCsv()).split(",").mapNotNull { Source.fromNameOrNull(it) }.map { it.name },
+            enabledSearchSources = (prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.idsToCsv()).csvToIds(),
 
             searchPageSize = prefs[PreferencesKeys.SEARCH_PAGE_SIZE]
                 ?: SettingsDefaults.SEARCH_PAGE_SIZE,
@@ -692,19 +671,18 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.translationEnabled?.let { prefs[PreferencesKeys.TRANSLATION_ENABLED] = it }
                 backup.ignoreShortAudio?.let { prefs[PreferencesKeys.IGNORE_SHORT_AUDIO] = it }
                 backup.searchSourceOrder?.let { list ->
-                    prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] = list.toSourceList().toSourceCsv()
+                    prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] = list.idsToCsv()
                 }
                 
                 // 处理启用的搜索源：如果为null或为空，默认启用所有源
                 if (backup.enabledSearchSources.isNullOrEmpty()) {
                     // 默认启用所有源
-                    val defaultEnabledCsv = SettingsDefaults.DEFAULT_ENABLED_SEARCH_SOURCES.joinToString(",") { it.name }
-                    prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] = defaultEnabledCsv
+                    prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] =
+                        SettingsDefaults.DEFAULT_ENABLED_SEARCH_SOURCES.idsToCsv()
                 } else {
                     // 使用导入的启用源列表，直接映射而不补齐缺失源
-                    val validSources = backup.enabledSearchSources.mapNotNull { Source.fromNameOrNull(it) }
-                    val csv = validSources.joinToString(",") { it.name }
-                    prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] = csv
+                    prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] =
+                        backup.enabledSearchSources.idsToCsv()
                 }
                 
                 backup.searchPageSize?.let { prefs[PreferencesKeys.SEARCH_PAGE_SIZE] = it }
@@ -844,10 +822,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun saveSourceSettings(source: Source, values: Map<String, String>) {
-        saveSourceSettings(source.id, values)
-    }
-
     override suspend fun updateCharacterMappingInRule(ruleId: String, charMappings: Map<String, String?>) {
         val currentConfig = characterMappingConfig.first()
         val updatedRules = currentConfig.rules.map { rule ->
@@ -873,8 +847,19 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         return sourceSettingsByIdFlow.first()[sourceId.toStableSourceId()] ?: SourceRuntimeConfig()
     }
 
-    override suspend fun getSourceSettings(source: Source): SourceRuntimeConfig {
-        return getSourceSettings(source.id)
+    override suspend fun removePluginSettings(pluginId: String) {
+        val stablePluginId = pluginId.toStableSourceId()
+        context.settingsDataStore.edit { preferences ->
+            val currentStore = decodeSourceSettingsStore(preferences[PreferencesKeys.SOURCE_SETTINGS])
+            preferences[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(
+                currentStore.copy(values = currentStore.values - stablePluginId)
+            )
+            val rules = decodeMetadataFieldWriteRules(
+                preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES].orEmpty()
+            )
+            preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES] =
+                jsonFormatter.encodeToString(rules.filterNot { it.pluginId == stablePluginId })
+        }
     }
 
     override suspend fun saveArtistSplitConfig(config: ArtistSplitConfig) {
@@ -928,7 +913,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     private fun decodeMetadataFieldWriteRules(raw: String): List<MetadataFieldWriteRule> {
         if (raw.isBlank()) return emptyList()
         return runCatching {
-            jsonFormatter.decodeFromString<List<MetadataFieldWriteRule>>(raw)
+            jsonFormatter.decodeFromString<List<MetadataFieldWriteRule>>(
+                raw.replace("\"sourceId\"", "\"pluginId\"")
+            )
         }.getOrDefault(emptyList())
     }
 
@@ -944,6 +931,22 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     }
 
     private fun String.toStableSourceId(): String {
-        return Source.fromIdOrNameOrNull(this)?.id ?: trim()
+        return trim()
+    }
+
+    private fun String?.csvToIds(): List<String> {
+        return this
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.distinct()
+            .orEmpty()
+    }
+
+    private fun Iterable<String>.idsToCsv(): String {
+        return map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .joinToString(",")
     }
 }

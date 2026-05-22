@@ -86,7 +86,7 @@ class MatchMetadataProcessor(
                 coroutineScope {
                     async(Dispatchers.IO) {
                         try {
-                            val results = source.search(
+                            val results = source.searchSongs(
                                 keyword = query,
                                 separator = separator,
                                 pageSize = 2
@@ -172,7 +172,7 @@ class MatchMetadataProcessor(
         val newArtist = resolveValue(plan, BatchMatchField.ARTIST, finalMatch.result.artist)
         val newAlbum = resolveValue(plan, BatchMatchField.ALBUM, finalMatch.result.album)
         val newDate = resolveValue(plan, BatchMatchField.DATE, finalMatch.result.date)
-        val newTrack = resolveValue(plan, BatchMatchField.TRACK_NUMBER, finalMatch.result.trackerNumber)
+        val newTrack = resolveValue(plan, BatchMatchField.TRACK_NUMBER, finalMatch.result.trackNumber)
         val newGenre = resolveValue(plan, BatchMatchField.GENRE, null)
         val newLyricsResolved = resolveValue(plan, BatchMatchField.LYRICS, newLyrics)
         val newComment = resolveValue(plan, BatchMatchField.COMMENT,
@@ -281,8 +281,13 @@ class MatchMetadataProcessor(
             com.lonx.lyrico.data.model.MetadataFieldTarget.SUBTITLE -> song.comment.isNullOrBlank()
             com.lonx.lyrico.data.model.MetadataFieldTarget.LYRICS -> song.lyrics.isNullOrBlank()
             com.lonx.lyrico.data.model.MetadataFieldTarget.COVER -> !hasEmbeddedCover(song)
+            com.lonx.lyrico.data.model.MetadataFieldTarget.LANGUAGE -> true
+            com.lonx.lyrico.data.model.MetadataFieldTarget.COPYRIGHT -> true
+            com.lonx.lyrico.data.model.MetadataFieldTarget.RATING -> true
             com.lonx.lyrico.data.model.MetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN -> song.replayGainTrackGain.isNullOrBlank()
             com.lonx.lyrico.data.model.MetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK -> song.replayGainTrackPeak.isNullOrBlank()
+            com.lonx.lyrico.data.model.MetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN -> true
+            com.lonx.lyrico.data.model.MetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK -> true
             com.lonx.lyrico.data.model.MetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS -> song.replayGainReferenceLoudness.isNullOrBlank()
             com.lonx.lyrico.data.model.MetadataFieldTarget.CUSTOM -> true
         }

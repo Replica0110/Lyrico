@@ -1,15 +1,15 @@
 package com.lonx.lyrico.plugin.source
 
 import android.util.Log
+import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginManifest
+import com.lonx.lyrico.data.model.plugin.PluginMetadataField
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.lyrics.SearchResultMetadataField
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 import com.lonx.lyrico.data.model.lyrics.SearchSourceCapability
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
-import com.lonx.lyrico.data.model.lyrics.SourceConfigField
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -29,8 +29,8 @@ class ScriptSearchSource(
     override val capabilities: Set<SearchSourceCapability> =
         manifest.capabilities.mapTo(mutableSetOf()) { it.toSearchSourceCapability() }
             .ifEmpty { setOf(SearchSourceCapability.SEARCH_SONGS) }
-    override val metadataFields: List<SearchResultMetadataField> =
-        manifest.metadataFields.map { it.toSearchResultMetadataField() }
+    override val configFields: List<PluginConfigField> = manifest.configFields
+    override val metadataFields: List<PluginMetadataField> = manifest.metadataFields
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
         Thread(
             null,
@@ -50,15 +50,11 @@ class ScriptSearchSource(
     }
     private val runtime: PluginJsRuntime by runtimeDelegate
 
-    override fun getConfigFields(): List<SourceConfigField> {
-        return manifest.configFields.map { it.toSourceConfigField() }
-    }
-
     override fun applyConfig(config: SourceRuntimeConfig) {
         this.config = config
     }
 
-    override suspend fun search(
+    override suspend fun searchSongs(
         keyword: String,
         page: Int,
         separator: String,
@@ -104,7 +100,7 @@ class ScriptSearchSource(
         }.getOrNull()
     }
 
-    override suspend fun searchCover(keyword: String, pageSize: Int): List<SongSearchResult> =
+    override suspend fun searchCovers(keyword: String, pageSize: Int): List<SongSearchResult> =
         withContext(quickJsDispatcher) {
             runCatching {
                 if (SearchSourceCapability.SEARCH_COVERS !in capabilities) {

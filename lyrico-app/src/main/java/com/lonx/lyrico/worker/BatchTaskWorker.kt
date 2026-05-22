@@ -385,7 +385,7 @@ class BatchTaskWorker(
             appendLine("fields=${config.matchConfig.fields.toSortedMap(compareBy { it.name }).entries.joinToString(", ") { "${it.key.name}:${it.value.name}" }}")
             val metadataRules = config.metadataFieldWriteRules
                 .filter { it.mode != MetadataWriteMode.DISABLED }
-                .map { "${it.sourceId}.${it.normalizedKey}:${it.mode.name}" }
+                .map { "${it.pluginId}.${it.normalizedKey}:${it.mode.name}" }
             appendLine("metadataFieldWriteRules=${metadataRules.joinToString(", ").ifBlank { "(none)" }}")
         }.trimEnd()
     }

@@ -15,7 +15,6 @@ import com.lonx.lyrico.data.model.ArtistSortInfo
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.viewmodel.SortInfo
-import com.lonx.lyrico.data.model.lyrics.Source
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import kotlinx.coroutines.flow.Flow
 
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.Flow
 interface SettingsRepository {
     val batchMatchConfig: Flow<BatchMatchConfig>
     val metadataFieldWriteRules: Flow<List<MetadataFieldWriteRule>>
-    val sourceSettingsFlow: Flow<Map<Source, SourceRuntimeConfig>>
     val sourceSettingsByIdFlow: Flow<Map<String, SourceRuntimeConfig>>
 
     val renameFormat: Flow<String>
@@ -42,8 +40,8 @@ interface SettingsRepository {
     val translationEnabled: Flow<Boolean>
     val checkUpdateEnabled: Flow<Boolean>
     val ignoreShortAudio: Flow<Boolean>
-    val searchSourceOrder: Flow<List<Source>>
-    val enabledSearchSources: Flow<Set<Source>>
+    val searchSourceOrder: Flow<List<String>>
+    val enabledSearchSources: Flow<Set<String>>
     val searchPageSize: Flow<Int>
     val themeMode: Flow<ThemeMode>
     val keyColor: Flow<KeyColor>
@@ -76,8 +74,8 @@ interface SettingsRepository {
     suspend fun saveTranslationEnabled(enabled: Boolean)
     suspend fun saveIgnoreShortAudio(enabled: Boolean)
     suspend fun saveLastScanTime(time: Long)
-    suspend fun saveSearchSourceOrder(sources: List<Source>)
-    suspend fun saveEnabledSearchSources(sources: Set<Source>)
+    suspend fun saveSearchSourceOrder(sources: List<String>)
+    suspend fun saveEnabledSearchSources(sources: Set<String>)
     suspend fun saveSearchPageSize(size: Int)
     suspend fun saveThemeMode(mode: ThemeMode)
     suspend fun saveKeyColor(selectedKeyColor: KeyColor)
@@ -93,9 +91,8 @@ interface SettingsRepository {
     suspend fun saveBatchMatchConfig(config: BatchMatchConfig)
     suspend fun saveMetadataFieldWriteRules(rules: List<MetadataFieldWriteRule>)
     suspend fun saveSourceSettings(sourceId: String, values: Map<String, String>)
-    suspend fun saveSourceSettings(source: Source, values: Map<String, String>)
     suspend fun getSourceSettings(sourceId: String): SourceRuntimeConfig
-    suspend fun getSourceSettings(source: Source): SourceRuntimeConfig
+    suspend fun removePluginSettings(pluginId: String)
     suspend fun saveRenameFormat(format: String)
     suspend fun saveCharacterMappingConfig(config: CharacterMappingConfig)
     // 更新指定规则中的字符映射

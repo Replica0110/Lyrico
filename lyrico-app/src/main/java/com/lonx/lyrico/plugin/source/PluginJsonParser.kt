@@ -37,20 +37,18 @@ class PluginJsonParser(
             val album = obj.string("album", "albumName").orEmpty()
             val duration = obj.long("duration", "durationMs", "duration_ms") ?: 0L
             val fields = obj.stringMap("fields", "metadata").orEmpty()
-            val extras = obj.stringMap("extras").orEmpty()
 
             SongSearchResult(
                 id = id,
+                pluginId = pluginId,
+                pluginName = pluginName,
                 title = title,
                 artist = artist,
                 album = album,
                 duration = duration,
                 date = obj.string("date", "releaseDate", "release_date").orEmpty(),
-                trackerNumber = obj.string("trackNumber", "trackerNumber", "track_number").orEmpty(),
+                trackNumber = obj.string("trackNumber", "trackerNumber", "track_number").orEmpty(),
                 picUrl = obj.string("picUrl", "coverUrl", "cover_url", "artworkUrl").orEmpty(),
-                extras = extras,
-                pluginId = pluginId,
-                pluginName = pluginName,
                 fields = fields
             )
         }

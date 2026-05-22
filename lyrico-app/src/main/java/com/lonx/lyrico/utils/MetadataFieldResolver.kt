@@ -64,10 +64,10 @@ class MetadataFieldResolver(
     ): String? {
         return scoredResults
             .asSequence()
-            .filter { it.result.pluginId == rule.sourceId }
+            .filter { it.result.pluginId == rule.pluginId }
             .filter { source ->
                 source.source?.metadataFields
-                    ?.any { it.key == rule.normalizedKey && it.writeable } != false
+                    ?.any { it.key == rule.normalizedKey && it.writeable && !it.internal } != false
             }
             .filter { it.score >= minimumScore }
             .sortedByDescending { it.score }
@@ -97,8 +97,13 @@ class MetadataFieldResolver(
             MetadataFieldTarget.SUBTITLE -> if (canWriteText(rule.mode, currentTagData?.comment ?: currentSong.comment)) currentOutput.copy(comment = value) else currentOutput
             MetadataFieldTarget.LYRICS -> if (canWriteText(rule.mode, currentTagData?.lyrics ?: currentSong.lyrics)) currentOutput.copy(lyrics = value) else currentOutput
             MetadataFieldTarget.COVER -> if (canWriteText(rule.mode, currentTagData?.picUrl)) currentOutput.copy(picUrl = value) else currentOutput
+            MetadataFieldTarget.LANGUAGE -> if (canWriteText(rule.mode, currentTagData?.language)) currentOutput.copy(language = value) else currentOutput
+            MetadataFieldTarget.COPYRIGHT -> if (canWriteText(rule.mode, currentTagData?.copyright)) currentOutput.copy(copyright = value) else currentOutput
+            MetadataFieldTarget.RATING -> if (canWriteText(rule.mode, currentTagData?.rating?.toString())) currentOutput.copy(rating = value.toIntOrNull()) else currentOutput
             MetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN -> if (canWriteText(rule.mode, currentTagData?.replayGainTrackGain ?: currentSong.replayGainTrackGain)) currentOutput.copy(replayGainTrackGain = value) else currentOutput
             MetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK -> if (canWriteText(rule.mode, currentTagData?.replayGainTrackPeak ?: currentSong.replayGainTrackPeak)) currentOutput.copy(replayGainTrackPeak = value) else currentOutput
+            MetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN -> if (canWriteText(rule.mode, currentTagData?.replayGainAlbumGain)) currentOutput.copy(replayGainAlbumGain = value) else currentOutput
+            MetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK -> if (canWriteText(rule.mode, currentTagData?.replayGainAlbumPeak)) currentOutput.copy(replayGainAlbumPeak = value) else currentOutput
             MetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS -> if (canWriteText(rule.mode, currentTagData?.replayGainReferenceLoudness ?: currentSong.replayGainReferenceLoudness)) currentOutput.copy(replayGainReferenceLoudness = value) else currentOutput
             MetadataFieldTarget.CUSTOM -> {
                 val key = rule.customTagKey?.takeIf { it.isNotBlank() } ?: rule.normalizedKey

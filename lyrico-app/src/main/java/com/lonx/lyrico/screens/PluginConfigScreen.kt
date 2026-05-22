@@ -40,8 +40,8 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
-@Destination<RootGraph>(route = "search_source_config")
-fun SearchSourceConfigScreen(
+@Destination<RootGraph>(route = "plugin_config")
+fun PluginConfigScreen(
     sourceName: String,
     navigator: DestinationsNavigator
 ) {
@@ -50,6 +50,8 @@ fun SearchSourceConfigScreen(
     val context = LocalContext.current
     val topAppBarScrollBehavior = MiuixScrollBehavior()
 
+
+    val requiredMessage = stringResource(R.string.source_config_required_error)
     LaunchedEffect(sourceName) {
         viewModel.load(sourceName)
     }
@@ -61,7 +63,7 @@ fun SearchSourceConfigScreen(
         }
     }
 
-    val title = uiState.title.ifBlank { stringResource(R.string.search_source_config) }
+    val title = uiState.title.ifBlank { stringResource(R.string.plugin_config_title) }
 
     Scaffold(
         topBar = {
@@ -78,7 +80,7 @@ fun SearchSourceConfigScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            viewModel.save(context.getString(R.string.source_config_required_error))
+                            viewModel.save(requiredMessage)
                         }
                     ) {
                         Icon(

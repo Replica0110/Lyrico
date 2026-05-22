@@ -31,6 +31,6 @@ interface SourcePluginDao {
     @Query("UPDATE source_plugins SET sortOrder = :sortOrder, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateSortOrder(id: String, sortOrder: Int, updatedAt: Long)
 
-    @Delete
-    suspend fun delete(plugin: SourcePluginEntity)
+    @Query("DELETE FROM source_plugins WHERE id = :id")
+    suspend fun delete(id: String)
 }

@@ -35,7 +35,7 @@ class SourcePluginRepositoryImpl(
         dao.updateSortOrder(id = id, sortOrder = sortOrder, updatedAt = System.currentTimeMillis())
     }
 
-    override suspend fun deletePlugin(plugin: SourcePluginEntity) {
-        dao.delete(plugin)
+    override suspend fun uninstallPlugin(id: String) {
+        dao.delete(id)
     }
 }

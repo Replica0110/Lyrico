@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
-import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
 import com.lonx.lyrico.plugin.source.SourcePluginInstaller
@@ -33,7 +32,6 @@ data class PluginUiState(
 
 class PluginViewModel(
     private val repository: SourcePluginRepository,
-    private val settingsRepository: SettingsRepository,
     private val installer: SourcePluginInstaller,
     private val pluginManager: PluginSearchSourceManager
 ) : ViewModel() {
@@ -78,56 +76,6 @@ class PluginViewModel(
         }
     }
 
-    fun deletePlugin(plugin: SourcePluginEntity) {
-        runBusy("Plugin deleted") {
-            repository.deletePlugin(plugin)
-            pluginManager.invalidate(plugin.id)
-            File(plugin.pluginDir).deleteRecursively()
-        }
-    }
-
-    fun runSmokeTest(pluginId: String? = null) {
-        runBusy("Smoke test finished") {
-            val sources = pluginManager.getEnabledSources()
-            val source = pluginId
-                ?.let { id -> sources.firstOrNull { it.id == id } }
-                ?: sources.firstOrNull()
-                ?: error("No enabled plugin source")
-            source.applyConfig(settingsRepository.getSourceSettings(source.id))
-
-            val songs = source.search(
-                keyword = "爱情转移",
-                page = 1,
-                separator = "/",
-                pageSize = 5
-            )
-            val first = songs.firstOrNull()
-            val lyrics = first?.let { source.getLyrics(it) }
-            val covers = source.searchCover(keyword = "爱情转移", pageSize = 3)
-
-            buildString {
-                appendLine("Source: ${source.name} (${source.id})")
-                appendLine("searchSongs: ${songs.size} result(s)")
-                first?.let {
-                    appendLine("first: ${it.title} - ${it.artist}")
-                    appendLine("fields: ${it.normalizedFields()}")
-                }
-                appendLine(
-                    "getLyrics: " + when {
-                        lyrics == null -> "null"
-                        lyrics.rawPlainLrc.isNotBlank() -> lyrics.rawPlainLrc
-                        else -> "${lyrics.original.size} structured line(s)"
-                    }
-                )
-                appendLine("searchCovers: ${covers.size} result(s)")
-                covers.firstOrNull()?.let { appendLine("cover: ${it.picUrl}") }
-            }.also { result ->
-                withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(smokeResult = result) }
-                }
-            }
-        }
-    }
 
     private fun runBusy(successMessage: String, block: suspend () -> Unit) {
         viewModelScope.launch {
@@ -189,6 +137,16 @@ class PluginViewModel(
         }
     }
 
+    fun uninstallPlugin(id: String) {
+        runBusy("Plugin deleted") {
+            val plugin = repository.getPlugin(id)
+            if (plugin != null) {
+                repository.uninstallPlugin(id)
+                pluginManager.invalidate(plugin.id)
+                File(plugin.pluginDir).deleteRecursively()
+            }
+        }
+    }
 
 
     private companion object {

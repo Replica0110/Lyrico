@@ -11,5 +11,5 @@ interface SourcePluginRepository {
     suspend fun upsertPlugin(plugin: SourcePluginEntity)
     suspend fun setEnabled(id: String, enabled: Boolean)
     suspend fun updateSortOrder(id: String, sortOrder: Int)
-    suspend fun deletePlugin(plugin: SourcePluginEntity)
+    suspend fun uninstallPlugin(id: String)
 }

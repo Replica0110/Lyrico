@@ -54,8 +54,8 @@ import com.ramcosta.composedestinations.generated.destinations.ArtistSplitSettin
 import com.ramcosta.composedestinations.generated.destinations.BatchTaskListDestination
 import com.ramcosta.composedestinations.generated.destinations.EditFieldVisibilityDestination
 import com.ramcosta.composedestinations.generated.destinations.FolderManagerDestination
+import com.ramcosta.composedestinations.generated.destinations.PluginManagerDestination
 import com.ramcosta.composedestinations.generated.destinations.QuickjsTestDestination
-import com.ramcosta.composedestinations.generated.destinations.SearchSourcePriorityDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -413,8 +413,8 @@ fun SettingsScreen(
                 SmallTitle(text = stringResource(R.string.section_search))
                 Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                     ArrowPreference(
-                        title = stringResource(R.string.search_source_priority),
-                        onClick = { navigator.navigate(SearchSourcePriorityDestination()) }
+                        title = stringResource(R.string.plugin_manager_title),
+                        onClick = { navigator.navigate(PluginManagerDestination()) }
                     )
                     ArrowPreference(
                         title = stringResource(R.string.search_limit),

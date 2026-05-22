@@ -6,7 +6,7 @@
     <string name="am_source_name">Apple Music</string>
     <string name="app_name" translatable="false">Lyrico</string>
     <string name="search_settings">Search Settings</string>
-    <string name="search_source_priority">Search Source Priority</string>
+    <string name="plugin_manager_title">Plugins Manager</string>
     <string name="search_source_priority_tip">Long press and drag to reorder search source priority. This affects the source order used in batch matching and the default source for single searches.</string>
 
 
@@ -226,7 +226,7 @@
     <string name="label_genre">Genre</string>
     <string name="label_date">Date</string>
     <string name="label_subtitle">Subtitle</string>
-    <string name="search_source_config">Search source settings</string>
+    <string name="plugin_config_title">Plugin Configuration</string>
     <string name="source_config_basic">Basic settings</string>
     <string name="source_config_extra_metadata">Extra metadata writing</string>
     <string name="source_config_required_error">This field is required</string>
@@ -693,5 +693,10 @@
     <string name="plugin_empty">No Plugin Installed</string>
     <string name="plugin_import_archive">Import Plugin</string>
 
-
+    <string name="plugin_config">Configure</string>
+    <string name="plugin_uninstall">Uninstall</string>
+    <string name="plugin_uninstall_confirm_message">Are you sure you want to uninstall "%1$s"? This action cannot be undone.</string>
+    <string name="plugin_update_source_configured">Update source</string>
+    <string name="plugin_version_with_value">Version: %1$s</string>
+    <string name="plugin_author_with_value">Author: %1$s</string>
 </resources>

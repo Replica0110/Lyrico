@@ -6,7 +6,7 @@
     <string name="soda_source_name">汽水音乐</string>
     <string name="am_source_name">Apple Music</string>
     <string name="search_settings">搜索设置</string>
-    <string name="search_source_priority">搜索源优先级</string>
+    <string name="plugin_manager_title">插件管理</string>
     <string name="search_source_priority_tip">长按拖动以调整搜索源的优先级顺序，优先级影响批量匹配时使用的搜索源顺序，以及单曲搜索时的默认源</string>
 
     <!-- 搜索 -->
@@ -230,7 +230,7 @@
     <string name="label_genre">流派</string>
     <string name="label_date">日期</string>
     <string name="label_subtitle">副标题</string>
-    <string name="search_source_config">搜索源配置</string>
+    <string name="plugin_config_title">插件配置</string>
     <string name="source_config_basic">基础配置</string>
     <string name="source_config_extra_metadata">扩展元数据写入</string>
     <string name="source_config_required_error">此项为必填项</string>
@@ -704,4 +704,10 @@
     <string name="plugin_empty">未安装插件</string>
     <string name="plugin_import_archive">导入插件</string>
 
+    <string name="plugin_config">配置</string>
+    <string name="plugin_uninstall">卸载</string>
+    <string name="plugin_uninstall_confirm_message">确定要卸载"%1$s"吗？此操作无法撤销。</string>
+    <string name="plugin_update_source_configured">更新源</string>
+    <string name="plugin_version_with_value">版本：%1$s</string>
+    <string name="plugin_author_with_value">作者：%1$s</string>
 </resources>

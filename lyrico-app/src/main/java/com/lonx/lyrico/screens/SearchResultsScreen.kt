@@ -362,6 +362,7 @@ fun SearchResultsScreen(
 
     WindowBottomSheet(
         show = showLyricsSheet,
+        enableNestedScroll = false,
         onDismissRequest = { showLyricsSheet = false },
         onDismissFinished = { viewModel.clearLyrics() },
         title = song?.title ?: "",

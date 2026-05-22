@@ -5,10 +5,8 @@ interface SearchSource {
     val name: String
     val capabilities: Set<SearchSourceCapability>
         get() = SearchSourceCapability.entries.toSet()
-    val extraFields: List<SearchResultExtraField>
+    val metadataFields: List<SearchResultMetadataField>
         get() = emptyList()
-    val metadataFields: List<SearchResultExtraField>
-        get() = extraFields
 
     fun getConfigFields(): List<SourceConfigField> = emptyList()
 
@@ -25,7 +23,7 @@ enum class SearchSourceCapability {
     SEARCH_COVERS
 }
 
-object SearchResultExtraKeys {
+object SearchResultMetadataKeys {
     const val NETEASE_163_KEY = "netease_163_key"
     const val REPLAY_GAIN_TRACK_GAIN = "replaygain_track_gain"
     const val REPLAY_GAIN_TRACK_PEAK = "replaygain_track_peak"

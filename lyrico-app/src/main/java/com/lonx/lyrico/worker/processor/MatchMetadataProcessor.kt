@@ -4,11 +4,9 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchField
 import com.lonx.lyrico.data.model.BatchMatchMode
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.MetadataFieldWriteRule
 import com.lonx.lyrico.data.model.MetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.ScoredSearchResult
-import com.lonx.lyrico.data.model.toMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
@@ -53,9 +51,7 @@ class MatchMetadataProcessor(
         val song = songRepository.getSongByUri(item.songUri)
             ?: throw BatchTaskSkippedException("Song not found")
 
-        val metadataRules = config.metadataWriteRules.takeIf { it.isNotEmpty() }
-            ?: config.extraWriteRules.map { it.toMetadataFieldWriteRule() }
-        val plan = buildPlan(matchConfig, metadataRules, song, sources)
+        val plan = buildPlan(matchConfig, config.metadataFieldWriteRules, song, sources)
         if (!plan.requiresSearch) {
             throw BatchTaskSkippedException("No fields need processing")
         }
@@ -195,16 +191,16 @@ class MatchMetadataProcessor(
             picUrl = picUrl,
             comment = newComment,
         )
-        val extraTagData = metadataFieldResolver.resolve(
+        val metadataTagData = metadataFieldResolver.resolve(
             currentSong = song,
             scoredResults = allScoredResults,
-            rules = plan.extraRules
+            rules = plan.metadataRules
         )
-        val tagDataToWrite = metadataFieldResolver.mergeNonNull(standardTagData, extraTagData)
+        val tagDataToWrite = metadataFieldResolver.mergeNonNull(standardTagData, metadataTagData)
 
         val isEffectivelyEmpty = newTitle == null && newArtist == null && newAlbum == null &&
                 newGenre == null && newDate == null && newTrack == null &&
-                newLyricsResolved == null && picUrl == null && newComment == null && extraTagData.isEmpty()
+                newLyricsResolved == null && picUrl == null && newComment == null && metadataTagData.isEmpty()
 
         if (isEffectivelyEmpty) {
             throw BatchTaskSkippedException("No fields to update")
@@ -222,19 +218,19 @@ class MatchMetadataProcessor(
 
     private suspend fun buildPlan(
         matchConfig: BatchMatchConfig,
-        extraRules: List<MetadataFieldWriteRule>,
+        metadataRules: List<MetadataFieldWriteRule>,
         song: SongEntity,
         sources: List<SearchSource>
     ): MatchMetadataPlan {
         val standardFields = matchConfig.fields.mapNotNull { (field, mode) ->
             if (shouldUpdateField(field, mode, song)) field else null
         }.toSet()
-        val applicableExtraRules = MetadataFieldWriteRuleFactory.mergeWithDeclaredFields(extraRules, sources)
-            .filter { shouldApplyExtraRule(it, song) }
+        val applicableMetadataRules = MetadataFieldWriteRuleFactory.mergeWithDeclaredFields(metadataRules, sources)
+            .filter { shouldApplyMetadataRule(it, song) }
 
         return MatchMetadataPlan(
             standardFields = standardFields,
-            extraRules = applicableExtraRules
+            metadataRules = applicableMetadataRules
         )
     }
 
@@ -263,7 +259,7 @@ class MatchMetadataProcessor(
         }.getOrDefault(false)
     }
 
-    private suspend fun shouldApplyExtraRule(
+    private suspend fun shouldApplyMetadataRule(
         rule: MetadataFieldWriteRule,
         song: SongEntity
     ): Boolean {
@@ -313,10 +309,10 @@ class MatchMetadataProcessor(
 
 private data class MatchMetadataPlan(
     val standardFields: Set<BatchMatchField>,
-    val extraRules: List<MetadataFieldWriteRule>
+    val metadataRules: List<MetadataFieldWriteRule>
 ) {
     val requiresSearch: Boolean
-        get() = standardFields.isNotEmpty() || extraRules.isNotEmpty()
+        get() = standardFields.isNotEmpty() || metadataRules.isNotEmpty()
 
     val shouldFetchLyrics: Boolean
         get() = BatchMatchField.LYRICS in standardFields
@@ -330,8 +326,7 @@ data class MatchMetadataTaskConfig(
     val matchConfig: BatchMatchConfig,
     val separator: String,
     val enabledSourceOrderIds: List<String>,
-    val extraWriteRules: List<ExtraMetadataWriteRule> = emptyList(),
-    val metadataWriteRules: List<MetadataFieldWriteRule> = emptyList(),
+    val metadataFieldWriteRules: List<MetadataFieldWriteRule> = emptyList(),
     val sourceSettings: Map<String, Map<String, String>> = emptyMap(),
     val concurrency: Int = 3
 )

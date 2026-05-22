@@ -256,7 +256,7 @@ class EditMetadataViewModel(
                     )
                 )
             }
-            // 从 extras 解析 ReplayGain
+            // Resolve plugin-declared metadata fields.
             val standardTagData = current.copy(
                 title = result.title?.takeIf { it.isNotBlank() } ?: current.title,
                 artist = result.artist?.takeIf { it.isNotBlank() } ?: current.artist,
@@ -268,7 +268,7 @@ class EditMetadataViewModel(
                 picUrl = result.picUrl?.takeIf { it.isNotBlank() } ?: current.picUrl,
                 comment = result.normalizedFields()["subtitle"]?.takeIf { it.isNotBlank() } ?: current.comment,
             )
-            val extraTagData = currentSong?.let { song ->
+            val metadataTagData = currentSong?.let { song ->
                 if (result.pluginId.isBlank()) {
                     AudioTagData()
                 } else {
@@ -304,7 +304,7 @@ class EditMetadataViewModel(
             } ?: AudioTagData()
             state.copy(
                 isEditing = true,
-                editingTagData = metadataFieldResolver.mergeNonNull(standardTagData, extraTagData),
+                editingTagData = metadataFieldResolver.mergeNonNull(standardTagData, metadataTagData),
                 coverUri = result.picUrl?.takeIf { it.isNotBlank() }
             )
         }

@@ -13,6 +13,8 @@ data class PluginManifest(
     val description: String = "",
     val apiVersion: Int,
     val entry: String = "source.js",
+    val includeDirs: List<String> = emptyList(),
+    val icon: String? = null,
     val capabilities: Set<PluginCapability> = emptySet(),
     val requiredHostApis: Set<String> = emptySet(),
     val configFields: List<PluginConfigField> = emptyList(),

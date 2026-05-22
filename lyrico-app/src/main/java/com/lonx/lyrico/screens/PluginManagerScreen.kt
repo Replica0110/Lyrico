@@ -1,6 +1,7 @@
 package com.lonx.lyrico.screens
 
 import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
@@ -8,6 +9,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,15 +19,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,12 +47,14 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.plugin.source.PluginVersionConflict
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.lonx.lyrico.viewmodel.PluginViewModel
@@ -60,6 +67,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -87,6 +95,7 @@ fun PluginManagerScreen(
     val viewModel: PluginViewModel = koinViewModel()
     val plugins by viewModel.plugins.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val pendingImport = uiState.pendingImport
     val context: Context = LocalContext.current
     var currentList by remember(plugins) { mutableStateOf(plugins) }
     val lazyListState = rememberLazyListState()
@@ -102,6 +111,11 @@ fun PluginManagerScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.importPlugin(context, it) }
+    }
+    LaunchedEffect(uiState.messageVersion) {
+        if (uiState.message.isNotBlank()) {
+            Toast.makeText(context, uiState.message, Toast.LENGTH_SHORT).show()
+        }
     }
     var showUninstallDialog by rememberSaveable { mutableStateOf(false) }
     var pendingUninstallPluginId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -239,6 +253,120 @@ fun PluginManagerScreen(
             pendingUninstallPluginId = null
         }
     )
+
+    YesNoDialog(
+        show = pendingImport != null,
+        title = "发现插件包",
+        summary = pendingImport?.let { session ->
+            "发现 ${session.candidates.size} 个可安装插件，${session.failed.size} 个无法安装"
+        },
+        content = {
+            val selectedRoots = uiState.selectedImportRoots
+            pendingImport?.let { session ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        items = session.candidates,
+                        key = { candidate -> candidate.relativeRootInArchive }
+                    ) { candidate ->
+                        val selected = candidate.relativeRootInArchive in selectedRoots
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    viewModel.setImportCandidateSelected(
+                                        candidate.relativeRootInArchive,
+                                        !selected
+                                    )
+                                }
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Checkbox(
+                                state = if (selected) ToggleableState.On else ToggleableState.Off,
+                                onClick = {
+                                    viewModel.setImportCandidateSelected(
+                                        candidate.relativeRootInArchive,
+                                        !selected
+                                    )
+                                }
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = candidate.manifest.name,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight(600),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = candidate.manifest.id,
+                                    fontSize = 12.sp,
+                                    color = colorScheme.onSurfaceVariantSummary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = buildPluginPreviewDetail(candidate),
+                                    fontSize = 12.sp,
+                                    color = colorScheme.onSurfaceVariantSummary
+                                )
+                            }
+                        }
+                    }
+
+                    if (session.failed.isNotEmpty()) {
+                        item("failed-title") {
+                            Text(
+                                text = "无法安装",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight(600),
+                                color = colorScheme.error,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                        items(
+                            items = session.failed,
+                            key = { failed -> "${failed.rootPath}:${failed.reason}" }
+                        ) { failed ->
+                            Text(
+                                text = "${failed.rootPath}: ${failed.reason}",
+                                fontSize = 12.sp,
+                                color = colorScheme.error
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        onDismissRequest = {
+            viewModel.dismissPendingImport()
+        },
+        onDismissFinished = {},
+        onConfirm = {
+            viewModel.installPendingImport()
+        },
+        confirmText = "安装"
+    )
+}
+
+private fun buildPluginPreviewDetail(
+    candidate: com.lonx.lyrico.plugin.source.PluginInstallCandidate
+): String {
+    val conflict = when (candidate.versionConflict) {
+        PluginVersionConflict.NONE -> "新安装"
+        PluginVersionConflict.UPDATE -> "更新 ${candidate.existingPlugin?.versionName.orEmpty()} -> ${candidate.manifest.versionName}"
+        PluginVersionConflict.OVERWRITE -> "覆盖相同版本 ${candidate.manifest.versionName}"
+        PluginVersionConflict.DOWNGRADE -> "降级 ${candidate.existingPlugin?.versionName.orEmpty()} -> ${candidate.manifest.versionName}"
+    }
+    val includeDirs = candidate.manifest.includeDirs.joinToString().ifBlank { "无" }
+    return "版本 ${candidate.manifest.versionName} | $conflict\n路径 ${candidate.relativeRootInArchive}\nincludeDirs: $includeDirs"
 }
 
 

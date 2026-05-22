@@ -182,7 +182,7 @@ class BatchMatchViewModel(
                     matchConfig = matchConfig,
                     separator = separator.value,
                     enabledSourceOrderIds = currentOrderIds,
-                    metadataWriteRules = metadataFieldWriteRules.value,
+                    metadataFieldWriteRules = metadataFieldWriteRules.value,
                     sourceSettings = sourceSettings.value.mapValues { it.value.values },
                     concurrency = matchConfig.concurrency
                 )

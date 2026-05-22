@@ -1,5 +1,6 @@
 package com.lonx.lyrico.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
@@ -187,25 +188,36 @@ class SearchViewModel(
     }
 
     fun performSearch(keywordOverride: String? = null) {
-        val keyword = keywordOverride ?: searchState.value.keyword
+        val keyword = (keywordOverride ?: searchState.value.keyword).trim()
         if (keyword.isBlank()) return
+        searchState.update {
+            it.copy(
+                keyword = keyword,
+                isSearching = true
+            )
+        }
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
 
             val searchConfig = searchConfigFlow.filterNotNull().first()
-            val sourceImpls = buildOrderedSources(searchConfig, allSourcesFlow.value)
+            val sourceImpls = buildOrderedSources(
+                searchConfig = searchConfig,
+                allSources = allSourcesFlow.first { it.isNotEmpty() }
+            )
 
             val source =
                 selectedSourceId.value
                     ?: sourceImpls.firstOrNull()?.id
 
-            if (source == null) return@launch
+            if (source == null) {
+                searchState.update { it.copy(isSearching = false) }
+                return@launch
+            }
 
             if (selectedSourceId.value == null) {
                 selectedSourceId.value = source
             }
-
             executeSearch(keyword, source, keywordOverride != null)
         }
     }

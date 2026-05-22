@@ -11,8 +11,8 @@ import com.lonx.lyrico.data.model.AppLogType
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.CacheCategory
 import com.lonx.lyrico.data.model.ConversionMode
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.LyricFormat
+import com.lonx.lyrico.data.model.MetadataFieldWriteRule
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.lyrics.Source
@@ -50,7 +50,7 @@ data class SettingsUiState(
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
     val conversionMode: ConversionMode = ConversionMode.NONE,
-    val extraMetadataWriteRules: List<ExtraMetadataWriteRule> = emptyList()
+    val metadataFieldWriteRules: List<MetadataFieldWriteRule> = emptyList()
 ) {
     /**
      * 返回按优先级排序且启用的搜索源列表
@@ -74,7 +74,7 @@ class SettingsViewModel(
         val search: com.lonx.lyrico.data.model.SearchConfig,
         val theme: com.lonx.lyrico.data.model.ThemeConfig,
         val ignoreShortAudio: Boolean,
-        val extraRules: List<ExtraMetadataWriteRule>
+        val metadataFieldRules: List<MetadataFieldWriteRule>
     )
 
     private val settingsBaseState = combine(
@@ -82,9 +82,9 @@ class SettingsViewModel(
         settingsRepository.searchConfigFlow,
         settingsRepository.themeConfigFlow,
         settingsRepository.ignoreShortAudio,
-        settingsRepository.extraMetadataWriteRules
-    ) { lyric, search, theme, ignoreShort, extraRules ->
-        SettingsBaseState(lyric, search, theme, ignoreShort, extraRules)
+        settingsRepository.metadataFieldWriteRules
+    ) { lyric, search, theme, ignoreShort, metadataFieldRules ->
+        SettingsBaseState(lyric, search, theme, ignoreShort, metadataFieldRules)
     }
 
     private val baseUiState = combine(
@@ -108,7 +108,7 @@ class SettingsViewModel(
             totalCacheSize = cacheMap.values.sum(),
             removeEmptyLines = base.lyric.removeEmptyLines,
             conversionMode = base.lyric.conversionMode,
-            extraMetadataWriteRules = base.extraRules
+            metadataFieldWriteRules = base.metadataFieldRules
         )
     }
 
@@ -206,9 +206,9 @@ class SettingsViewModel(
         }
     }
 
-    fun setExtraMetadataWriteRules(rules: List<ExtraMetadataWriteRule>) {
+    fun setMetadataFieldWriteRules(rules: List<MetadataFieldWriteRule>) {
         viewModelScope.launch {
-            settingsRepository.saveExtraMetadataWriteRules(rules)
+            settingsRepository.saveMetadataFieldWriteRules(rules)
         }
     }
 

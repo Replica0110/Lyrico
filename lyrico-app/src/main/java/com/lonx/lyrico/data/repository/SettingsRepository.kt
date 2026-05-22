@@ -3,7 +3,6 @@ package com.lonx.lyrico.data.repository
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.CharacterMappingConfig
 import com.lonx.lyrico.data.model.ConversionMode
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.LogRetentionOption
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
     val batchMatchConfig: Flow<BatchMatchConfig>
-    val extraMetadataWriteRules: Flow<List<ExtraMetadataWriteRule>>
     val metadataFieldWriteRules: Flow<List<MetadataFieldWriteRule>>
     val sourceSettingsFlow: Flow<Map<Source, SourceRuntimeConfig>>
     val sourceSettingsByIdFlow: Flow<Map<String, SourceRuntimeConfig>>
@@ -93,7 +91,6 @@ interface SettingsRepository {
     suspend fun exportSettings(): String
     suspend fun importSettings(jsonString: String): Boolean
     suspend fun saveBatchMatchConfig(config: BatchMatchConfig)
-    suspend fun saveExtraMetadataWriteRules(rules: List<ExtraMetadataWriteRule>)
     suspend fun saveMetadataFieldWriteRules(rules: List<MetadataFieldWriteRule>)
     suspend fun saveSourceSettings(sourceId: String, values: Map<String, String>)
     suspend fun saveSourceSettings(source: Source, values: Map<String, String>)
@@ -105,7 +102,6 @@ interface SettingsRepository {
     suspend fun updateCharacterMappingInRule(ruleId: String, charMappings: Map<String, String?>)
     suspend fun getCharacterMappingConfig(): CharacterMappingConfig
     suspend fun getBatchMatchConfig(): BatchMatchConfig
-    suspend fun getExtraMetadataWriteRules(): List<ExtraMetadataWriteRule>
     suspend fun getMetadataFieldWriteRules(): List<MetadataFieldWriteRule>
     suspend fun saveArtistSplitConfig(config: ArtistSplitConfig)
     suspend fun getArtistSplitConfig(): ArtistSplitConfig

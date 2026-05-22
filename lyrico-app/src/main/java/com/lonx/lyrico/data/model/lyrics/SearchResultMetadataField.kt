@@ -1,15 +1,15 @@
 package com.lonx.lyrico.data.model.lyrics
 
-data class SearchResultExtraField(
+data class SearchResultMetadataField(
     val key: String,
     val title: String,
     val summary: String = "",
     val writeable: Boolean = true,
-    val defaultTarget: SearchResultExtraTarget = SearchResultExtraTarget.COMMENT,
-    val defaultMode: SearchResultExtraWriteMode = SearchResultExtraWriteMode.DISABLED
+    val defaultTarget: SearchResultMetadataTarget = SearchResultMetadataTarget.COMMENT,
+    val defaultMode: SearchResultMetadataWriteMode = SearchResultMetadataWriteMode.DISABLED
 )
 
-enum class SearchResultExtraTarget {
+enum class SearchResultMetadataTarget {
     TITLE,
     ARTIST,
     ALBUM,
@@ -30,7 +30,7 @@ enum class SearchResultExtraTarget {
     CUSTOM
 }
 
-enum class SearchResultExtraWriteMode {
+enum class SearchResultMetadataWriteMode {
     DISABLED,
     SUPPLEMENT,
     OVERWRITE

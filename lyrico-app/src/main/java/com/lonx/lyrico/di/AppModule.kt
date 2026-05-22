@@ -133,7 +133,8 @@ val appModule = module {
             .addMigrations(
                 LyricoDatabase.MIGRATION_9_10,
                 LyricoDatabase.MIGRATION_10_11,
-                LyricoDatabase.MIGRATION_11_12
+                LyricoDatabase.MIGRATION_11_12,
+                LyricoDatabase.MIGRATION_12_13
             )
             .build()
     }

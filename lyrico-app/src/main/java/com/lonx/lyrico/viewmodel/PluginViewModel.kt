@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
+import com.lonx.lyrico.plugin.source.PluginImportSession
+import com.lonx.lyrico.plugin.source.PluginVersionConflict
 import com.lonx.lyrico.plugin.source.SourcePluginInstaller
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -27,7 +29,9 @@ data class PluginUiState(
     val isBusy: Boolean = false,
     val message: String = "",
     val messageVersion: Long = 0,
-    val smokeResult: String = ""
+    val smokeResult: String = "",
+    val pendingImport: PluginImportSession? = null,
+    val selectedImportRoots: Set<String> = emptySet()
 )
 
 class PluginViewModel(
@@ -45,19 +49,78 @@ class PluginViewModel(
 
 
     fun importPlugin(context: Context, uri: Uri) {
-        runBusy("Plugin imported") {
+        runBusy("Plugin package scanned") {
+            _uiState.value.pendingImport?.let { installer.discardImport(it) }
             val installRoot = File(context.filesDir, "plugins/sources")
             val input = context.contentResolver.openInputStream(uri)
                 ?: error("Cannot open selected file")
             input.use {
-                val plugin = installer.installFromArchive(
+                val session = installer.prepareImport(
                     input = it,
-                    installRoot = installRoot,
-                    enabled = true
+                    installRoot = installRoot
                 )
-                pluginManager.invalidate(plugin.id)
+                if (session.candidates.isEmpty()) {
+                    installer.discardImport(session)
+                    error(session.failed.firstOrNull()?.reason ?: "No installable plugin found")
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        pendingImport = session,
+                        selectedImportRoots = session.candidates
+                            .filter { candidate -> candidate.versionConflict != PluginVersionConflict.DOWNGRADE }
+                            .mapTo(mutableSetOf()) { candidate -> candidate.relativeRootInArchive }
+                    )
+                }
             }
         }
+    }
+
+    fun setImportCandidateSelected(rootPath: String, selected: Boolean) {
+        _uiState.update { state ->
+            val next = state.selectedImportRoots.toMutableSet()
+            if (selected) {
+                next += rootPath
+            } else {
+                next -= rootPath
+            }
+            state.copy(selectedImportRoots = next)
+        }
+    }
+
+    fun installPendingImport() {
+        val session = _uiState.value.pendingImport ?: run {
+            publishMessage("No pending plugin import")
+            return
+        }
+        val selectedRoots = _uiState.value.selectedImportRoots
+        if (selectedRoots.isEmpty()) {
+            publishMessage("No plugin selected")
+            return
+        }
+        val allowDowngrade = session.candidates.any { candidate ->
+            candidate.relativeRootInArchive in selectedRoots &&
+                candidate.versionConflict == PluginVersionConflict.DOWNGRADE
+        }
+        _uiState.update { it.copy(pendingImport = null, selectedImportRoots = emptySet()) }
+        runBusy("Plugin imported") {
+            val result = installer.installPrepared(
+                session = session,
+                enabled = true,
+                selectedRoots = selectedRoots,
+                allowDowngrade = allowDowngrade
+            )
+            result.installed.forEach { plugin ->
+                pluginManager.invalidate(plugin.id)
+            }
+            if (result.installed.isEmpty()) {
+                error(result.failed.firstOrNull()?.reason ?: "No installable plugin found")
+            }
+        }
+    }
+
+    fun dismissPendingImport() {
+        _uiState.value.pendingImport?.let { installer.discardImport(it) }
+        _uiState.update { it.copy(pendingImport = null, selectedImportRoots = emptySet()) }
     }
 
     fun setEnabled(id: String, enabled: Boolean) {

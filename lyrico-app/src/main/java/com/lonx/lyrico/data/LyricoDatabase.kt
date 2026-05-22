@@ -35,7 +35,7 @@ import com.lonx.lyrico.data.model.entity.SourcePluginEntity
         AlbumSongCrossRef::class,
         SourcePluginEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3),
@@ -272,6 +272,12 @@ abstract class LyricoDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE source_plugins ADD COLUMN includeDirsJson TEXT NOT NULL DEFAULT '[]'")
             }
         }
     }

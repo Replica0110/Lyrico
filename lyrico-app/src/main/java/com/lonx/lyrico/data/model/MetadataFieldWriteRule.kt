@@ -2,7 +2,6 @@ package com.lonx.lyrico.data.model
 
 import androidx.annotation.StringRes
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.lyrics.Source
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -14,7 +13,20 @@ data class MetadataFieldWriteRule(
     val customTagKey: String? = null
 ) {
     val normalizedKey: String
-        get() = ExtraMetadataKey.normalize(fieldKey)
+        get() = MetadataFieldKeyAlias.normalize(fieldKey)
+}
+
+object MetadataFieldKeyAlias {
+    private val aliases = mapOf(
+        "NETEASE_163_KEY" to "netease_163_key",
+        "REPLAY_GAIN_TRACK_GAIN" to "replaygain_track_gain",
+        "REPLAY_GAIN_TRACK_PEAK" to "replaygain_track_peak",
+        "REPLAY_GAIN_REFERENCE_LOUDNESS" to "replaygain_reference_loudness"
+    )
+
+    fun normalize(key: String): String {
+        return aliases[key] ?: key
+    }
 }
 
 @Serializable
@@ -48,82 +60,4 @@ enum class MetadataFieldTarget(
     REPLAY_GAIN_TRACK_PEAK(R.string.label_replaygain_track_peak),
     REPLAY_GAIN_REFERENCE_LOUDNESS(R.string.label_replaygain_reference_loudness),
     CUSTOM(R.string.label_custom)
-}
-
-fun ExtraMetadataWriteRule.toMetadataFieldWriteRule(): MetadataFieldWriteRule {
-    return MetadataFieldWriteRule(
-        sourceId = source.id,
-        fieldKey = normalizedKey,
-        target = target.toMetadataFieldTarget(),
-        mode = mode.toMetadataWriteMode()
-    )
-}
-
-fun MetadataFieldWriteRule.toExtraMetadataWriteRuleOrNull(): ExtraMetadataWriteRule? {
-    val source = Source.fromIdOrNameOrNull(sourceId) ?: return null
-    return ExtraMetadataWriteRule(
-        key = normalizedKey,
-        source = source,
-        target = target.toExtraMetadataTargetOrNull() ?: return null,
-        mode = mode.toExtraWriteMode()
-    )
-}
-
-fun ExtraMetadataTarget.toMetadataFieldTarget(): MetadataFieldTarget {
-    return when (this) {
-        ExtraMetadataTarget.TITLE -> MetadataFieldTarget.TITLE
-        ExtraMetadataTarget.ARTIST -> MetadataFieldTarget.ARTIST
-        ExtraMetadataTarget.ALBUM -> MetadataFieldTarget.ALBUM
-        ExtraMetadataTarget.ALBUM_ARTIST -> MetadataFieldTarget.ALBUM_ARTIST
-        ExtraMetadataTarget.GENRE -> MetadataFieldTarget.GENRE
-        ExtraMetadataTarget.DATE -> MetadataFieldTarget.DATE
-        ExtraMetadataTarget.TRACK_NUMBER -> MetadataFieldTarget.TRACK_NUMBER
-        ExtraMetadataTarget.DISC_NUMBER -> MetadataFieldTarget.DISC_NUMBER
-        ExtraMetadataTarget.COMPOSER -> MetadataFieldTarget.COMPOSER
-        ExtraMetadataTarget.LYRICIST -> MetadataFieldTarget.LYRICIST
-        ExtraMetadataTarget.SUBTITLE -> MetadataFieldTarget.SUBTITLE
-        ExtraMetadataTarget.COMMENT -> MetadataFieldTarget.COMMENT
-        ExtraMetadataTarget.REPLAY_GAIN_TRACK_GAIN -> MetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN
-        ExtraMetadataTarget.REPLAY_GAIN_TRACK_PEAK -> MetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK
-        ExtraMetadataTarget.REPLAY_GAIN_REFERENCE_LOUDNESS -> MetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
-    }
-}
-
-fun MetadataFieldTarget.toExtraMetadataTargetOrNull(): ExtraMetadataTarget? {
-    return when (this) {
-        MetadataFieldTarget.TITLE -> ExtraMetadataTarget.TITLE
-        MetadataFieldTarget.ARTIST -> ExtraMetadataTarget.ARTIST
-        MetadataFieldTarget.ALBUM -> ExtraMetadataTarget.ALBUM
-        MetadataFieldTarget.ALBUM_ARTIST -> ExtraMetadataTarget.ALBUM_ARTIST
-        MetadataFieldTarget.GENRE -> ExtraMetadataTarget.GENRE
-        MetadataFieldTarget.DATE -> ExtraMetadataTarget.DATE
-        MetadataFieldTarget.TRACK_NUMBER -> ExtraMetadataTarget.TRACK_NUMBER
-        MetadataFieldTarget.DISC_NUMBER -> ExtraMetadataTarget.DISC_NUMBER
-        MetadataFieldTarget.COMPOSER -> ExtraMetadataTarget.COMPOSER
-        MetadataFieldTarget.LYRICIST -> ExtraMetadataTarget.LYRICIST
-        MetadataFieldTarget.SUBTITLE -> ExtraMetadataTarget.SUBTITLE
-        MetadataFieldTarget.COMMENT -> ExtraMetadataTarget.COMMENT
-        MetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN -> ExtraMetadataTarget.REPLAY_GAIN_TRACK_GAIN
-        MetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK -> ExtraMetadataTarget.REPLAY_GAIN_TRACK_PEAK
-        MetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS -> ExtraMetadataTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
-        MetadataFieldTarget.LYRICS,
-        MetadataFieldTarget.COVER,
-        MetadataFieldTarget.CUSTOM -> null
-    }
-}
-
-fun ExtraWriteMode.toMetadataWriteMode(): MetadataWriteMode {
-    return when (this) {
-        ExtraWriteMode.DISABLED -> MetadataWriteMode.DISABLED
-        ExtraWriteMode.SUPPLEMENT -> MetadataWriteMode.SUPPLEMENT
-        ExtraWriteMode.OVERWRITE -> MetadataWriteMode.OVERWRITE
-    }
-}
-
-fun MetadataWriteMode.toExtraWriteMode(): ExtraWriteMode {
-    return when (this) {
-        MetadataWriteMode.DISABLED -> ExtraWriteMode.DISABLED
-        MetadataWriteMode.SUPPLEMENT -> ExtraWriteMode.SUPPLEMENT
-        MetadataWriteMode.OVERWRITE -> ExtraWriteMode.OVERWRITE
-    }
 }

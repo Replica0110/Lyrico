@@ -383,10 +383,10 @@ class BatchTaskWorker(
             appendLine("preferFileName=${config.matchConfig.preferFileName}")
             appendLine("enabledSources=${config.enabledSourceOrderIds.joinToString(" > ").ifBlank { "(default)" }}")
             appendLine("fields=${config.matchConfig.fields.toSortedMap(compareBy { it.name }).entries.joinToString(", ") { "${it.key.name}:${it.value.name}" }}")
-            val metadataRules = config.metadataWriteRules
+            val metadataRules = config.metadataFieldWriteRules
                 .filter { it.mode != MetadataWriteMode.DISABLED }
                 .map { "${it.sourceId}.${it.normalizedKey}:${it.mode.name}" }
-            appendLine("metadataWriteRules=${metadataRules.joinToString(", ").ifBlank { "(none)" }}")
+            appendLine("metadataFieldWriteRules=${metadataRules.joinToString(", ").ifBlank { "(none)" }}")
         }.trimEnd()
     }
 

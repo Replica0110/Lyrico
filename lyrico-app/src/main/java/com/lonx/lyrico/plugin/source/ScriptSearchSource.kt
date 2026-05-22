@@ -5,7 +5,7 @@ import com.lonx.lyrico.data.model.plugin.PluginManifest
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.lyrics.SearchResultExtraField
+import com.lonx.lyrico.data.model.lyrics.SearchResultMetadataField
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 import com.lonx.lyrico.data.model.lyrics.SearchSourceCapability
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
@@ -29,10 +29,8 @@ class ScriptSearchSource(
     override val capabilities: Set<SearchSourceCapability> =
         manifest.capabilities.mapTo(mutableSetOf()) { it.toSearchSourceCapability() }
             .ifEmpty { setOf(SearchSourceCapability.SEARCH_SONGS) }
-    override val metadataFields: List<SearchResultExtraField> =
-        manifest.metadataFields.map { it.toSearchResultExtraField() }
-    override val extraFields: List<SearchResultExtraField>
-        get() = metadataFields
+    override val metadataFields: List<SearchResultMetadataField> =
+        manifest.metadataFields.map { it.toSearchResultMetadataField() }
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
         Thread(
             null,

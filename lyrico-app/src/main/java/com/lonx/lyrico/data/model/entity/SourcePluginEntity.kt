@@ -14,6 +14,7 @@ data class SourcePluginEntity(
     val apiVersion: Int,
     val pluginDir: String,
     val entryFile: String,
+    val includeDirsJson: String,
     val iconPath: String?,
     val enabled: Boolean,
     val sortOrder: Int,

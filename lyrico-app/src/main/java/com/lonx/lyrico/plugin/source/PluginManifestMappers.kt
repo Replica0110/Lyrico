@@ -7,9 +7,9 @@ import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
 import com.lonx.lyrico.data.model.plugin.PluginConfigOption
 import com.lonx.lyrico.data.model.plugin.PluginMetadataField
 import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
-import com.lonx.lyrico.data.model.lyrics.SearchResultExtraField
-import com.lonx.lyrico.data.model.lyrics.SearchResultExtraTarget
-import com.lonx.lyrico.data.model.lyrics.SearchResultExtraWriteMode
+import com.lonx.lyrico.data.model.lyrics.SearchResultMetadataField
+import com.lonx.lyrico.data.model.lyrics.SearchResultMetadataTarget
+import com.lonx.lyrico.data.model.lyrics.SearchResultMetadataWriteMode
 import com.lonx.lyrico.data.model.lyrics.SearchSourceCapability
 import com.lonx.lyrico.data.model.lyrics.SourceConfigDependency
 import com.lonx.lyrico.data.model.lyrics.SourceConfigField
@@ -37,14 +37,14 @@ fun PluginConfigField.toSourceConfigField(): SourceConfigField {
     )
 }
 
-fun PluginMetadataField.toSearchResultExtraField(): SearchResultExtraField {
-    return SearchResultExtraField(
+fun PluginMetadataField.toSearchResultMetadataField(): SearchResultMetadataField {
+    return SearchResultMetadataField(
         key = key,
         title = title,
         summary = summary,
         writeable = writeable,
-        defaultTarget = defaultTarget.name.toSearchResultExtraTarget(),
-        defaultMode = defaultMode.toSearchResultExtraWriteMode()
+        defaultTarget = defaultTarget.name.toSearchResultMetadataTarget(),
+        defaultMode = defaultMode.toSearchResultMetadataWriteMode()
     )
 }
 
@@ -77,15 +77,15 @@ private fun PluginConfigDependency.toSourceConfigDependency(): SourceConfigDepen
     }
 }
 
-private fun PluginMetadataWriteMode.toSearchResultExtraWriteMode(): SearchResultExtraWriteMode {
+private fun PluginMetadataWriteMode.toSearchResultMetadataWriteMode(): SearchResultMetadataWriteMode {
     return when (this) {
-        PluginMetadataWriteMode.DISABLED -> SearchResultExtraWriteMode.DISABLED
-        PluginMetadataWriteMode.SUPPLEMENT -> SearchResultExtraWriteMode.SUPPLEMENT
-        PluginMetadataWriteMode.OVERWRITE -> SearchResultExtraWriteMode.OVERWRITE
+        PluginMetadataWriteMode.DISABLED -> SearchResultMetadataWriteMode.DISABLED
+        PluginMetadataWriteMode.SUPPLEMENT -> SearchResultMetadataWriteMode.SUPPLEMENT
+        PluginMetadataWriteMode.OVERWRITE -> SearchResultMetadataWriteMode.OVERWRITE
     }
 }
 
-private fun String.toSearchResultExtraTarget(): SearchResultExtraTarget {
-    return SearchResultExtraTarget.entries.firstOrNull { it.name == this }
-        ?: SearchResultExtraTarget.COMMENT
+private fun String.toSearchResultMetadataTarget(): SearchResultMetadataTarget {
+    return SearchResultMetadataTarget.entries.firstOrNull { it.name == this }
+        ?: SearchResultMetadataTarget.COMMENT
 }

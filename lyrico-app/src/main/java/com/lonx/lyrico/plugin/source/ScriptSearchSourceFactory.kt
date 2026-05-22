@@ -6,6 +6,7 @@ import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -18,7 +19,7 @@ class ScriptSearchSourceFactory(
         val manifestFile = File(pluginDir, MANIFEST_FILE)
         val manifest = json.decodeFromString<PluginManifest>(manifestFile.readText())
         val entryFile = File(pluginDir, plugin.entryFile.ifBlank { manifest.entry })
-        val script = buildScript(pluginDir, entryFile)
+        val script = buildScript(pluginDir, entryFile, manifest)
 
         ScriptSearchSource(
             manifest = manifest,
@@ -30,22 +31,46 @@ class ScriptSearchSourceFactory(
 
     private companion object {
         const val MANIFEST_FILE = "manifest.json"
-        const val LIB_DIR = "lib"
     }
 
-    private fun buildScript(pluginDir: File, entryFile: File): String {
-        val libDir = File(pluginDir, LIB_DIR)
-        val libScripts = libDir
-            .takeIf { it.isDirectory }
-            ?.walkTopDown()
-            ?.filter { it.isFile && it.extension.equals("js", ignoreCase = true) }
-            ?.sortedBy { it.relativeTo(libDir).invariantSeparatorsPath }
-            ?.map { file ->
-                "\n//# sourceURL=lib/${file.relativeTo(libDir).invariantSeparatorsPath}\n${file.readText()}\n"
+    private fun buildScript(pluginDir: File, entryFile: File, manifest: PluginManifest): String {
+        val includeSources = manifest.includeDirs
+            .asSequence()
+            .map { includeDir -> includeDir to File(pluginDir, includeDir) }
+            .filter { (_, dir) -> dir.isDirectory }
+            .flatMap { (includeDir, dir) ->
+                dir.walkTopDown()
+                    .filter { it.isFile && it.extension.equals("js", ignoreCase = true) }
+                    .sortedBy { it.relativeTo(dir).invariantSeparatorsPath }
+                    .asSequence()
+                    .map { file -> includeDir to file }
             }
-            ?.joinToString(separator = "\n")
-            .orEmpty()
+            .associate { (includeDir, file) ->
+                val relativePath = file.relativeTo(File(pluginDir, includeDir)).invariantSeparatorsPath
+                "$includeDir/$relativePath" to file.readText()
+            }
+        val includeSourcesJson = json.encodeToString(includeSources)
+        val includeOrderJson = json.encodeToString(includeSources.keys.toList())
+        val includeBootstrap = """
+            (function() {
+              var __lyricoIncludeSources = $includeSourcesJson;
+              var __lyricoIncludeOrder = $includeOrderJson;
+              var __lyricoIncluded = Object.create(null);
+              globalThis.include = function(path) {
+                path = String(path || "");
+                if (!Object.prototype.hasOwnProperty.call(__lyricoIncludeSources, path)) {
+                  throw new Error("Include path is not declared in includeDirs: " + path);
+                }
+                if (__lyricoIncluded[path]) return;
+                __lyricoIncluded[path] = true;
+                (0, eval)(__lyricoIncludeSources[path] + "\n//# sourceURL=" + path);
+              };
+              __lyricoIncludeOrder.forEach(function(path) {
+                globalThis.include(path);
+              });
+            })();
+        """.trimIndent()
 
-        return "$libScripts\n//# sourceURL=${entryFile.name}\n${entryFile.readText()}"
+        return "$includeBootstrap\n//# sourceURL=${manifest.entry}\n${entryFile.readText()}"
     }
 }

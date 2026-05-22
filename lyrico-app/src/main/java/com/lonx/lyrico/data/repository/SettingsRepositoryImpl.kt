@@ -17,7 +17,6 @@ import com.lonx.lyrico.data.model.BatchMatchMode
 import com.lonx.lyrico.data.model.CharacterMappingConfig
 import com.lonx.lyrico.data.model.CharacterMappingDefaults
 import com.lonx.lyrico.data.model.ConversionMode
-import com.lonx.lyrico.data.model.ExtraMetadataWriteRule
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.LogRetentionOption
@@ -27,8 +26,6 @@ import com.lonx.lyrico.data.model.SettingsBackup
 import com.lonx.lyrico.data.model.SourceSettingsStore
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
-import com.lonx.lyrico.data.model.toExtraMetadataWriteRuleOrNull
-import com.lonx.lyrico.data.model.toMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.AlbumSortBy
 import com.lonx.lyrico.data.model.AlbumSortInfo
 import com.lonx.lyrico.data.model.ArtistSortBy
@@ -124,7 +121,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val ONLY_TRANSLATION_IF_AVAILABLE = booleanPreferencesKey("only_translation_if_available")
         val CHARACTER_MAPPING_CONFIG = stringPreferencesKey("character_mapping_config")
         val BATCH_MATCH_CONFIG = stringPreferencesKey("batch_match_config")
-        val EXTRA_METADATA_WRITE_RULES = stringPreferencesKey("extra_metadata_write_rules")
         val METADATA_FIELD_WRITE_RULES = stringPreferencesKey("metadata_field_write_rules")
         val SOURCE_SETTINGS = stringPreferencesKey("source_settings")
         val CONVERSION_MODE = stringPreferencesKey("conversion_mode")
@@ -652,7 +648,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             limitLyricsInputLines = prefs[PreferencesKeys.LIMIT_LYRICS_INPUT_LINES]
                 ?: SettingsDefaults.LIMIT_LYRICS_INPUT_LINES,
             characterMappingConfig = charMapping,
-            extraMetadataWriteRules = getExtraMetadataWriteRules(),
             metadataFieldWriteRules = getMetadataFieldWriteRules(),
             sourceSettings = decodeSourceSettingsStore(prefs[PreferencesKeys.SOURCE_SETTINGS]),
             renameFormat = prefs[PreferencesKeys.RENAME_FORMAT]
@@ -728,14 +723,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.characterMappingConfig?.let { config ->
                     prefs[PreferencesKeys.CHARACTER_MAPPING_CONFIG] = jsonFormatter.encodeToString(config)
                 }
-                backup.extraMetadataWriteRules?.let { rules ->
-                    prefs[PreferencesKeys.EXTRA_METADATA_WRITE_RULES] =
-                        jsonFormatter.encodeToString(rules.map { it.copy(key = it.normalizedKey) })
-                }
                 backup.metadataFieldWriteRules?.let { rules ->
-                    val normalizedRules = rules.map { it.copy(fieldKey = it.normalizedKey) }
                     prefs[PreferencesKeys.METADATA_FIELD_WRITE_RULES] =
-                        jsonFormatter.encodeToString(normalizedRules)
+                        jsonFormatter.encodeToString(rules)
                 }
                 backup.sourceSettings?.let { store ->
                     prefs[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(store)
@@ -808,19 +798,13 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             }
         }
 
-    override val extraMetadataWriteRules: Flow<List<ExtraMetadataWriteRule>>
-        get() = context.settingsDataStore.data.map { preferences ->
-            decodeExtraMetadataWriteRules(preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES].orEmpty())
-        }
-
     override val metadataFieldWriteRules: Flow<List<MetadataFieldWriteRule>>
         get() = context.settingsDataStore.data.map { preferences ->
             val rulesJson = preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES]
             if (!rulesJson.isNullOrBlank()) {
                 decodeMetadataFieldWriteRules(rulesJson)
             } else {
-                decodeExtraMetadataWriteRules(preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES].orEmpty())
-                    .map { it.toMetadataFieldWriteRule() }
+                emptyList()
             }
         }
 
@@ -843,21 +827,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun saveExtraMetadataWriteRules(rules: List<ExtraMetadataWriteRule>) {
-        context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES] =
-                jsonFormatter.encodeToString(rules.map { it.copy(key = it.normalizedKey) })
-        }
-    }
-
     override suspend fun saveMetadataFieldWriteRules(rules: List<MetadataFieldWriteRule>) {
         context.settingsDataStore.edit { preferences ->
-            val normalizedRules = rules.map { it.copy(fieldKey = it.normalizedKey) }
             preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES] =
-                jsonFormatter.encodeToString(normalizedRules)
-            val legacyRules = normalizedRules.mapNotNull { it.toExtraMetadataWriteRuleOrNull() }
-            preferences[PreferencesKeys.EXTRA_METADATA_WRITE_RULES] =
-                jsonFormatter.encodeToString(legacyRules)
+                jsonFormatter.encodeToString(rules)
         }
     }
 
@@ -890,10 +863,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     }
     override suspend fun getBatchMatchConfig(): BatchMatchConfig {
         return batchMatchConfig.first()
-    }
-
-    override suspend fun getExtraMetadataWriteRules(): List<ExtraMetadataWriteRule> {
-        return extraMetadataWriteRules.first()
     }
 
     override suspend fun getMetadataFieldWriteRules(): List<MetadataFieldWriteRule> {
@@ -956,19 +925,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    private fun decodeExtraMetadataWriteRules(raw: String): List<ExtraMetadataWriteRule> {
-        if (raw.isBlank()) return emptyList()
-        return runCatching {
-            jsonFormatter.decodeFromString<List<ExtraMetadataWriteRule>>(raw)
-                .map { it.copy(key = it.normalizedKey) }
-        }.getOrDefault(emptyList())
-    }
-
     private fun decodeMetadataFieldWriteRules(raw: String): List<MetadataFieldWriteRule> {
         if (raw.isBlank()) return emptyList()
         return runCatching {
             jsonFormatter.decodeFromString<List<MetadataFieldWriteRule>>(raw)
-                .map { it.copy(fieldKey = it.normalizedKey) }
         }.getOrDefault(emptyList())
     }
 

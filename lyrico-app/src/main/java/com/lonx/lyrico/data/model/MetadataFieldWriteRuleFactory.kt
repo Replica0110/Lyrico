@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.model
 
-import com.lonx.lyrico.data.model.lyrics.SearchResultExtraTarget
-import com.lonx.lyrico.data.model.lyrics.SearchResultExtraWriteMode
+import com.lonx.lyrico.data.model.lyrics.SearchResultMetadataTarget
+import com.lonx.lyrico.data.model.lyrics.SearchResultMetadataWriteMode
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 
 object MetadataFieldWriteRuleFactory {
@@ -33,33 +33,33 @@ object MetadataFieldWriteRuleFactory {
     }
 }
 
-fun SearchResultExtraTarget.toMetadataFieldTarget(): MetadataFieldTarget {
+fun SearchResultMetadataTarget.toMetadataFieldTarget(): MetadataFieldTarget {
     return when (this) {
-        SearchResultExtraTarget.TITLE -> MetadataFieldTarget.TITLE
-        SearchResultExtraTarget.ARTIST -> MetadataFieldTarget.ARTIST
-        SearchResultExtraTarget.ALBUM -> MetadataFieldTarget.ALBUM
-        SearchResultExtraTarget.ALBUM_ARTIST -> MetadataFieldTarget.ALBUM_ARTIST
-        SearchResultExtraTarget.DATE -> MetadataFieldTarget.DATE
-        SearchResultExtraTarget.TRACK_NUMBER -> MetadataFieldTarget.TRACK_NUMBER
-        SearchResultExtraTarget.COMMENT -> MetadataFieldTarget.COMMENT
-        SearchResultExtraTarget.SUBTITLE -> MetadataFieldTarget.SUBTITLE
-        SearchResultExtraTarget.COMPOSER -> MetadataFieldTarget.COMPOSER
-        SearchResultExtraTarget.LYRICIST -> MetadataFieldTarget.LYRICIST
-        SearchResultExtraTarget.GENRE -> MetadataFieldTarget.GENRE
-        SearchResultExtraTarget.DISC_NUMBER -> MetadataFieldTarget.DISC_NUMBER
-        SearchResultExtraTarget.LYRICS -> MetadataFieldTarget.LYRICS
-        SearchResultExtraTarget.COVER -> MetadataFieldTarget.COVER
-        SearchResultExtraTarget.REPLAY_GAIN_TRACK_GAIN -> MetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN
-        SearchResultExtraTarget.REPLAY_GAIN_TRACK_PEAK -> MetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK
-        SearchResultExtraTarget.REPLAY_GAIN_REFERENCE_LOUDNESS -> MetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
-        SearchResultExtraTarget.CUSTOM -> MetadataFieldTarget.CUSTOM
+        SearchResultMetadataTarget.TITLE -> MetadataFieldTarget.TITLE
+        SearchResultMetadataTarget.ARTIST -> MetadataFieldTarget.ARTIST
+        SearchResultMetadataTarget.ALBUM -> MetadataFieldTarget.ALBUM
+        SearchResultMetadataTarget.ALBUM_ARTIST -> MetadataFieldTarget.ALBUM_ARTIST
+        SearchResultMetadataTarget.DATE -> MetadataFieldTarget.DATE
+        SearchResultMetadataTarget.TRACK_NUMBER -> MetadataFieldTarget.TRACK_NUMBER
+        SearchResultMetadataTarget.COMMENT -> MetadataFieldTarget.COMMENT
+        SearchResultMetadataTarget.SUBTITLE -> MetadataFieldTarget.SUBTITLE
+        SearchResultMetadataTarget.COMPOSER -> MetadataFieldTarget.COMPOSER
+        SearchResultMetadataTarget.LYRICIST -> MetadataFieldTarget.LYRICIST
+        SearchResultMetadataTarget.GENRE -> MetadataFieldTarget.GENRE
+        SearchResultMetadataTarget.DISC_NUMBER -> MetadataFieldTarget.DISC_NUMBER
+        SearchResultMetadataTarget.LYRICS -> MetadataFieldTarget.LYRICS
+        SearchResultMetadataTarget.COVER -> MetadataFieldTarget.COVER
+        SearchResultMetadataTarget.REPLAY_GAIN_TRACK_GAIN -> MetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN
+        SearchResultMetadataTarget.REPLAY_GAIN_TRACK_PEAK -> MetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK
+        SearchResultMetadataTarget.REPLAY_GAIN_REFERENCE_LOUDNESS -> MetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
+        SearchResultMetadataTarget.CUSTOM -> MetadataFieldTarget.CUSTOM
     }
 }
 
-fun SearchResultExtraWriteMode.toMetadataWriteMode(): MetadataWriteMode {
+fun SearchResultMetadataWriteMode.toMetadataWriteMode(): MetadataWriteMode {
     return when (this) {
-        SearchResultExtraWriteMode.DISABLED -> MetadataWriteMode.DISABLED
-        SearchResultExtraWriteMode.SUPPLEMENT -> MetadataWriteMode.SUPPLEMENT
-        SearchResultExtraWriteMode.OVERWRITE -> MetadataWriteMode.OVERWRITE
+        SearchResultMetadataWriteMode.DISABLED -> MetadataWriteMode.DISABLED
+        SearchResultMetadataWriteMode.SUPPLEMENT -> MetadataWriteMode.SUPPLEMENT
+        SearchResultMetadataWriteMode.OVERWRITE -> MetadataWriteMode.OVERWRITE
     }
 }

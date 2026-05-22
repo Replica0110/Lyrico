@@ -1,5 +1,8 @@
 package com.lonx.lyrico.plugin.runtime
 
+import androidx.annotation.Keep
+
+@Keep
 object QuickJsNative {
     init {
         System.loadLibrary("quickjs-ng")

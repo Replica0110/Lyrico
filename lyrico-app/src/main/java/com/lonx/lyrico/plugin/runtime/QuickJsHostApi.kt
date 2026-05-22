@@ -2,6 +2,7 @@ package com.lonx.lyrico.plugin.runtime
 
 import android.util.Base64
 import android.util.Log
+import androidx.annotation.Keep
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -25,7 +26,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MediaType.Companion.toMediaType
-
+@Keep
 class QuickJsHostApi(
     private val appInfo: HostAppInfo = HostAppInfo(),
     private val runtimeInfo: HostRuntimeInfo = HostRuntimeInfo(),

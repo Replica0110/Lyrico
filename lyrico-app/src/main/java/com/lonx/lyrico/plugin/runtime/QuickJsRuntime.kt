@@ -1,5 +1,8 @@
 package com.lonx.lyrico.plugin.runtime
 
+import androidx.annotation.Keep
+
+@Keep
 class QuickJsRuntime(
     memoryLimitBytes: Long = DEFAULT_MEMORY_LIMIT_BYTES,
     stackSizeBytes: Long = DEFAULT_STACK_SIZE_BYTES,

@@ -55,8 +55,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.plugin.source.PluginImportSession
+import com.lonx.lyrico.plugin.source.PluginInstallCandidate
+import com.lonx.lyrico.plugin.source.PluginInstallFailed
 import com.lonx.lyrico.plugin.source.PluginVersionConflict
 import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.library.LibraryEmptyState
 import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.lonx.lyrico.viewmodel.PluginViewModel
 import com.ramcosta.composedestinations.annotation.Destination
@@ -67,6 +71,7 @@ import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Checkbox
@@ -158,7 +163,7 @@ fun PluginManagerScreen(
             Text(
                 text = stringResource(R.string.search_source_priority_tip),
                 fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                color = colorScheme.onSurfaceVariantActions,
                 modifier = Modifier.padding(12.dp)
             )
 
@@ -174,21 +179,19 @@ fun PluginManagerScreen(
             ) {
                 if (currentList.isEmpty()) {
                     item("empty") {
-                        Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.plugin_empty),
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                                )
+                        LibraryEmptyState(
+                            title = stringResource(R.string.plugin_empty),
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            action = {
                                 TextButton(
                                     text = stringResource(R.string.plugin_import_archive),
                                     onClick = {
                                         if (!uiState.isBusy) importLauncher.launch(arrayOf("*/*"))
                                     },
-                                    modifier = Modifier.padding(top = 8.dp)
+                                    colors = ButtonDefaults.textButtonColorsPrimary()
                                 )
                             }
-                        }
+                        )
                     }
                 }
 
@@ -304,7 +307,7 @@ fun PluginManagerScreen(
 
 @Composable
 private fun PluginImportPreviewContent(
-    session: com.lonx.lyrico.plugin.source.PluginImportSession,
+    session: PluginImportSession,
     selectedRoots: Set<String>,
     onCandidateCheckedChange: (String, Boolean) -> Unit
 ) {
@@ -364,7 +367,7 @@ private fun PluginImportPreviewContent(
 
 @Composable
 private fun PluginImportCandidateItem(
-    candidate: com.lonx.lyrico.plugin.source.PluginInstallCandidate,
+    candidate: PluginInstallCandidate,
     selected: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -374,7 +377,7 @@ private fun PluginImportCandidateItem(
 
     Card(
         colors = CardDefaults.defaultColors(
-            color = MiuixTheme.colorScheme.secondaryContainer,
+            color = colorScheme.secondaryContainer,
         )
     ) {
         BasicComponent(
@@ -462,7 +465,7 @@ private fun PluginImportCandidateItem(
 
 @Composable
 private fun PluginImportFailedItem(
-    failed: com.lonx.lyrico.plugin.source.PluginInstallFailed
+    failed: PluginInstallFailed
 ) {
     var expanded by rememberSaveable(
         failed.rootPath,

@@ -116,11 +116,7 @@ class PluginJsonParser(
             return null
         }
 
-        val isWordByWord = obj.boolean("isWordByWord")
-            ?: obj.boolean("is_word_by_word")
-            ?: obj.boolean("wordByWord")
-            ?: obj.boolean("word_by_word")
-            ?: originalLines.isWordByWord()
+        val isWordByWord =  originalLines.isWordByWord()
 
         return LyricsResult(
             tags = tags,

@@ -14,20 +14,21 @@ class ScriptSearchSourceFactory(
     private val json: Json,
     private val runtimeFactory: () -> PluginJsRuntime = { QuickJsRuntime() }
 ) {
-    suspend fun create(plugin: SourcePluginEntity): ScriptSearchSource = withContext(Dispatchers.IO) {
-        val pluginDir = File(plugin.pluginDir)
-        val manifestFile = File(pluginDir, MANIFEST_FILE)
-        val manifest = json.decodeFromString<PluginManifest>(manifestFile.readText())
-        val entryFile = File(pluginDir, plugin.entryFile.ifBlank { manifest.entry })
-        val script = buildScript(pluginDir, entryFile, manifest)
+    suspend fun create(plugin: SourcePluginEntity): ScriptSearchSource =
+        withContext(Dispatchers.IO) {
+            val pluginDir = File(plugin.pluginDir)
+            val manifestFile = File(pluginDir, MANIFEST_FILE)
+            val manifest = json.decodeFromString<PluginManifest>(manifestFile.readText())
+            val entryFile = File(pluginDir, plugin.entryFile.ifBlank { manifest.entry })
+            val script = buildScript(pluginDir, entryFile, manifest)
 
-        ScriptSearchSource(
-            manifest = manifest,
-            script = script,
-            json = json,
-            runtimeFactory = runtimeFactory
-        )
-    }
+            ScriptSearchSource(
+                manifest = manifest,
+                script = script,
+                json = json,
+                runtimeFactory = runtimeFactory
+            )
+        }
 
     private companion object {
         const val MANIFEST_FILE = "manifest.json"
@@ -42,35 +43,73 @@ class ScriptSearchSourceFactory(
                 dir.walkTopDown()
                     .filter { it.isFile && it.extension.equals("js", ignoreCase = true) }
                     .sortedBy { it.relativeTo(dir).invariantSeparatorsPath }
-                    .asSequence()
                     .map { file -> includeDir to file }
             }
-            .associate { (includeDir, file) ->
-                val relativePath = file.relativeTo(File(pluginDir, includeDir)).invariantSeparatorsPath
-                "$includeDir/$relativePath" to file.readText()
+            .map { (includeDir, file) ->
+                val relativePath =
+                    file.relativeTo(File(pluginDir, includeDir)).invariantSeparatorsPath
+                IncludedScript(
+                    path = "$includeDir/$relativePath",
+                    content = file.readText()
+                )
             }
-        val includeSourcesJson = json.encodeToString(includeSources)
-        val includeOrderJson = json.encodeToString(includeSources.keys.toList())
-        val includeBootstrap = """
-            (function() {
-              var __lyricoIncludeSources = $includeSourcesJson;
-              var __lyricoIncludeOrder = $includeOrderJson;
-              var __lyricoIncluded = Object.create(null);
-              globalThis.include = function(path) {
-                path = String(path || "");
-                if (!Object.prototype.hasOwnProperty.call(__lyricoIncludeSources, path)) {
-                  throw new Error("Include path is not declared in includeDirs: " + path);
-                }
-                if (__lyricoIncluded[path]) return;
-                __lyricoIncluded[path] = true;
-                (0, eval)(__lyricoIncludeSources[path] + "\n//# sourceURL=" + path);
-              };
-              __lyricoIncludeOrder.forEach(function(path) {
-                globalThis.include(path);
-              });
-            })();
-        """.trimIndent()
+            .toList()
 
-        return "$includeBootstrap\n//# sourceURL=${manifest.entry}\n${entryFile.readText()}"
+        val includePathSetJson = json.encodeToString(includeSources.map { it.path }.toSet())
+
+        val includeBootstrap = """
+        (function() {
+          var __lyricoDeclaredIncludes = $includePathSetJson;
+          var __lyricoDeclaredIncludeMap = Object.create(null);
+
+          __lyricoDeclaredIncludes.forEach(function(path) {
+            __lyricoDeclaredIncludeMap[path] = true;
+          });
+
+          /*
+           * All declared include files have already been concatenated into the same
+           * script unit before source.js.
+           *
+           * Keep include(path) for compatibility with plugins that call it manually.
+           * It validates the path, then becomes a no-op.
+           */
+          globalThis.include = function(path) {
+            path = String(path || "");
+            if (!Object.prototype.hasOwnProperty.call(__lyricoDeclaredIncludeMap, path)) {
+              throw new Error("Include path is not declared in includeDirs: " + path);
+            }
+          };
+        })();
+    """.trimIndent()
+
+        return buildString {
+            append(includeBootstrap)
+            append('\n')
+
+            includeSources.forEach { source ->
+                append("\n;")
+                append("\n// ===== Lyrico include: ")
+                append(source.path)
+                append(" =====\n")
+                append(source.content)
+                append("\n//# sourceURL=")
+                append(source.path)
+                append('\n')
+            }
+
+            append("\n;")
+            append("\n// ===== Lyrico entry: ")
+            append(manifest.entry)
+            append(" =====\n")
+            append(entryFile.readText())
+            append("\n//# sourceURL=")
+            append(manifest.entry)
+            append('\n')
+        }
     }
+
+    private data class IncludedScript(
+        val path: String,
+        val content: String
+    )
 }

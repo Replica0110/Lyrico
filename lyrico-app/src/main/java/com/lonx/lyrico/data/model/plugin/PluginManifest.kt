@@ -36,6 +36,7 @@ data class PluginConfigField(
     val key: String,
     val title: String,
     val summary: String = "",
+    val group: String = "",
     val type: PluginConfigFieldType,
     val required: Boolean = false,
     val defaultValue: String = "",
@@ -66,22 +67,26 @@ data class PluginConfigOption(
 @Serializable
 sealed interface PluginConfigDependency {
     @Serializable
+    @SerialName("match")
     data class Match(
         val key: String,
         val value: String
     ) : PluginConfigDependency
 
     @Serializable
+    @SerialName("and")
     data class And(
         val conditions: List<PluginConfigDependency>
     ) : PluginConfigDependency
 
     @Serializable
+    @SerialName("or")
     data class Or(
         val conditions: List<PluginConfigDependency>
     ) : PluginConfigDependency
 
     @Serializable
+    @SerialName("not")
     data class Not(
         val condition: PluginConfigDependency
     ) : PluginConfigDependency

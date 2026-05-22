@@ -222,7 +222,7 @@ val appModule = module {
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get()) }
     viewModel { AppLogViewModel(get(),get()) }
-    viewModel { PluginViewModel(get(), get(), get(), get()) }
+    viewModel { PluginViewModel(get(), get(), get(), get(), get()) }
 
     viewModel { FolderManagerViewModel(get(), get(), get(), get(), get()) }
     viewModel { (folderId: Long) ->

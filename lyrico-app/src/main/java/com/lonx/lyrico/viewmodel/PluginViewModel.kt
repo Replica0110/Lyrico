@@ -2,10 +2,14 @@ package com.lonx.lyrico.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lonx.lyrico.data.model.AppLogLevel
+import com.lonx.lyrico.data.model.AppLogType
 import com.lonx.lyrico.data.model.MetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
@@ -40,7 +44,8 @@ class PluginViewModel(
     private val repository: SourcePluginRepository,
     private val settingsRepository: SettingsRepository,
     private val installer: SourcePluginInstaller,
-    private val pluginManager: PluginSearchSourceManager
+    private val pluginManager: PluginSearchSourceManager,
+    private val appLogRepository: AppLogRepository
 ) : ViewModel() {
     val plugins: StateFlow<List<SourcePluginEntity>> =
         repository.observePlugins()
@@ -64,7 +69,9 @@ class PluginViewModel(
                 )
                 if (session.candidates.isEmpty()) {
                     installer.discardImport(session)
-                    error(session.failed.firstOrNull()?.reason ?: "No installable plugin found")
+                    val failureReason = session.failed.firstOrNull()?.reason ?: "No installable plugin found"
+                    logPluginError("Import failed", failureReason, session.failed.joinToString("\n") { "${it.rootPath}: ${it.reason}" })
+                    error(failureReason)
                 }
                 _uiState.update { state ->
                     state.copy(
@@ -117,7 +124,9 @@ class PluginViewModel(
             }
             syncMetadataRules()
             if (result.installed.isEmpty()) {
-                error(result.failed.firstOrNull()?.reason ?: "No installable plugin found")
+                val failureReason = result.failed.firstOrNull()?.reason ?: "No installable plugin found"
+                logPluginError("Install failed", failureReason, result.failed.joinToString("\n") { "${it.rootPath}: ${it.reason}" })
+                error(failureReason)
             }
         }
     }
@@ -225,7 +234,22 @@ class PluginViewModel(
         settingsRepository.saveMetadataFieldWriteRules(mergedRules)
     }
 
+    private suspend fun logPluginError(message: String, detail: String, fullDetail: String? = null) {
+        try {
+            appLogRepository.log(
+                level = AppLogLevel.ERROR,
+                type = AppLogType.APP,
+                tag = TAG,
+                message = message,
+                detail = fullDetail ?: detail
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write plugin log", e)
+        }
+    }
+
     private companion object {
         const val ACTION_TIMEOUT_MS = 30_000L
+        const val TAG = "PluginViewModel"
     }
 }

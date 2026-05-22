@@ -714,4 +714,21 @@
     <string name="plugin_update_source_configured">更新源</string>
     <string name="plugin_version_with_value">版本：%1$s</string>
     <string name="plugin_author_with_value">作者：%1$s</string>
+    <string name="plugin_import_found_title">发现插件包</string>
+    <string name="plugin_import_found_summary">发现 %1$d 个可安装插件，%2$d 个无法安装</string>
+    <string name="plugin_import_selected_summary">已选择 %1$d 个插件</string>
+    <string name="plugin_import_install">安装</string>
+    <string name="plugin_import_installable_title">可安装插件（%1$d）</string>
+    <string name="plugin_import_failed_title">无法安装（%1$d）</string>
+    <string name="plugin_import_version">版本</string>
+    <string name="plugin_import_path">路径</string>
+    <string name="plugin_import_include_dirs">包含目录</string>
+    <string name="plugin_import_none">无</string>
+    <string name="plugin_import_unknown_path">未知路径</string>
+    <string name="plugin_import_conflict_new">新安装</string>
+    <string name="plugin_import_conflict_update">更新</string>
+    <string name="plugin_import_conflict_overwrite">覆盖</string>
+    <string name="plugin_import_conflict_downgrade">降级</string>
+    <string name="plugin_import_expand">展开</string>
+    <string name="plugin_import_collapse">收起</string>
 </resources>

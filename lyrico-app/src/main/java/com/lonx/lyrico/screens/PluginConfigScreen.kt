@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,16 +25,20 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.MetadataFieldTarget
 import com.lonx.lyrico.data.model.MetadataFieldWriteRule
@@ -49,6 +55,7 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -78,7 +85,13 @@ fun PluginConfigScreen(
     val context = LocalContext.current
     val topAppBarScrollBehavior = MiuixScrollBehavior()
 
-    var editingFieldKey by remember { mutableStateOf<String?>(null) }
+    var editingFieldKey by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    var showMetadataRuleSheet by rememberSaveable {
+        mutableStateOf(false)
+    }
 
     val requiredMessage = stringResource(R.string.source_config_required_error)
 
@@ -182,6 +195,7 @@ fun PluginConfigScreen(
                         metadataRules = uiState.metadataRules,
                         onEditField = { fieldKey ->
                             editingFieldKey = fieldKey
+                            showMetadataRuleSheet = true
                         }
                     )
                 }
@@ -190,9 +204,13 @@ fun PluginConfigScreen(
     }
 
     MetadataRuleBottomSheet(
+        show = showMetadataRuleSheet,
         field = editingField,
         rule = editingRule,
-        onDismiss = {
+        onDismissRequest = {
+            showMetadataRuleSheet = false
+        },
+        onDismissFinished = {
             editingFieldKey = null
         },
         onRuleChanged = viewModel::updateMetadataRule
@@ -416,50 +434,77 @@ private fun MetadataRulePreference(
 ) {
     BasicComponent(
         modifier = Modifier.fillMaxWidth(),
-        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         onClick = onClick,
         endActions = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.padding(start = 12.dp)
+            ) {
                 Text(
                     text = stringResource(rule.mode.labelRes),
-                    style = MiuixTheme.textStyles.footnote2
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = when (rule.mode) {
+                        MetadataWriteMode.DISABLED ->
+                            MiuixTheme.colorScheme.onSurfaceVariantActions
+                        MetadataWriteMode.SUPPLEMENT,
+                        MetadataWriteMode.OVERWRITE ->
+                            MiuixTheme.colorScheme.primary
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Text(
                     text = stringResource(rule.target.labelRes),
-                    style = MiuixTheme.textStyles.footnote2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                    fontSize = 12.sp,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
     ) {
-        Column {
-            Text(text = field.title.ifBlank { field.key })
+        Column(
+            modifier = Modifier.padding(end = 8.dp)
+        ) {
+            Text(
+                text = field.title.ifBlank { field.key },
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
-            if (field.summary.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = field.summary,
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                )
-            }
+            Spacer(modifier = Modifier.height(3.dp))
+
+            Text(
+                text = field.summary.ifBlank { field.key },
+                fontSize = 13.sp,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
 
 @Composable
 private fun MetadataRuleBottomSheet(
+    show: Boolean,
     field: PluginMetadataField?,
     rule: MetadataFieldWriteRule?,
-    onDismiss: () -> Unit,
+    onDismissRequest: () -> Unit,
+    onDismissFinished: () -> Unit,
     onRuleChanged: (MetadataFieldWriteRule) -> Unit
 ) {
     WindowBottomSheet(
-        show = field != null && rule != null,
-        onDismissRequest = onDismiss
+        show = show,
+        onDismissRequest = onDismissRequest,
+        onDismissFinished = onDismissFinished
     ) {
         val currentField = field ?: return@WindowBottomSheet
         val currentRule = rule ?: return@WindowBottomSheet
@@ -482,23 +527,19 @@ private fun MetadataRuleBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 4.dp)) {
-                Text(text = currentField.title.ifBlank { currentField.key })
-
-                if (currentField.summary.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = currentField.summary,
-                        style = MiuixTheme.textStyles.footnote1,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                    )
-                }
-            }
-
-            Card {
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+        )  {
+            SmallTitle(
+                text = currentField.title,
+                insideMargin = PaddingValues(4.dp)
+            )
+            Card(
+                modifier = Modifier.padding(bottom = 12.dp),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.secondaryContainer,
+                )
+            ) {
                 WindowDropdownPreference(
                     title = stringResource(R.string.source_config_write_mode),
                     items = MetadataWriteMode.entries.map { stringResource(it.labelRes) },
@@ -519,7 +560,7 @@ private fun MetadataRuleBottomSheet(
                     title = stringResource(R.string.source_config_write_target),
                     items = targetCandidates.map { stringResource(it.labelRes) },
                     selectedIndex = selectedTargetIndex,
-                    enabled = currentField.targetOptions.isNotEmpty(),
+                    enabled = targetCandidates.isNotEmpty(),
                     onSelectedIndexChange = { index ->
                         targetCandidates.getOrNull(index)?.let { target ->
                             onRuleChanged(
@@ -543,7 +584,11 @@ private fun MetadataRuleBottomSheet(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 10.dp)
                     ) {
-                        Text(text = stringResource(R.string.source_config_custom_tag_key))
+                        Text(
+                            text = stringResource(R.string.source_config_custom_tag_key),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
 
                         Spacer(modifier = Modifier.height(8.dp))
 

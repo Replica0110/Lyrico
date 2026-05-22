@@ -703,4 +703,21 @@
     <string name="plugin_update_source_configured">Update source</string>
     <string name="plugin_version_with_value">Version: %1$s</string>
     <string name="plugin_author_with_value">Author: %1$s</string>
+    <string name="plugin_import_found_title">Plugin package found</string>
+    <string name="plugin_import_found_summary">Found %1$d installable plugin(s), %2$d failed</string>
+    <string name="plugin_import_selected_summary">%1$d plugin(s) selected</string>
+    <string name="plugin_import_install">Install</string>
+    <string name="plugin_import_installable_title">Installable plugins (%1$d)</string>
+    <string name="plugin_import_failed_title">Failed plugins (%1$d)</string>
+    <string name="plugin_import_version">Version</string>
+    <string name="plugin_import_path">Path</string>
+    <string name="plugin_import_include_dirs">Include dirs</string>
+    <string name="plugin_import_none">None</string>
+    <string name="plugin_import_unknown_path">Unknown path</string>
+    <string name="plugin_import_conflict_new">New</string>
+    <string name="plugin_import_conflict_update">Update</string>
+    <string name="plugin_import_conflict_overwrite">Overwrite</string>
+    <string name="plugin_import_conflict_downgrade">Downgrade</string>
+    <string name="plugin_import_expand">Expand</string>
+    <string name="plugin_import_collapse">Collapse</string>
 </resources>

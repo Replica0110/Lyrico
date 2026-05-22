@@ -9,7 +9,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,9 +19,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -65,6 +66,7 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Checkbox
@@ -73,6 +75,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
@@ -136,7 +139,7 @@ fun PluginManagerScreen(
                         onClick = {
                             if (!uiState.isBusy) importLauncher.launch(arrayOf("*/*"))
                         }
-                    ){
+                    ) {
                         Icon(
                             imageVector = MiuixIcons.Add,
                             contentDescription = null
@@ -256,93 +259,36 @@ fun PluginManagerScreen(
 
     YesNoDialog(
         show = pendingImport != null,
-        title = "发现插件包",
+        title = stringResource(R.string.plugin_import_found_title),
         summary = pendingImport?.let { session ->
-            "发现 ${session.candidates.size} 个可安装插件，${session.failed.size} 个无法安装"
+            buildString {
+                append(
+                    stringResource(
+                        R.string.plugin_import_found_summary,
+                        session.candidates.size,
+                        session.failed.size
+                    )
+                )
+                if (uiState.selectedImportRoots.isNotEmpty()) {
+                    append("\n")
+                    append(
+                        stringResource(
+                            R.string.plugin_import_selected_summary,
+                            uiState.selectedImportRoots.size
+                        )
+                    )
+                }
+            }
         },
         content = {
-            val selectedRoots = uiState.selectedImportRoots
             pendingImport?.let { session ->
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(
-                        items = session.candidates,
-                        key = { candidate -> candidate.relativeRootInArchive }
-                    ) { candidate ->
-                        val selected = candidate.relativeRootInArchive in selectedRoots
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    viewModel.setImportCandidateSelected(
-                                        candidate.relativeRootInArchive,
-                                        !selected
-                                    )
-                                }
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Checkbox(
-                                state = if (selected) ToggleableState.On else ToggleableState.Off,
-                                onClick = {
-                                    viewModel.setImportCandidateSelected(
-                                        candidate.relativeRootInArchive,
-                                        !selected
-                                    )
-                                }
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = candidate.manifest.name,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight(600),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = candidate.manifest.id,
-                                    fontSize = 12.sp,
-                                    color = colorScheme.onSurfaceVariantSummary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = buildPluginPreviewDetail(candidate),
-                                    fontSize = 12.sp,
-                                    color = colorScheme.onSurfaceVariantSummary
-                                )
-                            }
-                        }
+                PluginImportPreviewContent(
+                    session = session,
+                    selectedRoots = uiState.selectedImportRoots,
+                    onCandidateCheckedChange = { root, checked ->
+                        viewModel.setImportCandidateSelected(root, checked)
                     }
-
-                    if (session.failed.isNotEmpty()) {
-                        item("failed-title") {
-                            Text(
-                                text = "无法安装",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight(600),
-                                color = colorScheme.error,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
-                        items(
-                            items = session.failed,
-                            key = { failed -> "${failed.rootPath}:${failed.reason}" }
-                        ) { failed ->
-                            Text(
-                                text = "${failed.rootPath}: ${failed.reason}",
-                                fontSize = 12.sp,
-                                color = colorScheme.error
-                            )
-                        }
-                    }
-                }
+                )
             }
         },
         onDismissRequest = {
@@ -352,23 +298,368 @@ fun PluginManagerScreen(
         onConfirm = {
             viewModel.installPendingImport()
         },
-        confirmText = "安装"
+        confirmText = stringResource(R.string.plugin_import_install),
     )
 }
 
-private fun buildPluginPreviewDetail(
-    candidate: com.lonx.lyrico.plugin.source.PluginInstallCandidate
-): String {
-    val conflict = when (candidate.versionConflict) {
-        PluginVersionConflict.NONE -> "新安装"
-        PluginVersionConflict.UPDATE -> "更新 ${candidate.existingPlugin?.versionName.orEmpty()} -> ${candidate.manifest.versionName}"
-        PluginVersionConflict.OVERWRITE -> "覆盖相同版本 ${candidate.manifest.versionName}"
-        PluginVersionConflict.DOWNGRADE -> "降级 ${candidate.existingPlugin?.versionName.orEmpty()} -> ${candidate.manifest.versionName}"
+@Composable
+private fun PluginImportPreviewContent(
+    session: com.lonx.lyrico.plugin.source.PluginImportSession,
+    selectedRoots: Set<String>,
+    onCandidateCheckedChange: (String, Boolean) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 460.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(vertical = 4.dp)
+    ) {
+        if (session.candidates.isNotEmpty()) {
+            item("installable-title") {
+                SmallTitle(
+                    text = stringResource(
+                        R.string.plugin_import_installable_title,
+                        session.candidates.size
+                    )
+                )
+            }
+
+            items(
+                items = session.candidates,
+                key = { candidate -> candidate.relativeRootInArchive }
+            ) { candidate ->
+                val selected = candidate.relativeRootInArchive in selectedRoots
+
+                PluginImportCandidateItem(
+                    candidate = candidate,
+                    selected = selected,
+                    onCheckedChange = { checked ->
+                        onCandidateCheckedChange(candidate.relativeRootInArchive, checked)
+                    }
+                )
+            }
+        }
+
+        if (session.failed.isNotEmpty()) {
+            item("failed-title") {
+                SmallTitle(
+                    text = stringResource(
+                        R.string.plugin_import_failed_title,
+                        session.failed.size
+                    ),
+                    textColor = colorScheme.error
+                )
+            }
+
+            items(
+                items = session.failed,
+                key = { failed -> "${failed.rootPath}:${failed.reason}" }
+            ) { failed ->
+                PluginImportFailedItem(failed = failed)
+            }
+        }
     }
-    val includeDirs = candidate.manifest.includeDirs.joinToString().ifBlank { "无" }
-    return "版本 ${candidate.manifest.versionName} | $conflict\n路径 ${candidate.relativeRootInArchive}\nincludeDirs: $includeDirs"
 }
 
+@Composable
+private fun PluginImportCandidateItem(
+    candidate: com.lonx.lyrico.plugin.source.PluginInstallCandidate,
+    selected: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val manifest = candidate.manifest
+    val conflictText = candidate.versionConflict.toImportConflictText()
+    val conflictColor = candidate.versionConflict.toImportConflictColor()
+
+    Card(
+        colors = CardDefaults.defaultColors(
+            color = MiuixTheme.colorScheme.secondaryContainer,
+        )
+    ) {
+        BasicComponent(
+            insideMargin = PaddingValues(8.dp),
+            onClick = {
+                onCheckedChange(!selected)
+            },
+            startAction = {
+                Checkbox(
+                    state = if (selected) ToggleableState.On else ToggleableState.Off,
+                    onClick = {
+                        onCheckedChange(!selected)
+                    }
+                )
+            }
+        ) {
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = manifest.name,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                ImportStatusBadge(
+                    text = conflictText,
+                    color = conflictColor
+                )
+            }
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            Text(
+                text = manifest.id,
+                fontSize = 12.sp,
+                color = colorScheme.onSurfaceVariantSummary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ImportInfoRow(
+                label = stringResource(R.string.plugin_import_version),
+                value = if (candidate.existingPlugin != null) {
+                    "${candidate.existingPlugin.versionName} -> ${manifest.versionName}"
+                } else {
+                    manifest.versionName
+                }
+            )
+
+            ImportInfoRow(
+                label = stringResource(R.string.plugin_import_path),
+                value = candidate.relativeRootInArchive.ifBlank { "/" }
+            )
+
+            ImportInfoRow(
+                label = stringResource(R.string.plugin_import_include_dirs),
+                value = manifest.includeDirs.joinToString().ifBlank {
+                    stringResource(R.string.plugin_import_none)
+                }
+            )
+
+            if (manifest.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = manifest.description,
+                    fontSize = 13.sp,
+                    color = colorScheme.onSurfaceVariantSummary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+    }
+}
+
+@Composable
+private fun PluginImportFailedItem(
+    failed: com.lonx.lyrico.plugin.source.PluginInstallFailed
+) {
+    var expanded by rememberSaveable(
+        failed.rootPath,
+        failed.reason,
+        failed.pluginId,
+        failed.versionName
+    ) {
+        mutableStateOf(false)
+    }
+
+    val title = failed.displayName
+
+    val subtitle = buildString {
+        failed.pluginId
+            ?.takeIf { it.isNotBlank() && it != title }
+            ?.let { append(it) }
+
+        failed.versionName
+            ?.takeIf { it.isNotBlank() }
+            ?.let {
+                if (isNotEmpty()) append(" · ")
+                append(stringResource(R.string.plugin_import_version))
+                append(" ")
+                append(it)
+            }
+
+        if (failed.rootPath.isNotBlank()) {
+            if (isNotEmpty()) append(" · ")
+            append(failed.rootPath)
+        }
+    }
+
+    val versionChange = buildString {
+        val oldVersion = failed.existingVersionName
+        val newVersion = failed.versionName
+        if (!oldVersion.isNullOrBlank() && !newVersion.isNullOrBlank()) {
+            append(oldVersion)
+            append(" -> ")
+            append(newVersion)
+        }
+    }
+
+    Card(
+        colors = CardDefaults.defaultColors(
+            color = colorScheme.errorContainer
+        )
+    ) {
+        BasicComponent(
+            onClick = {
+                expanded = !expanded
+            },
+            modifier = Modifier.animateContentSize()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onErrorContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                failed.conflict?.let { conflict ->
+                    ImportStatusBadge(
+                        text = conflict.toImportConflictText(),
+                        color = colorScheme.error
+                    )
+                }
+
+                Text(
+                    text = if (expanded) {
+                        stringResource(R.string.plugin_import_collapse)
+                    } else {
+                        stringResource(R.string.plugin_import_expand)
+                    },
+                    fontSize = 12.sp,
+                    color = colorScheme.onErrorContainer,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
+                )
+            }
+
+            if (subtitle.isNotBlank()) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = colorScheme.onErrorContainer.copy(alpha = 0.82f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (versionChange.isNotBlank()) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = versionChange,
+                    fontSize = 12.sp,
+                    color = colorScheme.onErrorContainer.copy(alpha = 0.82f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = failed.reason,
+                fontSize = 12.sp,
+                color = colorScheme.onErrorContainer,
+                maxLines = if (expanded) Int.MAX_VALUE else 2,
+                overflow = if (expanded) TextOverflow.Clip else TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun ImportStatusBadge(
+    text: String,
+    color: Color
+) {
+    Text(
+        text = text,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = color,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(color.copy(alpha = 0.14f))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    )
+}
+
+@Composable
+private fun ImportInfoRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = colorScheme.onSurfaceVariantSummary,
+            modifier = Modifier.width(72.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Text(
+            text = value,
+            fontSize = 12.sp,
+            color = colorScheme.onSurfaceVariantSummary,
+            modifier = Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun PluginVersionConflict.toImportConflictColor(): Color {
+    return when (this) {
+        PluginVersionConflict.NONE -> colorScheme.primary
+        PluginVersionConflict.UPDATE -> colorScheme.primary
+        PluginVersionConflict.OVERWRITE -> colorScheme.onTertiaryContainer
+        PluginVersionConflict.DOWNGRADE -> colorScheme.error
+    }
+}
+
+@Composable
+private fun PluginVersionConflict.toImportConflictText(): String {
+    return when (this) {
+        PluginVersionConflict.NONE ->
+            stringResource(R.string.plugin_import_conflict_new)
+
+        PluginVersionConflict.UPDATE ->
+            stringResource(R.string.plugin_import_conflict_update)
+
+        PluginVersionConflict.OVERWRITE ->
+            stringResource(R.string.plugin_import_conflict_overwrite)
+
+        PluginVersionConflict.DOWNGRADE ->
+            stringResource(R.string.plugin_import_conflict_downgrade)
+    }
+}
 
 @Composable
 fun PluginItem(

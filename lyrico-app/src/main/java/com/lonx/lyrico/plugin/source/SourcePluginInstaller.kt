@@ -8,7 +8,6 @@ import com.lonx.lyrico.plugin.runtime.HostApiRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
@@ -57,31 +56,72 @@ data class PluginImportSession(
 
 data class PluginInstallFailed(
     val rootPath: String,
-    val reason: String
-)
+    val reason: String,
+    val pluginId: String? = null,
+    val pluginName: String? = null,
+    val versionCode: Int? = null,
+    val versionName: String? = null,
+    val existingVersionCode: Int? = null,
+    val existingVersionName: String? = null,
+    val conflict: PluginVersionConflict? = null
+) {
+    val displayName: String
+        get() = pluginName
+            ?.takeIf { it.isNotBlank() }
+            ?: pluginId
+                ?.takeIf { it.isNotBlank() }
+            ?: rootPath.takeIf { it.isNotBlank() }
+            ?: "."
 
+    val hasPluginInfo: Boolean
+        get() = !pluginId.isNullOrBlank() ||
+                !pluginName.isNullOrBlank() ||
+                versionCode != null ||
+                !versionName.isNullOrBlank()
+}
+fun PluginInstallCandidate.toFailed(reason: String): PluginInstallFailed {
+    return PluginInstallFailed(
+        rootPath = relativeRootInArchive,
+        reason = reason,
+        pluginId = manifest.id,
+        pluginName = manifest.name,
+        versionCode = manifest.versionCode,
+        versionName = manifest.versionName,
+        existingVersionCode = existingPlugin?.versionCode,
+        existingVersionName = existingPlugin?.versionName,
+        conflict = versionConflict
+    )
+}
+fun PluginManifest.toFailed(
+    rootPath: String,
+    reason: String,
+    existingPlugin: SourcePluginEntity? = null,
+    conflict: PluginVersionConflict? = null
+): PluginInstallFailed {
+    return PluginInstallFailed(
+        rootPath = rootPath,
+        reason = reason,
+        pluginId = id,
+        pluginName = name,
+        versionCode = versionCode,
+        versionName = versionName,
+        existingVersionCode = existingPlugin?.versionCode,
+        existingVersionName = existingPlugin?.versionName,
+        conflict = conflict
+    )
+}
+fun Throwable.toFailedPlugin(rootPathFallback: String = "."): PluginInstallFailed {
+    val message = message ?: javaClass.simpleName
+    return PluginInstallFailed(
+        rootPath = message.substringBefore(": ").ifBlank { rootPathFallback },
+        reason = message
+    )
+}
 class SourcePluginInstaller(
     private val repository: SourcePluginRepository,
     private val json: Json,
     private val limits: PluginImportLimits = PluginImportLimits()
 ) {
-    suspend fun installFromArchive(
-        input: InputStream,
-        installRoot: File,
-        enabled: Boolean = false
-    ): SourcePluginEntity = installAllFromArchive(input, installRoot, enabled)
-        .installed
-        .firstOrNull()
-        ?: error("No installable plugin found")
-
-    suspend fun installAllFromArchive(
-        input: InputStream,
-        installRoot: File,
-        enabled: Boolean = false
-    ): PluginInstallResult = withContext(Dispatchers.IO) {
-        val session = prepareImport(input, installRoot)
-        installPrepared(session, enabled)
-    }
 
     suspend fun prepareImport(
         input: InputStream,
@@ -119,9 +159,8 @@ class SourcePluginInstaller(
                 result.fold(
                     onSuccess = { candidate ->
                         if (candidate.manifest.id in duplicateIds) {
-                            failed += PluginInstallFailed(
-                                candidate.relativeRootInArchive,
-                                "Duplicate plugin id in archive: ${candidate.manifest.id}"
+                            failed += candidate.toFailed(
+                                reason = "Duplicate plugin id in archive: ${candidate.manifest.id}"
                             )
                         } else {
                             val existing = repository.getPlugin(candidate.manifest.id)
@@ -132,10 +171,7 @@ class SourcePluginInstaller(
                         }
                     },
                     onFailure = { throwable ->
-                        failed += PluginInstallFailed(
-                            rootPath = throwable.message?.substringBefore(": ").orEmpty().ifBlank { "." },
-                            reason = throwable.message ?: throwable.javaClass.simpleName
-                        )
+                        failed += throwable.toFailedPlugin()
                     }
                 )
             }
@@ -165,9 +201,8 @@ class SourcePluginInstaller(
             }
             val installed = selectedCandidates.mapNotNull { candidate ->
                 if (candidate.versionConflict == PluginVersionConflict.DOWNGRADE && !allowDowngrade) {
-                    failed += PluginInstallFailed(
-                        candidate.relativeRootInArchive,
-                        "Import version is lower than installed version: ${candidate.manifest.id}"
+                    failed += candidate.toFailed(
+                        reason = "Import version is lower than installed version: ${candidate.manifest.id}"
                     )
                     return@mapNotNull null
                 }
@@ -179,9 +214,8 @@ class SourcePluginInstaller(
                         enabled = enabled
                     )
                 }.onFailure { throwable ->
-                    failed += PluginInstallFailed(
-                        candidate.relativeRootInArchive,
-                        throwable.message ?: throwable.javaClass.simpleName
+                    failed += candidate.toFailed(
+                        reason = throwable.message ?: throwable.javaClass.simpleName
                     )
                 }.getOrNull()
             }
@@ -194,24 +228,6 @@ class SourcePluginInstaller(
     fun discardImport(session: PluginImportSession) {
         session.tempDir.deleteRecursively()
     }
-
-    suspend fun installFromDirectory(pluginDir: File, enabled: Boolean = false): SourcePluginEntity =
-        withContext(Dispatchers.IO) {
-            val manifestFile = File(pluginDir, MANIFEST_FILE)
-            val candidate = buildCandidate(manifestFile = manifestFile, packageRoot = pluginDir.parentFile ?: pluginDir)
-                .getOrThrow()
-            val targetDir = File(pluginDir.parentFile ?: pluginDir, candidate.manifest.id)
-            val finalDir = if (pluginDir.canonicalFile == targetDir.canonicalFile) {
-                pluginDir
-            } else {
-                if (targetDir.exists()) targetDir.deleteRecursively()
-                require(pluginDir.copyRecursively(targetDir, overwrite = true)) {
-                    "Failed to copy plugin into ${targetDir.absolutePath}"
-                }
-                targetDir
-            }
-            upsertInstalledPlugin(candidate.manifest, finalDir, enabled)
-        }
 
     private fun extractZip(input: InputStream, targetDir: File) {
         val canonicalTarget = targetDir.canonicalFile

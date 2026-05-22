@@ -4,6 +4,7 @@ import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.model.plugin.PluginCapability
 import com.lonx.lyrico.data.model.plugin.PluginManifest
 import com.lonx.lyrico.data.repository.SourcePluginRepository
+import com.lonx.lyrico.plugin.runtime.HostApiRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -416,11 +417,11 @@ class SourcePluginInstaller(
         }
         require(manifest.name.isNotBlank()) { "Plugin name is required" }
         require(manifest.versionCode >= 1) { "Plugin versionCode must be >= 1" }
-        require(manifest.apiVersion == SUPPORTED_API_VERSION) {
+        require(manifest.apiVersion == HostApiRegistry.PLUGIN_API_VERSION) {
             "Unsupported plugin apiVersion: ${manifest.apiVersion}"
         }
-        require(manifest.requiredHostApis.all { it in SUPPORTED_HOST_APIS }) {
-            "Unsupported host APIs: ${manifest.requiredHostApis - SUPPORTED_HOST_APIS}"
+        require(manifest.requiredHostApis.all { it in HostApiRegistry.SUPPORTED_HOST_APIS }) {
+            "Unsupported host APIs: ${manifest.requiredHostApis - HostApiRegistry.SUPPORTED_HOST_APIS}"
         }
         require(manifest.capabilities.isEmpty() || PluginCapability.SEARCH_SONGS in manifest.capabilities) {
             "A source plugin must support SEARCH_SONGS"
@@ -495,33 +496,7 @@ class SourcePluginInstaller(
 
     private companion object {
         const val MANIFEST_FILE = "manifest.json"
-        const val SUPPORTED_API_VERSION = 1
         val ID_PATTERN = Regex("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$")
-        val SUPPORTED_HOST_APIS = setOf(
-            "crypto.md5",
-            "crypto.aesEcbPkcs5EncryptBase64",
-            "crypto.aesEcbPkcs5EncryptHex",
-            "crypto.aesEcbPkcs5DecryptBase64ToText",
-            "base64.encodeText",
-            "base64.decodeText",
-            "base64.dropBytes",
-            "base64.decodeBytes",
-            "base64.encodeBytes",
-            "bytes.xor",
-            "bytes.xorBase64",
-            "compression.inflateBytesToText",
-            "compression.inflateBase64ToText",
-            "http.getText",
-            "http.postText",
-            "http.postBytes",
-            "http.get",
-            "http.post",
-            "http.getBytes",
-            "http.postBytesResponse",
-            "log.debug",
-            "log.warn",
-            "log.error"
-        )
         val SUPPORTED_ICON_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp")
     }
 }

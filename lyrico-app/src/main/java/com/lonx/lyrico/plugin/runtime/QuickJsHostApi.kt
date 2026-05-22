@@ -25,6 +25,8 @@ import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
 class QuickJsHostApi(
+    private val appInfo: HostAppInfo = HostAppInfo(),
+    private val runtimeInfo: HostRuntimeInfo = HostRuntimeInfo(),
     private val json: Json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -37,6 +39,12 @@ class QuickJsHostApi(
         }.getOrDefault(JsonObject(emptyMap()))
 
         return when (name) {
+            "app.info" -> value(appInfo.toJsonObject())
+
+            "app.userAgent" -> text(buildDefaultUserAgent(appInfo))
+
+            "runtime.info" -> value(runtimeInfo.toJsonObject())
+
             "crypto.md5" -> text(md5(payload.string("text")))
 
             "crypto.aesEcbPkcs5EncryptBase64" -> text(
@@ -241,14 +249,15 @@ class QuickJsHostApi(
             }
 
             payload.obj("headers")?.forEach { (key, value) ->
-                val headerValue = when (value) {
-                    is JsonPrimitive -> value.contentOrNull.orEmpty()
-                    is JsonArray -> value.joinToString(", ") {
-                        it.jsonPrimitive.contentOrNull.orEmpty()
-                    }
-                    else -> value.toString()
+                val headerValue = value.headerString()
+                if (key.equals("User-Agent", ignoreCase = true) && headerValue.isBlank()) {
+                    return@forEach
                 }
                 setRequestProperty(key, headerValue)
+            }
+
+            if (!hasNonBlankHeader(payload.obj("headers"), "User-Agent")) {
+                setRequestProperty("User-Agent", buildDefaultUserAgent(appInfo))
             }
         }
 
@@ -289,6 +298,13 @@ class QuickJsHostApi(
             )
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun hasNonBlankHeader(headers: JsonObject?, targetName: String): Boolean {
+        if (headers == null) return false
+        return headers.any { (key, value) ->
+            key.equals(targetName, ignoreCase = true) && value.headerString().isNotBlank()
         }
     }
 
@@ -454,6 +470,55 @@ class QuickJsHostApi(
     }
 }
 
+data class HostAppInfo(
+    val name: String = "Lyrico",
+    val packageName: String = "com.lonx.lyrico",
+    val versionName: String = "0.0.0",
+    val versionCode: Long = 0,
+    val buildType: String = "unknown",
+    val debug: Boolean = false
+) {
+    fun toJsonObject(): JsonObject {
+        return buildJsonObject {
+            put("name", name)
+            put("packageName", packageName)
+            put("versionName", versionName)
+            put("versionCode", versionCode)
+            put("buildType", buildType)
+            put("debug", debug)
+        }
+    }
+}
+
+data class HostRuntimeInfo(
+    val pluginApiVersion: Int = HostApiRegistry.PLUGIN_API_VERSION,
+    val hostApiVersion: Int = HostApiRegistry.HOST_API_VERSION,
+    val engine: String = "quickjs",
+    val engineVersion: String? = null,
+    val supportedHostApis: Set<String> = HostApiRegistry.SUPPORTED_HOST_APIS
+) {
+    fun toJsonObject(): JsonObject {
+        return buildJsonObject {
+            put("pluginApiVersion", pluginApiVersion)
+            put("hostApiVersion", hostApiVersion)
+            put("engine", engine)
+            if (engineVersion != null) {
+                put("engineVersion", engineVersion)
+            } else {
+                put("engineVersion", JsonNull)
+            }
+            put(
+                "supportedHostApis",
+                JsonArray(supportedHostApis.sorted().map { JsonPrimitive(it) })
+            )
+        }
+    }
+}
+
+fun buildDefaultUserAgent(appInfo: HostAppInfo): String {
+    return "${appInfo.name}/${appInfo.versionName}"
+}
+
 private fun JsonObject.string(key: String): String {
     return this[key]?.jsonPrimitive?.contentOrNull.orEmpty()
 }
@@ -474,6 +539,16 @@ private fun JsonObject.bytes(key: String): ByteArray {
     val array = this[key]?.jsonArray ?: return ByteArray(0)
     return ByteArray(array.size) { index ->
         array[index].jsonPrimitive.int.toByte()
+    }
+}
+
+private fun JsonElement.headerString(): String {
+    return when (this) {
+        is JsonPrimitive -> contentOrNull.orEmpty()
+        is JsonArray -> joinToString(", ") {
+            it.jsonPrimitive.contentOrNull.orEmpty()
+        }
+        else -> toString()
     }
 }
 

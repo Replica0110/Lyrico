@@ -76,7 +76,25 @@ class QuickJsRuntime(
                 };
               }
 
+              globalThis.app = {
+                getInfo: function() {
+                  return hostCall("app.info", {});
+                },
+                getUserAgent: function() {
+                  return hostCall("app.userAgent", {});
+                }
+              };
+
+              globalThis.runtime = {
+                getInfo: function() {
+                  return hostCall("runtime.info", {});
+                }
+              };
+
               globalThis.Lyrico = {
+                app: globalThis.app,
+                runtime: globalThis.runtime,
+
                 crypto: {
                   md5: function(text) {
                     return hostCall("crypto.md5", {

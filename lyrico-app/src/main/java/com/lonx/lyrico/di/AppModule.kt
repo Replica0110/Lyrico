@@ -1,6 +1,7 @@
 package com.lonx.lyrico.di
 
 import androidx.room.Room
+import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.network.NetworkLoggingInterceptor
@@ -28,6 +29,9 @@ import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.plugin.source.ScriptSearchSourceFactory
 import com.lonx.lyrico.plugin.source.SourcePluginInstaller
+import com.lonx.lyrico.plugin.runtime.HostAppInfo
+import com.lonx.lyrico.plugin.runtime.QuickJsHostApi
+import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import com.lonx.lyrico.utils.MediaScanner
 import com.lonx.lyrico.utils.ReplayGainScanner
 import com.lonx.lyrico.utils.LibraryScanManager
@@ -109,7 +113,26 @@ val appModule = module {
             .build()
     }
     single { SharedSelectionManager() }
-    single { ScriptSearchSourceFactory(json = get()) }
+    single {
+        val context = androidContext()
+        ScriptSearchSourceFactory(
+            json = get(),
+            runtimeFactory = {
+                QuickJsRuntime(
+                    hostApi = QuickJsHostApi(
+                        appInfo = HostAppInfo(
+                            name = "Lyrico",
+                            packageName = context.packageName,
+                            versionName = BuildConfig.VERSION_NAME,
+                            versionCode = BuildConfig.VERSION_CODE.toLong(),
+                            buildType = BuildConfig.BUILD_TYPE,
+                            debug = BuildConfig.DEBUG
+                        )
+                    )
+                )
+            }
+        )
+    }
     single { PluginSearchSourceManager(repository = get(), factory = get()) }
     single { SourcePluginInstaller(repository = get(), json = get()) }
     single { SearchSourceProvider(pluginManager = get()) }

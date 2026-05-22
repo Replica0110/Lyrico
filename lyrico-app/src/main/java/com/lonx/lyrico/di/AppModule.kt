@@ -115,6 +115,7 @@ val appModule = module {
     single { SharedSelectionManager() }
     single {
         val context = androidContext()
+        val okHttpClient = get<OkHttpClient>()
         ScriptSearchSourceFactory(
             json = get(),
             runtimeFactory = {
@@ -127,7 +128,8 @@ val appModule = module {
                             versionCode = BuildConfig.VERSION_CODE.toLong(),
                             buildType = BuildConfig.BUILD_TYPE,
                             debug = BuildConfig.DEBUG
-                        )
+                        ),
+                        okHttpClient = okHttpClient
                     )
                 )
             }

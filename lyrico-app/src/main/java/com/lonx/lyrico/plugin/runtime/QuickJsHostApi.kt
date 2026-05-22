@@ -16,17 +16,20 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
-import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 import java.util.zip.Inflater
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
 
 class QuickJsHostApi(
     private val appInfo: HostAppInfo = HostAppInfo(),
     private val runtimeInfo: HostRuntimeInfo = HostRuntimeInfo(),
+    private val okHttpClient: OkHttpClient = OkHttpClient(),
     private val json: Json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -228,52 +231,48 @@ class QuickJsHostApi(
         val urlText = payload.string("url")
         require(urlText.isNotBlank()) { "HTTP url is blank" }
 
-        val connection = (URL(urlText).openConnection() as HttpURLConnection).apply {
-            requestMethod = method
-            instanceFollowRedirects = payload.booleanOrNull("followRedirects") ?: true
-            connectTimeout = payload.intOrNull("connectTimeoutMs") ?: 8_000
-            readTimeout = payload.intOrNull("readTimeoutMs") ?: 12_000
-
-            if (method == "POST" || method == "PUT" || method == "PATCH") {
-                doOutput = true
-                setRequestProperty(
-                    "Content-Type",
-                    payload.string("contentType").ifBlank {
-                        if (binaryResponse) {
-                            "application/octet-stream"
-                        } else {
-                            "application/json; charset=utf-8"
-                        }
-                    }
-                )
-            }
-
-            payload.obj("headers")?.forEach { (key, value) ->
-                val headerValue = value.headerString()
-                if (key.equals("User-Agent", ignoreCase = true) && headerValue.isBlank()) {
-                    return@forEach
-                }
-                setRequestProperty(key, headerValue)
-            }
-
-            if (!hasNonBlankHeader(payload.obj("headers"), "User-Agent")) {
-                setRequestProperty("User-Agent", buildDefaultUserAgent(appInfo))
+        val contentType = payload.string("contentType").ifBlank {
+            if (binaryResponse) {
+                "application/octet-stream"
+            } else {
+                "application/json; charset=utf-8"
             }
         }
 
-        return try {
-            if (method == "POST" || method == "PUT" || method == "PATCH") {
-                val bodyBytes = payload.requestBodyBytes()
-                connection.outputStream.use { output ->
-                    output.write(bodyBytes)
-                }
-            }
+        val requestBuilder = Request.Builder().url(urlText)
+        if (method == "POST" || method == "PUT" || method == "PATCH") {
+            requestBuilder.header("Content-Type", contentType)
+        }
 
-            val code = connection.responseCode
-            val responseBytes = connection.responseStream(code).useOrEmpty { stream ->
-                stream.readAllBytesCompat()
+        payload.obj("headers")?.forEach { (key, value) ->
+            val headerValue = value.headerString()
+            if (key.equals("User-Agent", ignoreCase = true) && headerValue.isBlank()) {
+                return@forEach
             }
+            requestBuilder.header(key, headerValue)
+        }
 
+        if (!hasNonBlankHeader(payload.obj("headers"), "User-Agent")) {
+            requestBuilder.header("User-Agent", buildDefaultUserAgent(appInfo))
+        }
+
+        val requestBody = if (method == "POST" || method == "PUT" || method == "PATCH") {
+            payload.requestBodyBytes().toRequestBody(contentType.toMediaType())
+        } else {
+            null
+        }
+
+        requestBuilder.method(method, requestBody)
+
+        val client = okHttpClient.newBuilder()
+            .followRedirects(payload.booleanOrNull("followRedirects") ?: true)
+            .followSslRedirects(payload.booleanOrNull("followRedirects") ?: true)
+            .connectTimeout((payload.intOrNull("connectTimeoutMs") ?: 8_000).toLong(), TimeUnit.MILLISECONDS)
+            .readTimeout((payload.intOrNull("readTimeoutMs") ?: 12_000).toLong(), TimeUnit.MILLISECONDS)
+            .build()
+
+        return client.newCall(requestBuilder.build()).execute().use { response ->
+            val responseBytes = response.body.bytes()
             val bodyText = if (binaryResponse) {
                 ""
             } else {
@@ -287,17 +286,12 @@ class QuickJsHostApi(
             }
 
             HostHttpResponse(
-                code = code,
-                message = connection.responseMessage.orEmpty(),
-                headers = connection.headerFields.orEmpty()
-                    .filterKeys { it != null }
-                    .mapKeys { it.key.orEmpty() }
-                    .mapValues { it.value.orEmpty() },
+                code = response.code,
+                message = response.message,
+                headers = response.headers.toMultimap(),
                 bodyText = bodyText,
                 bodyBase64 = bodyBase64
             )
-        } finally {
-            connection.disconnect()
         }
     }
 
@@ -322,34 +316,6 @@ class QuickJsHostApi(
         }
 
         return string("body").toByteArray(Charsets.UTF_8)
-    }
-
-    private fun HttpURLConnection.responseStream(code: Int): InputStream? {
-        return if (code in 200..299) {
-            inputStream
-        } else {
-            errorStream ?: inputStream
-        }
-    }
-
-    private inline fun <T> InputStream?.useOrEmpty(block: (InputStream) -> T): T where T : Any {
-        return if (this == null) {
-            @Suppress("UNCHECKED_CAST")
-            ByteArray(0) as T
-        } else {
-            use(block)
-        }
-    }
-
-    private fun InputStream.readAllBytesCompat(): ByteArray {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        while (true) {
-            val count = read(buffer)
-            if (count < 0) break
-            output.write(buffer, 0, count)
-        }
-        return output.toByteArray()
     }
 
     private fun md5(text: String): String {

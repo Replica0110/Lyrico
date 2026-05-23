@@ -518,6 +518,19 @@
     <string name="batch_edit_processing">Processing</string>
     <string name="batch_edit_remove_replay_gain">Remove ReplayGain</string>
     <string name="batch_edit_remove_replay_gain_desc">Remove all replay gain tags from selected songs</string>
+    <string name="batch_tag_clean_title">Clean Specified Keyword</string>
+    <string name="batch_tag_clean_keyword">Find</string>
+    <string name="batch_tag_clean_replacement">Replace with</string>
+    <string name="batch_tag_clean_ignore_case">Case insensitive</string>
+    <string name="batch_tag_clean_exact_match">Exactly equals keyword</string>
+    <string name="batch_tag_clean_regex">Use regular expression</string>
+    <string name="batch_tag_clean_previewing">Previewing...</string>
+    <string name="batch_tag_clean_confirm_write">Confirm Write</string>
+    <string name="batch_tag_clean_preview_summary">Scanned: %1$d, matched files: %2$d, modified fields: %3$d, failed files: %4$d</string>
+    <string name="batch_tag_clean_no_matches">No matching tags to clean</string>
+    <string name="batch_tag_clean_preview_more">%1$d more preview items hidden</string>
+    <string name="batch_tag_clean_original">Original: %1$s</string>
+    <string name="batch_tag_clean_new_value">New: %1$s</string>
 
     <!-- Same Album Cover -->
     <string name="msg_same_album_cover_applied">Applied same album cover</string>

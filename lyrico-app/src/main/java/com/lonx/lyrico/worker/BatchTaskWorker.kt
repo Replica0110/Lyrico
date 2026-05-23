@@ -429,6 +429,7 @@ class BatchTaskWorker(
             if (config.replayGainAlbumPeak != keep) add("replayGainAlbumPeak")
             if (config.replayGainReferenceLoudness != keep) add("replayGainReferenceLoudness")
             if (config.customFields.isNotEmpty()) add("customFields")
+            if (config.tagKeywordCleanConfig != null) add("tagKeywordClean")
         }
 
         return buildString {
@@ -437,6 +438,13 @@ class BatchTaskWorker(
             if (config.ratingModified) appendLine("rating=${config.rating}")
             if (config.lyricsOffset.isNotBlank()) appendLine("lyricsOffset=${config.lyricsOffset}")
             appendLine("customFieldKeys=${config.customFields.map { it.key }.joinToString(", ").ifBlank { "(none)" }}")
+            config.tagKeywordCleanConfig?.let { cleanConfig ->
+                appendLine("tagKeywordCleanFields=${cleanConfig.fields.joinToString(", ") { it.name }}")
+                appendLine("tagKeywordCleanMode=${cleanConfig.matchMode}")
+                appendLine("tagKeywordCleanIgnoreCase=${cleanConfig.ignoreCase}")
+                appendLine("tagKeywordCleanKeyword=${cleanConfig.keyword.sanitizeConfigValue()}")
+                appendLine("tagKeywordCleanReplacement=${cleanConfig.replacement.sanitizeConfigValue()}")
+            }
             appendSanitizedValue("title", config.title, keep)
             appendSanitizedValue("artist", config.artist, keep)
             appendSanitizedValue("albumArtist", config.albumArtist, keep)

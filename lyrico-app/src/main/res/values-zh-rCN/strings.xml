@@ -518,6 +518,19 @@
     <string name="batch_edit_processing">处理中</string>
     <string name="batch_edit_remove_replay_gain">删除回放增益</string>
     <string name="batch_edit_remove_replay_gain_desc">从选中的歌曲中删除所有回放增益标签</string>
+    <string name="batch_tag_clean_title">清理指定关键词</string>
+    <string name="batch_tag_clean_keyword">查找内容</string>
+    <string name="batch_tag_clean_replacement">替换为</string>
+    <string name="batch_tag_clean_ignore_case">大小写不敏感</string>
+    <string name="batch_tag_clean_exact_match">完全等于关键词</string>
+    <string name="batch_tag_clean_regex">使用正则表达式</string>
+    <string name="batch_tag_clean_previewing">正在预览...</string>
+    <string name="batch_tag_clean_confirm_write">确认写入</string>
+    <string name="batch_tag_clean_preview_summary">扫描文件: %1$d，命中文件: %2$d，修改字段: %3$d，失败文件: %4$d</string>
+    <string name="batch_tag_clean_no_matches">没有找到需要清理的标签</string>
+    <string name="batch_tag_clean_preview_more">还有 %1$d 条预览未显示</string>
+    <string name="batch_tag_clean_original">原值: %1$s</string>
+    <string name="batch_tag_clean_new_value">新值: %1$s</string>
 
     <!-- 同专辑封面 -->
     <string name="msg_same_album_cover_applied">已应用同专辑封面</string>

@@ -20,6 +20,10 @@ import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.LyricEncoder
+import com.lonx.lyrico.utils.TagKeywordCleanConfig
+import com.lonx.lyrico.utils.TagKeywordCleanField
+import com.lonx.lyrico.utils.TagKeywordCleaner
+import com.lonx.lyrico.utils.TagKeywordMatchMode
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.worker.BatchTaskScheduler
@@ -135,6 +139,14 @@ data class BatchEditSelectableCover(
     val fileLastModified: Long
 )
 
+data class BatchTagCleanPreviewItem(
+    val fileName: String,
+    val songUri: String,
+    val field: TagKeywordCleanField,
+    val originalValue: String,
+    val newValue: String
+)
+
 class BatchEditViewModel(
     private val songRepository: SongRepository,
     private val selectionManager: SharedSelectionManager,
@@ -167,6 +179,37 @@ class BatchEditViewModel(
     /** 保存选中的文件uri */
     private var selectedUris: List<String> = emptyList()
     private var selectedSongs: List<SongEntity> = emptyList()
+
+    private val _tagCleanKeyword = MutableStateFlow("kuwo")
+    val tagCleanKeyword: StateFlow<String> = _tagCleanKeyword.asStateFlow()
+
+    private val _tagCleanReplacement = MutableStateFlow("")
+    val tagCleanReplacement: StateFlow<String> = _tagCleanReplacement.asStateFlow()
+
+    private val _tagCleanGenreSelected = MutableStateFlow(true)
+    val tagCleanGenreSelected: StateFlow<Boolean> = _tagCleanGenreSelected.asStateFlow()
+
+    private val _tagCleanCommentSelected = MutableStateFlow(true)
+    val tagCleanCommentSelected: StateFlow<Boolean> = _tagCleanCommentSelected.asStateFlow()
+
+    private val _tagCleanIgnoreCase = MutableStateFlow(true)
+    val tagCleanIgnoreCase: StateFlow<Boolean> = _tagCleanIgnoreCase.asStateFlow()
+
+    private val _tagCleanMatchMode = MutableStateFlow(TagKeywordMatchMode.CONTAINS)
+    val tagCleanMatchMode: StateFlow<TagKeywordMatchMode> = _tagCleanMatchMode.asStateFlow()
+
+    private val _tagCleanPreviewItems = MutableStateFlow<List<BatchTagCleanPreviewItem>>(emptyList())
+    val tagCleanPreviewItems: StateFlow<List<BatchTagCleanPreviewItem>> =
+        _tagCleanPreviewItems.asStateFlow()
+
+    private val _tagCleanPreviewFailureCount = MutableStateFlow(0)
+    val tagCleanPreviewFailureCount: StateFlow<Int> = _tagCleanPreviewFailureCount.asStateFlow()
+
+    private val _tagCleanIsPreviewing = MutableStateFlow(false)
+    val tagCleanIsPreviewing: StateFlow<Boolean> = _tagCleanIsPreviewing.asStateFlow()
+
+    private val _tagCleanPreviewGenerated = MutableStateFlow(false)
+    val tagCleanPreviewGenerated: StateFlow<Boolean> = _tagCleanPreviewGenerated.asStateFlow()
 
     init {
         val uris = selectionManager.selectedUris.value.toList()
@@ -250,6 +293,204 @@ class BatchEditViewModel(
 
     fun resetRating() {
         _uiState.update { it.copy(rating = 0, ratingModified = false) }
+    }
+
+    // ── 关键词清理 ──────────────────────────────────────────
+
+    fun updateTagCleanKeyword(value: String) {
+        _tagCleanKeyword.value = value
+        invalidateTagCleanPreview()
+    }
+
+    fun updateTagCleanReplacement(value: String) {
+        _tagCleanReplacement.value = value
+        invalidateTagCleanPreview()
+    }
+
+    fun updateTagCleanGenreSelected(value: Boolean) {
+        _tagCleanGenreSelected.value = value
+        invalidateTagCleanPreview()
+    }
+
+    fun updateTagCleanCommentSelected(value: Boolean) {
+        _tagCleanCommentSelected.value = value
+        invalidateTagCleanPreview()
+    }
+
+    fun updateTagCleanIgnoreCase(value: Boolean) {
+        _tagCleanIgnoreCase.value = value
+        invalidateTagCleanPreview()
+    }
+
+    fun updateTagCleanMatchMode(value: TagKeywordMatchMode) {
+        _tagCleanMatchMode.value = value
+        invalidateTagCleanPreview()
+    }
+
+    fun previewTagKeywordClean() {
+        if (_tagCleanIsPreviewing.value || selectedUris.isEmpty()) return
+        val config = currentTagKeywordCleanConfig()
+        if (config == null) {
+            _tagCleanPreviewItems.value = emptyList()
+            _tagCleanPreviewFailureCount.value = 0
+            _tagCleanPreviewGenerated.value = true
+            return
+        }
+
+        viewModelScope.launch {
+            _tagCleanIsPreviewing.value = true
+            _uiState.update { it.copy(errorMessage = null) }
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    buildTagKeywordCleanPreview(config)
+                }
+                _tagCleanPreviewItems.value = result.first
+                _tagCleanPreviewFailureCount.value = result.second
+                _tagCleanPreviewGenerated.value = true
+            } catch (e: Exception) {
+                Log.e(TAG, "关键词清理预览失败", e)
+                _uiState.update {
+                    it.copy(
+                        errorMessage = UiMessage.StringResource(
+                            R.string.msg_save_failed_with_reason,
+                            e.message ?: e::class.java.simpleName
+                        )
+                    )
+                }
+            } finally {
+                _tagCleanIsPreviewing.value = false
+            }
+        }
+    }
+
+    fun saveTagKeywordClean() {
+        val config = currentTagKeywordCleanConfig() ?: return
+        val previewItems = _tagCleanPreviewItems.value
+        if (_uiState.value.isSaving || selectedUris.isEmpty() || previewItems.isEmpty()) return
+
+        saveJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSaving = true,
+                    saveProgressBottomSheet = true,
+                    saveProgress = 0,
+                    saveTotal = selectedUris.size,
+                    currentFile = "",
+                    successCount = 0,
+                    skippedCount = 0,
+                    failureCount = 0,
+                    saveTimeMillis = 0,
+                    saveSuccess = null,
+                    saveResultMessage = null,
+                    errorMessage = null
+                )
+            }
+
+            val songs = selectedUris.mapNotNull { uri ->
+                songRepository.getSongByUri(uri)
+            }
+            if (songs.isEmpty()) {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        saveProgressBottomSheet = false,
+                        errorMessage = UiMessage.StringResource(R.string.no_song_selected)
+                    )
+                }
+                return@launch
+            }
+
+            val configJson = Json.encodeToString(
+                EditTagsTaskConfig.serializer(),
+                EditTagsTaskConfig(tagKeywordCleanConfig = config)
+            )
+            val taskId = batchTaskRepository.createTask(
+                type = BatchTaskType.EDIT_TAGS,
+                songs = songs,
+                configJson = configJson
+            )
+            batchTaskScheduler.enqueue(taskId)
+            resumeObservingTask(taskId)
+        }
+    }
+
+    private fun invalidateTagCleanPreview() {
+        _tagCleanPreviewGenerated.value = false
+        _tagCleanPreviewItems.value = emptyList()
+        _tagCleanPreviewFailureCount.value = 0
+    }
+
+    private fun currentTagKeywordCleanConfig(): TagKeywordCleanConfig? {
+        val fields = buildSet {
+            if (_tagCleanGenreSelected.value) add(TagKeywordCleanField.GENRE)
+            if (_tagCleanCommentSelected.value) add(TagKeywordCleanField.COMMENT)
+        }
+        val keyword = _tagCleanKeyword.value.trim()
+        if (fields.isEmpty() || keyword.isBlank()) return null
+        return TagKeywordCleanConfig(
+            fields = fields,
+            keyword = keyword,
+            replacement = _tagCleanReplacement.value,
+            ignoreCase = _tagCleanIgnoreCase.value,
+            matchMode = _tagCleanMatchMode.value
+        )
+    }
+
+    private suspend fun buildTagKeywordCleanPreview(
+        config: TagKeywordCleanConfig
+    ): Pair<List<BatchTagCleanPreviewItem>, Int> {
+        ensureSelectedSongsLoaded()
+        val songsByUri = selectedSongs.associateBy { it.uri }
+        val items = mutableListOf<BatchTagCleanPreviewItem>()
+        var failureCount = 0
+
+        selectedUris.forEach { uri ->
+            val song = songsByUri[uri]
+            val fileName = song?.fileName ?: UriUtils.getMediaStoreFileName(
+                contentResolver,
+                uri.toUri()
+            ) ?: "Unknown"
+            val tagData = try {
+                songRepository.readAudioTagData(uri)
+            } catch (e: Exception) {
+                Log.e(TAG, "读取关键词清理预览标签失败: $uri", e)
+                failureCount++
+                return@forEach
+            }
+
+            if (TagKeywordCleanField.GENRE in config.fields) {
+                val original = tagData.genre.orEmpty()
+                val cleaned = TagKeywordCleaner.cleanGenre(tagData.genre, config).orEmpty()
+                if (cleaned != original) {
+                    items.add(
+                        BatchTagCleanPreviewItem(
+                            fileName = fileName,
+                            songUri = uri,
+                            field = TagKeywordCleanField.GENRE,
+                            originalValue = original,
+                            newValue = cleaned
+                        )
+                    )
+                }
+            }
+            if (TagKeywordCleanField.COMMENT in config.fields) {
+                val original = tagData.comment.orEmpty()
+                val cleaned = TagKeywordCleaner.cleanComment(tagData.comment, config).orEmpty()
+                if (cleaned != original) {
+                    items.add(
+                        BatchTagCleanPreviewItem(
+                            fileName = fileName,
+                            songUri = uri,
+                            field = TagKeywordCleanField.COMMENT,
+                            originalValue = original,
+                            newValue = cleaned
+                        )
+                    )
+                }
+            }
+        }
+
+        return items to failureCount
     }
 
     // ── 歌词偏移 ──────────────────────────────────────────

@@ -1,1 +1,1 @@
-Edit audio tags, covers, and lyrics on Android
+Audio tag editor with extensible plugin system and synced lyrics

@@ -277,8 +277,7 @@ class MatchMetadataProcessor(
             com.lonx.lyrico.data.model.MetadataFieldTarget.DISC_NUMBER -> song.discNumber == null
             com.lonx.lyrico.data.model.MetadataFieldTarget.COMPOSER -> song.composer.isNullOrBlank()
             com.lonx.lyrico.data.model.MetadataFieldTarget.LYRICIST -> song.lyricist.isNullOrBlank()
-            com.lonx.lyrico.data.model.MetadataFieldTarget.COMMENT,
-            com.lonx.lyrico.data.model.MetadataFieldTarget.SUBTITLE -> song.comment.isNullOrBlank()
+            com.lonx.lyrico.data.model.MetadataFieldTarget.COMMENT -> song.comment.isNullOrBlank()
             com.lonx.lyrico.data.model.MetadataFieldTarget.LYRICS -> song.lyrics.isNullOrBlank()
             com.lonx.lyrico.data.model.MetadataFieldTarget.COVER -> !hasEmbeddedCover(song)
             com.lonx.lyrico.data.model.MetadataFieldTarget.LANGUAGE -> true

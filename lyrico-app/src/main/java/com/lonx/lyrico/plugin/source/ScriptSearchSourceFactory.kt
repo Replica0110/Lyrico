@@ -88,7 +88,7 @@ class ScriptSearchSourceFactory(
 
             includeSources.forEach { source ->
                 append("\n;")
-                append("\n// ===== Lyrico include: ")
+                append("\n// ===== Platform include: ")
                 append(source.path)
                 append(" =====\n")
                 append(source.content)
@@ -98,7 +98,7 @@ class ScriptSearchSourceFactory(
             }
 
             append("\n;")
-            append("\n// ===== Lyrico entry: ")
+            append("\n// ===== Platform entry: ")
             append(manifest.entry)
             append(" =====\n")
             append(entryFile.readText())

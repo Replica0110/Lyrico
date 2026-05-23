@@ -94,7 +94,7 @@ class QuickJsRuntime(
                 }
               };
 
-              globalThis.Lyrico = {
+              globalThis.Platform = {
                 app: globalThis.app,
                 runtime: globalThis.runtime,
 
@@ -292,30 +292,30 @@ class QuickJsRuntime(
                   debug: function(tag, message) {
                     if (message === undefined) {
                       message = tag;
-                      tag = "LyricoPlugin";
+                      tag = "PlatformPlugin";
                     }
                     return hostCall("log.debug", {
-                      tag: String(tag || "LyricoPlugin"),
+                      tag: String(tag || "PlatformPlugin"),
                       message: String(message || "")
                     });
                   },
                   warn: function(tag, message) {
                     if (message === undefined) {
                       message = tag;
-                      tag = "LyricoPlugin";
+                      tag = "PlatformPlugin";
                     }
                     return hostCall("log.warn", {
-                      tag: String(tag || "LyricoPlugin"),
+                      tag: String(tag || "PlatformPlugin"),
                       message: String(message || "")
                     });
                   },
                   error: function(tag, message) {
                     if (message === undefined) {
                       message = tag;
-                      tag = "LyricoPlugin";
+                      tag = "PlatformPlugin";
                     }
                     return hostCall("log.error", {
-                      tag: String(tag || "LyricoPlugin"),
+                      tag: String(tag || "PlatformPlugin"),
                       message: String(message || "")
                     });
                   }

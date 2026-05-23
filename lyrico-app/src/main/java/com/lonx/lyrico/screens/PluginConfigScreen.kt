@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +28,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,6 +56,7 @@ import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
@@ -60,8 +65,10 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -84,6 +91,8 @@ fun PluginConfigScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+    val scope = rememberCoroutineScope()
+    val pagerState = rememberPagerState(pageCount = { 2 })
 
     var editingFieldKey by rememberSaveable {
         mutableStateOf<String?>(null)
@@ -118,6 +127,22 @@ fun PluginConfigScreen(
         }
     }
 
+    val hasConfigContent by remember {
+        derivedStateOf {
+            uiState.errorMessage == null &&
+                    !uiState.isLoading &&
+                    uiState.configFields.any { it.dependency.isSatisfied(uiState.values) }
+        }
+    }
+
+    val hasMetadataContent by remember {
+        derivedStateOf {
+            uiState.errorMessage == null &&
+                    !uiState.isLoading &&
+                    uiState.metadataFields.isNotEmpty()
+        }
+    }
+
     Scaffold(
         topBar = {
             SmallTopAppBar(
@@ -146,53 +171,70 @@ fun PluginConfigScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = Modifier
+                .fillMaxSize()
                 .imePadding()
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(
-                top = paddingValues.calculateTopPadding(),
-                bottom = paddingValues.calculateBottomPadding() + 12.dp
-            ),
-            overscrollEffect = null
+                .padding(paddingValues)
         ) {
-            when {
-                uiState.errorMessage != null -> {
-                    item("error") {
-                        Text(
-                            text = stringResource(R.string.source_config_invalid_source),
-                            modifier = Modifier.padding(12.dp),
-                            color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                        )
-                    }
-                }
+            if (uiState.errorMessage != null) {
+                Text(
+                    text = stringResource(R.string.source_config_invalid_source),
+                    modifier = Modifier.padding(12.dp),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                )
+                return@Scaffold
+            }
 
-                !uiState.isLoading &&
-                        uiState.configFields.none { it.dependency.isSatisfied(uiState.values) } &&
-                        uiState.metadataFields.isEmpty() -> {
-                    item("empty") {
-                        Text(
-                            text = stringResource(R.string.source_config_empty),
-                            modifier = Modifier.padding(12.dp),
-                            color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                        )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 8.dp)
+            ) {
+                TabRowWithContour(
+                    tabs = listOf(
+                        stringResource(R.string.source_config_tab_config),
+                        stringResource(R.string.source_config_tab_metadata)
+                    ),
+                    selectedTabIndex = pagerState.currentPage,
+                    onTabSelected = { index ->
+                        scope.launch {
+                            pagerState.animateScrollToPage(index)
+                        }
                     }
-                }
+                )
+            }
 
-                else -> {
-                    pluginConfigFormItems(
+            if (!hasConfigContent && !hasMetadataContent) {
+                Text(
+                    text = stringResource(R.string.source_config_empty),
+                    modifier = Modifier.padding(12.dp),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                )
+                return@Scaffold
+            }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                when (page) {
+                    0 -> PluginConfigTab(
                         fields = uiState.configFields,
                         values = uiState.values,
                         validationErrors = uiState.validationErrors,
+                        hasContent = hasConfigContent,
+                        topAppBarScrollBehavior = topAppBarScrollBehavior,
                         onValueChange = viewModel::updateValue
                     )
 
-                    metadataRuleItems(
+                    1 -> PluginMetadataTab(
                         pluginId = uiState.pluginId,
                         metadataFields = uiState.metadataFields,
                         metadataRules = uiState.metadataRules,
+                        hasContent = hasMetadataContent,
+                        topAppBarScrollBehavior = topAppBarScrollBehavior,
                         onEditField = { fieldKey ->
                             editingFieldKey = fieldKey
                             showMetadataRuleSheet = true
@@ -215,6 +257,82 @@ fun PluginConfigScreen(
         },
         onRuleChanged = viewModel::updateMetadataRule
     )
+}
+
+@Composable
+private fun PluginConfigTab(
+    fields: List<PluginConfigField>,
+    values: Map<String, String>,
+    validationErrors: Map<String, String>,
+    hasContent: Boolean,
+    topAppBarScrollBehavior: ScrollBehavior,
+    onValueChange: (String, String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .scrollEndHaptic()
+            .overScrollVertical()
+            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+        contentPadding = PaddingValues(bottom = 12.dp),
+        overscrollEffect = null
+    ) {
+        if (!hasContent) {
+            item("empty_config") {
+                Text(
+                    text = stringResource(R.string.source_config_empty),
+                    modifier = Modifier.padding(12.dp),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                )
+            }
+            return@LazyColumn
+        }
+
+        pluginConfigFormItems(
+            fields = fields,
+            values = values,
+            validationErrors = validationErrors,
+            onValueChange = onValueChange
+        )
+    }
+}
+
+@Composable
+private fun PluginMetadataTab(
+    pluginId: String,
+    metadataFields: List<PluginMetadataField>,
+    metadataRules: List<MetadataFieldWriteRule>,
+    hasContent: Boolean,
+    topAppBarScrollBehavior: ScrollBehavior,
+    onEditField: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .scrollEndHaptic()
+            .overScrollVertical()
+            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+        contentPadding = PaddingValues(bottom = 12.dp),
+        overscrollEffect = null
+    ) {
+        if (!hasContent) {
+            item("empty_metadata") {
+                Text(
+                    text = stringResource(R.string.source_config_empty),
+                    modifier = Modifier.padding(12.dp),
+                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                )
+            }
+            return@LazyColumn
+        }
+
+        metadataRuleItems(
+            pluginId = pluginId,
+            metadataFields = metadataFields,
+            metadataRules = metadataRules,
+            onEditField = onEditField
+        )
+    }
 }
 
 private fun LazyListScope.pluginConfigFormItems(
@@ -529,7 +647,7 @@ private fun MetadataRuleBottomSheet(
                 .fillMaxWidth()
                 .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState()),
-        )  {
+        ) {
             SmallTitle(
                 text = currentField.title,
                 insideMargin = PaddingValues(4.dp)

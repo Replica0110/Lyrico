@@ -152,7 +152,7 @@ class ScriptSearchSource(
         const val FUNCTION_SEARCH_SONGS = "searchSongs"
         const val FUNCTION_GET_LYRICS = "getLyrics"
         const val FUNCTION_SEARCH_COVERS = "searchCovers"
-        const val TAG = "LyricoPlugin"
+        const val TAG = "PlatformPlugin"
 
         val defaultJson: Json = Json {
             ignoreUnknownKeys = true

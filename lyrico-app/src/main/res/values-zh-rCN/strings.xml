@@ -242,6 +242,8 @@
     <string name="source_config_saved">已保存</string>
     <string name="source_config_invalid_source">无效的插件</string>
     <string name="source_config_empty">暂无可配置项</string>
+    <string name="source_config_tab_config">插件配置</string>
+    <string name="source_config_tab_metadata">写入规则</string>
     <string name="label_track_number">音轨号</string>
     <string name="label_duration">时长</string>
     <string name="label_bitrate">比特率</string>

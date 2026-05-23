@@ -525,6 +525,6 @@ private fun ByteArray.toHex(): String {
 
 private fun JsonObject.logTag(): String {
     return string("tag")
-        .ifBlank { "LyricoPlugin" }
+        .ifBlank { "PlatformPlugin" }
         .take(48)
 }

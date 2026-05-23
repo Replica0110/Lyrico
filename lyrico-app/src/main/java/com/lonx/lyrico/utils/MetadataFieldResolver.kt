@@ -93,8 +93,7 @@ class MetadataFieldResolver(
             MetadataFieldTarget.DISC_NUMBER -> if (canWriteText(rule.mode, (currentTagData?.discNumber ?: currentSong.discNumber)?.toString())) currentOutput.copy(discNumber = value.toIntOrNull()) else currentOutput
             MetadataFieldTarget.COMPOSER -> if (canWriteText(rule.mode, currentTagData?.composer ?: currentSong.composer)) currentOutput.copy(composer = value) else currentOutput
             MetadataFieldTarget.LYRICIST -> if (canWriteText(rule.mode, currentTagData?.lyricist ?: currentSong.lyricist)) currentOutput.copy(lyricist = value) else currentOutput
-            MetadataFieldTarget.COMMENT,
-            MetadataFieldTarget.SUBTITLE -> if (canWriteText(rule.mode, currentTagData?.comment ?: currentSong.comment)) currentOutput.copy(comment = value) else currentOutput
+            MetadataFieldTarget.COMMENT -> if (canWriteText(rule.mode, currentTagData?.comment ?: currentSong.comment)) currentOutput.copy(comment = value) else currentOutput
             MetadataFieldTarget.LYRICS -> if (canWriteText(rule.mode, currentTagData?.lyrics ?: currentSong.lyrics)) currentOutput.copy(lyrics = value) else currentOutput
             MetadataFieldTarget.COVER -> if (canWriteText(rule.mode, currentTagData?.picUrl)) currentOutput.copy(picUrl = value) else currentOutput
             MetadataFieldTarget.LANGUAGE -> if (canWriteText(rule.mode, currentTagData?.language)) currentOutput.copy(language = value) else currentOutput

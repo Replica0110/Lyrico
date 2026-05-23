@@ -238,6 +238,8 @@
     <string name="source_config_saved">Saved</string>
     <string name="source_config_invalid_source">Invalid plugin</string>
     <string name="source_config_empty">No configurable items</string>
+    <string name="source_config_tab_config">Plugin Settings</string>
+    <string name="source_config_tab_metadata">Write Rules</string>
     <string name="label_track_number">Track Number</string>
     <string name="label_duration">Duration</string>
     <string name="label_bitrate">Bitrate</string>

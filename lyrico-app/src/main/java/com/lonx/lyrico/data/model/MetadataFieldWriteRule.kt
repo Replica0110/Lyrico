@@ -53,7 +53,6 @@ enum class MetadataFieldTarget(
     COMPOSER(R.string.label_composer),
     LYRICIST(R.string.label_lyricist),
     COMMENT(R.string.label_comment),
-    SUBTITLE(R.string.label_subtitle),
     LYRICS(R.string.label_lyrics),
     COVER(R.string.label_cover),
     LANGUAGE(R.string.label_language),

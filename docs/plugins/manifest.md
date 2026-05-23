@@ -342,8 +342,8 @@
 {
   "type": "dropdown",
   "options": [
-    { "value": "zh-CN", "label": "zh-CN" },
-    { "value": "en-US", "label": "en-US" }
+    { "value": "zh-CN", "label": "zh-CN", "summary": "简体中文" },
+    { "value": "en-US", "label": "en-US", "summary": "English" }
   ]
 }
 ```
@@ -351,6 +351,7 @@
 每个选项包含：
 - `value`：实际值，传递给插件
 - `label`：显示文本
+- `summary`（可选，默认为 `""`）：选项的补充说明
 
 ### dependency — 条件可见性
 

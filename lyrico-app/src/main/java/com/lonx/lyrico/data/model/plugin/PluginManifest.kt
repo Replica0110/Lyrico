@@ -72,7 +72,8 @@ enum class PluginConfigFieldType {
 @Serializable
 data class PluginConfigOption(
     val value: String,
-    val label: String
+    val label: String,
+    val summary: String = ""
 )
 
 @Serializable(with = PluginConfigDependencySerializer::class)

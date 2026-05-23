@@ -205,8 +205,8 @@ var enabled = request.config.my_switch === "true";
       "targetOptions": []
     },
     {
-      "key": "netease_163_key",
-      "title": "网易163 Key",
+      "key": "source_platform_key",
+      "title": "平台密钥",
       "group": "内部",
       "type": "text",
       "writeable": true,
@@ -233,7 +233,7 @@ var enabled = request.config.my_switch === "true";
     album: "专辑名",
     date: "2024-01-01",
     track_number: "3",
-    netease_163_key: "163 key(Don't modify):..."
+    source_platform_key: "encrypted_metadata_string..."
   }
 }
 ```
@@ -247,7 +247,7 @@ var enabled = request.config.my_switch === "true";
 | `album` | `ALBUM` | 专辑标签 |
 | `date` | `DATE` | 发行日期标签 |
 | `track_number` | `TRACK_NUMBER` | 音轨号标签 |
-| `netease_163_key` | `COMMENT` | 注释标签（默认不启用） |
+| `source_platform_key` | `COMMENT` | 注释标签（默认不启用） |
 
 ### 写入模式对比
 
@@ -261,14 +261,14 @@ var enabled = request.config.my_switch === "true";
 
 `"internal": true` 的元数据字段在元数据管理界面中不会展示给用户，但系统内部仍可使用。适用于：
 
-- 平台专属 ID（如 Apple ID、专辑 ID）
+- 平台专属 ID（如平台用户 ID、专辑 ID）
 - 后续查询需要的持久化密钥
 - 不需要用户关注的内部数据
 
 ```json
 {
-  "key": "apple_id",
-  "title": "Apple ID",
+  "key": "platform_id",
+  "title": "平台 ID",
   "internal": true,
   "defaultTarget": "CUSTOM",
   "defaultMode": "DISABLED"

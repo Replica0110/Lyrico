@@ -33,7 +33,7 @@
 
 ```json
 // ✅ 合法
-"id": "com.neteasecloudmusic.source"
+"id": "com.example.music_source"
 "id": "org.example.my_plugin_v2"
 
 // ❌ 非法
@@ -51,7 +51,7 @@
 **限制**：不能为空（空白字符串会被拒绝）
 
 ```json
-"name": "网易云音乐"
+"name": "示例音乐源"
 ```
 
 ---
@@ -107,7 +107,7 @@
 **默认值**：`""`
 
 ```json
-"author": "Replica0110"
+"author": "Developer"
 ```
 
 ---
@@ -119,7 +119,7 @@
 **默认值**：`""`
 
 ```json
-"description": "网易云音乐搜索源插件"
+"description": "示例音乐搜索源插件"
 ```
 
 ---
@@ -461,16 +461,16 @@
 }
 ```
 
-## 完整示例（Apple Music 插件）
+## 完整示例
 
 ```json
 {
-  "id": "com.applemusic.source",
-  "name": "Apple Music",
+  "id": "com.example.music_source",
+  "name": "示例音乐源",
   "versionCode": 1,
   "versionName": "0.1.0",
-  "author": "Replica0110",
-  "description": "Apple Music 搜索源插件",
+  "author": "Developer",
+  "description": "示例音乐搜索源插件",
   "apiVersion": 1,
   "entry": "source.js",
   "includeDirs": ["lib"],
@@ -487,7 +487,7 @@
     {
       "key": "lyrics_provider",
       "title": "歌词源",
-      "summary": "选择第三方歌词接口或 Apple 官方接口",
+      "summary": "选择歌词接口来源",
       "group": "歌词",
       "type": "dropdown",
       "required": true,
@@ -500,7 +500,7 @@
     {
       "key": "token",
       "title": "Token",
-      "summary": "使用 Apple 官方歌词源时必填",
+      "summary": "使用官方歌词源时必填",
       "group": "歌词",
       "type": "password",
       "required": true,
@@ -528,8 +528,8 @@
       "defaultMode": "OVERWRITE"
     },
     {
-      "key": "apple_id",
-      "title": "Apple ID",
+      "key": "platform_id",
+      "title": "平台 ID",
       "group": "内部",
       "type": "text",
       "writeable": false,

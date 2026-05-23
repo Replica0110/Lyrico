@@ -30,7 +30,7 @@ function searchCovers(request) { ... }  // ✅ 全局函数
 
 ```json
 {
-  "keyword": "七里香",
+  "keyword": "示例歌曲",
   "page": 1,
   "pageSize": 20,
   "separator": "/",
@@ -59,18 +59,18 @@ function searchSongs(request) {
   return JSON.stringify([
     {
       id: "12345",
-      title: "七里香",
-      artist: "周杰伦",
-      album: "七里香",
-      duration: 283000,
-      date: "2004-08-03",
+      title: "示例歌曲",
+      artist: "示例歌手",
+      album: "示例专辑",
+      duration: 240000,
+      date: "2024-01-01",
       trackNumber: "2",
-      picUrl: "https://p1.music.126.net/abc.jpg",
+      picUrl: "https://cdn.example.com/cover/abc.jpg",
       fields: {
-        title: "七里香",
-        artist: "周杰伦",
-        album: "七里香",
-        date: "2004-08-03"
+        title: "示例歌曲",
+        artist: "示例歌手",
+        album: "示例专辑",
+        date: "2024-01-01"
       }
     }
   ]);
@@ -129,7 +129,7 @@ function searchSongs(request) {
     "date": "2024-01-01",
     "track_number": "3",
     "cover_url": "https://...",
-    "netease_163_key": "163 key(Don't modify):..."
+    "source_platform_key": "encrypted_metadata_string..."
   }
 }
 ```
@@ -146,15 +146,15 @@ function searchSongs(request) {
 {
   "song": {
     "id": "12345",
-    "title": "七里香",
-    "artist": "周杰伦",
-    "album": "七里香",
-    "duration": 283000,
-    "sourceId": "com.neteasecloudmusic.source",
-    "pluginId": "com.neteasecloudmusic.source",
+    "title": "示例歌曲",
+    "artist": "示例歌手",
+    "album": "示例专辑",
+    "duration": 240000,
+    "sourceId": "com.example.music_source",
+    "pluginId": "com.example.music_source",
     "fields": {
-      "netease_163_key": "163 key(Don't modify):...",
-      "title": "七里香"
+      "source_platform_key": "encrypted_metadata_string...",
+      "title": "示例歌曲"
     }
   },
   "config": {}
@@ -273,7 +273,7 @@ function getLyrics(request) {
 
 ```json
 {
-  "keyword": "七里香",
+  "keyword": "示例歌曲",
   "pageSize": 5,
   "config": {}
 }

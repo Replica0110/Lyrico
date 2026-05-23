@@ -123,26 +123,25 @@ include("lib/secret.js");   // 未声明于 includeDirs => 抛出 Error
 
 ## 完整文件结构示例
 
-### 网易云音乐插件
+### 示例音乐源插件
 
 ```
-com.neteasecloudmusic.source/
+com.example.source/
 ├── manifest.json        # 插件声明
 ├── source.js            # 入口：searchSongs/getLyrics/searchCovers
 └── lib/
-    ├── 01_http.js       # EAPI 加密通信、匿名登录、Cookie 管理
-    └── 02_lrc.js        # LRC/YRC 歌词解析、行对齐
+    ├── 01_http.js       # API 加密通信、签名、请求封装
+    └── 02_lrc.js        # LRC 歌词解析、行对齐合并
 ```
 
-### Apple Music 插件
+### 带配置项的插件示例
 
 ```
-com.applemusic.source/
-├── manifest.json        # 含 4 个配置项（歌词源、Token、地区、封面大小）
-├── source.js            # 入口：搜索、第三方歌词、封面
+com.example.source/
+├── manifest.json        # 含多个配置项（API 类型、Token、封面大小）
+├── source.js            # 入口：搜索、歌词获取、封面
 └── lib/
-    └── 01_apple_api.js  # JWT Token 提取、地区映射
-```
+    └── 01_api.js        # JWT Token 验证、请求封装
 
 ## 包内多插件组织
 

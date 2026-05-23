@@ -38,6 +38,9 @@ import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
 import com.lonx.lyrico.viewmodel.FolderSongsViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
+import com.lonx.lyrico.viewmodel.SortBy
+import com.lonx.lyrico.viewmodel.SortInfo
+import com.lonx.lyrico.viewmodel.SortOrder
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
@@ -47,6 +50,8 @@ import org.koin.core.parameter.parametersOf
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -54,6 +59,8 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Sort
+import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -69,6 +76,7 @@ fun FolderSongsScreen(
         parameters = { parametersOf(folderId) }
     )
     val selectionViewModel: SongSelectionViewModel = koinViewModel()
+    val sortInfo by viewModel.sortInfo.collectAsStateWithLifecycle()
     val songs by viewModel.songs.collectAsStateWithLifecycle()
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
@@ -135,6 +143,49 @@ fun FolderSongsScreen(
                                     Icon(
                                         imageVector = MiuixIcons.Back,
                                         contentDescription = stringResource(R.string.action_back)
+                                    )
+                                }
+                            },
+                            actions = {
+                                val sortTypes = SortBy.entries.toList()
+                                val sortEntries = DropdownEntry(
+                                    items = sortTypes.map { sortType ->
+                                        val isSelected = sortInfo.sortBy == sortType
+                                        DropdownItem(
+                                            text = stringResource(sortType.labelRes),
+                                            selected = isSelected,
+                                            summary = if (isSelected) {
+                                                stringResource(
+                                                    when (sortInfo.order) {
+                                                        SortOrder.ASC -> R.string.sort_ascending
+                                                        SortOrder.DESC -> R.string.sort_descending
+                                                    }
+                                                )
+                                            } else {
+                                                null
+                                            },
+                                            onClick = {
+                                                val newOrder = if (isSelected) {
+                                                    if (sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC
+                                                } else {
+                                                    SortOrder.ASC
+                                                }
+                                                viewModel.onSortChange(
+                                                    SortInfo(
+                                                        sortType,
+                                                        newOrder
+                                                    )
+                                                )
+                                            }
+                                        )
+                                    }
+                                )
+                                OverlayIconDropdownMenu(
+                                    entries = listOf(sortEntries),
+                                ) {
+                                    Icon(
+                                        imageVector = MiuixIcons.Sort,
+                                        contentDescription = stringResource(R.string.cd_sort)
                                     )
                                 }
                             },

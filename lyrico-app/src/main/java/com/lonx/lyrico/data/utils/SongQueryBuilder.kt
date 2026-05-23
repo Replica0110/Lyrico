@@ -9,6 +9,10 @@ import com.lonx.lyrico.viewmodel.SortOrder
 object SongQueryBuilder {
 
     fun build(sortInfo: SortInfo): SupportSQLiteQuery {
+        return build(sortInfo, null)
+    }
+
+    fun build(sortInfo: SortInfo, folderId: Long?): SupportSQLiteQuery {
 
         val orderColumn = when (sortInfo.sortBy) {
             SortBy.TITLE -> "s.titleSortKey"
@@ -25,10 +29,16 @@ object SongQueryBuilder {
             SortOrder.DESC -> "DESC"
         }
 
+        val whereClause = if (folderId != null) {
+            "WHERE s.folderId = $folderId AND f.isIgnored = 0"
+        } else {
+            "WHERE f.isIgnored = 0"
+        }
+
         val sql = """
             SELECT s.* FROM songs AS s
             INNER JOIN folders AS f ON s.folderId = f.id
-            WHERE f.isIgnored = 0
+            $whereClause
             ORDER BY $orderColumn $direction, s.titleSortKey ASC
         """.trimIndent()
 

@@ -14,7 +14,8 @@ object MetadataFieldWriteRuleFactory {
                         pluginId = source.id,
                         fieldKey = field.key,
                         target = field.defaultTarget.toMetadataFieldTarget(),
-                        mode = field.defaultMode.toMetadataWriteMode()
+                        mode = field.defaultMode.toMetadataWriteMode(),
+                        customTagKey = field.defaultCustomTagKey.takeIf { it.isNotBlank() }
                     )
                 }
         }

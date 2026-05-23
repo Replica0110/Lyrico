@@ -163,6 +163,7 @@ data class PluginMetadataField(
     val internal: Boolean = false,
     val defaultTarget: PluginMetadataFieldTarget = PluginMetadataFieldTarget.COMMENT,
     val defaultMode: PluginMetadataWriteMode = PluginMetadataWriteMode.DISABLED,
+    val defaultCustomTagKey: String = "",
     val targetOptions: List<PluginMetadataFieldTarget> = emptyList()
 )
 

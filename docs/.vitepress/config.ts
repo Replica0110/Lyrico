@@ -8,7 +8,7 @@ export default defineConfig({
   base: '/Lyrico/',
 
   head: [
-    ['link', { rel: 'icon', href: '/logo.svg', type: 'image/svg+xml' }],
+    ['link', { rel: 'icon', href: 'logo.svg', type: 'image/svg+xml' }],
   ],
 
   vite: {

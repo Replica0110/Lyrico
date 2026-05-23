@@ -197,6 +197,7 @@ object LyricDecoder {
 
         val factory = XmlPullParserFactory.newInstance().apply {
             isNamespaceAware = true
+            setFeature(XmlPullParser.FEATURE_PROCESS_DOCDECL, false)
         }
 
         val parser = factory.newPullParser()

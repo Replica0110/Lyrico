@@ -706,8 +706,6 @@
     <string name="plugin_version_with_value">Version: %1$s</string>
     <string name="plugin_author_with_value">Author: %1$s</string>
     <string name="plugin_import_found_title">Plugin package found</string>
-    <string name="plugin_import_found_summary">Found %1$d installable plugin(s), %2$d failed</string>
-    <string name="plugin_import_selected_summary">%1$d plugin(s) selected</string>
     <string name="plugin_import_install">Install</string>
     <string name="plugin_import_installable_title">Installable plugins (%1$d)</string>
     <string name="plugin_import_failed_title">Failed plugins (%1$d)</string>

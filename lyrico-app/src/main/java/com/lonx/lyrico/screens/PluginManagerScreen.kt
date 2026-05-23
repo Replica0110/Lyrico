@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -94,6 +95,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 @Composable
 @Destination<RootGraph>(route = "plugin_manager")
@@ -181,7 +183,9 @@ fun PluginManagerScreen(
                     item("empty") {
                         LibraryEmptyState(
                             title = stringResource(R.string.plugin_empty),
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
                             action = {
                                 TextButton(
                                     text = stringResource(R.string.plugin_import_archive),
@@ -260,27 +264,37 @@ fun PluginManagerScreen(
         }
     )
 
-    YesNoDialog(
+    WindowBottomSheet(
         show = pendingImport != null,
         title = stringResource(R.string.plugin_import_found_title),
-        summary = pendingImport?.let { session ->
-            buildString {
-                append(
-                    stringResource(
-                        R.string.plugin_import_found_summary,
-                        session.candidates.size,
-                        session.failed.size
-                    )
-                )
-                if (uiState.selectedImportRoots.isNotEmpty()) {
-                    append("\n")
-                    append(
-                        stringResource(
-                            R.string.plugin_import_selected_summary,
-                            uiState.selectedImportRoots.size
-                        )
-                    )
+        onDismissRequest = {
+            viewModel.dismissPendingImport()
+        },
+        enableNestedScroll = false,
+        onDismissFinished = {},
+        startAction = {
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    viewModel.dismissPendingImport()
                 }
+            ) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    color = colorScheme.onSurfaceVariantActions
+                )
+            }
+        },
+        endAction = {
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    viewModel.installPendingImport()
+                },
+
+                ) {
+                Text(
+                    text = stringResource(R.string.plugin_import_install),
+                    color = colorScheme.primary
+                )
             }
         },
         content = {
@@ -293,15 +307,7 @@ fun PluginManagerScreen(
                     }
                 )
             }
-        },
-        onDismissRequest = {
-            viewModel.dismissPendingImport()
-        },
-        onDismissFinished = {},
-        onConfirm = {
-            viewModel.installPendingImport()
-        },
-        confirmText = stringResource(R.string.plugin_import_install),
+        }
     )
 }
 
@@ -324,7 +330,8 @@ private fun PluginImportPreviewContent(
                     text = stringResource(
                         R.string.plugin_import_installable_title,
                         session.candidates.size
-                    )
+                    ),
+                    insideMargin = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                 )
             }
 

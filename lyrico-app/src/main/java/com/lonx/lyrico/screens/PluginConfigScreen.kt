@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -180,7 +181,10 @@ fun PluginConfigScreen(
             if (uiState.errorMessage != null) {
                 Text(
                     text = stringResource(R.string.source_config_invalid_source),
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    textAlign = TextAlign.Center,
                     color = MiuixTheme.colorScheme.onSurfaceVariantActions
                 )
                 return@Scaffold
@@ -209,7 +213,10 @@ fun PluginConfigScreen(
             if (!hasConfigContent && !hasMetadataContent) {
                 Text(
                     text = stringResource(R.string.source_config_empty),
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    textAlign = TextAlign.Center,
                     color = MiuixTheme.colorScheme.onSurfaceVariantActions
                 )
                 return@Scaffold
@@ -281,7 +288,10 @@ private fun PluginConfigTab(
             item("empty_config") {
                 Text(
                     text = stringResource(R.string.source_config_empty),
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    textAlign = TextAlign.Center,
                     color = MiuixTheme.colorScheme.onSurfaceVariantActions
                 )
             }
@@ -319,7 +329,10 @@ private fun PluginMetadataTab(
             item("empty_metadata") {
                 Text(
                     text = stringResource(R.string.source_config_empty),
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    textAlign = TextAlign.Center,
                     color = MiuixTheme.colorScheme.onSurfaceVariantActions
                 )
             }

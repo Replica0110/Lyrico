@@ -717,8 +717,6 @@
     <string name="plugin_version_with_value">版本：%1$s</string>
     <string name="plugin_author_with_value">作者：%1$s</string>
     <string name="plugin_import_found_title">发现插件包</string>
-    <string name="plugin_import_found_summary">发现 %1$d 个可安装插件，%2$d 个无法安装</string>
-    <string name="plugin_import_selected_summary">已选择 %1$d 个插件</string>
     <string name="plugin_import_install">安装</string>
     <string name="plugin_import_installable_title">可安装插件（%1$d）</string>
     <string name="plugin_import_failed_title">无法安装（%1$d）</string>

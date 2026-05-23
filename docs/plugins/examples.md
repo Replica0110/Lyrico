@@ -156,7 +156,8 @@ com.musiclib.source/
       "writeable": false,
       "internal": true,
       "defaultTarget": "CUSTOM",
-      "defaultMode": "DISABLED"
+      "defaultMode": "DISABLED",
+      "targetOptions": ["COMMENT", "CUSTOM"]
     }
   ]
 }

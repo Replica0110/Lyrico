@@ -185,43 +185,11 @@ var enabled = request.config.my_switch === "true";
 
 ## 元数据字段（metadataFields）
 
-`metadataFields` 声明插件可以写入音频文件的元数据。每个声明将 `searchSongs` 返回的 `fields` 中的某个键映射到音频文件的标签字段。
-
-### 声明结构
-
-```json
-{
-  "metadataFields": [
-    {
-      "key": "title",
-      "title": "歌曲标题",
-      "summary": "",
-      "group": "基本信息",
-      "type": "text",
-      "writeable": true,
-      "internal": false,
-      "defaultTarget": "TITLE",
-      "defaultMode": "OVERWRITE",
-      "targetOptions": []
-    },
-    {
-      "key": "source_platform_key",
-      "title": "平台密钥",
-      "group": "内部",
-      "type": "text",
-      "writeable": true,
-      "internal": true,
-      "defaultTarget": "COMMENT",
-      "defaultMode": "DISABLED",
-      "targetOptions": []
-    }
-  ]
-}
-```
+`metadataFields` 声明插件可以写入音频文件的元数据。各字段的定义和可选值详见 [Manifest 字段参考](./manifest.md) 中的 `metadataFields` 章节。
 
 ### 写入流程
 
-1. 插件在 `searchSongs` 结果中返回带有 `fields` 的歌曲对象：
+1. 插件在 `searchSongs` 返回的 `fields` 中包含键名，键名对应 `metadataFields` 中的 `key`：
 
 ```javascript
 {
@@ -238,22 +206,22 @@ var enabled = request.config.my_switch === "true";
 }
 ```
 
-2. 用户（或系统）根据 `metadataFields` 声明决定将哪些字段写入音频文件：
+2. 用户（或系统）根据 `metadataFields` 声明决定将哪些字段写入音频文件。每个字段的 `defaultTarget` 决定默认写入哪个标签，`defaultMode` 决定写入策略：
 
-| `fields` 中的键 | `defaultTarget` | 写入的音频标签 |
-|-----------------|-----------------|---------------|
-| `title` | `TITLE` | 歌曲标题标签 |
-| `artist` | `ARTIST` | 艺术家标签 |
-| `album` | `ALBUM` | 专辑标签 |
-| `date` | `DATE` | 发行日期标签 |
-| `track_number` | `TRACK_NUMBER` | 音轨号标签 |
-| `source_platform_key` | `COMMENT` | 注释标签（默认不启用） |
+| `fields` 键 | `defaultTarget` | 效果 |
+|-------------|-----------------|------|
+| `title` | `TITLE` | 写入歌曲标题标签 |
+| `artist` | `ARTIST` | 写入艺术家标签 |
+| `album` | `ALBUM` | 写入专辑标签 |
+| `date` | `DATE` | 写入发行日期标签 |
+| `track_number` | `TRACK_NUMBER` | 写入音轨号标签 |
+| `source_platform_key` | `COMMENT` | 写入注释标签（默认不启用） |
 
-### 写入模式对比
+### 写入模式
 
 | 模式 | 行为 |
 |------|------|
-| `DISABLED` | 用户需要手动启用才能写入 |
+| `DISABLED` | 默认不写入，用户需手动启用 |
 | `SUPPLEMENT` | 仅在目标字段为空时写入（不覆盖已有内容） |
 | `OVERWRITE` | 始终以插件数据覆盖目标字段 |
 
@@ -271,36 +239,10 @@ var enabled = request.config.my_switch === "true";
   "title": "平台 ID",
   "internal": true,
   "defaultTarget": "CUSTOM",
-  "defaultMode": "DISABLED"
+  "defaultMode": "DISABLED",
+  "defaultCustomTagKey": "PLATFORM_ID"
 }
 ```
-
-### 写入目标完整列表
-
-| 枚举值 | 写入的音频标签 |
-|--------|---------------|
-| `TITLE` | 歌曲标题 |
-| `ARTIST` | 艺术家名称 |
-| `ALBUM` | 专辑名称 |
-| `ALBUM_ARTIST` | 专辑艺术家 |
-| `GENRE` | 流派 |
-| `DATE` | 发行日期 |
-| `TRACK_NUMBER` | 音轨号 |
-| `DISC_NUMBER` | 碟片号 |
-| `COMPOSER` | 作曲者 |
-| `LYRICIST` | 作词者 |
-| `COMMENT` | 注释 / 备注 |
-| `LYRICS` | 歌词内容 |
-| `COVER` | 封面图片 |
-| `LANGUAGE` | 语言 |
-| `COPYRIGHT` | 版权信息 |
-| `RATING` | 评分 |
-| `REPLAY_GAIN_TRACK_GAIN` | 音轨回放增益 |
-| `REPLAY_GAIN_TRACK_PEAK` | 音轨回放峰值 |
-| `REPLAY_GAIN_ALBUM_GAIN` | 专辑回放增益 |
-| `REPLAY_GAIN_ALBUM_PEAK` | 专辑回放峰值 |
-| `REPLAY_GAIN_REFERENCE_LOUDNESS` | 参考响度 |
-| `CUSTOM` | 自定义字段 |
 
 ---
 

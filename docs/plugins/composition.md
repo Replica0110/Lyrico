@@ -142,6 +142,7 @@ com.example.source/
 ├── source.js            # 入口：搜索、歌词获取、封面
 └── lib/
     └── 01_api.js        # JWT Token 验证、请求封装
+```
 
 ## 包内多插件组织
 

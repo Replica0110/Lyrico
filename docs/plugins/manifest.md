@@ -379,6 +379,7 @@
   "internal": false,
   "defaultTarget": "TITLE",
   "defaultMode": "OVERWRITE",
+  "defaultCustomTagKey": "",
   "targetOptions": []
 }
 ```
@@ -394,9 +395,10 @@
 | `type` | `string` | 否 | `"text"` | 数据类型 |
 | `writeable` | `boolean` | 否 | `true` | 是否可写入 |
 | `internal` | `boolean` | 否 | `false` | `true` 时隐藏，不展示给用户 |
-| `defaultTarget` | `string` | 否 | `"COMMENT"` | 默认写入目标 |
+| `defaultTarget` | `string` | 否 | `"COMMENT"` | 默认写入目标。`"CUSTOM"` 表示自定义标签，可配合 `defaultCustomTagKey` 建议默认键名 |
 | `defaultMode` | `string` | 否 | `"DISABLED"` | 默认写入模式 |
-| `targetOptions` | `string[]` | 否 | `[]` | 允许的写入目标（空 = 全部可选） |
+| `defaultCustomTagKey` | `string` | 否 | `""` | 当 `defaultTarget` 为 `"CUSTOM"` 时的默认自定义标签键名 |
+| `targetOptions` | `string[]` | 否 | `[]` | 限定用户可选的写入目标枚举值列表。取值为下方 `defaultTarget` 枚举列表中的任一值。空数组时所有 22 个目标均可选；指定后仅列出的可选 |
 
 ### type — 数据类型
 
@@ -535,7 +537,9 @@
       "writeable": false,
       "internal": true,
       "defaultTarget": "CUSTOM",
-      "defaultMode": "DISABLED"
+      "defaultMode": "DISABLED",
+      "defaultCustomTagKey": "PLATFORM_ID",
+      "targetOptions": ["COMMENT", "CUSTOM"]
     }
   ]
 }

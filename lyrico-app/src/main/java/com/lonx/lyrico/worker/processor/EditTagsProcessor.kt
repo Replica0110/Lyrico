@@ -6,9 +6,8 @@ import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.repository.SongRepository
-import com.lonx.lyrico.utils.TagKeywordCleanField
-import com.lonx.lyrico.utils.TagKeywordCleanConfig
-import com.lonx.lyrico.utils.TagKeywordCleaner
+import com.lonx.lyrico.utils.TagFindReplace
+import com.lonx.lyrico.utils.TagFindReplaceConfig
 import com.lonx.lyrico.utils.LyricEncoder
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -40,7 +39,7 @@ data class EditTagsTaskConfig(
     val replayGainAlbumPeak: String = "<keep>",
     val replayGainReferenceLoudness: String = "<keep>",
     val customFields: List<EditTagsCustomField> = emptyList(),
-    val tagKeywordCleanConfig: TagKeywordCleanConfig? = null,
+    val tagFindReplaceConfig: TagFindReplaceConfig? = null,
     val concurrency: Int = 3
 ) {
     companion object {
@@ -113,14 +112,10 @@ class EditTagsProcessor(
         if (config.comment != keep) tag = tag.copy(comment = config.comment)
         if (config.lyrics != keep) tag = tag.copy(lyrics = config.lyrics)
 
-        config.tagKeywordCleanConfig?.let { cleanConfig ->
-            if (TagKeywordCleanField.GENRE in cleanConfig.fields) {
-                val cleanedGenre = TagKeywordCleaner.cleanGenre(tag.genre, cleanConfig)
-                if (cleanedGenre != tag.genre) tag = tag.copy(genre = cleanedGenre)
-            }
-            if (TagKeywordCleanField.COMMENT in cleanConfig.fields) {
-                val cleanedComment = TagKeywordCleaner.cleanComment(tag.comment, cleanConfig)
-                if (cleanedComment != tag.comment) tag = tag.copy(comment = cleanedComment)
+        config.tagFindReplaceConfig?.let { findReplaceConfig ->
+            val updatedTag = TagFindReplace.apply(tag, findReplaceConfig)
+            if (updatedTag != tag) {
+                tag = updatedTag
             }
         }
 

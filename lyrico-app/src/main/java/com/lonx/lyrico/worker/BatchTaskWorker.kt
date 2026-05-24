@@ -429,7 +429,7 @@ class BatchTaskWorker(
             if (config.replayGainAlbumPeak != keep) add("replayGainAlbumPeak")
             if (config.replayGainReferenceLoudness != keep) add("replayGainReferenceLoudness")
             if (config.customFields.isNotEmpty()) add("customFields")
-            if (config.tagKeywordCleanConfig != null) add("tagKeywordClean")
+            if (config.tagFindReplaceConfig != null) add("tagFindReplace")
         }
 
         return buildString {
@@ -438,12 +438,12 @@ class BatchTaskWorker(
             if (config.ratingModified) appendLine("rating=${config.rating}")
             if (config.lyricsOffset.isNotBlank()) appendLine("lyricsOffset=${config.lyricsOffset}")
             appendLine("customFieldKeys=${config.customFields.map { it.key }.joinToString(", ").ifBlank { "(none)" }}")
-            config.tagKeywordCleanConfig?.let { cleanConfig ->
-                appendLine("tagKeywordCleanFields=${cleanConfig.fields.joinToString(", ") { it.name }}")
-                appendLine("tagKeywordCleanMode=${cleanConfig.matchMode}")
-                appendLine("tagKeywordCleanIgnoreCase=${cleanConfig.ignoreCase}")
-                appendLine("tagKeywordCleanKeyword=${cleanConfig.keyword.sanitizeConfigValue()}")
-                appendLine("tagKeywordCleanReplacement=${cleanConfig.replacement.sanitizeConfigValue()}")
+            config.tagFindReplaceConfig?.let { replaceConfig ->
+                appendLine("tagFindReplaceFields=${replaceConfig.fields.joinToString(", ") { it.name }}")
+                appendLine("tagFindReplaceMode=${replaceConfig.mode}")
+                appendLine("tagFindReplaceIgnoreCase=${replaceConfig.ignoreCase}")
+                appendLine("tagFindReplaceFind=${replaceConfig.find.sanitizeConfigValue()}")
+                appendLine("tagFindReplaceReplacement=${replaceConfig.replacement.sanitizeConfigValue()}")
             }
             appendSanitizedValue("title", config.title, keep)
             appendSanitizedValue("artist", config.artist, keep)

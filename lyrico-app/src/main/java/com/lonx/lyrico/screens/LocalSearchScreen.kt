@@ -16,11 +16,14 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -46,6 +49,10 @@ import com.lonx.lyrico.ui.components.search.SearchSectionHeader
 import com.lonx.lyrico.ui.components.song.SongActionSheets
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
+import com.lonx.lyrico.utils.AdvancedSearchCondition
+import com.lonx.lyrico.utils.AdvancedSearchJoinMode
+import com.lonx.lyrico.utils.AdvancedSearchOperator
+import com.lonx.lyrico.utils.TagTextField
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
 import com.ramcosta.composedestinations.annotation.Destination
@@ -62,8 +69,12 @@ import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
@@ -76,6 +87,9 @@ fun LocalSearchScreen(
     val selectionViewModel: SongSelectionViewModel = koinViewModel()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isAdvancedSearchEnabled by viewModel.isAdvancedSearchEnabled.collectAsStateWithLifecycle()
+    val advancedJoinMode by viewModel.advancedJoinMode.collectAsStateWithLifecycle()
+    val advancedConditions by viewModel.advancedConditions.collectAsStateWithLifecycle()
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -178,16 +192,31 @@ fun LocalSearchScreen(
                             targetOffsetY = { -it / 3 }
                         ) + fadeOut(tween(300))
                     ) {
-                        SearchBar(
-                            value = searchQuery,
-                            onValueChange = viewModel::onQueryChange,
-                            placeholder = stringResource(R.string.local_search_hint),
-                            onSearch = { viewModel.onQueryChange(searchQuery) },
-                            autoFocus = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        )
+                        Column {
+                            SearchBar(
+                                value = searchQuery,
+                                onValueChange = viewModel::onQueryChange,
+                                placeholder = stringResource(R.string.local_search_hint),
+                                onSearch = { viewModel.onQueryChange(searchQuery) },
+                                autoFocus = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                            AdvancedSearchPanel(
+                                enabled = isAdvancedSearchEnabled,
+                                joinMode = advancedJoinMode,
+                                conditions = advancedConditions,
+                                onEnabledChange = viewModel::setAdvancedSearchEnabled,
+                                onJoinModeChange = viewModel::setAdvancedJoinMode,
+                                onAddCondition = viewModel::addAdvancedCondition,
+                                onRemoveCondition = viewModel::removeAdvancedCondition,
+                                onFieldChange = viewModel::updateAdvancedConditionField,
+                                onOperatorChange = viewModel::updateAdvancedConditionOperator,
+                                onValueChange = viewModel::updateAdvancedConditionValue,
+                                onIgnoreCaseChange = viewModel::updateAdvancedConditionIgnoreCase
+                            )
+                        }
                     }
                 }
             }
@@ -204,7 +233,7 @@ fun LocalSearchScreen(
                 ),
                 overscrollEffect = null
             ) {
-                if (searchQuery.isNotBlank() && !hasResults) {
+                if ((searchQuery.isNotBlank() || isAdvancedSearchEnabled) && !hasResults) {
                     item {
                         SearchEmptyCard()
                     }
@@ -339,6 +368,169 @@ fun LocalSearchScreen(
                 selectionViewModel.renameSong(song, newFileName)
             }
         )
+    }
+}
+
+@Composable
+private fun AdvancedSearchPanel(
+    enabled: Boolean,
+    joinMode: AdvancedSearchJoinMode,
+    conditions: List<AdvancedSearchCondition>,
+    onEnabledChange: (Boolean) -> Unit,
+    onJoinModeChange: (AdvancedSearchJoinMode) -> Unit,
+    onAddCondition: () -> Unit,
+    onRemoveCondition: (Int) -> Unit,
+    onFieldChange: (Int, TagTextField) -> Unit,
+    onOperatorChange: (Int, AdvancedSearchOperator) -> Unit,
+    onValueChange: (Int, String) -> Unit,
+    onIgnoreCaseChange: (Int, Boolean) -> Unit
+) {
+    Card(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Column(modifier = Modifier.padding(vertical = 6.dp)) {
+            SwitchPreference(
+                title = stringResource(R.string.advanced_search_title),
+                checked = enabled,
+                onCheckedChange = onEnabledChange,
+                insideMargin = PaddingValues(horizontal = 12.dp)
+            )
+
+            if (enabled) {
+                BasicComponent(
+                    insideMargin = PaddingValues(horizontal = 12.dp),
+                    onClick = {
+                        onJoinModeChange(
+                            if (joinMode == AdvancedSearchJoinMode.AND) {
+                                AdvancedSearchJoinMode.OR
+                            } else {
+                                AdvancedSearchJoinMode.AND
+                            }
+                        )
+                    },
+                    endActions = {
+                        Text(text = stringResource(joinMode.labelRes()))
+                    }
+                ) {
+                    Text(text = stringResource(R.string.advanced_search_join_mode))
+                }
+
+                conditions.forEachIndexed { index, condition ->
+                    AdvancedSearchConditionEditor(
+                        index = index,
+                        condition = condition,
+                        canRemove = conditions.size > 1,
+                        onRemoveCondition = onRemoveCondition,
+                        onFieldChange = onFieldChange,
+                        onOperatorChange = onOperatorChange,
+                        onValueChange = onValueChange,
+                        onIgnoreCaseChange = onIgnoreCaseChange
+                    )
+                }
+
+                TextButton(
+                    text = stringResource(R.string.advanced_search_add_condition),
+                    onClick = onAddCondition,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdvancedSearchConditionEditor(
+    index: Int,
+    condition: AdvancedSearchCondition,
+    canRemove: Boolean,
+    onRemoveCondition: (Int) -> Unit,
+    onFieldChange: (Int, TagTextField) -> Unit,
+    onOperatorChange: (Int, AdvancedSearchOperator) -> Unit,
+    onValueChange: (Int, String) -> Unit,
+    onIgnoreCaseChange: (Int, Boolean) -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            BasicComponent(
+                modifier = Modifier.weight(1f),
+                insideMargin = PaddingValues(0.dp),
+                onClick = {
+                    onFieldChange(index, condition.field.next())
+                }
+            ) {
+                Text(text = stringResource(condition.field.labelRes))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            BasicComponent(
+                modifier = Modifier.weight(1f),
+                insideMargin = PaddingValues(0.dp),
+                onClick = {
+                    onOperatorChange(index, condition.operator.next())
+                }
+            ) {
+                Text(text = stringResource(condition.operator.labelRes()))
+            }
+        }
+
+        if (condition.operator.requiresValue()) {
+            TextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+                value = condition.value,
+                onValueChange = { onValueChange(index, it) },
+                label = stringResource(R.string.advanced_search_value)
+            )
+        }
+
+        SwitchPreference(
+            title = stringResource(R.string.advanced_search_ignore_case),
+            checked = condition.ignoreCase,
+            enabled = condition.operator.requiresValue(),
+            onCheckedChange = { onIgnoreCaseChange(index, it) },
+            insideMargin = PaddingValues(0.dp)
+        )
+
+        if (canRemove) {
+            TextButton(
+                text = stringResource(R.string.advanced_search_remove_condition),
+                onClick = { onRemoveCondition(index) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+private fun TagTextField.next(): TagTextField {
+    val entries = TagTextField.entries
+    return entries[(entries.indexOf(this) + 1) % entries.size]
+}
+
+private fun AdvancedSearchOperator.next(): AdvancedSearchOperator {
+    val entries = AdvancedSearchOperator.entries
+    return entries[(entries.indexOf(this) + 1) % entries.size]
+}
+
+private fun AdvancedSearchOperator.requiresValue(): Boolean {
+    return this != AdvancedSearchOperator.IS_EMPTY && this != AdvancedSearchOperator.IS_NOT_EMPTY
+}
+
+private fun AdvancedSearchJoinMode.labelRes(): Int {
+    return when (this) {
+        AdvancedSearchJoinMode.AND -> R.string.advanced_search_join_and
+        AdvancedSearchJoinMode.OR -> R.string.advanced_search_join_or
+    }
+}
+
+private fun AdvancedSearchOperator.labelRes(): Int {
+    return when (this) {
+        AdvancedSearchOperator.IS_EMPTY -> R.string.advanced_search_operator_empty
+        AdvancedSearchOperator.IS_NOT_EMPTY -> R.string.advanced_search_operator_not_empty
+        AdvancedSearchOperator.EQUALS -> R.string.advanced_search_operator_equals
+        AdvancedSearchOperator.NOT_EQUALS -> R.string.advanced_search_operator_not_equals
+        AdvancedSearchOperator.CONTAINS -> R.string.advanced_search_operator_contains
+        AdvancedSearchOperator.NOT_CONTAINS -> R.string.advanced_search_operator_not_contains
+        AdvancedSearchOperator.REGEX -> R.string.advanced_search_operator_regex
     }
 }
 

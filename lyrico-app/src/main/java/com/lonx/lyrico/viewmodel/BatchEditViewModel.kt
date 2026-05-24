@@ -20,10 +20,10 @@ import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.LyricEncoder
-import com.lonx.lyrico.utils.TagKeywordCleanConfig
-import com.lonx.lyrico.utils.TagKeywordCleanField
-import com.lonx.lyrico.utils.TagKeywordCleaner
-import com.lonx.lyrico.utils.TagKeywordMatchMode
+import com.lonx.lyrico.utils.TagFindReplace
+import com.lonx.lyrico.utils.TagFindReplaceConfig
+import com.lonx.lyrico.utils.TagFindReplaceMode
+import com.lonx.lyrico.utils.TagTextField
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.worker.BatchTaskScheduler
@@ -139,10 +139,10 @@ data class BatchEditSelectableCover(
     val fileLastModified: Long
 )
 
-data class BatchTagCleanPreviewItem(
+data class BatchTagFindReplacePreviewItem(
     val fileName: String,
     val songUri: String,
-    val field: TagKeywordCleanField,
+    val field: TagTextField,
     val originalValue: String,
     val newValue: String
 )
@@ -180,36 +180,36 @@ class BatchEditViewModel(
     private var selectedUris: List<String> = emptyList()
     private var selectedSongs: List<SongEntity> = emptyList()
 
-    private val _tagCleanKeyword = MutableStateFlow("kuwo")
-    val tagCleanKeyword: StateFlow<String> = _tagCleanKeyword.asStateFlow()
+    private val _tagFindReplaceFind = MutableStateFlow("")
+    val tagFindReplaceFind: StateFlow<String> = _tagFindReplaceFind.asStateFlow()
 
-    private val _tagCleanReplacement = MutableStateFlow("")
-    val tagCleanReplacement: StateFlow<String> = _tagCleanReplacement.asStateFlow()
+    private val _tagFindReplaceReplacement = MutableStateFlow("")
+    val tagFindReplaceReplacement: StateFlow<String> = _tagFindReplaceReplacement.asStateFlow()
 
-    private val _tagCleanGenreSelected = MutableStateFlow(true)
-    val tagCleanGenreSelected: StateFlow<Boolean> = _tagCleanGenreSelected.asStateFlow()
+    private val _tagFindReplaceFields = MutableStateFlow(setOf(TagTextField.GENRE, TagTextField.COMMENT))
+    val tagFindReplaceFields: StateFlow<Set<TagTextField>> = _tagFindReplaceFields.asStateFlow()
 
-    private val _tagCleanCommentSelected = MutableStateFlow(true)
-    val tagCleanCommentSelected: StateFlow<Boolean> = _tagCleanCommentSelected.asStateFlow()
+    private val _tagFindReplaceIgnoreCase = MutableStateFlow(true)
+    val tagFindReplaceIgnoreCase: StateFlow<Boolean> = _tagFindReplaceIgnoreCase.asStateFlow()
 
-    private val _tagCleanIgnoreCase = MutableStateFlow(true)
-    val tagCleanIgnoreCase: StateFlow<Boolean> = _tagCleanIgnoreCase.asStateFlow()
+    private val _tagFindReplaceMode = MutableStateFlow(TagFindReplaceMode.CONTAINS)
+    val tagFindReplaceMode: StateFlow<TagFindReplaceMode> = _tagFindReplaceMode.asStateFlow()
 
-    private val _tagCleanMatchMode = MutableStateFlow(TagKeywordMatchMode.CONTAINS)
-    val tagCleanMatchMode: StateFlow<TagKeywordMatchMode> = _tagCleanMatchMode.asStateFlow()
+    private val _tagFindReplacePreviewItems =
+        MutableStateFlow<List<BatchTagFindReplacePreviewItem>>(emptyList())
+    val tagFindReplacePreviewItems: StateFlow<List<BatchTagFindReplacePreviewItem>> =
+        _tagFindReplacePreviewItems.asStateFlow()
 
-    private val _tagCleanPreviewItems = MutableStateFlow<List<BatchTagCleanPreviewItem>>(emptyList())
-    val tagCleanPreviewItems: StateFlow<List<BatchTagCleanPreviewItem>> =
-        _tagCleanPreviewItems.asStateFlow()
+    private val _tagFindReplacePreviewFailureCount = MutableStateFlow(0)
+    val tagFindReplacePreviewFailureCount: StateFlow<Int> =
+        _tagFindReplacePreviewFailureCount.asStateFlow()
 
-    private val _tagCleanPreviewFailureCount = MutableStateFlow(0)
-    val tagCleanPreviewFailureCount: StateFlow<Int> = _tagCleanPreviewFailureCount.asStateFlow()
+    private val _tagFindReplaceIsPreviewing = MutableStateFlow(false)
+    val tagFindReplaceIsPreviewing: StateFlow<Boolean> = _tagFindReplaceIsPreviewing.asStateFlow()
 
-    private val _tagCleanIsPreviewing = MutableStateFlow(false)
-    val tagCleanIsPreviewing: StateFlow<Boolean> = _tagCleanIsPreviewing.asStateFlow()
-
-    private val _tagCleanPreviewGenerated = MutableStateFlow(false)
-    val tagCleanPreviewGenerated: StateFlow<Boolean> = _tagCleanPreviewGenerated.asStateFlow()
+    private val _tagFindReplacePreviewGenerated = MutableStateFlow(false)
+    val tagFindReplacePreviewGenerated: StateFlow<Boolean> =
+        _tagFindReplacePreviewGenerated.asStateFlow()
 
     init {
         val uris = selectionManager.selectedUris.value.toList()
@@ -295,60 +295,57 @@ class BatchEditViewModel(
         _uiState.update { it.copy(rating = 0, ratingModified = false) }
     }
 
-    // ── 关键词清理 ──────────────────────────────────────────
+    // ── 字段查找替换 ────────────────────────────────────────
 
-    fun updateTagCleanKeyword(value: String) {
-        _tagCleanKeyword.value = value
-        invalidateTagCleanPreview()
+    fun updateTagFindReplaceFind(value: String) {
+        _tagFindReplaceFind.value = value
+        invalidateTagFindReplacePreview()
     }
 
-    fun updateTagCleanReplacement(value: String) {
-        _tagCleanReplacement.value = value
-        invalidateTagCleanPreview()
+    fun updateTagFindReplaceReplacement(value: String) {
+        _tagFindReplaceReplacement.value = value
+        invalidateTagFindReplacePreview()
     }
 
-    fun updateTagCleanGenreSelected(value: Boolean) {
-        _tagCleanGenreSelected.value = value
-        invalidateTagCleanPreview()
+    fun updateTagFindReplaceField(field: TagTextField, selected: Boolean) {
+        _tagFindReplaceFields.update { fields ->
+            if (selected) fields + field else fields - field
+        }
+        invalidateTagFindReplacePreview()
     }
 
-    fun updateTagCleanCommentSelected(value: Boolean) {
-        _tagCleanCommentSelected.value = value
-        invalidateTagCleanPreview()
+    fun updateTagFindReplaceIgnoreCase(value: Boolean) {
+        _tagFindReplaceIgnoreCase.value = value
+        invalidateTagFindReplacePreview()
     }
 
-    fun updateTagCleanIgnoreCase(value: Boolean) {
-        _tagCleanIgnoreCase.value = value
-        invalidateTagCleanPreview()
+    fun updateTagFindReplaceMode(value: TagFindReplaceMode) {
+        _tagFindReplaceMode.value = value
+        invalidateTagFindReplacePreview()
     }
 
-    fun updateTagCleanMatchMode(value: TagKeywordMatchMode) {
-        _tagCleanMatchMode.value = value
-        invalidateTagCleanPreview()
-    }
-
-    fun previewTagKeywordClean() {
-        if (_tagCleanIsPreviewing.value || selectedUris.isEmpty()) return
-        val config = currentTagKeywordCleanConfig()
+    fun previewTagFindReplace() {
+        if (_tagFindReplaceIsPreviewing.value || selectedUris.isEmpty()) return
+        val config = currentTagFindReplaceConfig()
         if (config == null) {
-            _tagCleanPreviewItems.value = emptyList()
-            _tagCleanPreviewFailureCount.value = 0
-            _tagCleanPreviewGenerated.value = true
+            _tagFindReplacePreviewItems.value = emptyList()
+            _tagFindReplacePreviewFailureCount.value = 0
+            _tagFindReplacePreviewGenerated.value = true
             return
         }
 
         viewModelScope.launch {
-            _tagCleanIsPreviewing.value = true
+            _tagFindReplaceIsPreviewing.value = true
             _uiState.update { it.copy(errorMessage = null) }
             try {
                 val result = withContext(Dispatchers.IO) {
-                    buildTagKeywordCleanPreview(config)
+                    buildTagFindReplacePreview(config)
                 }
-                _tagCleanPreviewItems.value = result.first
-                _tagCleanPreviewFailureCount.value = result.second
-                _tagCleanPreviewGenerated.value = true
+                _tagFindReplacePreviewItems.value = result.first
+                _tagFindReplacePreviewFailureCount.value = result.second
+                _tagFindReplacePreviewGenerated.value = true
             } catch (e: Exception) {
-                Log.e(TAG, "关键词清理预览失败", e)
+                Log.e(TAG, "字段查找替换预览失败", e)
                 _uiState.update {
                     it.copy(
                         errorMessage = UiMessage.StringResource(
@@ -358,14 +355,14 @@ class BatchEditViewModel(
                     )
                 }
             } finally {
-                _tagCleanIsPreviewing.value = false
+                _tagFindReplaceIsPreviewing.value = false
             }
         }
     }
 
-    fun saveTagKeywordClean() {
-        val config = currentTagKeywordCleanConfig() ?: return
-        val previewItems = _tagCleanPreviewItems.value
+    fun saveTagFindReplace() {
+        val config = currentTagFindReplaceConfig() ?: return
+        val previewItems = _tagFindReplacePreviewItems.value
         if (_uiState.value.isSaving || selectedUris.isEmpty() || previewItems.isEmpty()) return
 
         saveJob = viewModelScope.launch {
@@ -402,7 +399,7 @@ class BatchEditViewModel(
 
             val configJson = Json.encodeToString(
                 EditTagsTaskConfig.serializer(),
-                EditTagsTaskConfig(tagKeywordCleanConfig = config)
+                EditTagsTaskConfig(tagFindReplaceConfig = config)
             )
             val taskId = batchTaskRepository.createTask(
                 type = BatchTaskType.EDIT_TAGS,
@@ -414,34 +411,31 @@ class BatchEditViewModel(
         }
     }
 
-    private fun invalidateTagCleanPreview() {
-        _tagCleanPreviewGenerated.value = false
-        _tagCleanPreviewItems.value = emptyList()
-        _tagCleanPreviewFailureCount.value = 0
+    private fun invalidateTagFindReplacePreview() {
+        _tagFindReplacePreviewGenerated.value = false
+        _tagFindReplacePreviewItems.value = emptyList()
+        _tagFindReplacePreviewFailureCount.value = 0
     }
 
-    private fun currentTagKeywordCleanConfig(): TagKeywordCleanConfig? {
-        val fields = buildSet {
-            if (_tagCleanGenreSelected.value) add(TagKeywordCleanField.GENRE)
-            if (_tagCleanCommentSelected.value) add(TagKeywordCleanField.COMMENT)
-        }
-        val keyword = _tagCleanKeyword.value.trim()
-        if (fields.isEmpty() || keyword.isBlank()) return null
-        return TagKeywordCleanConfig(
+    private fun currentTagFindReplaceConfig(): TagFindReplaceConfig? {
+        val find = _tagFindReplaceFind.value.trim()
+        val fields = _tagFindReplaceFields.value
+        if (fields.isEmpty() || find.isBlank()) return null
+        return TagFindReplaceConfig(
             fields = fields,
-            keyword = keyword,
-            replacement = _tagCleanReplacement.value,
-            ignoreCase = _tagCleanIgnoreCase.value,
-            matchMode = _tagCleanMatchMode.value
+            find = find,
+            replacement = _tagFindReplaceReplacement.value,
+            ignoreCase = _tagFindReplaceIgnoreCase.value,
+            mode = _tagFindReplaceMode.value
         )
     }
 
-    private suspend fun buildTagKeywordCleanPreview(
-        config: TagKeywordCleanConfig
-    ): Pair<List<BatchTagCleanPreviewItem>, Int> {
+    private suspend fun buildTagFindReplacePreview(
+        config: TagFindReplaceConfig
+    ): Pair<List<BatchTagFindReplacePreviewItem>, Int> {
         ensureSelectedSongsLoaded()
         val songsByUri = selectedSongs.associateBy { it.uri }
-        val items = mutableListOf<BatchTagCleanPreviewItem>()
+        val items = mutableListOf<BatchTagFindReplacePreviewItem>()
         var failureCount = 0
 
         selectedUris.forEach { uri ->
@@ -453,40 +447,21 @@ class BatchEditViewModel(
             val tagData = try {
                 songRepository.readAudioTagData(uri)
             } catch (e: Exception) {
-                Log.e(TAG, "读取关键词清理预览标签失败: $uri", e)
+                Log.e(TAG, "读取字段查找替换预览标签失败: $uri", e)
                 failureCount++
                 return@forEach
             }
 
-            if (TagKeywordCleanField.GENRE in config.fields) {
-                val original = tagData.genre.orEmpty()
-                val cleaned = TagKeywordCleaner.cleanGenre(tagData.genre, config).orEmpty()
-                if (cleaned != original) {
-                    items.add(
-                        BatchTagCleanPreviewItem(
-                            fileName = fileName,
-                            songUri = uri,
-                            field = TagKeywordCleanField.GENRE,
-                            originalValue = original,
-                            newValue = cleaned
-                        )
+            TagFindReplace.preview(tagData, config).forEach { change ->
+                items.add(
+                    BatchTagFindReplacePreviewItem(
+                        fileName = fileName,
+                        songUri = uri,
+                        field = change.field,
+                        originalValue = change.originalValue,
+                        newValue = change.newValue
                     )
-                }
-            }
-            if (TagKeywordCleanField.COMMENT in config.fields) {
-                val original = tagData.comment.orEmpty()
-                val cleaned = TagKeywordCleaner.cleanComment(tagData.comment, config).orEmpty()
-                if (cleaned != original) {
-                    items.add(
-                        BatchTagCleanPreviewItem(
-                            fileName = fileName,
-                            songUri = uri,
-                            field = TagKeywordCleanField.COMMENT,
-                            originalValue = original,
-                            newValue = cleaned
-                        )
-                    )
-                }
+                )
             }
         }
 

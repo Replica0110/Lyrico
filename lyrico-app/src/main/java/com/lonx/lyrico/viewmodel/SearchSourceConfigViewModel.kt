@@ -7,9 +7,9 @@ import com.lonx.lyrico.data.model.MetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.MetadataWriteMode
 import com.lonx.lyrico.data.model.lyrics.SearchSourceCapability
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
-import com.lonx.lyrico.data.model.plugin.PluginLyricsConfig
+import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
 import com.lonx.lyrico.data.model.plugin.PluginMetadataField
-import com.lonx.lyrico.data.repository.PluginLyricsConfigRepository
+import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.isSatisfied
@@ -28,7 +28,7 @@ data class SearchSourceConfigUiState(
     val metadataFields: List<PluginMetadataField> = emptyList(),
     val values: Map<String, String> = emptyMap(),
     val metadataRules: List<MetadataFieldWriteRule> = emptyList(),
-    val lyricsConfig: PluginLyricsConfig? = null,
+    val fieldProcessConfig: PluginFieldProcessConfig? = null,
     val validationErrors: Map<String, String> = emptyMap(),
     val isLoading: Boolean = true,
     val saved: Boolean = false,
@@ -37,7 +37,7 @@ data class SearchSourceConfigUiState(
 
 class SearchSourceConfigViewModel(
     private val settingsRepository: SettingsRepository,
-    private val pluginLyricsConfigRepository: PluginLyricsConfigRepository,
+    private val pluginFieldProcessConfigRepository: PluginFieldProcessConfigRepository,
     private val searchSourceProvider: SearchSourceProvider
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchSourceConfigUiState())
@@ -58,11 +58,7 @@ class SearchSourceConfigViewModel(
             val fields = sourceImpl.configFields
             val defaults = fields.associate { it.key to it.defaultValue }
             val saved = settingsRepository.getSourceSettings(sourceImpl.id).values
-            val lyricsConfig = if (SearchSourceCapability.GET_LYRICS in sourceImpl.capabilities) {
-                pluginLyricsConfigRepository.getConfig(sourceImpl.id)
-            } else {
-                null
-            }
+            val fieldProcessConfig = pluginFieldProcessConfigRepository.getConfig(sourceImpl.id)
             allMetadataRules = MetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
                 savedRules = settingsRepository.getMetadataFieldWriteRules(),
                 searchSources = allSources
@@ -79,7 +75,7 @@ class SearchSourceConfigViewModel(
                     },
                     values = defaults + saved,
                     metadataRules = allMetadataRules.filter { rule -> rule.pluginId == sourceImpl.id },
-                    lyricsConfig = lyricsConfig,
+                    fieldProcessConfig = fieldProcessConfig,
                     validationErrors = emptyMap(),
                     isLoading = false,
                     saved = false,
@@ -143,10 +139,10 @@ class SearchSourceConfigViewModel(
         }
     }
 
-    fun updateLyricsConfig(config: PluginLyricsConfig) {
+    fun updateFieldProcessConfig(config: PluginFieldProcessConfig) {
         _uiState.update {
             it.copy(
-                lyricsConfig = config.copy(
+                fieldProcessConfig = config.copy(
                     pluginId = config.pluginId.ifBlank { it.pluginId }
                 ),
                 saved = false
@@ -178,8 +174,8 @@ class SearchSourceConfigViewModel(
                 } ?: old
             }
             settingsRepository.saveMetadataFieldWriteRules(updatedRules)
-            state.lyricsConfig?.let { config ->
-                pluginLyricsConfigRepository.updateConfig(
+            state.fieldProcessConfig?.let { config ->
+                pluginFieldProcessConfigRepository.updateConfig(
                     config.copy(pluginId = config.pluginId.ifBlank { pluginId })
                 )
             }

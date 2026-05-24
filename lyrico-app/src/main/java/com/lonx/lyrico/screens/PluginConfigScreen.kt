@@ -49,12 +49,15 @@ import com.lonx.lyrico.data.model.MetadataFieldTarget
 import com.lonx.lyrico.data.model.MetadataFieldWriteRule
 import com.lonx.lyrico.data.model.MetadataWriteMode
 import com.lonx.lyrico.data.model.lyrics.SearchSourceCapability
+import com.lonx.lyrico.data.model.plugin.FieldProcessRule
+import com.lonx.lyrico.data.model.plugin.FieldScriptConversionMode
 import com.lonx.lyrico.data.model.plugin.FollowGlobalBooleanMode
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
-import com.lonx.lyrico.data.model.plugin.PluginLyricsConfig
+import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
+import com.lonx.lyrico.data.model.plugin.PluginFieldValueType
 import com.lonx.lyrico.data.model.plugin.PluginMetadataField
-import com.lonx.lyrico.data.model.plugin.PluginScriptConversionMode
+import com.lonx.lyrico.data.model.plugin.valueType
 import com.lonx.lyrico.plugin.source.toMetadataFieldTarget
 import com.lonx.lyrico.utils.isSatisfied
 import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
@@ -102,8 +105,8 @@ fun PluginConfigScreen(
     val tabs = remember(uiState.capabilities, uiState.metadataFields) {
         buildList {
             add(PluginConfigTab.Basic)
-            if (SearchSourceCapability.GET_LYRICS in uiState.capabilities) {
-                add(PluginConfigTab.Lyrics)
+            if (SearchSourceCapability.GET_LYRICS in uiState.capabilities || uiState.metadataFields.isNotEmpty()) {
+                add(PluginConfigTab.FieldProcess)
             }
             if (uiState.metadataFields.isNotEmpty()) {
                 add(PluginConfigTab.Metadata)
@@ -117,6 +120,12 @@ fun PluginConfigScreen(
     }
 
     var showMetadataRuleSheet by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var editingProcessFieldKey by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    var showFieldProcessRuleSheet by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -150,6 +159,14 @@ fun PluginConfigScreen(
             it.pluginId == uiState.pluginId && it.normalizedKey == editingFieldKey
         }
     }
+    val editingProcessField = remember(editingProcessFieldKey, uiState.metadataFields) {
+        uiState.metadataFields.firstOrNull { it.key == editingProcessFieldKey }
+    }
+    val editingProcessRule = remember(editingProcessFieldKey, uiState.pluginId, uiState.metadataRules) {
+        uiState.metadataRules.firstOrNull {
+            it.pluginId == uiState.pluginId && it.normalizedKey == editingProcessFieldKey
+        }
+    }
 
     val hasConfigContent by remember {
         derivedStateOf {
@@ -167,11 +184,11 @@ fun PluginConfigScreen(
         }
     }
 
-    val hasLyricsContent by remember {
+    val hasFieldProcessContent by remember {
         derivedStateOf {
             uiState.errorMessage == null &&
                     !uiState.isLoading &&
-                    uiState.lyricsConfig != null
+                    uiState.fieldProcessConfig != null
         }
     }
 
@@ -238,7 +255,7 @@ fun PluginConfigScreen(
                 )
             }
 
-            if (!hasConfigContent && !hasMetadataContent && !hasLyricsContent) {
+            if (!hasConfigContent && !hasMetadataContent && !hasFieldProcessContent) {
                 Text(
                     text = stringResource(R.string.source_config_empty),
                     modifier = Modifier
@@ -264,11 +281,17 @@ fun PluginConfigScreen(
                         onValueChange = viewModel::updateValue
                     )
 
-                    PluginConfigTab.Lyrics -> PluginLyricsConfigTab(
-                        config = uiState.lyricsConfig ?: PluginLyricsConfig(uiState.pluginId),
-                        hasContent = uiState.lyricsConfig != null,
+                    PluginConfigTab.FieldProcess -> PluginFieldProcessConfigTab(
+                        metadataFields = uiState.metadataFields,
+                        metadataRules = uiState.metadataRules,
+                        config = uiState.fieldProcessConfig ?: PluginFieldProcessConfig(uiState.pluginId),
+                        hasContent = uiState.fieldProcessConfig != null,
                         topAppBarScrollBehavior = topAppBarScrollBehavior,
-                        onConfigChange = viewModel::updateLyricsConfig
+                        onEditField = { fieldKey ->
+                            editingProcessFieldKey = fieldKey
+                            showFieldProcessRuleSheet = true
+                        },
+                        onConfigChange = viewModel::updateFieldProcessConfig
                     )
 
                     PluginConfigTab.Metadata -> PluginMetadataTab(
@@ -301,6 +324,20 @@ fun PluginConfigScreen(
             editingFieldKey = null
         },
         onRuleChanged = viewModel::updateMetadataRule
+    )
+
+    FieldProcessRuleBottomSheet(
+        show = showFieldProcessRuleSheet,
+        field = editingProcessField,
+        writeRule = editingProcessRule,
+        config = uiState.fieldProcessConfig,
+        onDismissRequest = {
+            showFieldProcessRuleSheet = false
+        },
+        onDismissFinished = {
+            editingProcessFieldKey = null
+        },
+        onConfigChanged = viewModel::updateFieldProcessConfig
     )
 }
 
@@ -398,11 +435,14 @@ private fun PluginMetadataTab(
 }
 
 @Composable
-private fun PluginLyricsConfigTab(
-    config: PluginLyricsConfig,
+private fun PluginFieldProcessConfigTab(
+    metadataFields: List<PluginMetadataField>,
+    metadataRules: List<MetadataFieldWriteRule>,
+    config: PluginFieldProcessConfig,
     hasContent: Boolean,
     topAppBarScrollBehavior: ScrollBehavior,
-    onConfigChange: (PluginLyricsConfig) -> Unit
+    onEditField: (String) -> Unit,
+    onConfigChange: (PluginFieldProcessConfig) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -427,55 +467,178 @@ private fun PluginLyricsConfigTab(
             return@LazyColumn
         }
 
-        item("lyrics_title") {
-            SmallTitle(text = stringResource(R.string.plugin_lyrics_config_title))
+        if (metadataFields.isNotEmpty()) {
+            item("field_process_fields_title") {
+                SmallTitle(text = stringResource(R.string.plugin_field_process_field_rules))
+            }
+
+            item("field_process_fields_card") {
+                val rulesByKey = metadataRules.associateBy { it.normalizedKey }
+                Card(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 12.dp)
+                ) {
+                    metadataFields.forEach { field ->
+                        FieldProcessRulePreference(
+                            field = field,
+                            valueType = rulesByKey[field.key]?.target?.valueType() ?: inferFieldValueType(field.key),
+                            isConfigured = config.fieldRules.containsKey(field.key),
+                            onClick = { onEditField(field.key) }
+                        )
+                    }
+                }
+            }
         }
+    }
+}
 
-        item("lyrics_config_card") {
+@Composable
+private fun FieldProcessRulePreference(
+    field: PluginMetadataField,
+    valueType: PluginFieldValueType,
+    isConfigured: Boolean,
+    onClick: () -> Unit
+) {
+    BasicComponent(
+        modifier = Modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        onClick = onClick,
+        endActions = {
+            Text(
+                text = stringResource(
+                    if (isConfigured) {
+                        R.string.plugin_field_process_configured
+                    } else {
+                        R.string.plugin_field_process_initial
+                    }
+                ),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (isConfigured) {
+                    MiuixTheme.colorScheme.primary
+                } else {
+                    MiuixTheme.colorScheme.onSurfaceVariantActions
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    ) {
+        Column(modifier = Modifier.padding(end = 8.dp)) {
+            Text(
+                text = field.title.ifBlank { field.key },
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = valueType.name.lowercase(),
+                fontSize = 13.sp,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun FieldProcessRulePreferences(
+    rule: FieldProcessRule,
+    valueType: PluginFieldValueType?,
+    onRuleChange: (FieldProcessRule) -> Unit
+) {
+    if (valueType == null || valueType.canConvertScript()) {
+        WindowDropdownPreference(
+            title = stringResource(R.string.plugin_field_process_script_conversion),
+            summary = stringResource(R.string.plugin_field_process_script_conversion_summary),
+            items = FieldScriptConversionMode.entries.map { stringResource(it.labelRes) },
+            selectedIndex = FieldScriptConversionMode.entries.indexOf(rule.scriptConversion).coerceAtLeast(0),
+            onSelectedIndexChange = { index ->
+                FieldScriptConversionMode.entries.getOrNull(index)?.let { mode ->
+                    onRuleChange(rule.copy(scriptConversion = mode))
+                }
+            }
+        )
+    }
+
+    if (valueType == null || valueType.canTrim()) {
+        FollowGlobalBooleanPreference(
+            title = stringResource(R.string.plugin_field_process_trim),
+            summary = stringResource(R.string.plugin_field_process_trim_summary),
+            value = rule.trim,
+            onValueChange = { mode -> onRuleChange(rule.copy(trim = mode)) }
+        )
+    }
+
+    if (valueType == null || valueType.canNormalizeWhitespace()) {
+        FollowGlobalBooleanPreference(
+            title = stringResource(R.string.plugin_field_process_normalize_whitespace),
+            summary = stringResource(R.string.plugin_field_process_normalize_whitespace_summary),
+            value = rule.normalizeWhitespace,
+            onValueChange = { mode -> onRuleChange(rule.copy(normalizeWhitespace = mode)) }
+        )
+    }
+
+    if (valueType == null || valueType.canRemoveEmptyLines()) {
+        FollowGlobalBooleanPreference(
+            title = stringResource(R.string.plugin_field_process_remove_empty_lines),
+            summary = stringResource(R.string.plugin_field_process_remove_empty_lines_summary),
+            value = rule.removeEmptyLines,
+            onValueChange = { mode -> onRuleChange(rule.copy(removeEmptyLines = mode)) }
+        )
+    }
+
+}
+
+@Composable
+private fun FieldProcessRuleBottomSheet(
+    show: Boolean,
+    field: PluginMetadataField?,
+    writeRule: MetadataFieldWriteRule?,
+    config: PluginFieldProcessConfig?,
+    onDismissRequest: () -> Unit,
+    onDismissFinished: () -> Unit,
+    onConfigChanged: (PluginFieldProcessConfig) -> Unit
+) {
+    WindowBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        onDismissFinished = onDismissFinished
+    ) {
+        val currentField = field ?: return@WindowBottomSheet
+        val currentConfig = config ?: return@WindowBottomSheet
+        val fieldRule = currentConfig.fieldRules[currentField.key] ?: FieldProcessRule()
+        val valueType = writeRule?.target?.valueType() ?: inferFieldValueType(currentField.key)
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            SmallTitle(
+                text = currentField.title.ifBlank { currentField.key },
+                insideMargin = PaddingValues(4.dp)
+            )
             Card(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 12.dp),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.secondaryContainer,
+                )
             ) {
-                Text(
-                    text = stringResource(R.string.plugin_lyrics_config_summary),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    fontSize = 13.sp,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                )
-
-                FollowGlobalBooleanPreference(
-                    title = stringResource(R.string.plugin_lyrics_remove_empty_lines),
-                    value = config.removeEmptyLines,
-                    onValueChange = { mode ->
-                        onConfigChange(config.copy(removeEmptyLines = mode))
-                    }
-                )
-
-                FollowGlobalBooleanPreference(
-                    title = stringResource(R.string.plugin_lyrics_normalize_whitespace),
-                    value = config.normalizeWhitespace,
-                    onValueChange = { mode ->
-                        onConfigChange(config.copy(normalizeWhitespace = mode))
-                    }
-                )
-
-                FollowGlobalBooleanPreference(
-                    title = stringResource(R.string.plugin_lyrics_keep_tags),
-                    value = config.keepLyricsTags,
-                    onValueChange = { mode ->
-                        onConfigChange(config.copy(keepLyricsTags = mode))
-                    }
-                )
-
-                WindowDropdownPreference(
-                    title = stringResource(R.string.plugin_lyrics_script_conversion),
-                    items = PluginScriptConversionMode.entries.map { stringResource(it.labelRes) },
-                    selectedIndex = PluginScriptConversionMode.entries.indexOf(config.scriptConversion).coerceAtLeast(0),
-                    onSelectedIndexChange = { index ->
-                        PluginScriptConversionMode.entries.getOrNull(index)?.let { mode ->
-                            onConfigChange(config.copy(scriptConversion = mode))
-                        }
+                FieldProcessRulePreferences(
+                    rule = fieldRule,
+                    valueType = valueType,
+                    onRuleChange = { rule ->
+                        onConfigChanged(
+                            currentConfig.copy(
+                                fieldRules = currentConfig.fieldRules + (currentField.key to rule)
+                            )
+                        )
                     }
                 )
             }
@@ -743,11 +906,13 @@ private fun MetadataRuleBatchActions(
 @Composable
 private fun FollowGlobalBooleanPreference(
     title: String,
+    summary: String,
     value: FollowGlobalBooleanMode,
     onValueChange: (FollowGlobalBooleanMode) -> Unit
 ) {
     WindowDropdownPreference(
         title = title,
+        summary = summary,
         items = FollowGlobalBooleanMode.entries.map { stringResource(it.labelRes) },
         selectedIndex = FollowGlobalBooleanMode.entries.indexOf(value).coerceAtLeast(0),
         onSelectedIndexChange = { index ->
@@ -951,7 +1116,7 @@ private fun helperText(field: PluginConfigField, error: String?): String {
 
 private enum class PluginConfigTab(val labelRes: Int) {
     Basic(R.string.plugin_config_tab_basic),
-    Lyrics(R.string.plugin_config_tab_lyrics),
+    FieldProcess(R.string.plugin_config_tab_field_process),
     Metadata(R.string.plugin_config_tab_metadata)
 }
 
@@ -962,13 +1127,48 @@ private val FollowGlobalBooleanMode.labelRes: Int
         FollowGlobalBooleanMode.DISABLED -> R.string.config_disabled
     }
 
-private val PluginScriptConversionMode.labelRes: Int
+private val FieldScriptConversionMode.labelRes: Int
     get() = when (this) {
-        PluginScriptConversionMode.FOLLOW_GLOBAL -> R.string.config_follow_global
-        PluginScriptConversionMode.DISABLED -> R.string.script_conversion_disabled
-        PluginScriptConversionMode.SIMPLIFIED -> R.string.script_conversion_simplified
-        PluginScriptConversionMode.TRADITIONAL -> R.string.script_conversion_traditional
+        FieldScriptConversionMode.FOLLOW_GLOBAL -> R.string.config_follow_global
+        FieldScriptConversionMode.DISABLED -> R.string.script_conversion_disabled
+        FieldScriptConversionMode.SIMPLIFIED -> R.string.script_conversion_simplified
+        FieldScriptConversionMode.TRADITIONAL -> R.string.script_conversion_traditional
     }
+
+private fun inferFieldValueType(key: String): PluginFieldValueType {
+    return when (key) {
+        "artist", "album_artist", "composer", "lyricist" -> PluginFieldValueType.PERSON_LIST
+        "lyrics", "lyric" -> PluginFieldValueType.LYRICS
+        "cover_url", "pic_url", "image_url" -> PluginFieldValueType.IMAGE_URL
+        "track_number", "disc_number", "duration", "rating" -> PluginFieldValueType.NUMBER
+        "date", "year" -> PluginFieldValueType.DATE
+        else -> PluginFieldValueType.TEXT
+    }
+}
+
+private fun PluginFieldValueType.canConvertScript(): Boolean {
+    return this in setOf(
+        PluginFieldValueType.TEXT,
+        PluginFieldValueType.MULTILINE_TEXT,
+        PluginFieldValueType.PERSON_LIST,
+        PluginFieldValueType.LYRICS
+    )
+}
+
+private fun PluginFieldValueType.canTrim(): Boolean {
+    return canConvertScript()
+}
+
+private fun PluginFieldValueType.canNormalizeWhitespace(): Boolean {
+    return canConvertScript()
+}
+
+private fun PluginFieldValueType.canRemoveEmptyLines(): Boolean {
+    return this in setOf(
+        PluginFieldValueType.MULTILINE_TEXT,
+        PluginFieldValueType.LYRICS
+    )
+}
 
 private const val DEFAULT_CONFIG_GROUP = "__basic__"
 private const val DEFAULT_METADATA_GROUP = "extended"

@@ -10,7 +10,7 @@ import com.lonx.lyrico.data.model.AppLogType
 import com.lonx.lyrico.data.model.MetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.PluginLyricsConfigRepository
+import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
@@ -44,7 +44,7 @@ data class PluginUiState(
 class PluginViewModel(
     private val repository: SourcePluginRepository,
     private val settingsRepository: SettingsRepository,
-    private val pluginLyricsConfigRepository: PluginLyricsConfigRepository,
+    private val pluginFieldProcessConfigRepository: PluginFieldProcessConfigRepository,
     private val installer: SourcePluginInstaller,
     private val pluginManager: PluginSearchSourceManager,
     private val appLogRepository: AppLogRepository
@@ -222,7 +222,7 @@ class PluginViewModel(
                 repository.uninstallPlugin(id)
                 pluginManager.invalidate(plugin.id)
                 settingsRepository.removePluginSettings(plugin.id)
-                pluginLyricsConfigRepository.removeConfig(plugin.id)
+                pluginFieldProcessConfigRepository.removeConfig(plugin.id)
                 File(plugin.pluginDir).deleteRecursively()
             }
         }

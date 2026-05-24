@@ -12,10 +12,9 @@ import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.lyrics.SearchSource
-import com.lonx.lyrico.data.model.plugin.GlobalLyricsSettings
-import com.lonx.lyrico.data.model.plugin.PluginLyricsConfig
-import com.lonx.lyrico.data.model.plugin.ResolvedLyricsProcessPolicy
-import com.lonx.lyrico.data.model.plugin.resolveLyricsProcessPolicy
+import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
+import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -23,12 +22,13 @@ import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.MetadataFieldResolver
 import com.lonx.lyrico.utils.MatchScoreDetail
 import com.lonx.lyrico.utils.MusicMatchUtils
-import com.lonx.lyrico.utils.PluginLyricsPostProcessor
+import com.lonx.lyrico.utils.PluginFieldPostProcessor
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -69,6 +69,12 @@ class MatchMetadataProcessor(
         } else {
             null
         }
+        val fieldProcessor = PluginFieldPostProcessor(
+            GlobalFieldProcessSettings(
+                scriptConversion = lyricConfig?.conversionMode ?: settingsRepository.conversionMode.first(),
+                removeEmptyLines = lyricConfig?.removeEmptyLines ?: settingsRepository.removeEmptyLines.first()
+            )
+        )
         val enabledSourceOrder = config.enabledSourceOrderIds
         val queries = MusicMatchUtils.buildSearchQueries(
             song = song,
@@ -164,12 +170,15 @@ class MatchMetadataProcessor(
                 val deferred = async(Dispatchers.Default) {
                     finalMatch.source?.getLyrics(finalMatch.result)?.let { result ->
                         val sourceId = finalMatch.source.id
-                        val policy = lyricConfig.resolvePluginLyricsPolicy(
-                            config.pluginLyricsConfigs[sourceId]
+                        val processConfig = config.pluginFieldProcessConfigs[sourceId]
+                            ?: defaultPluginFieldProcessConfig(sourceId)
+                        val processed = fieldProcessor.processLyrics(
+                            lyrics = result,
+                            config = processConfig
                         )
                         LyricEncoder.encode(
-                            result = PluginLyricsPostProcessor.process(result, policy),
-                            config = lyricConfig.withPluginLyricsPolicy(policy)
+                            result = processed,
+                            config = lyricConfig.copy(conversionMode = com.lonx.lyrico.data.model.ConversionMode.NONE)
                         )
                     }
                 }
@@ -181,15 +190,26 @@ class MatchMetadataProcessor(
             null
         }
         onProgress(0.75f)
-        val newTitle = resolveValue(plan, BatchMatchField.TITLE, finalMatch.result.title)
-        val newArtist = resolveValue(plan, BatchMatchField.ARTIST, finalMatch.result.artist)
-        val newAlbum = resolveValue(plan, BatchMatchField.ALBUM, finalMatch.result.album)
-        val newDate = resolveValue(plan, BatchMatchField.DATE, finalMatch.result.date)
-        val newTrack = resolveValue(plan, BatchMatchField.TRACK_NUMBER, finalMatch.result.trackNumber)
+        val processedFields = finalMatch.source?.let { source ->
+            val processConfig = config.pluginFieldProcessConfigs[source.id]
+                ?: defaultPluginFieldProcessConfig(source.id)
+            fieldProcessor.processFields(
+                pluginId = source.id,
+                fields = finalMatch.result.normalizedFields(),
+                config = processConfig,
+                fieldDefinitions = source.metadataFields,
+                writeRules = plan.metadataRules
+            )
+        }.orEmpty()
+        val newTitle = resolveValue(plan, BatchMatchField.TITLE, processedFields["title"] ?: finalMatch.result.title)
+        val newArtist = resolveValue(plan, BatchMatchField.ARTIST, processedFields["artist"] ?: finalMatch.result.artist)
+        val newAlbum = resolveValue(plan, BatchMatchField.ALBUM, processedFields["album"] ?: finalMatch.result.album)
+        val newDate = resolveValue(plan, BatchMatchField.DATE, processedFields["date"] ?: finalMatch.result.date)
+        val newTrack = resolveValue(plan, BatchMatchField.TRACK_NUMBER, processedFields["track_number"] ?: finalMatch.result.trackNumber)
         val newGenre = resolveValue(plan, BatchMatchField.GENRE, null)
         val newLyricsResolved = resolveValue(plan, BatchMatchField.LYRICS, newLyrics)
         val newComment = resolveValue(plan, BatchMatchField.COMMENT,
-            finalMatch.result.normalizedFields()["subtitle"]
+            processedFields["subtitle"] ?: finalMatch.result.normalizedFields()["subtitle"]
         )
         val picUrl = if (plan.shouldUpdateCover) finalMatch.result.picUrl else null
 
@@ -206,7 +226,22 @@ class MatchMetadataProcessor(
         )
         val metadataTagData = metadataFieldResolver.resolve(
             currentSong = song,
-            scoredResults = allScoredResults,
+            scoredResults = allScoredResults.map { scoredResult ->
+                val source = scoredResult.source ?: return@map scoredResult
+                val processConfig = config.pluginFieldProcessConfigs[source.id]
+                    ?: defaultPluginFieldProcessConfig(source.id)
+                scoredResult.copy(
+                    result = scoredResult.result.copy(
+                        fields = fieldProcessor.processFields(
+                            pluginId = source.id,
+                            fields = scoredResult.result.normalizedFields(),
+                            config = processConfig,
+                            fieldDefinitions = source.metadataFields,
+                            writeRules = plan.metadataRules
+                        )
+                    )
+                )
+            },
             rules = plan.metadataRules
         )
         val tagDataToWrite = metadataFieldResolver.mergeNonNull(standardTagData, metadataTagData)
@@ -323,26 +358,6 @@ class MatchMetadataProcessor(
                 replayGainReferenceLoudness == null
     }
 
-    private fun LyricRenderConfig.resolvePluginLyricsPolicy(
-        pluginConfig: PluginLyricsConfig?
-    ): ResolvedLyricsProcessPolicy {
-        return resolveLyricsProcessPolicy(
-            global = GlobalLyricsSettings(
-                removeEmptyLines = removeEmptyLines,
-                conversionMode = conversionMode
-            ),
-            plugin = pluginConfig
-        )
-    }
-
-    private fun LyricRenderConfig.withPluginLyricsPolicy(
-        policy: ResolvedLyricsProcessPolicy
-    ): LyricRenderConfig {
-        return copy(
-            removeEmptyLines = policy.removeEmptyLines,
-            conversionMode = policy.conversionMode
-        )
-    }
 }
 
 private data class MatchMetadataPlan(
@@ -366,7 +381,7 @@ data class MatchMetadataTaskConfig(
     val enabledSourceOrderIds: List<String>,
     val metadataFieldWriteRules: List<MetadataFieldWriteRule> = emptyList(),
     val sourceSettings: Map<String, Map<String, String>> = emptyMap(),
-    val pluginLyricsConfigs: Map<String, PluginLyricsConfig> = emptyMap(),
+    val pluginFieldProcessConfigs: Map<String, PluginFieldProcessConfig> = emptyMap(),
     val lyricRenderConfig: LyricRenderConfig? = null,
     val concurrency: Int = 3
 )

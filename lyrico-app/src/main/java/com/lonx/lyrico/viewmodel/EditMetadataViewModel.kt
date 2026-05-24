@@ -29,7 +29,10 @@ import com.lonx.lyrico.data.model.LyricsSearchResult
 import com.lonx.lyrico.data.model.MetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.ScoredSearchResult
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
 import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.data.repository.SettingsDefaults
 import com.lonx.lyrico.data.repository.SettingsRepository
@@ -39,6 +42,7 @@ import com.lonx.lyrico.utils.CoverSourceType
 import com.lonx.lyrico.utils.LyricDecoder
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.MetadataFieldResolver
+import com.lonx.lyrico.utils.PluginFieldPostProcessor
 import com.lonx.lyrico.utils.ReplayGainCalculateState
 import com.lonx.lyrico.utils.ReplayGainError
 import com.lonx.lyrico.utils.ReplayGainScanner
@@ -101,6 +105,7 @@ class EditMetadataViewModel(
     private val replayGainScanner: ReplayGainScanner,
     private val appLogRepository: AppLogRepository,
     private val editFieldVisibilityRepository: EditFieldVisibilityRepository,
+    private val pluginFieldProcessConfigRepository: PluginFieldProcessConfigRepository,
     private val searchSourceProvider: SearchSourceProvider
 ) : ViewModel() {
 
@@ -121,6 +126,16 @@ class EditMetadataViewModel(
         viewModelScope,
         SharingStarted.Eagerly,
         emptyList()
+    )
+    private val pluginFieldProcessConfigs = pluginFieldProcessConfigRepository.configsFlow.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        emptyMap()
+    )
+    private val lyricRenderConfig = settingsRepository.lyricRenderConfigFlow.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        null
     )
     private var currentSong: SongEntity? = null
 
@@ -256,17 +271,37 @@ class EditMetadataViewModel(
                     )
                 )
             }
+            val source = searchSources.value.firstOrNull { it.id == result.pluginId }
+            val processConfig = pluginFieldProcessConfigs.value[result.pluginId]
+                ?: defaultPluginFieldProcessConfig(result.pluginId)
+            val renderConfig = lyricRenderConfig.value
+            val fieldProcessor = PluginFieldPostProcessor(
+                GlobalFieldProcessSettings(
+                    scriptConversion = renderConfig?.conversionMode ?: ConversionMode.NONE,
+                    removeEmptyLines = renderConfig?.removeEmptyLines ?: SettingsDefaults.REMOVE_EMPTY_LINES
+                )
+            )
+            val processedFields = fieldProcessor.processFields(
+                pluginId = result.pluginId,
+                fields = result.normalizedFields(),
+                config = processConfig,
+                fieldDefinitions = source?.metadataFields.orEmpty(),
+                writeRules = MetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
+                    savedRules = metadataFieldWriteRules.value,
+                    searchSources = searchSources.value
+                )
+            )
             // Resolve plugin-declared metadata fields.
             val standardTagData = current.copy(
-                title = result.title?.takeIf { it.isNotBlank() } ?: current.title,
-                artist = result.artist?.takeIf { it.isNotBlank() } ?: current.artist,
-                album = result.album?.takeIf { it.isNotBlank() } ?: current.album,
+                title = processedFields["title"]?.takeIf { it.isNotBlank() } ?: current.title,
+                artist = processedFields["artist"]?.takeIf { it.isNotBlank() } ?: current.artist,
+                album = processedFields["album"]?.takeIf { it.isNotBlank() } ?: current.album,
                 lyrics = result.lyrics?.takeIf { it.isNotBlank() } ?: current.lyrics,
-                date = result.date?.takeIf { it.isNotBlank() } ?: current.date,
-                trackNumber = result.trackerNumber?.takeIf { it.isNotBlank() }
+                date = processedFields["date"]?.takeIf { it.isNotBlank() } ?: current.date,
+                trackNumber = processedFields["track_number"]?.takeIf { it.isNotBlank() }
                     ?: current.trackNumber,
                 picUrl = result.picUrl?.takeIf { it.isNotBlank() } ?: current.picUrl,
-                comment = result.normalizedFields()["subtitle"]?.takeIf { it.isNotBlank() } ?: current.comment,
+                comment = processedFields["subtitle"]?.takeIf { it.isNotBlank() } ?: current.comment,
             )
             val metadataTagData = currentSong?.let { song ->
                 if (result.pluginId.isBlank()) {
@@ -287,7 +322,7 @@ class EditMetadataViewModel(
                                     date = result.date.orEmpty(),
                                     trackNumber = result.trackerNumber.orEmpty(),
                                     picUrl = result.picUrl.orEmpty(),
-                                    fields = result.fields
+                                    fields = processedFields
                                 ),
                                 score = 1.0
                             )

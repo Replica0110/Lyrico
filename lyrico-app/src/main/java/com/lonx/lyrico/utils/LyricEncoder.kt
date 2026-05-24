@@ -201,12 +201,14 @@ object LyricEncoder {
         config: LyricRenderConfig,
         offset: Long = 0L,
     ): String {
-        selectRawLyrics(result, config)?.let { raw ->
-            val converted = convertLyricsText(raw, config.conversionMode)
-            return shiftLyricsOffset(converted, offset).trim()
-        }
-        encodeFallbackRawLyrics(result, config, offset)?.let {
-            return it
+        if (!shouldPreferStructured(result, config)) {
+            selectRawLyrics(result, config)?.let { raw ->
+                val converted = convertLyricsText(raw, config.conversionMode)
+                return shiftLyricsOffset(converted, offset).trim()
+            }
+            encodeFallbackRawLyrics(result, config, offset)?.let {
+                return it
+            }
         }
 
         val convertedResult = convertLyricsResult(result, config.conversionMode)
@@ -305,6 +307,14 @@ object LyricEncoder {
         }
 
         return raw.takeIf { it.isNotBlank() }
+    }
+
+    private fun shouldPreferStructured(
+        result: LyricsResult,
+        config: LyricRenderConfig
+    ): Boolean {
+        return (config.showTranslation && !result.translated.isNullOrEmpty()) ||
+                (config.showRomanization && !result.romanization.isNullOrEmpty())
     }
 
     private fun encodeFallbackRawLyrics(

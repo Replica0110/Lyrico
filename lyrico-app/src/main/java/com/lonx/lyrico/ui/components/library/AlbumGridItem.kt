@@ -33,9 +33,9 @@ fun rememberAlbumGridTextStyle(columns: Int): AlbumGridTextStyle {
     return remember(columns, textStyles) {
         when (columns) {
             2 -> AlbumGridTextStyle(
-                title = textStyles.main,
+                title = textStyles.body2,
                 summary = textStyles.footnote1,
-                titleMaxLines = 2
+                titleMaxLines = 1
             )
 
             3 -> AlbumGridTextStyle(

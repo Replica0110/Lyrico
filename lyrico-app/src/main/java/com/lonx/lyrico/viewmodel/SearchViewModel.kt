@@ -1,6 +1,5 @@
 package com.lonx.lyrico.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
@@ -8,7 +7,6 @@ import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.LyricFormat
 import com.lonx.lyrico.data.model.LyricRenderConfig
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
-import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
 import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
@@ -143,7 +141,7 @@ class SearchViewModel(
             allSourcesFlow
         ) { search, searchConfig, renderedLyrics, selectedId, allSources ->
 
-            val sourceImpls = buildOrderedSources(searchConfig, allSources)
+            val sourceImpls = getSearchSources(searchConfig, allSources)
             val filteredSources = sourceImpls.map { it.toUiModel() }
             val selectedSource =
                 filteredSources.find { it.id == selectedId }
@@ -218,7 +216,7 @@ class SearchViewModel(
         searchJob = viewModelScope.launch {
 
             val searchConfig = searchConfigFlow.filterNotNull().first()
-            val sourceImpls = buildOrderedSources(
+            val sourceImpls = getSearchSources(
                 searchConfig = searchConfig,
                 allSources = allSourcesFlow.first { it.isNotEmpty() }
             )
@@ -413,13 +411,14 @@ class SearchViewModel(
         return searchResultCache[keyword]?.get(sourceId)
     }
 
-    private fun buildOrderedSources(
+    private fun getSearchSources(
         searchConfig: com.lonx.lyrico.data.model.SearchConfig?,
         allSources: List<SearchSource>
     ): List<SearchSource> {
         if (searchConfig == null) return emptyList()
 
-        return allSources.sortedBy { it.name }
+        // allSources 已经由 SourcePluginDao 按 sortOrder ASC, name ASC 排好序
+        return allSources
     }
 
     fun setLyricFormat(format: LyricFormat) {

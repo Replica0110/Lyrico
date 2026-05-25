@@ -93,7 +93,7 @@ class CoverSearchViewModel(
             allSourcesFlow
         ) { search, searchConfig, allSources ->
 
-            val filteredSources = buildOrderedSources(searchConfig, allSources).map { it.toUiModel() }
+            val filteredSources = getSearchSources(searchConfig, allSources).map { it.toUiModel() }
 
             CoverSearchUiState(
                 searchKeyword = search.keyword,
@@ -154,7 +154,7 @@ class CoverSearchViewModel(
             val searchConfig = searchConfigFlow.filterNotNull().first()
             val pageSize = settingsRepository.searchPageSize.first()
             
-            val enabledSources = buildOrderedSources(searchConfig, allSourcesFlow.value)
+            val enabledSources = getSearchSources(searchConfig, allSourcesFlow.value)
 
             // 并行从所有启用的源搜索封面
             val sourceResults = enabledSources.map { sourceImpl ->
@@ -206,13 +206,14 @@ class CoverSearchViewModel(
         }
     }
 
-    private fun buildOrderedSources(
+    private fun getSearchSources(
         searchConfig: com.lonx.lyrico.data.model.SearchConfig?,
         allSources: List<SearchSource>
     ): List<SearchSource> {
         if (searchConfig == null) return emptyList()
 
-        return allSources.sortedBy { it.name }
+        // allSources 已经由 SourcePluginDao 按 sortOrder ASC, name ASC 排好序
+        return allSources
     }
 
     private fun Throwable.toUiMessage(): UiMessage {

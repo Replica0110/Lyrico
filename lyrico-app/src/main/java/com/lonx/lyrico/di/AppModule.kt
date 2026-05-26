@@ -177,7 +177,7 @@ val appModule = module {
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
     single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get(), get(), get()) }
     single<SourcePluginRepository> { SourcePluginRepositoryImpl(get()) }
-    single<LibraryScanManager> { LibraryScanManagerImpl(get(), get(), get()) }
+    single<LibraryScanManager> { LibraryScanManagerImpl(get(), androidContext(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
     single<AppLogRepository> { AppLogRepositoryImpl(get(), get()) }
     single<GhContributorRepository> { GhContributorRepositoryImpl(get(), get()) }

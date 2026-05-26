@@ -59,7 +59,9 @@ interface FolderDao {
     suspend fun upsertAndGetId(
         path: String,
         treeUri: String? = null,
-        addedBySaf: Boolean = false
+        addedBySaf: Boolean = false,
+        isIgnored: Boolean? = null,
+        collapseToExistingParent: Boolean = true
     ): Long {
         val now = System.currentTimeMillis()
         val normalizedPath = normalizeFolderPath(path)
@@ -68,41 +70,31 @@ interface FolderDao {
             normalizeFolderPath(it.path) == normalizedPath
         }
 
-        val existingParent = allFolders.firstOrNull {
-            it.id != existing?.id &&
-                    isParentFolder(
-                        parentPath = normalizeFolderPath(it.path),
-                        childPath = normalizedPath
-                    )
-        }
-        if (existingParent != null) {
-            val duplicateChildIds = allFolders
+        if (collapseToExistingParent) {
+            val existingParent = allFolders.firstOrNull {
+                it.id != existing?.id &&
+                        isParentFolder(
+                            parentPath = normalizeFolderPath(it.path),
+                            childPath = normalizedPath
+                        )
+            }
+            if (existingParent != null) {
+                return existingParent.id
+            }
+
+            val childFolderIds = allFolders
                 .filter {
-                    it.id != existingParent.id &&
+                    it.id != existing?.id &&
                             isParentFolder(
-                                parentPath = normalizeFolderPath(existingParent.path),
+                                parentPath = normalizedPath,
                                 childPath = normalizeFolderPath(it.path)
                             )
                 }
                 .map { it.id }
-            if (duplicateChildIds.isNotEmpty()) {
-                deleteFoldersPermanently(duplicateChildIds)
-            }
-            return existingParent.id
-        }
 
-        val childFolderIds = allFolders
-            .filter {
-                it.id != existing?.id &&
-                        isParentFolder(
-                            parentPath = normalizedPath,
-                            childPath = normalizeFolderPath(it.path)
-                        )
+            if (childFolderIds.isNotEmpty()) {
+                deleteFoldersPermanently(childFolderIds)
             }
-            .map { it.id }
-
-        if (childFolderIds.isNotEmpty()) {
-            deleteFoldersPermanently(childFolderIds)
         }
 
         return if (existing == null) {
@@ -111,6 +103,7 @@ interface FolderDao {
                     path = normalizedPath,
                     treeUri = treeUri,
                     addedBySaf = addedBySaf,
+                    isIgnored = isIgnored ?: false,
                     lastScanned = now,
                     dbUpdateTime = now,
                     songCount = 0
@@ -122,6 +115,7 @@ interface FolderDao {
             update(existing.copy(
                 treeUri = if (shouldUpdateTreeUri) treeUri else existing.treeUri,
                 addedBySaf = if (shouldUpdateSaf) true else existing.addedBySaf,
+                isIgnored = isIgnored ?: existing.isIgnored,
                 path = normalizedPath,
                 lastScanned = now,
                 dbUpdateTime = now
@@ -143,6 +137,92 @@ interface FolderDao {
         if (parentPath.isBlank() || childPath.isBlank()) return false
         if (parentPath == childPath) return false
         return childPath.startsWith("$parentPath/")
+    }
+
+    @Transaction
+    suspend fun upsertScannedFolderAndGetId(path: String, isIgnored: Boolean): Long {
+        return upsertAndGetId(
+            path = path,
+            isIgnored = isIgnored,
+            collapseToExistingParent = false
+        )
+    }
+
+    @Transaction
+    suspend fun upsertScannedFolderTreeAndGetLeafId(
+        rootPath: String,
+        folderPath: String,
+        isIgnored: Boolean
+    ): Long {
+        val normalizedRootPath = normalizeFolderPath(rootPath)
+        val normalizedFolderPath = normalizeFolderPath(folderPath)
+        val relativePath = normalizedFolderPath
+            .removePrefix(normalizedRootPath)
+            .trimStart('/')
+
+        var currentPath = normalizedRootPath
+        var currentId = upsertScannedFolderAndGetId(currentPath, isIgnored)
+
+        relativePath
+            .split('/')
+            .filter { it.isNotBlank() }
+            .forEach { segment ->
+                currentPath = "$currentPath/$segment"
+                currentId = upsertScannedFolderAndGetId(currentPath, isIgnored)
+            }
+
+        return currentId
+    }
+
+    @Transaction
+    suspend fun getScanRootFoldersFor(folderIds: Set<Long>): List<FolderEntity> {
+        if (folderIds.isEmpty()) return emptyList()
+        val folders = getAllFoldersOnce()
+        val selected = folders.filter { it.id in folderIds }
+        if (selected.isEmpty()) return emptyList()
+
+        return folders
+            .filter { it.addedBySaf && !it.treeUri.isNullOrBlank() }
+            .filter { root ->
+                selected.any { folder ->
+                    val rootPath = normalizeFolderPath(root.path)
+                    val selectedPath = normalizeFolderPath(folder.path)
+                    root.id == folder.id || isParentFolder(rootPath, selectedPath)
+                }
+            }
+    }
+
+    @Transaction
+    suspend fun getFolderTreeIds(folderId: Long): List<Long> {
+        val folders = getAllFoldersOnce()
+        val root = folders.firstOrNull { it.id == folderId } ?: return emptyList()
+        val rootPath = normalizeFolderPath(root.path)
+        return folders
+            .filter { folder ->
+                val path = normalizeFolderPath(folder.path)
+                folder.id == root.id || isParentFolder(rootPath, path)
+            }
+            .map { it.id }
+    }
+
+    @Transaction
+    suspend fun getFolderTreeIds(folderIds: Set<Long>): List<Long> {
+        return folderIds.flatMap { getFolderTreeIds(it) }.distinct()
+    }
+
+    @Transaction
+    suspend fun setIgnoredRecursively(folderId: Long, ignored: Boolean) {
+        getFolderTreeIds(folderId).forEach { id ->
+            setIgnored(id, ignored)
+        }
+    }
+
+    @Transaction
+    suspend fun deleteFolderTreePermanently(folderId: Long) {
+        val folderIds = getFolderTreeIds(folderId)
+        if (folderIds.isNotEmpty()) {
+            deleteFoldersPermanently(folderIds)
+        }
     }
 
     @Query("UPDATE folders SET isIgnored = :ignored, dbUpdateTime = :updateTime WHERE id = :folderId")
@@ -186,6 +266,11 @@ interface FolderDao {
         WHERE songCount = 0 
           AND isIgnored = 0 
           AND addedBySaf = 0
+          AND NOT EXISTS (
+              SELECT 1
+              FROM folders AS child
+              WHERE child.path LIKE folders.path || '/%'
+          )
     """)
     suspend fun deleteEmptyFolders()
 

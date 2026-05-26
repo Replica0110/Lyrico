@@ -76,7 +76,9 @@ class SongRepositoryImpl(
         if (foldersWithoutPermission.isEmpty()) return 0
 
         database.withTransaction {
-            folderDao.deleteFoldersPermanently(foldersWithoutPermission.map { it.id })
+            foldersWithoutPermission.forEach { folder ->
+                folderDao.deleteFolderTreePermanently(folder.id)
+            }
         }
 
         logApp(
@@ -370,8 +372,12 @@ class SongRepositoryImpl(
 
                     val songsToUpsert = mutableListOf<SongEntity>()
 
-                    val safFolders = folderDao.getSafFolders()
-                        .filter { folder -> folderIds == null || folder.id in folderIds }
+                    val safFolders = if (folderIds == null) {
+                        folderDao.getSafFolders()
+                    } else {
+                        folderDao.getScanRootFoldersFor(folderIds)
+                    }
+                    val safFolderById = safFolders.associateBy { it.id }
                     val safScanResult = mediaScanner.querySongsFromSafFolders(safFolders)
                     Log.d(TAG, "SAF 扫描完成，共 ${safScanResult.songs.size} 首, 成功文件夹=${safScanResult.successfulFolderIds.size}, 失败=${safScanResult.failedFolderIds.size}")
 
@@ -406,7 +412,12 @@ class SongRepositoryImpl(
 
                             if (needsUpdate) {
                                 try {
-                                    val folderId = scannedSong.rootFolderId
+                                    val rootFolder = safFolderById[scannedSong.rootFolderId]
+                                    val folderId = folderDao.upsertScannedFolderTreeAndGetLeafId(
+                                        rootPath = rootFolder?.path ?: scannedSong.folderPath,
+                                        folderPath = scannedSong.folderPath,
+                                        isIgnored = rootFolder?.isIgnored ?: false
+                                    )
                                     impactedFolderIds.add(folderId)
 
                                     val entity = extractSongMetadata(
@@ -437,11 +448,14 @@ class SongRepositoryImpl(
 
                     val successfulSafFolderIds = safScanResult.successfulFolderIds
                     val missingSafFolderIds = safScanResult.missingFolderIds
+                    val successfulScannedFolderIds = folderDao
+                        .getFolderTreeIds(successfulSafFolderIds)
+                        .toSet()
 
                     val deletedUris = dbSyncInfos
                         .filter { info ->
                             when (info.source) {
-                                "SAF" -> info.folderId in successfulSafFolderIds && info.uri !in deviceUris
+                                "SAF" -> info.folderId in successfulScannedFolderIds && info.uri !in deviceUris
                                 else -> true
                             }
                         }
@@ -489,7 +503,9 @@ class SongRepositoryImpl(
                         }
 
                         if (missingSafFolderIds.isNotEmpty()) {
-                            folderDao.deleteFoldersPermanently(missingSafFolderIds.toList())
+                            missingSafFolderIds.forEach { folderId ->
+                                folderDao.deleteFolderTreePermanently(folderId)
+                            }
                         }
 
                         impactedFolderIds

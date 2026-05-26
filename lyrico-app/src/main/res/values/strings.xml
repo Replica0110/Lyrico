@@ -288,6 +288,10 @@
     <string name="folder_scan_failed">Scan failed: %s</string>
 
     <!-- Folder Item Info -->
+    <string name="folder_root_path">Folders</string>
+    <string name="folder_browser_count_format">%1$d folders, %2$d songs</string>
+    <string name="folder_child_song_count_format">Folders: %1$d, Songs: %2$d</string>
+    <string name="folder_hidden_child_song_count_format">Hidden, Folders: %1$d, Songs: %2$d</string>
     <string name="folder_song_count_format">Songs: %d</string>
     <string name="folder_hidden_song_count_format">Hidden, Songs: %d</string>
     <string name="folder_source_manual">Manually Added</string>

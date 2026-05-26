@@ -20,7 +20,8 @@ data class SafScanResult(
 
 data class SafScannedSongFile(
     val songFile: SongFile,
-    val rootFolderId: Long
+    val rootFolderId: Long,
+    val folderPath: String
 )
 
 private data class SafDocumentRow(
@@ -148,6 +149,10 @@ class MediaScanner(
                 output.add(
                     SafScannedSongFile(
                         rootFolderId = rootFolderId,
+                        folderPath = buildDisplayFolderPath(
+                            rootPath = displayRootPath,
+                            relativePath = currentRelativePath
+                        ),
                         songFile = SongFile(
                             mediaId = createVirtualMediaId(child.uri.toString()),
                             uri = child.uri,
@@ -303,6 +308,17 @@ class MediaScanner(
             "${rootPath.trimEnd('/')}/$fileName"
         } else {
             "${rootPath.trimEnd('/')}/$relativePath/$fileName"
+        }
+    }
+
+    private fun buildDisplayFolderPath(
+        rootPath: String,
+        relativePath: String
+    ): String {
+        return if (relativePath.isBlank()) {
+            rootPath.trimEnd('/')
+        } else {
+            "${rootPath.trimEnd('/')}/$relativePath"
         }
     }
 

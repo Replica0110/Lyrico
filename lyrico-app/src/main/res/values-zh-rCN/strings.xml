@@ -293,6 +293,10 @@
     <string name="folder_scan_failed">扫描失败：%s</string>
 
     <!-- 文件夹项信息 -->
+    <string name="folder_root_path">文件夹</string>
+    <string name="folder_browser_count_format">%1$d 个文件夹，%2$d 首歌曲</string>
+    <string name="folder_child_song_count_format">%1$d 个文件夹，%2$d 首歌曲</string>
+    <string name="folder_hidden_child_song_count_format">已隐藏，%1$d 个文件夹，%2$d 首歌曲</string>
     <string name="folder_song_count_format">歌曲 %d 首</string>
     <string name="folder_hidden_song_count_format">已隐藏，歌曲 %d 首</string>
     <string name="folder_source_manual">手动添加</string>

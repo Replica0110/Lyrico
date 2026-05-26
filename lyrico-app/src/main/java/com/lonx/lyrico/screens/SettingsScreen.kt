@@ -108,10 +108,10 @@ fun SettingsScreen(
     val removeEmptyLines = settingsUiState.removeEmptyLines
     val ignoreShortAudio = settingsUiState.ignoreShortAudio
     val folders = folderUiState.folders
-    val totalFolders = folders.size
+    val totalFolders = folders.filter { it.addedBySaf }.size
     val conversionMode = settingsUiState.conversionMode
 
-    val ignoredFolders = folders.count { it.isIgnored }
+    val ignoredFolders = folders.count { it.isIgnored && it.addedBySaf }
     val searchPageSize = settingsUiState.searchPageSize
     val scope = rememberCoroutineScope()
 

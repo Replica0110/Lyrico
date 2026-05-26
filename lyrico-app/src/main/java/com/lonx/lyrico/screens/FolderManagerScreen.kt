@@ -1,11 +1,13 @@
 package com.lonx.lyrico.screens
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -17,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,12 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.FolderEntity
+import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
-import com.ramcosta.composedestinations.generated.destinations.FolderSongsDestination
+import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -72,11 +74,30 @@ fun FolderManagerScreen(
     val viewModel: FolderManagerViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val folders = uiState.folders
+    val folderTree = remember(folders, uiState.songs) { buildFolderTree(folders, uiState.songs) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    var selectedFolderId by remember { mutableLongStateOf(-1L) }
-    val currentFolder = remember(selectedFolderId, folders) {
+    var currentFolderId by remember { mutableLongStateOf(ROOT_FOLDER_ID) }
+    var selectedFolderId by remember { mutableLongStateOf(ROOT_FOLDER_ID) }
+    val selectedFolder = remember(selectedFolderId, folders) {
         folders.find { it.id == selectedFolderId }
+    }
+    val currentFolder = remember(currentFolderId, folders) {
+        folders.find { it.id == currentFolderId }
+    }
+    val currentNode = remember(currentFolder, folderTree) {
+        currentFolder?.let { folderTree.nodesById[it.id] }
+    }
+    val parentFolder = remember(currentNode, folderTree) {
+        currentNode?.parentId?.let { folderTree.nodesById[it]?.folder }
+    }
+    val currentChildFolders = remember(currentNode, folderTree) {
+        currentNode?.childFolders ?: folderTree.rootFolders
+    }
+    val currentSongs = remember(currentFolder, uiState.songs) {
+        currentFolder?.let { folder ->
+            uiState.songs.filter { song -> song.folderId == folder.id }
+        }.orEmpty()
     }
     val showConfirmDialog = remember { mutableStateOf(false) }
 
@@ -103,13 +124,27 @@ fun FolderManagerScreen(
         }
     }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+    BackHandler(enabled = currentFolder != null) {
+        currentFolderId = parentFolder?.id ?: ROOT_FOLDER_ID
+    }
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = stringResource(R.string.folder_manager_title),
+                title = if (currentFolderId == ROOT_FOLDER_ID) {
+                    stringResource(R.string.folder_manager_title)
+                } else {
+                    currentFolder?.path?.substringAfterLast("/")?.ifBlank { currentFolder.path }
+                        ?: stringResource(R.string.folder_manager_title)
+                },
                 navigationIcon = {
                     IconButton(
-                        onClick = { navigator.navigateUp() }) {
+                        onClick = {
+                            if (currentFolder != null) {
+                                currentFolderId = parentFolder?.id ?: ROOT_FOLDER_ID
+                            } else {
+                                navigator.navigateUp()
+                            }
+                        }) {
                         Icon(
                             imageVector = MiuixIcons.Back,
                             contentDescription = null
@@ -117,20 +152,22 @@ fun FolderManagerScreen(
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { folderPickerLauncher.launch(null) }
-                    ) {
-                        Icon(
-                            imageVector = MiuixIcons.AddFolder,
-                            contentDescription = null
-                        )
+                    if (currentFolderId == ROOT_FOLDER_ID){
+                        IconButton(
+                            onClick = { folderPickerLauncher.launch(null) }
+                        ) {
+                            Icon(
+                                imageVector = MiuixIcons.AddFolder,
+                                contentDescription = null
+                            )
+                        }
                     }
                 },
                 scrollBehavior = topAppBarScrollBehavior
             )
         }
     ) { paddingValues ->
-        currentFolder?.let { folder ->
+        selectedFolder?.let { folder ->
             WindowDialog(
                 title = stringResource(R.string.dialog_remove_folder_title),
                 show = showConfirmDialog.value,
@@ -165,7 +202,10 @@ fun FolderManagerScreen(
                             onClick = {
                                 showConfirmDialog.value = false
                                 viewModel.deleteFolder(folder)
-                                selectedFolderId = -1L
+                                selectedFolderId = ROOT_FOLDER_ID
+                                if (folder.id == currentFolderId) {
+                                    currentFolderId = parentFolder?.id ?: ROOT_FOLDER_ID
+                                }
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.textButtonColorsPrimary(),
@@ -180,11 +220,11 @@ fun FolderManagerScreen(
                 .fillMaxSize()
                 .padding(scaffoldTopHorizontalPadding(paddingValues))
         ) {
-            Text(
-                text = stringResource(R.string.folder_tip_disabled_logic),
-                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                modifier = Modifier.padding(12.dp)
+            FolderPathHeader(
+                currentPath = currentFolder?.path
+                    ?: stringResource(R.string.folder_root_path),
+                folderCount = currentChildFolders.size,
+                songCount = currentSongs.size
             )
             uiState.error?.let { error ->
                 Text(
@@ -202,19 +242,19 @@ fun FolderManagerScreen(
                     .fillMaxHeight(),
                 overscrollEffect = null,
             ) {
-                items(items = folders) { folder ->
+                items(
+                    items = currentChildFolders,
+                    key = { folder -> "folder-${folder.id}" }
+                ) { folder ->
                     FolderListItem(
                         folder = folder,
+                        node = folderTree.nodesById.getValue(folder.id),
                         isScanning = folder.id in uiState.scanningFolderIds,
                         isQueued = folder.id in uiState.queuedFolderIds,
                         onClick = {
-                            navigator.navigate(
-                                FolderSongsDestination(
-                                    folder.id,
-                                    folder.path
-                                )
-                            )
+                            currentFolderId = folder.id
                         },
+                        canRemove = folder.addedBySaf,
                         onDelete = {
                             selectedFolderId = folder.id
                             showConfirmDialog.value = true
@@ -227,18 +267,48 @@ fun FolderManagerScreen(
                         }
                     )
                 }
+                items(
+                    items = currentSongs,
+                    key = { song -> "song-${song.uri.takeIf { it.isNotBlank() && it != "0" } ?: song.id}" }
+                ) { song ->
+                    SongFileItem(
+                        song = song,
+                        onClick = {
+                            navigator.navigate(EditMetadataDestination(song.uri))
+                        }
+                    )
+                }
             }
         }
     }
 }
 
+private const val ROOT_FOLDER_ID = -1L
+
+@Composable
+private fun FolderPathHeader(
+    currentPath: String,
+    folderCount: Int,
+    songCount: Int
+) {
+    Card(
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        BasicComponent(
+            title = currentPath,
+            summary = stringResource(R.string.folder_browser_count_format, folderCount, songCount)
+        )
+    }
+}
 
 @Composable
 private fun FolderListItem(
     folder: FolderEntity,
+    node: FolderTreeNode,
     isScanning: Boolean,
     isQueued: Boolean,
     onClick: () -> Unit,
+    canRemove: Boolean,
     onDelete: () -> Unit,
     onRefresh: () -> Unit,
     onIgnoredChange: (Boolean) -> Unit
@@ -248,11 +318,19 @@ private fun FolderListItem(
     val statusText = when {
         isScanning -> stringResource(R.string.folder_scanning)
         isQueued -> stringResource(R.string.folder_scan_queued)
-        folder.isIgnored -> stringResource(R.string.folder_hidden_song_count_format, folder.songCount)
-        else -> stringResource(R.string.folder_song_count_format, folder.songCount)
+        folder.isIgnored -> stringResource(
+            R.string.folder_hidden_child_song_count_format,
+            node.childFolders.size,
+            node.subtreeSongCount
+        )
+        else -> stringResource(
+            R.string.folder_child_song_count_format,
+            node.childFolders.size,
+            node.subtreeSongCount
+        )
     }
-    val actionEntry = DropdownEntry(
-        items = listOf(
+    val actionItems = buildList {
+        add(
             DropdownItem(
                 text = if (folder.isIgnored) {
                     stringResource(R.string.folder_action_show)
@@ -262,24 +340,31 @@ private fun FolderListItem(
                 onClick = {
                     onIgnoredChange(!folder.isIgnored)
                 }
-            ),
+            )
+        )
+        add(
             DropdownItem(
                 text = stringResource(R.string.action_refresh_folder),
                 onClick = {
                     if (!isBusy){ onRefresh() }
                 }
-            ),
-            DropdownItem(
-                text = stringResource(R.string.folder_action_remove),
-                onClick = {
-                    if (!isBusy){ onDelete() }
-                }
             )
         )
-    )
+        if (canRemove) {
+            add(
+                DropdownItem(
+                    text = stringResource(R.string.folder_action_remove),
+                    onClick = {
+                        if (!isBusy){ onDelete() }
+                    }
+                )
+            )
+        }
+    }
+    val actionEntry = DropdownEntry(items = actionItems)
 
     Card(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
     ){
         BasicComponent(
             endActions = {
@@ -322,4 +407,92 @@ private fun FolderListItem(
             )
         }
     }
+}
+
+@Composable
+private fun SongFileItem(
+    song: SongEntity,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        BasicComponent(
+            insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            title = song.title?.takeIf { it.isNotBlank() } ?: song.fileName,
+            summary = song.fileName,
+            onClick = onClick
+        )
+    }
+}
+
+private data class FolderTree(
+    val nodesById: Map<Long, FolderTreeNode>,
+    val rootFolders: List<FolderEntity>
+)
+
+private data class FolderTreeNode(
+    val folder: FolderEntity,
+    val parentId: Long?,
+    val childFolders: List<FolderEntity>,
+    val directSongCount: Int,
+    val subtreeSongCount: Int
+)
+
+private fun buildFolderTree(folders: List<FolderEntity>, songs: List<SongEntity>): FolderTree {
+    val normalizedPaths = folders.associate { folder ->
+        folder.id to folder.path.normalizeFolderPath()
+    }
+    val directSongCounts = songs.groupingBy { song -> song.folderId }.eachCount()
+    val parentIds = folders.associate { folder ->
+        val path = normalizedPaths.getValue(folder.id)
+        val parent = folders
+            .filter { candidate ->
+                val candidatePath = normalizedPaths.getValue(candidate.id)
+                candidate.id != folder.id &&
+                        candidatePath.isNotBlank() &&
+                        path.startsWith("$candidatePath/")
+            }
+            .maxByOrNull { candidate ->
+                normalizedPaths.getValue(candidate.id).length
+            }
+
+        folder.id to parent?.id
+    }
+    val childrenByParentId = folders
+        .groupBy { folder -> parentIds.getValue(folder.id) }
+        .mapValues { (_, children) ->
+            children.sortedBy { it.path.normalizeFolderPath() }
+        }
+    val subtreeSongCounts = mutableMapOf<Long, Int>()
+    fun subtreeSongCount(folderId: Long): Int {
+        return subtreeSongCounts.getOrPut(folderId) {
+            directSongCounts[folderId].orZero() +
+                    childrenByParentId[folderId].orEmpty().sumOf { child ->
+                        subtreeSongCount(child.id)
+                    }
+        }
+    }
+    val nodesById = folders.associate { folder ->
+        folder.id to FolderTreeNode(
+            folder = folder,
+            parentId = parentIds.getValue(folder.id),
+            childFolders = childrenByParentId[folder.id].orEmpty(),
+            directSongCount = directSongCounts[folder.id].orZero(),
+            subtreeSongCount = subtreeSongCount(folder.id)
+        )
+    }
+
+    return FolderTree(
+        nodesById = nodesById,
+        rootFolders = childrenByParentId[null].orEmpty()
+    )
+}
+
+private fun Int?.orZero(): Int = this ?: 0
+
+private fun String.normalizeFolderPath(): String {
+    return replace('\\', '/')
+        .trim()
+        .trimEnd('/')
 }

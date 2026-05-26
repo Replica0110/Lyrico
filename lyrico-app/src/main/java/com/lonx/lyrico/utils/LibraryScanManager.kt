@@ -1,6 +1,8 @@
 package com.lonx.lyrico.utils
 
+import android.content.Context
 import com.lonx.lyrico.data.LyricoDatabase
+import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.repository.LibraryScanProgress
 import com.lonx.lyrico.data.repository.SongRepository
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +35,7 @@ interface LibraryScanManager {
 
 class LibraryScanManagerImpl(
     private val appScope: CoroutineScope,
+    private val context: Context,
     private val database: LyricoDatabase,
     private val songRepository: SongRepository
 ) : LibraryScanManager {
@@ -64,6 +67,7 @@ class LibraryScanManagerImpl(
 
     override fun addFolderAndScan(path: String, treeUri: String) {
         appScope.launch {
+            releaseRedundantSafPermissions(path, treeUri)
             val id = folderDao.upsertAndGetId(
                 path = path,
                 treeUri = treeUri,
@@ -72,6 +76,62 @@ class LibraryScanManagerImpl(
             folderDao.setIgnored(id, false)
             enqueueScan(ScanRequest(fullRescan = false, folderIds = setOf(id)))
         }
+    }
+
+    private suspend fun releaseRedundantSafPermissions(path: String, treeUri: String) {
+        val normalizedPath = normalizeFolderPath(path)
+        val allFolders = folderDao.getAllFoldersOnce()
+
+        val existing = allFolders.firstOrNull { folder ->
+            normalizeFolderPath(folder.path) == normalizedPath
+        }
+        if (existing != null && existing.treeUri != treeUri) {
+            releaseFolderPermission(existing)
+        }
+
+        val existingParent = allFolders
+            .filter { folder ->
+                folder.id != existing?.id &&
+                        isParentFolder(
+                            parentPath = normalizeFolderPath(folder.path),
+                            childPath = normalizedPath
+                        )
+            }
+            .maxByOrNull { folder -> normalizeFolderPath(folder.path).length }
+        if (existingParent != null) {
+            UriUtils.releasePersistedPermission(context.contentResolver, treeUri)
+            return
+        }
+
+        allFolders
+            .filter { folder ->
+                isParentFolder(
+                    parentPath = normalizedPath,
+                    childPath = normalizeFolderPath(folder.path)
+                )
+            }
+            .forEach { folder -> releaseFolderPermission(folder) }
+    }
+
+    private fun releaseFolderPermission(folder: FolderEntity) {
+        if (folder.addedBySaf) {
+            UriUtils.releasePersistedPermission(context.contentResolver, folder.treeUri)
+        }
+    }
+
+    private fun normalizeFolderPath(path: String): String {
+        val normalized = path
+            .replace('\\', '/')
+            .trim()
+            .trimEnd('/')
+
+        return normalized.ifBlank { path.trim() }
+    }
+
+    private fun isParentFolder(parentPath: String, childPath: String): Boolean {
+        if (parentPath.isBlank() || childPath.isBlank()) return false
+        if (parentPath == childPath) return false
+        return childPath.startsWith("$parentPath/")
     }
 
     private fun enqueueScan(request: ScanRequest) {

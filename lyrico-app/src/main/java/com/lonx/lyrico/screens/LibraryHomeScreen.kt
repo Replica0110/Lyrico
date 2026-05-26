@@ -11,6 +11,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +28,7 @@ import com.lonx.lyrico.screens.library.SongsPage
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.library.LibraryBottomNavigationBar
 import com.lonx.lyrico.ui.components.library.LibraryNavigationRail
+import com.lonx.lyrico.ui.components.LocalScaffoldIncludesStartPadding
 import com.lonx.lyrico.ui.components.scaffoldBottomPadding
 import com.lonx.lyrico.ui.components.scaffoldHorizontalBottomPadding
 import com.lonx.lyrico.viewmodel.SongListViewModel
@@ -91,12 +93,14 @@ fun LibraryHomeScreen(
                         selectedTab = selectedTab,
                         onTabSelected = ::selectTab
                     )
-                    LibraryHomePager(
-                        tabs = tabs,
-                        pagerState = pagerState,
-                        navigator = navigator,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    CompositionLocalProvider(LocalScaffoldIncludesStartPadding provides false) {
+                        LibraryHomePager(
+                            tabs = tabs,
+                            pagerState = pagerState,
+                            navigator = navigator,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             } else {
                 Scaffold(

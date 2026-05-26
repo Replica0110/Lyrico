@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SongRepository
@@ -58,7 +57,6 @@ class SongListViewModel(
     private val settingsRepository: SettingsRepository,
     private val updateManager: UpdateManager,
     private val libraryScanManager: LibraryScanManager,
-    private val selectionManager: SharedSelectionManager,
     database: LyricoDatabase
 ) : ViewModel() {
 
@@ -80,9 +78,6 @@ class SongListViewModel(
     private val _uiState = MutableStateFlow(SongListUiState())
     val uiState = _uiState.asStateFlow()
 
-    private var preDragSelectedUris = emptySet<String>()
-
-    private val selectedSongUris = selectionManager.selectedUris
     private val _searchType = MutableStateFlow(LocalSearchType.ALL)
     val searchType = _searchType.asStateFlow()
     val songs: StateFlow<List<SongEntity>> = combine(
@@ -106,28 +101,6 @@ class SongListViewModel(
         _searchType.value = LocalSearchType.ALL
     }
 
-    fun startDragSelection(index: Int, songs: List<SongEntity>) {
-        val song = songs.getOrNull(index) ?: return
-        preDragSelectedUris = selectedSongUris.value
-
-        val rangeUris = setOf(song.uri)
-
-        selectionManager.setUris((preDragSelectedUris - rangeUris) + (rangeUris - preDragSelectedUris))
-    }
-
-    fun updateDragSelection(startIndex: Int, endIndex: Int, songs: List<SongEntity>) {
-        val start = minOf(startIndex, endIndex).coerceAtLeast(0)
-        val end = maxOf(startIndex, endIndex).coerceAtMost(songs.size - 1)
-        if (start > end) return
-
-        val rangeUris = songs.subList(start, end + 1).map { it.uri }.toSet()
-
-        selectionManager.setUris((preDragSelectedUris - rangeUris) + (rangeUris - preDragSelectedUris))
-    }
-
-    fun endDragSelection() {
-        preDragSelectedUris = emptySet()
-    }
     fun checkForUpdate() {
         viewModelScope.launch {
             val checkUpdateEnabled = settingsRepository.checkUpdateEnabled.first()

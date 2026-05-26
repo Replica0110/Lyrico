@@ -351,17 +351,17 @@ fun SongsPage(
                                     itemCount = songs.size,
                                     isSelectionMode = isSelectionMode,
                                     onDragSelectionStart = { index ->
-                                        viewModel.startDragSelection(index, songs)
+                                        selectionViewModel.startDragSelection(index, songs)
                                     },
                                     onDragSelectionChange = { startIndex, endIndex ->
-                                        viewModel.updateDragSelection(
+                                        selectionViewModel.updateDragSelection(
                                             startIndex,
                                             endIndex,
                                             songs
                                         )
                                     },
                                     onDragSelectionEnd = {
-                                        viewModel.endDragSelection()
+                                        selectionViewModel.endDragSelection()
                                     }
                                 ),
                             state = listState,

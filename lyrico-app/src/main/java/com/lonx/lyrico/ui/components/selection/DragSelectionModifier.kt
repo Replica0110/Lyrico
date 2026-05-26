@@ -2,6 +2,7 @@ package com.lonx.lyrico.ui.components.selection
 
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +31,8 @@ fun Modifier.dragSelection(
     onDragSelectionStart: (index: Int) -> Unit,
     onDragSelectionChange: (startIndex: Int, endIndex: Int) -> Unit,
     onDragSelectionEnd: () -> Unit,
+    itemIndexMapper: (lazyListIndex: Int) -> Int? = { it },
+    itemInfoMapper: ((itemInfo: LazyListItemInfo) -> Int?)? = null,
 ): Modifier {
     var initialDragY by remember { mutableStateOf<Float?>(null) }
     var currentDragY by remember { mutableStateOf<Float?>(null) }
@@ -55,6 +58,18 @@ fun Modifier.dragSelection(
         scrollDirection = ScrollDirection.NONE
     }
 
+    fun mappedItemIndex(itemInfo: LazyListItemInfo): Int? {
+        return itemInfoMapper?.invoke(itemInfo) ?: itemIndexMapper(itemInfo.index)
+    }
+
+    fun itemInfoAt(y: Float): LazyListItemInfo? {
+        val layoutInfo = listState.layoutInfo
+        val itemY = y + layoutInfo.viewportStartOffset
+        return layoutInfo.visibleItemsInfo.find {
+            itemY >= it.offset && itemY <= it.offset + it.size
+        }
+    }
+
     LaunchedEffect(listState, isSelectionMode, itemCount) {
         while (isActive) {
             currentSpeed += (autoScrollSpeed - currentSpeed) * 0.2f
@@ -74,13 +89,13 @@ fun Modifier.dragSelection(
                     val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
                     val clampedY = y.coerceIn(0f, viewportHeight - 1f)
 
-                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                        clampedY >= it.offset && clampedY <= it.offset + it.size
-                    }
+                    val itemInfo = itemInfoAt(clampedY)
 
                     val startIndex = initialDragIndex
                     if (itemInfo != null && startIndex != null) {
-                        val newIndex = itemInfo.index.coerceIn(0, itemCount - 1)
+                        val newIndex = mappedItemIndex(itemInfo)
+                            ?.coerceIn(0, itemCount - 1)
+                            ?: return@let
                         if (newIndex != currentDragIndex) {
                             currentDragIndex = newIndex
                             onDragSelectionChange(startIndex, newIndex)
@@ -106,12 +121,12 @@ fun Modifier.dragSelection(
                 peakDragY = null
                 scrollDirection = ScrollDirection.NONE
 
-                val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                    offset.y >= it.offset && offset.y <= it.offset + it.size
-                }
+                val itemInfo = itemInfoAt(offset.y)
 
                 itemInfo?.let {
-                    val index = it.index.coerceIn(0, itemCount - 1)
+                    val index = mappedItemIndex(it)
+                        ?.coerceIn(0, itemCount - 1)
+                        ?: return@let
                     initialDragIndex = index
                     currentDragIndex = index
                     onDragSelectionStart(index)
@@ -183,13 +198,13 @@ fun Modifier.dragSelection(
                 val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
                 val clampedY = y.coerceIn(0f, viewportHeight - 1f)
 
-                val itemInfo = listState.layoutInfo.visibleItemsInfo.find {
-                    clampedY >= it.offset && clampedY <= it.offset + it.size
-                }
+                val itemInfo = itemInfoAt(clampedY)
 
                 val startIndex = initialDragIndex
                 if (itemInfo != null && startIndex != null) {
-                    val newIndex = itemInfo.index.coerceIn(0, itemCount - 1)
+                    val newIndex = mappedItemIndex(itemInfo)
+                        ?.coerceIn(0, itemCount - 1)
+                        ?: return@detectDragGesturesAfterLongPress
                     if (newIndex != currentDragIndex) {
                         currentDragIndex = newIndex
                         onDragSelectionChange(startIndex, newIndex)

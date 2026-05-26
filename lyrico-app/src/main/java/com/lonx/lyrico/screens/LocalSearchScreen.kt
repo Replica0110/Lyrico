@@ -13,6 +13,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +45,7 @@ import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.search.AlbumSongItem
 import com.lonx.lyrico.ui.components.search.ArtistSongItem
 import com.lonx.lyrico.ui.components.search.SearchSectionHeader
+import com.lonx.lyrico.ui.components.selection.dragSelection
 import com.lonx.lyrico.ui.components.song.SongActionSheets
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
@@ -64,6 +67,7 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
@@ -80,6 +84,7 @@ fun LocalSearchScreen(
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val context = LocalContext.current
+    val listState = rememberLazyListState()
     var isFabMenuExpanded by remember { mutableStateOf(false) }
     var selectedSong by remember { mutableStateOf<SongEntity?>(null) }
     var showMenuSheet by remember { mutableStateOf(false) }
@@ -89,6 +94,11 @@ fun LocalSearchScreen(
     val hasResults = uiState.songs.isNotEmpty() ||
         uiState.albums.isNotEmpty() ||
         uiState.artists.isNotEmpty()
+    val songIndexByLazyListKey = remember(uiState.songs) {
+        uiState.songs
+            .mapIndexed { index, song -> localSearchSongKey(song) to index }
+            .toMap()
+    }
 
     BackHandler(enabled = isSelectionMode) {
         if (isFabMenuExpanded) {
@@ -101,7 +111,9 @@ fun LocalSearchScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
-                Column {
+                Column(
+                    modifier = Modifier.background(MiuixTheme.colorScheme.surface)
+                ) {
                     AnimatedContent(
                         targetState = isSelectionMode,
                         label = "LocalSearchTopBarAnimation",
@@ -197,7 +209,27 @@ fun LocalSearchScreen(
                     .scrollEndHaptic()
                     .overScrollVertical()
                     .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                    .dragSelection(
+                        listState = listState,
+                        itemCount = uiState.songs.size,
+                        isSelectionMode = isSelectionMode,
+                        itemInfoMapper = { itemInfo ->
+                            songIndexByLazyListKey[itemInfo.key]
+                        },
+                        onDragSelectionStart = { index ->
+                            selectionViewModel.startDragSelection(index, uiState.songs)
+                        },
+                        onDragSelectionChange = { startIndex, endIndex ->
+                            selectionViewModel.updateDragSelection(
+                                startIndex,
+                                endIndex,
+                                uiState.songs
+                            )
+                        },
+                        onDragSelectionEnd = selectionViewModel::endDragSelection
+                    )
                     .fillMaxHeight(),
+                state = listState,
                 contentPadding = scaffoldContentPadding(
                     paddingValues = paddingValues,
                     bottomExtra = 12.dp
@@ -274,7 +306,7 @@ fun LocalSearchScreen(
                     }
                     items(
                         items = uiState.songs,
-                        key = { song -> song.uri.takeIf { it.isNotBlank() && it != "0" } ?: "song-${song.id}" }
+                        key = ::localSearchSongKey
                     ) { song ->
                         SongListItem(
                             song = song,
@@ -358,4 +390,9 @@ private fun SearchEmptyCard() {
             )
         }
     }
+}
+
+private fun localSearchSongKey(song: SongEntity): String {
+    val stableId = song.uri.takeIf { it.isNotBlank() && it != "0" } ?: song.id.toString()
+    return "local-search-song-$stableId"
 }

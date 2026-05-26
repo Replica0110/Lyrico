@@ -199,7 +199,7 @@ val appModule = module {
     )) }
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
-    viewModel { SongListViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { SongListViewModel(get(), get(), get(), get(), get()) }
     viewModel { SongSelectionViewModel(get(), get(), get()) }
     viewModel { LocalSearchViewModel(get(), get()) }
     viewModel { (albumId: Long) ->

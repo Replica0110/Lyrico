@@ -21,6 +21,7 @@ class SongSelectionViewModel(
 
     val selectedSongUris = selectionManager.selectedUris
     val isSelectionMode = selectionManager.isSelectionMode
+    private var preDragSelectedUris = emptySet<String>()
 
     fun toggleSelection(uri: String) {
         selectionManager.toggle(uri)
@@ -44,6 +45,27 @@ class SongSelectionViewModel(
 
         selectionManager.setUris(selectedUris)
         return true
+    }
+
+    fun startDragSelection(index: Int, songs: List<SongEntity>) {
+        val song = songs.getOrNull(index) ?: return
+        preDragSelectedUris = selectedSongUris.value
+
+        val rangeUris = setOf(song.uri)
+        selectionManager.setUris((preDragSelectedUris - rangeUris) + (rangeUris - preDragSelectedUris))
+    }
+
+    fun updateDragSelection(startIndex: Int, endIndex: Int, songs: List<SongEntity>) {
+        val start = minOf(startIndex, endIndex).coerceAtLeast(0)
+        val end = maxOf(startIndex, endIndex).coerceAtMost(songs.size - 1)
+        if (start > end) return
+
+        val rangeUris = songs.subList(start, end + 1).map { it.uri }.toSet()
+        selectionManager.setUris((preDragSelectedUris - rangeUris) + (rangeUris - preDragSelectedUris))
+    }
+
+    fun endDragSelection() {
+        preDragSelectedUris = emptySet()
     }
 
     fun play(context: Context, song: SongEntity) {

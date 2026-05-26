@@ -12,9 +12,9 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.cover.CoverImage
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
+import com.lonx.lyrico.ui.components.selection.dragSelection
 import com.lonx.lyrico.ui.components.song.SongActionSheets
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
@@ -85,6 +87,7 @@ fun AlbumDetailScreen(
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+    val listState = rememberLazyListState()
     val context = LocalContext.current
     var isFabMenuExpanded by remember { mutableStateOf(false) }
 
@@ -158,56 +161,73 @@ fun AlbumDetailScreen(
             }
         ) { paddingValues ->
             Box {
-                LazyColumn(
+                Column(
                     modifier = Modifier
-                        .scrollEndHaptic()
-                        .overScrollVertical()
-                        .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                        .fillMaxHeight(),
-                    contentPadding = scaffoldTopHorizontalPadding(paddingValues),
-                    overscrollEffect = null
+                        .fillMaxSize()
+                        .padding(scaffoldTopHorizontalPadding(paddingValues))
                 ) {
-                    item {
-                        AlbumDetailHeader(
-                            album = albumName,
-                            albumArtist = albumArtist,
-                            songCount = songs.size,
-                            coverSong = songs.firstOrNull()
-                        )
-                    }
+                    AlbumDetailHeader(
+                        album = albumName,
+                        albumArtist = albumArtist,
+                        songCount = songs.size,
+                        coverSong = songs.firstOrNull()
+                    )
 
-                    items(
-                        items = songs,
-                        key = { song ->
-                            song.uri.takeIf { it.isNotBlank() && it != "0" } ?: "song-${song.id}"
-                        }
-                    ) { song ->
-                        SongListItem(
-                            song = song,
-                            isSelectionMode = isSelectionMode,
-                            isSelected = selectedSongUris.contains(song.uri),
-                            onClick = {
-                                navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
-                            },
-                            onToggleSelection = {
-                                selectionViewModel.toggleSelection(song.uri)
-                            },
-                            trailingContent = {
-                                Box(modifier = Modifier.padding(end = 8.dp)) {
-                                    SongListItemActions(
-                                        isSelectionMode = isSelectionMode,
-                                        isSelected = selectedSongUris.contains(song.uri),
-                                        onToggleSelection = {
-                                            selectionViewModel.toggleSelection(song.uri)
-                                        },
-                                        onShowMenu = {
-                                            selectedSong = song
-                                            showMenuSheet = true
-                                        }
-                                    )
-                                }
+                    LazyColumn(
+                        modifier = Modifier
+                            .scrollEndHaptic()
+                            .overScrollVertical()
+                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                            .dragSelection(
+                                listState = listState,
+                                itemCount = songs.size,
+                                isSelectionMode = isSelectionMode,
+                                onDragSelectionStart = { index ->
+                                    selectionViewModel.startDragSelection(index, songs)
+                                },
+                                onDragSelectionChange = { startIndex, endIndex ->
+                                    selectionViewModel.updateDragSelection(startIndex, endIndex, songs)
+                                },
+                                onDragSelectionEnd = selectionViewModel::endDragSelection
+                            )
+                            .weight(1f),
+                        state = listState,
+                        contentPadding = PaddingValues(bottom = 12.dp),
+                        overscrollEffect = null
+                    ) {
+                        items(
+                            items = songs,
+                            key = { song ->
+                                song.uri.takeIf { it.isNotBlank() && it != "0" } ?: "song-${song.id}"
                             }
-                        )
+                        ) { song ->
+                            SongListItem(
+                                song = song,
+                                isSelectionMode = isSelectionMode,
+                                isSelected = selectedSongUris.contains(song.uri),
+                                onClick = {
+                                    navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                                },
+                                onToggleSelection = {
+                                    selectionViewModel.toggleSelection(song.uri)
+                                },
+                                trailingContent = {
+                                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                                        SongListItemActions(
+                                            isSelectionMode = isSelectionMode,
+                                            isSelected = selectedSongUris.contains(song.uri),
+                                            onToggleSelection = {
+                                                selectionViewModel.toggleSelection(song.uri)
+                                            },
+                                            onShowMenu = {
+                                                selectedSong = song
+                                                showMenuSheet = true
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
 

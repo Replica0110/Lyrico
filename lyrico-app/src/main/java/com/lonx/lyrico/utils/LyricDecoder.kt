@@ -200,6 +200,7 @@ object LyricDecoder {
         val originalLines = mutableListOf<LyricsLine>()
         val translatedLines = mutableListOf<LyricsLine>()
         val romanizationLines = mutableListOf<LyricsLine>()
+        val metadataTranslations = mutableMapOf<String, String>()
 
         val factory = XmlPullParserFactory.newInstance().apply {
             isNamespaceAware = true
@@ -211,7 +212,10 @@ object LyricDecoder {
         var currentPStart = 0L
         var currentPEnd = 0L
         var currentPRole: String? = null
+        var currentPKey: String? = null
         var insideP = false
+        var currentMetadataTranslationKey: String? = null
+        var metadataTranslationTextBuilder: StringBuilder? = null
 
         var originalWords = mutableListOf<LyricsWord>()
         var plainTextBuilder = StringBuilder()
@@ -337,7 +341,11 @@ object LyricDecoder {
                     }
 
                     val transText = transTextBuilder.toString()
-                    if (transText.isNotBlank()) {
+                    val metadataTransText = currentPKey
+                        ?.let { metadataTranslations[it] }
+                        .orEmpty()
+                    val finalTransText = transText.ifBlank { metadataTransText }
+                    if (finalTransText.isNotBlank()) {
                         translatedLines.add(
                             LyricsLine(
                                 start = currentPStart,
@@ -346,7 +354,7 @@ object LyricDecoder {
                                     LyricsWord(
                                         start = currentPStart,
                                         end = currentPEnd,
-                                        text = transText
+                                        text = finalTransText
                                     )
                                 )
                             )
@@ -376,6 +384,16 @@ object LyricDecoder {
             when (eventType) {
                 XmlPullParser.START_TAG -> {
                     when (parser.name) {
+                        "text" -> {
+                            if (!insideP) {
+                                val key = attr("for")
+                                if (!key.isNullOrBlank()) {
+                                    currentMetadataTranslationKey = key
+                                    metadataTranslationTextBuilder = StringBuilder()
+                                }
+                            }
+                        }
+
                         "p" -> {
                             val begin = attr("begin")
                             val end = attr("end")
@@ -385,6 +403,7 @@ object LyricDecoder {
                                 currentPStart = parseTtmlTimeMs(begin)
                                 currentPEnd = parseTtmlTimeMs(end)
                                 currentPRole = roleAttr()
+                                currentPKey = attr("key")
 
                                 originalWords = mutableListOf()
                                 plainTextBuilder = StringBuilder()
@@ -410,7 +429,9 @@ object LyricDecoder {
                 }
 
                 XmlPullParser.TEXT -> {
-                    if (insideP) {
+                    if (currentMetadataTranslationKey != null && metadataTranslationTextBuilder != null) {
+                        metadataTranslationTextBuilder.append(parser.text ?: "")
+                    } else if (insideP) {
                         val text = parser.text ?: ""
 
                         if (currentSpanTextBuilder != null) {
@@ -423,6 +444,18 @@ object LyricDecoder {
 
                 XmlPullParser.END_TAG -> {
                     when (parser.name) {
+                        "text" -> {
+                            val key = currentMetadataTranslationKey
+                            val text = metadataTranslationTextBuilder?.toString()
+                            if (key != null && text != null) {
+                                normalizeTtmlText(text, trimEdges = true)
+                                    .takeIf { it.isNotBlank() }
+                                    ?.let { metadataTranslations[key] = it }
+                            }
+                            currentMetadataTranslationKey = null
+                            metadataTranslationTextBuilder = null
+                        }
+
                         "span" -> {
                             if (insideP && currentSpanTextBuilder != null) {
                                 val text = normalizeTtmlText(currentSpanTextBuilder.toString(), trimEdges = true)
@@ -469,6 +502,7 @@ object LyricDecoder {
                             if (insideP) {
                                 finishP()
                                 insideP = false
+                                currentPKey = null
                             }
                         }
                     }

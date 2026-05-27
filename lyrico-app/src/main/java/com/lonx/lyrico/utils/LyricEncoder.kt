@@ -203,6 +203,10 @@ object LyricEncoder {
         offset: Long = 0L,
     ): String {
         if (result.payloadType.isRaw()) {
+            encodeRawWithRenderConfig(selectRawLyrics(result, config), config, offset)?.let {
+                return it
+            }
+
             selectRawLyrics(result, config)?.let { raw ->
                 val converted = convertLyricsText(raw, config.conversionMode)
                 return shiftLyricsOffset(converted, offset).trim()
@@ -214,7 +218,13 @@ object LyricEncoder {
         }
 
         if (result.original.isEmpty()) {
-            selectRawLyrics(result, config)?.let { raw ->
+            val selectedRaw = selectRawLyrics(result, config)
+
+            encodeRawWithRenderConfig(selectedRaw, config, offset)?.let {
+                return it
+            }
+
+            selectedRaw?.let { raw ->
                 val converted = convertLyricsText(raw, config.conversionMode)
                 return shiftLyricsOffset(converted, offset).trim()
             }
@@ -306,6 +316,26 @@ object LyricEncoder {
         }
 
         return builder.toString().trim()
+    }
+
+    private fun encodeRawWithRenderConfig(
+        raw: String?,
+        config: LyricRenderConfig,
+        offset: Long
+    ): String? {
+        if (raw.isNullOrBlank()) return null
+
+        val shouldApplyTrackVisibility =
+            !config.showTranslation ||
+                    !config.showRomanization ||
+                    config.onlyTranslationIfAvailable ||
+                    config.removeEmptyLines
+
+        if (!shouldApplyTrackVisibility) return null
+
+        return LyricDecoder.decode(raw)
+            ?.let { decoded -> encode(decoded, config, offset) }
+            ?.takeIf { it.isNotBlank() }
     }
 
     private fun selectRawLyrics(

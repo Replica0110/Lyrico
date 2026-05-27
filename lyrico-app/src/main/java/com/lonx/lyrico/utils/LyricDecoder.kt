@@ -11,6 +11,15 @@ import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader
 
 object LyricDecoder {
+    internal fun normalizeTtmlText(text: String, trimEdges: Boolean = false): String {
+        if (!text.contains('\n') && !text.contains('\r')) {
+            return if (trimEdges) text.trim() else text
+        }
+
+        val collapsed = text.replace(Regex("\\s+"), " ")
+        return if (trimEdges) collapsed.trim() else collapsed
+    }
+
     fun detectFormat(lyricsText: String): LyricFormat? {
         if (lyricsText.isBlank()) return null
 
@@ -347,6 +356,20 @@ object LyricDecoder {
             }
         }
 
+        fun appendTextOutsideSpan(text: String) {
+            val normalized = normalizeTtmlText(text)
+
+            if (originalWords.isNotEmpty()) {
+                if (normalized.isBlank() && (text.contains('\n') || text.contains('\r'))) return
+
+                val lastIndex = originalWords.lastIndex
+                val lastWord = originalWords[lastIndex]
+                originalWords[lastIndex] = lastWord.copy(text = lastWord.text + normalized)
+            } else if (normalized.isNotBlank()) {
+                plainTextBuilder.append(normalized)
+            }
+        }
+
         var eventType = parser.eventType
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -392,12 +415,8 @@ object LyricDecoder {
 
                         if (currentSpanTextBuilder != null) {
                             currentSpanTextBuilder.append(text)
-                        } else if (originalWords.isNotEmpty()) {
-                            val lastIndex = originalWords.lastIndex
-                            val lastWord = originalWords[lastIndex]
-                            originalWords[lastIndex] = lastWord.copy(text = lastWord.text + text)
-                        } else if (text.isNotBlank()) {
-                            plainTextBuilder.append(text)
+                        } else {
+                            appendTextOutsideSpan(text)
                         }
                     }
                 }
@@ -406,7 +425,7 @@ object LyricDecoder {
                     when (parser.name) {
                         "span" -> {
                             if (insideP && currentSpanTextBuilder != null) {
-                                val text = currentSpanTextBuilder.toString()
+                                val text = normalizeTtmlText(currentSpanTextBuilder.toString(), trimEdges = true)
 
                                 when (currentSpanRole) {
                                     "x-translation" -> {
@@ -461,10 +480,12 @@ object LyricDecoder {
         val wordLineCount = originalLines.count { it.words.size > 1 }
         val totalWordCount = originalLines.sumOf { it.words.size }
 
-        Log.d(
-            "LyricDecoder",
-            "parseTtmlToResult: lines=${originalLines.size}, wordLineCount=$wordLineCount, totalWordCount=$totalWordCount"
-        )
+        runCatching {
+            Log.d(
+                "LyricDecoder",
+                "parseTtmlToResult: lines=${originalLines.size}, wordLineCount=$wordLineCount, totalWordCount=$totalWordCount"
+            )
+        }
         return LyricsResult(
             tags = emptyMap(),
             original = originalLines,

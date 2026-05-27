@@ -334,7 +334,11 @@ class SourcePluginInstaller(
         try {
             copyPluginRoot(candidate, allCandidates, stagingDir)
             validatePluginSize(stagingDir)
-            if (targetDir.exists()) targetDir.deleteRecursively()
+            if (targetDir.exists()) {
+                require(targetDir.deleteRecursively()) {
+                    "Failed to remove existing plugin directory: ${targetDir.absolutePath}"
+                }
+            }
             if (!stagingDir.renameTo(targetDir)) {
                 require(stagingDir.copyRecursively(targetDir, overwrite = true)) {
                     "Failed to copy plugin into ${targetDir.absolutePath}"

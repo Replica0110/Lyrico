@@ -6,6 +6,8 @@ import com.lonx.lyrico.data.model.plugin.PluginMetadataField
 interface SearchSource {
     val id: String
     val name: String
+    val iconPath: String?
+        get() = null
     val capabilities: Set<SearchSourceCapability>
         get() = SearchSourceCapability.entries.toSet()
     val configFields: List<PluginConfigField>

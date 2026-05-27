@@ -42,11 +42,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
@@ -126,12 +129,16 @@ fun FolderManagerScreen(
     }
     val context = LocalContext.current
 
-    var currentFolderId by remember { mutableLongStateOf(ROOT_FOLDER_ID) }
-    var selectedFolderId by remember { mutableLongStateOf(ROOT_FOLDER_ID) }
+    var currentFolderId by rememberSaveable { mutableLongStateOf(ROOT_FOLDER_ID) }
+    var selectedFolderId by rememberSaveable { mutableLongStateOf(ROOT_FOLDER_ID) }
     var folderContentTransition by remember { mutableStateOf<FolderContentTransition?>(null) }
     var isFabMenuExpanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { 2 })
+    var savedPagerPage by rememberSaveable { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(
+        initialPage = savedPagerPage,
+        pageCount = { 2 }
+    )
     var selectedSong by remember { mutableStateOf<SongEntity?>(null) }
     var showMenuSheet by remember { mutableStateOf(false) }
     var showDetailSheet by remember { mutableStateOf(false) }
@@ -146,6 +153,10 @@ fun FolderManagerScreen(
     }
     LaunchedEffect(currentFolder?.id) {
         viewModel.setCurrentFolderId(currentFolder?.id)
+    }
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }
+            .collect { page -> savedPagerPage = page }
     }
     val currentNode = remember(currentFolder, folderTree) {
         currentFolder?.let { folderTree.nodesById[it.id] }

@@ -25,6 +25,7 @@ class ScriptSearchSourceFactory(
             ScriptSearchSource(
                 manifest = manifest,
                 script = script,
+                iconPath = plugin.iconPath,
                 json = json,
                 runtimeFactory = runtimeFactory
             )

@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 class ScriptSearchSource(
     private val manifest: PluginManifest,
     private val script: String,
+    override val iconPath: String? = null,
     private val json: Json = defaultJson,
     private val runtimeFactory: () -> PluginJsRuntime = { QuickJsRuntime() }
 ) : SearchSource, AutoCloseable {

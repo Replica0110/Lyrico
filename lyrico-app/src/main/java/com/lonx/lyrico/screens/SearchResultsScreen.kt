@@ -84,7 +84,6 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -94,6 +93,8 @@ import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import com.lonx.lyrico.ui.components.plugin.PluginIcon
+import com.lonx.lyrico.viewmodel.SearchSourceUiModel
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -225,10 +226,8 @@ fun SearchResultsScreen(
                     .padding(horizontal = 12.dp)
                     .padding(bottom = 12.dp)
             ) {
-                TabRowWithContour(
-                    tabs = uiState.availableSources.map { source ->
-                        source.labelRes?.let { stringResource(id = it) } ?: source.name
-                    },
+                SourceIconTabRow(
+                    sources = uiState.availableSources,
                     selectedTabIndex = pagerState.currentPage,
                     onTabSelected = { index ->
                         scope.launch {
@@ -773,6 +772,51 @@ fun SearchResultItem(
             }
 
 
+        }
+    }
+}
+
+@Composable
+private fun SourceIconTabRow(
+    sources: List<SearchSourceUiModel>,
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        sources.forEachIndexed { index, source ->
+            val selected = index == selectedTabIndex
+            val contentDescription = source.labelRes?.let { stringResource(id = it) } ?: source.name
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (selected) {
+                            MiuixTheme.colorScheme.primary.copy(alpha = 0.16f)
+                        } else {
+                            Color.Transparent
+                        }
+                    )
+                    .clickable {
+                        onTabSelected(index)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                PluginIcon(
+                    iconPath = source.iconPath,
+                    contentDescription = contentDescription,
+                    size = 28.dp
+                )
+            }
         }
     }
 }

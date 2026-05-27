@@ -219,11 +219,16 @@ class PluginViewModel(
         runBusy("Plugin deleted") {
             val plugin = repository.getPlugin(id)
             if (plugin != null) {
-                repository.uninstallPlugin(id)
                 pluginManager.invalidate(plugin.id)
                 settingsRepository.removePluginSettings(plugin.id)
                 pluginFieldProcessConfigRepository.removeConfig(plugin.id)
-                File(plugin.pluginDir).deleteRecursively()
+                val pluginDir = File(plugin.pluginDir)
+                if (pluginDir.exists()) {
+                    require(pluginDir.deleteRecursively()) {
+                        "Failed to remove plugin files: ${pluginDir.absolutePath}"
+                    }
+                }
+                repository.uninstallPlugin(id)
             }
         }
     }

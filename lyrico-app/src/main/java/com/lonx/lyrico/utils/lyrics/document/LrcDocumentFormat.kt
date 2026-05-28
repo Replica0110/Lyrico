@@ -67,6 +67,12 @@ object EnhancedLrcWriter : LyricsFormatWriter {
                         .append(">")
                         .append(word.text)
                 }
+                val lineEnd = line.words.lastOrNull()?.endMs ?: line.endMs
+                if (lineEnd != null) {
+                    builder.append("<")
+                        .append(LyricFormatter.formatTimestamp(lineEnd))
+                        .append(">")
+                }
             } else {
                 builder.append(line.text)
             }

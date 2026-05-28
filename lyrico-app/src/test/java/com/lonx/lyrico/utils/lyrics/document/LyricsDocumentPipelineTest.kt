@@ -82,6 +82,17 @@ class LyricsDocumentPipelineTest {
     }
 
     @Test
+    fun ttmlCanDowngradeToEnhancedLrcWithFinalWordEndTime() {
+        val output = LyricsDocumentPipeline.process(
+            raw = sampleTtml(),
+            sourceFormat = LyricFormat.TTML,
+            targetFormat = LyricFormat.ENHANCED_LRC
+        ).orEmpty()
+
+        assertTrue(output.contains("[00:01.000]<00:01.000>A<00:02.000>"))
+    }
+
+    @Test
     fun rawResultEncoderUsesDocumentPipelineForTtmlVisibility() {
         val result = LyricsResult(
             tags = emptyMap(),

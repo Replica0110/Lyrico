@@ -48,8 +48,7 @@ data class EditTagsTaskConfig(
 @Serializable
 data class EditTagsCustomField(
     val key: String = "",
-    val value: String? = "",
-    val clear: Boolean = false,
+    val value: String = "",
 )
 
 class EditTagsProcessor(
@@ -149,9 +148,7 @@ class EditTagsProcessor(
                 config.customFields.forEach { newField ->
                     val key = normalizeCustomTagKey(newField.key) ?: return@forEach
                     removeAll { it.key.equals(key, ignoreCase = true) }
-                    if (!newField.clear) {
-                        add(CustomTagField(key, newField.value.orEmpty()))
-                    }
+                    add(CustomTagField(key, newField.value))
                 }
             })
         }

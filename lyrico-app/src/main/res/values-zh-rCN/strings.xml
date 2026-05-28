@@ -494,10 +494,6 @@
     <string name="custom_tag_song_count">%1$d 首歌曲</string>
     <string name="custom_tag_delete_current_value">删除当前歌曲中的标签值</string>
     <string name="custom_tag_delete_current_value_summary">这只会删除当前歌曲中的该标签，不会从编辑页显示列表中移除。</string>
-    <string name="batch_custom_tag_keep">不修改</string>
-    <string name="batch_custom_tag_set">设置值</string>
-    <string name="batch_custom_tag_clear">清除标签</string>
-    <string name="batch_custom_tag_clear_summary">保存后会从所有选中歌曲中删除这个自定义标签。</string>
 
     <!-- 批量编辑 -->
     <string name="batch_edit_title">编辑标签</string>

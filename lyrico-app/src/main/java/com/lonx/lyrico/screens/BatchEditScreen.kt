@@ -99,7 +99,6 @@ import top.yukonga.miuix.kmp.icon.basic.ArrowUpDown
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Settings
@@ -135,6 +134,7 @@ fun BatchEditScreen(
     var showAddCustomTagDialog by remember { mutableStateOf(false) }
     var showSelectedValueSheet by remember { mutableStateOf(false) }
     var selectedValueField by remember { mutableStateOf<BatchEditField?>(null) }
+    var selectedCustomValueKey by remember { mutableStateOf<String?>(null) }
     var selectedValueOptions by remember { mutableStateOf<List<BatchEditSelectableValue>>(emptyList()) }
     var selectedValueOptionsLoading by remember { mutableStateOf(false) }
     var expandedFabMenu by remember { mutableStateOf(false) }
@@ -191,11 +191,24 @@ fun BatchEditScreen(
 
     fun openSelectedValueSheet(field: BatchEditField) {
         selectedValueField = field
+        selectedCustomValueKey = null
         selectedValueOptions = emptyList()
         selectedValueOptionsLoading = true
         showSelectedValueSheet = true
         scope.launch {
             selectedValueOptions = viewModel.getSelectedSongFieldValues(field)
+            selectedValueOptionsLoading = false
+        }
+    }
+
+    fun openSelectedCustomValueSheet(key: String) {
+        selectedValueField = null
+        selectedCustomValueKey = key
+        selectedValueOptions = emptyList()
+        selectedValueOptionsLoading = true
+        showSelectedValueSheet = true
+        scope.launch {
+            selectedValueOptions = viewModel.getSelectedSongCustomTagValues(key)
             selectedValueOptionsLoading = false
         }
     }
@@ -762,7 +775,6 @@ fun BatchEditScreen(
                                                                     .firstOrNull { it.key == key }
                                                                     ?.value
                                                                     ?: "<keep>",
-                                                                clear = key in uiState.customFieldClearKeys,
                                                                 onValueChange = { value ->
                                                                     viewModel.setCustomFieldValue(
                                                                         key = key,
@@ -772,8 +784,8 @@ fun BatchEditScreen(
                                                                 onKeep = {
                                                                     viewModel.keepCustomField(key)
                                                                 },
-                                                                onClear = {
-                                                                    viewModel.clearCustomField(key)
+                                                                onSelectFromSongs = {
+                                                                    openSelectedCustomValueSheet(key)
                                                                 },
                                                             )
                                                         }
@@ -960,7 +972,8 @@ fun BatchEditScreen(
     WindowBottomSheet(
         show = showSelectedValueSheet,
         enableNestedScroll = false,
-        title = selectedValueField?.let { stringResource(it.labelResId) }.orEmpty(),
+        title = selectedValueField?.let { stringResource(it.labelResId) }
+            ?: selectedCustomValueKey.orEmpty(),
         onDismissRequest = { showSelectedValueSheet = false }
     ) {
         Column(
@@ -1002,6 +1015,9 @@ fun BatchEditScreen(
                                     onClick = {
                                         selectedValueField?.let { field ->
                                             applySelectedValue(field, option.value)
+                                        }
+                                        selectedCustomValueKey?.let { key ->
+                                            viewModel.setCustomFieldValue(key, option.value)
                                         }
                                         showSelectedValueSheet = false
                                     }
@@ -1707,38 +1723,27 @@ private fun BatchEditFieldItem(
 private fun BatchEditCustomFieldItem(
     keyName: String,
     value: String,
-    clear: Boolean,
     onValueChange: (String) -> Unit,
     onKeep: () -> Unit,
-    onClear: () -> Unit,
+    onSelectFromSongs: () -> Unit,
 ) {
     val isKeep = value == "<keep>"
-    val displayedValue = if (clear) "" else value
-    val labelSuffix = when {
-        clear -> " (" + stringResource(R.string.batch_custom_tag_clear) + ")"
-        isKeep -> " (" + stringResource(R.string.batch_custom_tag_keep) + ")"
-        else -> " (" + stringResource(R.string.batch_custom_tag_set) + ")"
-    }
 
-    Column(modifier = Modifier.padding(vertical = 6.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = keyName,
-                style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
+    TextField(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        value = value,
+        onValueChange = onValueChange,
+        label = keyName + if (isKeep) " (无修改)" else "",
+        trailingIcon = {
             Row {
                 IconButton(onClick = {
-                    if (isKeep) onValueChange("") else onKeep()
+                    if (isKeep) {
+                        onValueChange("")
+                    } else {
+                        onKeep()
+                    }
                 }) {
                     Icon(
                         imageVector = if (isKeep) MiuixIcons.Close else MiuixIcons.Undo,
@@ -1749,33 +1754,14 @@ private fun BatchEditCustomFieldItem(
                             MiuixTheme.colorScheme.error
                     )
                 }
-                IconButton(onClick = onClear) {
+                IconButton(onClick = onSelectFromSongs) {
                     Icon(
-                        MiuixIcons.Delete,
-                        contentDescription = stringResource(R.string.batch_custom_tag_clear),
-                        tint = MiuixTheme.colorScheme.error
+                        imageVector = MiuixIcons.Basic.ArrowUpDown,
+                        contentDescription = stringResource(R.string.batch_edit_select_from_selected_songs)
                     )
                 }
             }
         }
-
-        if (clear) {
-            Text(
-                text = stringResource(R.string.batch_custom_tag_clear_summary),
-                style = MiuixTheme.textStyles.footnote1,
-                color = MiuixTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-            )
-        } else {
-            TextField(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                value = displayedValue,
-                onValueChange = onValueChange,
-                label = keyName + labelSuffix,
-            )
-        }
-    }
+    )
 }
 

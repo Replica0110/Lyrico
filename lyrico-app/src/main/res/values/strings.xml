@@ -375,10 +375,6 @@
     <string name="custom_tag_song_count">%1$d songs</string>
     <string name="custom_tag_delete_current_value">Delete value from current song</string>
     <string name="custom_tag_delete_current_value_summary">This only deletes the tag from the current song. It does not remove the tag from the editor display list.</string>
-    <string name="batch_custom_tag_keep">Keep</string>
-    <string name="batch_custom_tag_set">Set value</string>
-    <string name="batch_custom_tag_clear">Clear tag</string>
-    <string name="batch_custom_tag_clear_summary">Saving will delete this custom tag from all selected songs.</string>
     <string name="label_file_size">File Size</string>
     <!-- Cover Editor -->
     <string name="status_modified">Modified</string>

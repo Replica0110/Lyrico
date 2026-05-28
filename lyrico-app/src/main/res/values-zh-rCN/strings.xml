@@ -476,6 +476,24 @@
     <string name="action_add_custom_tag">添加自定义标签</string>
     <string name="action_remove_custom_tag">移除标签</string>
     <string name="custom_tags_empty">还没有自定义标签，点击“添加标签”即可创建。</string>
+    <string name="custom_tag_management_title">自定义标签管理</string>
+    <string name="custom_tag_visible_section">编辑页显示标签</string>
+    <string name="custom_tag_visible_summary">添加到这里的自定义标签会显示在歌曲编辑页面。</string>
+    <string name="custom_tag_discovered_section">所有已发现标签</string>
+    <string name="custom_tag_discovered_summary">这些标签来自当前音乐库，可添加到编辑页显示。</string>
+    <string name="custom_tag_add_key">添加自定义标签键</string>
+    <string name="custom_tag_key">标签键名</string>
+    <string name="custom_tag_key_hint">请输入音频标签中的自定义字段 key，例如 SOURCE、MOOD、CATALOG_NO。</string>
+    <string name="custom_tag_add_to_visible">添加到显示</string>
+    <string name="custom_tag_remove_visible">移除显示</string>
+    <string name="custom_tag_already_visible">已显示</string>
+    <string name="custom_tag_empty_visible_title">尚未添加显示标签</string>
+    <string name="custom_tag_empty_visible_summary">添加标签键后，它会显示在歌曲编辑页面。</string>
+    <string name="custom_tag_remove_notice">移除显示不会删除歌曲中的已有数据。</string>
+    <string name="custom_tag_search_hint">搜索标签 key</string>
+    <string name="custom_tag_song_count">%1$d 首歌曲</string>
+    <string name="custom_tag_delete_current_value">删除当前歌曲中的标签值</string>
+    <string name="custom_tag_delete_current_value_summary">这只会删除当前歌曲中的该标签，不会从编辑页显示列表中移除。</string>
 
     <!-- 批量编辑 -->
     <string name="batch_edit_title">编辑标签</string>

@@ -501,20 +501,6 @@ class BatchEditViewModel(
                 }
             }
 
-            if (visible("custom_tags.custom_tags")) {
-                state.customFields
-                    .filter { it.key.isNotBlank() }
-                    .forEach { field ->
-                        add(
-                            BatchEditPreviewChange(
-                                labelResId = null,
-                                customLabel = field.key,
-                                oldValue = "",
-                                newValue = field.value
-                            )
-                        )
-                    }
-            }
         }
     }
 
@@ -623,7 +609,7 @@ class BatchEditViewModel(
             } else {
                 keep
             },
-            customFields = if (visible("custom_tags.custom_tags")) customFields else emptyList(),
+            customFields = emptyList(),
         )
     }
 
@@ -724,11 +710,7 @@ class BatchEditViewModel(
             } else {
                 keep
             },
-            customFields = if (visible("custom_tags.custom_tags")) {
-                customFields.map { EditTagsCustomField(it.key, it.value) }
-            } else {
-                emptyList()
-            }
+            customFields = emptyList()
         )
     }
 
@@ -903,20 +885,6 @@ class BatchEditViewModel(
                     LyricEncoder.shiftLyricsOffset(tag.lyrics!!, offsetValue.toLong())
                 tag = tag.copy(lyrics = shiftedLyrics)
             }
-        }
-
-        // 处理自定义标签
-        if (visible("custom_tags.custom_tags") && state.customFields.isNotEmpty()) {
-            tag = tag.copy(customFields = tag.customFields.toMutableList().apply {
-                state.customFields.forEach { newField ->
-                    val existingIndex = indexOfFirst { it.key == newField.key }
-                    if (existingIndex >= 0) {
-                        this[existingIndex] = newField
-                    } else {
-                        add(newField)
-                    }
-                }
-            })
         }
 
         return tag

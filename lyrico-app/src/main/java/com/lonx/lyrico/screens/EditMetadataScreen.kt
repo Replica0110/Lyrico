@@ -156,6 +156,7 @@ fun EditMetadataScreen(
     val viewModel: EditMetadataViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val visibleFieldGroups by viewModel.visibleFieldGroups.collectAsState()
+    val visibleCustomKeys by viewModel.visibleCustomKeys.collectAsState()
     val limitLyricsInputLines by viewModel.limitLyricsInputLines.collectAsState()
     val replayGainCalculateProgress = uiState.replayGainCalculateProgress
     val originalTagData = uiState.originalTagData
@@ -776,67 +777,36 @@ fun EditMetadataScreen(
                     }
                 }
 
-                if (
-                    visibleGroupCodes.contains(EditFieldRegistry.GROUP_CUSTOM_TAGS) &&
-                    visibleFieldCodes.contains("custom_tags.custom_tags") &&
-                    !editingTagData?.customFields.isNullOrEmpty()
-                ) {
+                if (visibleCustomKeys.isNotEmpty()) {
                     item(key = "custom_fields") {
                         Column {
                             SmallTitle(text = stringResource(R.string.group_custom_tags))
-                            editingTagData.customFields.forEachIndexed { index, field ->
+                            visibleCustomKeys.forEach { key ->
+                                val field = editingTagData?.customFields
+                                    .orEmpty()
+                                    .firstOrNull { it.key == key }
+                                    ?: CustomTagField(
+                                        key = key,
+                                        value = "",
+                                    )
+
+                                val originalField = originalTagData?.customFields
+                                    .orEmpty()
+                                    .firstOrNull { it.key == key }
+
                                 CustomMetadataFieldEditor(
                                     field = field,
-                                    isModified = field != originalTagData?.customFields?.getOrNull(
-                                        index
-                                    ),
-                                    onKeyChange = { newKey ->
-                                        viewModel.updateTag {
-                                            copy(
-                                                customFields = customFields.toMutableList()
-                                                    .apply {
-                                                        this[index] =
-                                                            this[index].copy(key = newKey)
-                                                    }
-                                            )
-                                        }
-                                    },
+                                    isModified = originalField
+                                        ?.let { field != it }
+                                        ?: field.value.isNotEmpty(),
                                     onValueChange = { newValue ->
-                                        viewModel.updateTag {
-                                            copy(
-                                                customFields = customFields.toMutableList()
-                                                    .apply {
-                                                        this[index] =
-                                                            this[index].copy(value = newValue)
-                                                    }
-                                            )
-                                        }
+                                        viewModel.updateCustomFieldValue(key, newValue)
                                     },
                                     onRemove = {
-                                        viewModel.updateTag {
-                                            copy(
-                                                customFields = customFields.toMutableList()
-                                                    .apply {
-                                                        removeAt(index)
-                                                    }
-                                            )
-                                        }
+                                        viewModel.removeCustomFieldValue(key)
                                     },
                                     onRevert = {
-                                        viewModel.updateTag {
-                                            val originalField =
-                                                originalTagData?.customFields?.getOrNull(index)
-                                            copy(
-                                                customFields = customFields.toMutableList()
-                                                    .apply {
-                                                        if (originalField != null) {
-                                                            this[index] = originalField
-                                                        } else {
-                                                            removeAt(index)
-                                                        }
-                                                    }
-                                            )
-                                        }
+                                        viewModel.revertCustomField(key)
                                     }
                                 )
                             }
@@ -1374,14 +1344,10 @@ fun EditMetadataScreen(
                     text = stringResource(R.string.confirm),
                     onClick = {
                         if (newCustomTagKey.isNotBlank()) {
-                            viewModel.updateTag {
-                                copy(
-                                    customFields = customFields + CustomTagField(
-                                        newCustomTagKey,
-                                        newCustomTagValue
-                                    )
-                                )
-                            }
+                            viewModel.addCustomFieldAndShow(
+                                key = newCustomTagKey,
+                                value = newCustomTagValue,
+                            )
                             showAddCustomTagDialog = false
                         }
                     },
@@ -1864,7 +1830,6 @@ private fun MetadataInputField(
 private fun CustomMetadataFieldEditor(
     field: CustomTagField,
     isModified: Boolean,
-    onKeyChange: (String) -> Unit,
     onValueChange: (String) -> Unit,
     onRemove: () -> Unit,
     onRevert: () -> Unit
@@ -1922,12 +1887,13 @@ private fun CustomMetadataFieldEditor(
             }
         }
 
-        MetadataInputField(
-            label = stringResource(R.string.label_custom_tag_name),
-            value = field.key,
-            onValueChange = onKeyChange,
-            isModified = false,
-            onRevert = onRevert
+        Text(
+            text = field.key,
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp)
         )
         MetadataInputField(
             label = stringResource(R.string.label_custom_tag_value),

@@ -10,6 +10,7 @@ import com.lonx.lyrico.data.model.dao.BatchTaskDao
 import com.lonx.lyrico.data.model.dao.FolderDao
 import com.lonx.lyrico.data.model.dao.LibraryIndexDao
 import com.lonx.lyrico.data.model.dao.SongDao
+import com.lonx.lyrico.data.model.dao.SongCustomTagKeyDao
 import com.lonx.lyrico.data.model.dao.SourcePluginDao
 import com.lonx.lyrico.data.model.entity.AlbumEntity
 import com.lonx.lyrico.data.model.entity.AlbumSongCrossRef
@@ -20,6 +21,7 @@ import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.entity.SongCustomTagKeyEntity
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 
 @Database(
@@ -33,9 +35,10 @@ import com.lonx.lyrico.data.model.entity.SourcePluginEntity
         ArtistSongCrossRef::class,
         AlbumEntity::class,
         AlbumSongCrossRef::class,
-        SourcePluginEntity::class
+        SourcePluginEntity::class,
+        SongCustomTagKeyEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3),
@@ -53,6 +56,7 @@ abstract class LyricoDatabase : RoomDatabase() {
     abstract fun appLogDao(): AppLogDao
     abstract fun libraryIndexDao(): LibraryIndexDao
     abstract fun sourcePluginDao(): SourcePluginDao
+    abstract fun songCustomTagKeyDao(): SongCustomTagKeyDao
 
     companion object {
         val MIGRATION_9_10 = object : Migration(9, 10) {
@@ -278,6 +282,32 @@ abstract class LyricoDatabase : RoomDatabase() {
         val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE source_plugins ADD COLUMN includeDirsJson TEXT NOT NULL DEFAULT '[]'")
+            }
+        }
+
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS song_custom_tag_keys (
+                        songUri TEXT NOT NULL,
+                        `key` TEXT NOT NULL,
+                        PRIMARY KEY(songUri, `key`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_song_custom_tag_keys_key
+                    ON song_custom_tag_keys(`key`)
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_song_custom_tag_keys_songUri
+                    ON song_custom_tag_keys(songUri)
+                    """.trimIndent()
+                )
             }
         }
     }

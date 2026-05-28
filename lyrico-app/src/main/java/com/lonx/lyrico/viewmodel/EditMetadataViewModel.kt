@@ -15,6 +15,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
+import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.editfield.EditFieldScene
 import com.lonx.lyrico.data.editfield.EditFieldVisibilityRepository
@@ -32,6 +33,7 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
 import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.repository.CustomTagSettingsRepository
 import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
 import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.data.repository.SettingsDefaults
@@ -106,7 +108,8 @@ class EditMetadataViewModel(
     private val appLogRepository: AppLogRepository,
     private val editFieldVisibilityRepository: EditFieldVisibilityRepository,
     private val pluginFieldProcessConfigRepository: PluginFieldProcessConfigRepository,
-    private val searchSourceProvider: SearchSourceProvider
+    private val searchSourceProvider: SearchSourceProvider,
+    private val customTagSettingsRepository: CustomTagSettingsRepository,
 ) : ViewModel() {
 
     private val TAG = "EditMetadataVM"
@@ -154,6 +157,15 @@ class EditMetadataViewModel(
             .map { config ->
                 config.visibleGroupsForScene(EditFieldScene.SingleEdit)
             }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
+
+    val visibleCustomKeys: StateFlow<List<String>> =
+        customTagSettingsRepository.settingsFlow
+            .map { it.visibleKeys }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
@@ -213,6 +225,59 @@ class EditMetadataViewModel(
                 isEditing = true
             )
         }
+    }
+
+    fun updateCustomFieldValue(key: String, value: String) {
+        updateTag {
+            val fields = customFields.toMutableList()
+            val index = fields.indexOfFirst { it.key == key }
+
+            if (index >= 0) {
+                fields[index] = fields[index].copy(value = value)
+            } else {
+                fields += CustomTagField(
+                    key = key,
+                    value = value,
+                )
+            }
+
+            copy(customFields = fields)
+        }
+    }
+
+    fun removeCustomFieldValue(key: String) {
+        updateTag {
+            copy(
+                customFields = customFields.filterNot { it.key == key }
+            )
+        }
+    }
+
+    fun revertCustomField(key: String) {
+        val original = _uiState.value.originalTagData
+            ?.customFields
+            .orEmpty()
+            .firstOrNull { it.key == key }
+
+        updateTag {
+            val fields = customFields
+                .filterNot { it.key == key }
+                .toMutableList()
+
+            if (original != null) {
+                fields += original
+            }
+
+            copy(customFields = fields)
+        }
+    }
+
+    fun addCustomFieldAndShow(key: String, value: String) {
+        viewModelScope.launch {
+            customTagSettingsRepository.addVisibleKey(key)
+        }
+
+        updateCustomFieldValue(key, value)
     }
     /**
      * 打开弹窗前准备：拍快照，并重置累计偏移量
@@ -687,7 +752,6 @@ class EditMetadataViewModel(
             } else {
                 base.replayGainReferenceLoudness
             },
-            customFields = if (visible("custom_tags.custom_tags")) customFields else base.customFields,
             lyrics = if (visible("lyrics.lyrics")) lyrics else base.lyrics,
             pictures = if (visible("cover.picture")) pictures else base.pictures,
             picUrl = if (visible("cover.picture")) picUrl else base.picUrl,

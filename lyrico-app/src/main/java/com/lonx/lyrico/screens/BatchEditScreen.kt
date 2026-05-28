@@ -739,49 +739,6 @@ fun BatchEditScreen(
                                         }
                                     }
 
-                                    // 自定义标签组
-                                    if (
-                                        visibleGroupCodes.contains(EditFieldRegistry.GROUP_CUSTOM_TAGS) &&
-                                        visibleFieldCodes.contains("custom_tags.custom_tags") &&
-                                        uiState.customFields.isNotEmpty()
-                                    ) {
-                                        item(key = "custom_fields") {
-                                            SmallTitle(text = stringResource(R.string.group_custom_tags))
-                                            Card(
-                                                modifier = Modifier.padding(
-                                                    horizontal = 12.dp,
-                                                    vertical = 6.dp
-                                                )
-                                            ) {
-                                                Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                                                    uiState.customFields.forEachIndexed { index, field ->
-                                                        BatchEditCustomFieldItem(
-                                                            field = field,
-                                                            onKeyChange = { newKey ->
-                                                                viewModel.updateCustomField(
-                                                                    index,
-                                                                    newKey,
-                                                                    field.value
-                                                                )
-                                                            },
-                                                            onValueChange = { newValue ->
-                                                                viewModel.updateCustomField(
-                                                                    index,
-                                                                    field.key,
-                                                                    newValue
-                                                                )
-                                                            },
-                                                            onRemove = {
-                                                                viewModel.removeCustomField(
-                                                                    index
-                                                                )
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
                                     // 歌词组
                                     if (visibleGroupCodes.contains(EditFieldRegistry.GROUP_LYRICS)) {
                                         item(key = "lyrics") {
@@ -860,18 +817,9 @@ fun BatchEditScreen(
             style = ExpandableFabMenuStyle.default().copy(
                 mainIcon = MiuixIcons.Add
             ),
-            itemCount = 3,
+            itemCount = 2,
             onExpandedChange = { expandedFabMenu = it }
         ) {
-            FabMenuItem(
-                label = stringResource(R.string.action_add_custom_tag),
-                icon = MiuixIcons.Add,
-                enabled = !uiState.isSaving,
-                onClick = {
-                    expandedFabMenu = false
-                    showAddCustomTagDialog = true
-                }
-            )
             FabMenuItem(
                 label = stringResource(R.string.edit_field_visibility_settings),
                 icon = MiuixIcons.Settings,

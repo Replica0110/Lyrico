@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -57,9 +56,20 @@ class BatchMatchViewModel(
     val batchMatchConfig: StateFlow<BatchMatchConfig> = settingsRepository.batchMatchConfig
         .stateIn(viewModelScope, SharingStarted.Eagerly, BatchMatchConfigDefaults.DEFAULT_CONFIG)
 
+    private val allSources: StateFlow<List<SearchSource>> =
+        searchSourceProvider.observeAllSources()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     private val metadataFieldWriteRules: StateFlow<List<PluginMetadataFieldWriteRule>> =
-        settingsRepository.metadataFieldWriteRules
-            .combineWithDefaults()
+        combine(
+            settingsRepository.metadataFieldWriteRules,
+            allSources
+        ) { savedRules, sources ->
+            PluginMetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
+                savedRules = savedRules,
+                searchSources = sources
+            )
+        }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val sourceSettings: StateFlow<Map<String, SourceRuntimeConfig>> =
@@ -68,9 +78,6 @@ class BatchMatchViewModel(
     private val pluginFieldProcessConfigs: StateFlow<Map<String, PluginFieldProcessConfig>> =
         pluginFieldProcessConfigRepository.configsFlow
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-    private val allSources: StateFlow<List<SearchSource>> =
-        searchSourceProvider.observeAllSources()
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val separator: StateFlow<String> = settingsRepository.separator
         .stateIn(viewModelScope, SharingStarted.Eagerly, "/")
@@ -240,14 +247,6 @@ class BatchMatchViewModel(
             )
         }
     }
-
-    private fun kotlinx.coroutines.flow.Flow<List<PluginMetadataFieldWriteRule>>.combineWithDefaults() =
-        map { savedRules ->
-            PluginMetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
-                savedRules = savedRules,
-                searchSources = allSources.value
-            )
-        }
 
     private fun buildEnabledSourceOrderIds(): List<String> {
         return allSources.value.map { it.id }

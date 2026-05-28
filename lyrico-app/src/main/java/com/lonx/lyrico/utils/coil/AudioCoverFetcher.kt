@@ -31,7 +31,6 @@ class AudioCoverFetcher(
             return null
         }
 
-        Log.d("AudioCoverFetcher", "TagLib picture fileSize: ${pictureBytes.size}")
 
         val buffer = Buffer().apply { write(pictureBytes) }
         val imageSource = ImageSource(buffer, options.fileSystem)

@@ -50,6 +50,7 @@ import com.lonx.lyrico.utils.ReplayGainError
 import com.lonx.lyrico.utils.ReplayGainScanner
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.utils.getCoverSourceType
+import com.lonx.lyrico.utils.lyrics.document.LyricsDocumentPipeline
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -101,6 +102,12 @@ data class EditMetadataUiState(
     val sameAlbumCoverMessage: UiMessage? = null
 )
 
+private data class LyricsFormatConversionSession(
+    val sourceFormat: LyricFormat,
+    val sourceLyrics: String,
+    val lastRenderedLyrics: String
+)
+
 class EditMetadataViewModel(
     private val songRepository: SongRepository,
     private val settingsRepository: SettingsRepository,
@@ -146,6 +153,7 @@ class EditMetadataViewModel(
     // 存储当前正在操作的 URI 字符串
     private var currentSongUri: String? = null
     private var preOffsetLyrics: String? = null
+    private var lyricsFormatConversionSession: LyricsFormatConversionSession? = null
     private var scanJob: Job? = null
     // 记录当前的累计偏移量，供 UI 显示
     private val _currentShiftOffset = MutableStateFlow(0L)
@@ -175,6 +183,7 @@ class EditMetadataViewModel(
 
     fun readMetadata(uriString: String) {
         currentSongUri = uriString
+        lyricsFormatConversionSession = null
 
         viewModelScope.launch {
             try {
@@ -348,6 +357,7 @@ class EditMetadataViewModel(
             val current = state.editingTagData ?: AudioTagData()
 
             if (result.lyricsOnly) {
+                lyricsFormatConversionSession = null
                 return@update state.copy(
                     isEditing = true,
                     editingTagData = current.copy(
@@ -387,6 +397,9 @@ class EditMetadataViewModel(
                 picUrl = result.picUrl?.takeIf { it.isNotBlank() } ?: current.picUrl,
                 comment = processedFields["subtitle"]?.takeIf { it.isNotBlank() } ?: current.comment,
             )
+            if (!result.lyrics.isNullOrBlank()) {
+                lyricsFormatConversionSession = null
+            }
             val metadataTagData = currentSong?.let { song ->
                 if (result.pluginId.isBlank()) {
                     AudioTagData()
@@ -1102,6 +1115,7 @@ class EditMetadataViewModel(
                 }
 
                 if (!lyrics.isNullOrBlank()) {
+                    lyricsFormatConversionSession = null
                     updateTag { copy(lyrics = lyrics) }
                     _uiState.update { it.copy(importLyricsResult = true) }
                     Log.d(TAG, "歌词导入成功")
@@ -1139,6 +1153,7 @@ class EditMetadataViewModel(
         if (currentLyrics.isBlank()) return
 
         val convertedLyrics = LyricEncoder.convertLyricsText(currentLyrics, conversionMode)
+        lyricsFormatConversionSession = null
         updateTag { copy(lyrics = convertedLyrics) }
     }
 
@@ -1152,22 +1167,21 @@ class EditMetadataViewModel(
 
         viewModelScope.launch {
             try {
-                val lyricsResult = LyricDecoder.decode(currentLyrics)
+                val session = getOrCreateLyricsFormatConversionSession(currentLyrics)
                     ?: return@launch
-                if (lyricsResult.original.isEmpty()) return@launch
 
-                // 3. 配置渲染参数
-                val config = LyricRenderConfig(
-                    format = targetFormat,
-                    conversionMode = ConversionMode.NONE,
-                    showTranslation = lyricsResult.translated != null,
-                    showRomanization = lyricsResult.romanization != null,
-                    removeEmptyLines = true,
-                    onlyTranslationIfAvailable = false
-                )
+                val converted = if (targetFormat == session.sourceFormat) {
+                    session.sourceLyrics
+                } else {
+                    LyricsDocumentPipeline.process(
+                        raw = session.sourceLyrics,
+                        sourceFormat = session.sourceFormat,
+                        targetFormat = targetFormat,
+                        removeEmptyLines = true
+                    ) ?: convertLyricsFormatFromCurrent(currentLyrics, targetFormat) ?: return@launch
+                }
 
-                // 4. 编码：Model → String
-                val converted = LyricEncoder.encode(lyricsResult, config)
+                lyricsFormatConversionSession = session.copy(lastRenderedLyrics = converted)
                 updateTag { copy(lyrics = converted) }
             } catch (e: Exception) {
                 Log.e(TAG, "歌词格式转换失败", e)
@@ -1178,6 +1192,42 @@ class EditMetadataViewModel(
                 )
             }
         }
+    }
+
+    private fun getOrCreateLyricsFormatConversionSession(
+        currentLyrics: String
+    ): LyricsFormatConversionSession? {
+        lyricsFormatConversionSession
+            ?.takeIf { it.lastRenderedLyrics == currentLyrics }
+            ?.let { return it }
+
+        val sourceFormat = LyricDecoder.detectFormat(currentLyrics) ?: return null
+        return LyricsFormatConversionSession(
+            sourceFormat = sourceFormat,
+            sourceLyrics = currentLyrics,
+            lastRenderedLyrics = currentLyrics
+        ).also {
+            lyricsFormatConversionSession = it
+        }
+    }
+
+    private fun convertLyricsFormatFromCurrent(
+        currentLyrics: String,
+        targetFormat: LyricFormat
+    ): String? {
+        val lyricsResult = LyricDecoder.decode(currentLyrics) ?: return null
+        if (lyricsResult.original.isEmpty()) return null
+
+        val config = LyricRenderConfig(
+            format = targetFormat,
+            conversionMode = ConversionMode.NONE,
+            showTranslation = lyricsResult.translated != null,
+            showRomanization = lyricsResult.romanization != null,
+            removeEmptyLines = true,
+            onlyTranslationIfAvailable = false
+        )
+
+        return LyricEncoder.encode(lyricsResult, config).takeIf { it.isNotBlank() }
     }
 
     fun clearImportLyricsStatus() {

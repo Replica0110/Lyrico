@@ -11,6 +11,7 @@ import com.lonx.lyrico.data.model.plugin.PluginMetadataField
 import com.lonx.lyrico.data.model.plugin.ResolvedFieldProcessRule
 import com.lonx.lyrico.data.model.plugin.resolveFieldProcessRule
 import com.lonx.lyrico.data.model.plugin.valueType
+import com.lonx.lyrico.utils.lyrics.document.LyricsDocumentPipeline
 
 class PluginFieldPostProcessor(
     private val globalSettings: GlobalFieldProcessSettings
@@ -64,19 +65,16 @@ class PluginFieldPostProcessor(
     ): LyricsResult {
         val rule = resolveFieldProcessRule(globalSettings, resolveFieldProcessRule(config, fieldKey))
 
-        return lyrics.copy(
+        val processed = lyrics.copy(
             original = processLyricLines(lyrics.original, rule),
             translated = lyrics.translated?.let { processLyricLines(it, rule) },
             romanization = lyrics.romanization?.let { processLyricLines(it, rule, convertScript = false) },
             tags = lyrics.tags.mapValues { (_, value) ->
                 LyricEncoder.convertLyricsText(value, rule.scriptConversion)
-            },
-            rawPlainLrc = processLyricsText(lyrics.rawPlainLrc, rule),
-            rawVerbatimLrc = processLyricsText(lyrics.rawVerbatimLrc, rule),
-            rawEnhancedLrc = processLyricsText(lyrics.rawEnhancedLrc, rule),
-            rawTtml = processLyricsText(lyrics.rawTtml, rule),
-            rawMultiPersonEnhancedLrc = processLyricsText(lyrics.rawMultiPersonEnhancedLrc, rule)
+            }
         )
+
+        return LyricsDocumentPipeline.processRawResultForFieldRule(processed, rule)
     }
 
     private fun inferValueType(key: String, field: PluginMetadataField?): PluginFieldValueType {

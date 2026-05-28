@@ -3,11 +3,13 @@ package com.lonx.lyrico.utils
 import android.annotation.SuppressLint
 import com.github.houbb.opencc4j.util.ZhHkConverterUtil
 import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricFormat.*
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.isRaw
+import com.lonx.lyrico.utils.lyrics.document.LyricsDocumentPipeline
 
 object LyricEncoder {
     // 匹配 TTML 格式: begin="00:01:23.456" 或 end="00:01:23.456"
@@ -203,6 +205,12 @@ object LyricEncoder {
         offset: Long = 0L,
     ): String {
         if (result.payloadType.isRaw()) {
+            if (shouldUseDocumentPipeline(result, config, offset)) {
+                LyricsDocumentPipeline.processRawResult(result, config, offset)?.let {
+                    return it
+                }
+            }
+
             encodeRawWithRenderConfig(selectRawLyrics(result, config), config, offset)?.let {
                 return it
             }
@@ -219,6 +227,12 @@ object LyricEncoder {
 
         if (result.original.isEmpty()) {
             val selectedRaw = selectRawLyrics(result, config)
+
+            if (shouldUseDocumentPipeline(result, config, offset)) {
+                LyricsDocumentPipeline.processRawResult(result, config, offset)?.let {
+                    return it
+                }
+            }
 
             encodeRawWithRenderConfig(selectedRaw, config, offset)?.let {
                 return it
@@ -333,9 +347,18 @@ object LyricEncoder {
 
         if (!shouldApplyTrackVisibility) return null
 
-        return LyricDecoder.decode(raw)
-            ?.let { decoded -> encode(decoded, config, offset) }
-            ?.takeIf { it.isNotBlank() }
+        val sourceFormat = LyricDecoder.detectFormat(raw) ?: return null
+        return LyricsDocumentPipeline.process(
+            raw = raw,
+            sourceFormat = sourceFormat,
+            targetFormat = config.format,
+            conversionMode = config.conversionMode,
+            showTranslation = config.showTranslation,
+            showRomanization = config.showRomanization,
+            onlyTranslationIfAvailable = config.onlyTranslationIfAvailable,
+            removeEmptyLines = config.removeEmptyLines,
+            offset = offset
+        )
     }
 
     private fun selectRawLyrics(
@@ -359,36 +382,62 @@ object LyricEncoder {
     ): String? {
         val fallbackRaw = when (config.format) {
             PLAIN_LRC -> listOf(
-                result.rawVerbatimLrc,
-                result.rawEnhancedLrc,
-                result.rawMultiPersonEnhancedLrc,
-                result.rawTtml
+                LyricFormat.VERBATIM_LRC to result.rawVerbatimLrc,
+                LyricFormat.ENHANCED_LRC to result.rawEnhancedLrc,
+                LyricFormat.ENHANCED_LRC to result.rawMultiPersonEnhancedLrc,
+                LyricFormat.TTML to result.rawTtml
             )
             VERBATIM_LRC -> listOf(
-                result.rawEnhancedLrc,
-                result.rawMultiPersonEnhancedLrc,
-                result.rawTtml,
-                result.rawPlainLrc
+                LyricFormat.ENHANCED_LRC to result.rawEnhancedLrc,
+                LyricFormat.ENHANCED_LRC to result.rawMultiPersonEnhancedLrc,
+                LyricFormat.TTML to result.rawTtml,
+                LyricFormat.PLAIN_LRC to result.rawPlainLrc
             )
             ENHANCED_LRC -> listOf(
-                result.rawVerbatimLrc,
-                result.rawMultiPersonEnhancedLrc,
-                result.rawTtml,
-                result.rawPlainLrc
+                LyricFormat.VERBATIM_LRC to result.rawVerbatimLrc,
+                LyricFormat.ENHANCED_LRC to result.rawMultiPersonEnhancedLrc,
+                LyricFormat.TTML to result.rawTtml,
+                LyricFormat.PLAIN_LRC to result.rawPlainLrc
             )
-            TTML -> listOf(result.rawEnhancedLrc, result.rawVerbatimLrc, result.rawPlainLrc)
+            TTML -> listOf(
+                LyricFormat.ENHANCED_LRC to result.rawEnhancedLrc,
+                LyricFormat.VERBATIM_LRC to result.rawVerbatimLrc,
+                LyricFormat.PLAIN_LRC to result.rawPlainLrc
+            )
         }
 
         fallbackRaw
-            .firstOrNull { it.isNotBlank() }
-            ?.let { raw ->
-                LyricDecoder.decode(raw)?.let { decoded ->
-                    return encode(decoded, config, offset).takeIf { it.isNotBlank() }
-                }
+            .firstOrNull { (_, raw) -> raw.isNotBlank() }
+            ?.let { (sourceFormat, raw) ->
+                LyricsDocumentPipeline.process(
+                    raw = raw,
+                    sourceFormat = sourceFormat,
+                    targetFormat = config.format,
+                    conversionMode = config.conversionMode,
+                    showTranslation = config.showTranslation,
+                    showRomanization = config.showRomanization,
+                    onlyTranslationIfAvailable = config.onlyTranslationIfAvailable,
+                    removeEmptyLines = config.removeEmptyLines,
+                    offset = offset
+                )?.let { return it }
             }
 
 
         return null
+    }
+
+    private fun shouldUseDocumentPipeline(
+        result: LyricsResult,
+        config: LyricRenderConfig,
+        offset: Long
+    ): Boolean {
+        return offset != 0L ||
+                config.conversionMode != ConversionMode.NONE ||
+                !config.showTranslation ||
+                !config.showRomanization ||
+                config.onlyTranslationIfAvailable ||
+                config.removeEmptyLines ||
+                selectRawLyrics(result, config).isNullOrBlank()
     }
 
 

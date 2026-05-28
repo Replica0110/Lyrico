@@ -10,6 +10,8 @@ import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.BatchTaskRepositoryImpl
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.AppLogRepositoryImpl
+import com.lonx.lyrico.data.repository.CustomTagKeyRepository
+import com.lonx.lyrico.data.repository.CustomTagSettingsRepository
 import com.lonx.lyrico.data.repository.GhContributorRepository
 import com.lonx.lyrico.data.repository.GhContributorRepositoryImpl
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
@@ -65,6 +67,7 @@ import com.lonx.lyrico.viewmodel.BatchRenameViewModel
 import com.lonx.lyrico.viewmodel.BatchReplayGainViewModel
 import com.lonx.lyrico.viewmodel.CoverSearchViewModel
 import com.lonx.lyrico.viewmodel.CharacterMappingViewModel
+import com.lonx.lyrico.viewmodel.CustomTagManagementViewModel
 import com.lonx.lyrico.viewmodel.EditFieldVisibilitySettingsViewModel
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
@@ -160,7 +163,8 @@ val appModule = module {
                 LyricoDatabase.MIGRATION_9_10,
                 LyricoDatabase.MIGRATION_10_11,
                 LyricoDatabase.MIGRATION_11_12,
-                LyricoDatabase.MIGRATION_12_13
+                LyricoDatabase.MIGRATION_12_13,
+                LyricoDatabase.MIGRATION_13_14
             )
             .build()
     }
@@ -168,13 +172,16 @@ val appModule = module {
     single { get<LyricoDatabase>().appLogDao() }
     single { get<LyricoDatabase>().libraryIndexDao() }
     single { get<LyricoDatabase>().sourcePluginDao() }
+    single { get<LyricoDatabase>().songCustomTagKeyDao() }
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
+    single { CustomTagSettingsRepository(androidContext(), get()) }
+    single { CustomTagKeyRepository(get()) }
     single<PluginFieldProcessConfigRepository> { PluginFieldProcessConfigRepositoryImpl(androidContext(), get()) }
     single { EditFieldVisibilityRepository(androidContext()) }
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
     single<PlaybackRepository> { PlaybackRepositoryImpl() }
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
-    single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get(), get(), get()) }
+    single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get(), get(), get(), get()) }
     single<SourcePluginRepository> { SourcePluginRepositoryImpl(get()) }
     single<LibraryScanManager> { LibraryScanManagerImpl(get(), androidContext(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
@@ -220,8 +227,9 @@ val appModule = module {
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get()) }
     viewModel { SearchSourceConfigViewModel(get(), get(), get()) }
-    viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
+    viewModel { CustomTagManagementViewModel(get(), get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { AppLogViewModel(get(),get()) }
     viewModel { PluginViewModel(get(), get(), get(), get(), get(), get()) }
@@ -230,7 +238,7 @@ val appModule = module {
     viewModel { BatchRenameViewModel(get(), get(), get(), get(), get()) }
     viewModel { CharacterMappingViewModel(get()) }
     viewModel { BatchExportViewModel(get(), get(), get()) }
-    viewModel { BatchEditViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { BatchEditViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { BatchReplayGainViewModel(get(), get(), get()) }
     viewModel { BatchLyricsFormatViewModel(get(), get(), get()) }
     viewModel { (taskId: String) -> BatchTaskDetailViewModel(taskId, get(), get()) }

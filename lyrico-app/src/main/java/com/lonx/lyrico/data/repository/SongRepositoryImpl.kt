@@ -16,6 +16,7 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.AudioTagKeys
+import com.lonx.audiotag.model.CustomTagField
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
 import com.lonx.lyrico.data.LyricoDatabase
@@ -43,6 +44,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
+import java.util.Locale
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -53,7 +55,8 @@ class SongRepositoryImpl(
     private val settingsRepository: SettingsRepository,
     private val okHttpClient: OkHttpClient,
     private val appLogRepository: AppLogRepository,
-    private val libraryIndexRepository: LibraryIndexRepository
+    private val libraryIndexRepository: LibraryIndexRepository,
+    private val customTagKeyRepository: CustomTagKeyRepository
 ) : SongRepository {
 
     private val songDao = database.songDao()
@@ -110,6 +113,7 @@ class SongRepositoryImpl(
                 DeleteFileResult.AlreadyMissing -> {
                     database.withTransaction {
                         songDao.deleteByUri(song.uri)
+                        customTagKeyRepository.removeSongs(listOf(song.uri))
                         folderDao.refreshSongCount(song.folderId)
                         folderDao.performPostScanCleanup()
                     }
@@ -149,12 +153,13 @@ class SongRepositoryImpl(
             if (dbSongsToDelete.isEmpty()) return@withContext
 
             database.withTransaction {
-                dbSongsToDelete
-                    .map { it.uri }
-                    .chunked(BATCH_SIZE)
-                    .forEach { chunk ->
-                        songDao.deleteByUris(chunk)
-                    }
+                        dbSongsToDelete
+                            .map { it.uri }
+                            .chunked(BATCH_SIZE)
+                            .forEach { chunk ->
+                                songDao.deleteByUris(chunk)
+                                customTagKeyRepository.removeSongs(chunk)
+                            }
 
                 impactedFolderIds.forEach { folderId ->
                     folderDao.refreshSongCount(folderId)
@@ -370,7 +375,7 @@ class SongRepositoryImpl(
                     val impactedFolderIds = mutableSetOf<Long>()
                     val itemFailures = mutableListOf<String>()
 
-                    val songsToUpsert = mutableListOf<SongEntity>()
+                    val songsToUpsert = mutableListOf<ScannedSongMetadata>()
 
                     val safFolders = if (folderIds == null) {
                         folderDao.getSafFolders()
@@ -420,14 +425,14 @@ class SongRepositoryImpl(
                                     )
                                     impactedFolderIds.add(folderId)
 
-                                    val entity = extractSongMetadata(
+                                    val metadata = extractSongMetadata(
                                         songFile = deviceSong,
                                         folderId = folderId,
                                         existingId = dbInfo?.id ?: 0L,
                                         source = "SAF"
                                     )
-                                    if (entity != null) {
-                                        songsToUpsert.add(entity)
+                                    if (metadata != null) {
+                                        songsToUpsert.add(metadata)
                                     }
                                 } catch (e: Exception) {
                                     Log.e(TAG, "处理歌曲失败: ${deviceSong.fileName}", e)
@@ -492,13 +497,20 @@ class SongRepositoryImpl(
                     database.withTransaction {
                         if (songsToUpsert.isNotEmpty()) {
                             songsToUpsert.chunked(BATCH_SIZE).forEach { chunk ->
-                                songDao.upsertAll(chunk)
+                                songDao.upsertAll(chunk.map { it.entity })
+                                chunk.forEach { metadata ->
+                                    customTagKeyRepository.replaceForSong(
+                                        songUri = metadata.entity.uri,
+                                        customFields = metadata.customFields
+                                    )
+                                }
                             }
                         }
 
                         if (allDeletedUris.isNotEmpty()) {
                             allDeletedUris.chunked(BATCH_SIZE).forEach { chunk ->
                                 songDao.deleteByUris(chunk.toList())
+                                customTagKeyRepository.removeSongs(chunk.toList())
                             }
                         }
 
@@ -517,7 +529,7 @@ class SongRepositoryImpl(
                         folderDao.performPostScanCleanup()
                     }
                     if (songsToUpsert.isNotEmpty()) {
-                        val indexedSongs = songDao.getSongsByUris(songsToUpsert.map { it.uri })
+                        val indexedSongs = songDao.getSongsByUris(songsToUpsert.map { it.entity.uri })
                         libraryIndexRepository.reindexSongs(indexedSongs)
                     }
                     if (allDeletedUris.isNotEmpty() || missingSafFolderIds.isNotEmpty()) {
@@ -595,12 +607,17 @@ class SongRepositoryImpl(
         }
     }
 
+    private data class ScannedSongMetadata(
+        val entity: SongEntity,
+        val customFields: List<CustomTagField>,
+    )
+
     private suspend fun extractSongMetadata(
         songFile: SongFile,
         folderId: Long,
         existingId: Long = 0L,
         source: String = "MEDIA_STORE"
-    ): SongEntity? = withContext(Dispatchers.IO) {
+    ): ScannedSongMetadata? = withContext(Dispatchers.IO) {
         try {
 
             val audioData = context.contentResolver.openFileDescriptor(
@@ -609,7 +626,7 @@ class SongRepositoryImpl(
                 AudioTagReader.read(pfd, readPictures = false)
             } ?: return@withContext null
 
-            return@withContext SongEntity(
+            val entity = SongEntity(
                 id = existingId,
                 mediaId = songFile.mediaId,
                 source = source,
@@ -647,6 +664,10 @@ class SongRepositoryImpl(
                 fileAdded = songFile.dateAdded,
                 folderId = folderId
             ).withSortKeysUpdated()
+            return@withContext ScannedSongMetadata(
+                entity = entity,
+                customFields = audioData.customFields,
+            )
         } catch (e: Exception) {
             Log.e(TAG, "解析元数据失败: ${songFile.fileName}", e)
             null
@@ -723,8 +744,15 @@ class SongRepositoryImpl(
                 fileLastModified = lastModified
             ).withSortKeysUpdated()
 
+            val savedCustomFields = runCatching {
+                readAudioTagData(contentUri).customFields
+            }.getOrNull()
+
             database.withTransaction {
                 songDao.update(updatedSong)
+                if (savedCustomFields != null) {
+                    customTagKeyRepository.replaceForSong(contentUri, savedCustomFields)
+                }
                 libraryIndexRepository.reindexSongInTransaction(updatedSong)
             }
 
@@ -1115,7 +1143,7 @@ class SongRepositoryImpl(
                 }
 
             audioTagData.customFields.forEach { field ->
-                val key = field.key.trim()
+                val key = field.key.trim().uppercase(Locale.ROOT)
                 if (key.isEmpty() || AudioTagKeys.isReserved(key)) return@forEach
                 updates[key] = field.value.trim()
             }
@@ -1194,6 +1222,12 @@ class SongRepositoryImpl(
                 }
             }
 
+            audioTagData.customFields.forEach { field ->
+                val key = field.key.trim().uppercase(Locale.ROOT)
+                if (key.isEmpty() || AudioTagKeys.isReserved(key)) return@forEach
+                updates[key] = field.value.trim()
+            }
+
             if (updates.isNotEmpty()) {
                 AudioTagWriter.writeTags(pfdDescriptor, updates)
             }
@@ -1239,7 +1273,10 @@ class SongRepositoryImpl(
 
     override suspend fun clearAll() {
         withContext(Dispatchers.IO) {
-            songDao.clear()
+            database.withTransaction {
+                songDao.clear()
+                customTagKeyRepository.clearAll()
+            }
             libraryIndexRepository.refreshAndPruneIndexes()
             Log.d(TAG, "所有歌曲数据已清空")
         }

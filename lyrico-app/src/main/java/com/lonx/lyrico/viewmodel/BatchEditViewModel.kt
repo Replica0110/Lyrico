@@ -18,6 +18,7 @@ import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.data.repository.BatchTaskRepository
+import com.lonx.lyrico.data.repository.CustomTagSettingsRepository
 import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.UiMessage
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -118,7 +120,8 @@ data class BatchEditUiState(
     val skippedCount: Int = 0,  // 跳过计数
     val failureCount: Int = 0,  // 失败计数
     val saveTimeMillis: Long = 0,  // 保存总用时（毫秒）
-    val selectedSongsVersion: Int = 0
+    val selectedSongsVersion: Int = 0,
+    val customTagPreviewVersion: Int = 0
 )
 
 data class BatchEditPreview(
@@ -155,6 +158,7 @@ class BatchEditViewModel(
     private val batchTaskRepository: BatchTaskRepository,
     private val batchTaskScheduler: BatchTaskScheduler,
     private val editFieldVisibilityRepository: EditFieldVisibilityRepository,
+    private val customTagSettingsRepository: CustomTagSettingsRepository,
     private val application: Application
 ) : ViewModel() {
 
@@ -163,6 +167,7 @@ class BatchEditViewModel(
     private var saveJob: Job? = null
     private var observeJob: Job? = null
     private var currentTaskId: String? = null
+    private var customTagPreviewValues: Map<String, Map<String, String>> = emptyMap()
 
     private val _uiState = MutableStateFlow(BatchEditUiState())
     val uiState: StateFlow<BatchEditUiState> = _uiState.asStateFlow()
@@ -172,6 +177,15 @@ class BatchEditViewModel(
             .map { config ->
                 config.visibleGroupsForScene(EditFieldScene.BatchEdit)
             }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
+
+    val visibleCustomKeys: StateFlow<List<String>> =
+        customTagSettingsRepository.settingsFlow
+            .map { it.visibleKeys }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
@@ -297,30 +311,52 @@ class BatchEditViewModel(
 
     // ── 自定义标签 ──────────────────────────────────────────
 
-    fun addCustomField(field: CustomTagField) {
-        _uiState.update { it.copy(customFields = it.customFields + field) }
-    }
+    fun setCustomFieldValue(key: String, value: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
 
-    fun updateCustomField(index: Int, key: String, value: String) {
-        _uiState.update {
-            it.copy(
-                customFields = it.customFields.toMutableList().apply {
-                    this[index] = this[index].copy(key = key, value = value)
-                }
+        _uiState.update { state ->
+            val nextFields = state.customFields
+                .filterNot { it.key.equals(normalizedKey, ignoreCase = true) }
+                .toMutableList()
+
+            nextFields += CustomTagField(normalizedKey, value)
+
+            state.copy(
+                customFields = nextFields,
             )
         }
     }
 
-    fun removeCustomField(index: Int) {
-        _uiState.update {
-            it.copy(
-                customFields = it.customFields.toMutableList().apply {
-                    removeAt(index)
-                }
+    fun keepCustomField(key: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
+
+        _uiState.update { state ->
+            state.copy(
+                customFields = state.customFields
+                    .filterNot { it.key.equals(normalizedKey, ignoreCase = true) },
             )
         }
     }
 
+    fun addCustomFieldAndShow(key: String, value: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
+
+        viewModelScope.launch {
+            customTagSettingsRepository.addVisibleKey(normalizedKey)
+        }
+
+        setCustomFieldValue(normalizedKey, value)
+    }
+
+    private fun normalizeCustomTagKey(input: String): String? {
+        val key = input.trim()
+        return when {
+            key.isBlank() -> null
+            key.length > 64 -> null
+            key.any { it == '\n' || it == '\r' } -> null
+            else -> key.uppercase(Locale.ROOT)
+        }
+    }
 
     // ── 封面管理 ──────────────────────────────────────────
 
@@ -351,6 +387,33 @@ class BatchEditViewModel(
                         sourceUri = fieldValue.sourceUri
                     )
                 }
+        }
+
+    suspend fun getSelectedSongCustomTagValues(key: String): List<BatchEditSelectableValue> =
+        withContext(Dispatchers.IO) {
+            val normalizedKey = normalizeCustomTagKey(key) ?: return@withContext emptyList()
+            ensureSelectedSongsLoaded()
+
+            selectedSongs.mapNotNull { song ->
+                val value = try {
+                    songRepository.readAudioTagData(song.uri)
+                        .customFields
+                        .firstOrNull { field ->
+                            normalizeCustomTagKey(field.key) == normalizedKey
+                        }
+                        ?.value
+                } catch (e: Exception) {
+                    Log.e(TAG, "读取已选歌曲自定义标签失败: ${song.uri}", e)
+                    null
+                }?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+
+                BatchEditSelectableValue(
+                    title = value,
+                    summary = song.title?.takeIf { it.isNotBlank() } ?: song.fileName,
+                    value = value,
+                    sourceUri = song.uri
+                )
+            }.distinctBy { it.value }
         }
 
     private fun BatchEditField.databaseColumnName(): String? = when (this) {
@@ -401,6 +464,35 @@ class BatchEditViewModel(
                 null
             }
         }
+
+    fun loadCustomTagPreviewValues(keys: List<String>) {
+        val normalizedKeys = keys.mapNotNull { normalizeCustomTagKey(it) }.toSet()
+        if (normalizedKeys.isEmpty() || selectedUris.isEmpty()) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            ensureSelectedSongsLoaded()
+            val values = selectedSongs.associate { song ->
+                val customValues = try {
+                    songRepository.readAudioTagData(song.uri)
+                        .customFields
+                        .mapNotNull { field ->
+                            val key = normalizeCustomTagKey(field.key) ?: return@mapNotNull null
+                            if (key in normalizedKeys) key to field.value else null
+                        }
+                        .toMap()
+                } catch (e: Exception) {
+                    Log.e(TAG, "读取自定义标签预览失败: ${song.uri}", e)
+                    emptyMap()
+                }
+                song.uri to customValues
+            }
+
+            customTagPreviewValues = values
+            _uiState.update {
+                it.copy(customTagPreviewVersion = it.customTagPreviewVersion + 1)
+            }
+        }
+    }
 
     fun buildEditPreviews(visibleFieldCodes: Set<String>): List<BatchEditPreview> {
         val state = _uiState.value.filterHiddenEditFields(visibleFieldCodes)
@@ -501,20 +593,21 @@ class BatchEditViewModel(
                 }
             }
 
-            if (visible("custom_tags.custom_tags")) {
-                state.customFields
-                    .filter { it.key.isNotBlank() }
-                    .forEach { field ->
-                        add(
-                            BatchEditPreviewChange(
-                                labelResId = null,
-                                customLabel = field.key,
-                                oldValue = "",
-                                newValue = field.value
-                            )
+            state.customFields
+                .filter { it.key.isNotBlank() && it.value != keep }
+                .forEach { field ->
+                    add(
+                        BatchEditPreviewChange(
+                            labelResId = null,
+                            customLabel = field.key,
+                            oldValue = customTagPreviewValues[song.uri]
+                                ?.get(normalizeCustomTagKey(field.key))
+                                .orEmpty(),
+                            newValue = field.value
                         )
-                    }
-            }
+                    )
+                }
+
         }
     }
 
@@ -623,7 +716,9 @@ class BatchEditViewModel(
             } else {
                 keep
             },
-            customFields = if (visible("custom_tags.custom_tags")) customFields else emptyList(),
+            customFields = customFields
+                .filter { it.key.isNotBlank() && it.value != keep }
+                .distinctBy { it.key },
         )
     }
 
@@ -724,11 +819,10 @@ class BatchEditViewModel(
             } else {
                 keep
             },
-            customFields = if (visible("custom_tags.custom_tags")) {
-                customFields.map { EditTagsCustomField(it.key, it.value) }
-            } else {
-                emptyList()
-            }
+            customFields = customFields
+                .filter { it.key.isNotBlank() && it.value != keep }
+                .distinctBy { it.key }
+                .map { EditTagsCustomField(key = it.key, value = it.value) }
         )
     }
 
@@ -905,15 +999,16 @@ class BatchEditViewModel(
             }
         }
 
-        // 处理自定义标签
-        if (visible("custom_tags.custom_tags") && state.customFields.isNotEmpty()) {
+        if (state.customFields.isNotEmpty()) {
             tag = tag.copy(customFields = tag.customFields.toMutableList().apply {
                 state.customFields.forEach { newField ->
-                    val existingIndex = indexOfFirst { it.key == newField.key }
+                    val key = normalizeCustomTagKey(newField.key) ?: return@forEach
+                    val field = CustomTagField(key = key, value = newField.value)
+                    val existingIndex = indexOfFirst { it.key.equals(key, ignoreCase = true) }
                     if (existingIndex >= 0) {
-                        this[existingIndex] = newField
+                        this[existingIndex] = field
                     } else {
-                        add(newField)
+                        add(field)
                     }
                 }
             })

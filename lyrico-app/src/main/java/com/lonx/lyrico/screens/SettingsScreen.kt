@@ -53,6 +53,7 @@ import com.ramcosta.composedestinations.generated.destinations.AboutDestination
 import com.ramcosta.composedestinations.generated.destinations.AppLogsDestination
 import com.ramcosta.composedestinations.generated.destinations.ArtistSplitSettingsDestination
 import com.ramcosta.composedestinations.generated.destinations.BatchTaskListDestination
+import com.ramcosta.composedestinations.generated.destinations.CustomTagManagementDestination
 import com.ramcosta.composedestinations.generated.destinations.EditFieldVisibilityDestination
 import com.ramcosta.composedestinations.generated.destinations.FolderManagerDestination
 import com.ramcosta.composedestinations.generated.destinations.PluginManagerDestination
@@ -522,6 +523,10 @@ fun SettingsScreen(
                     ArrowPreference(
                         title = stringResource(R.string.edit_field_visibility_settings),
                         onClick = { navigator.navigate(EditFieldVisibilityDestination()) }
+                    )
+                    ArrowPreference(
+                        title = stringResource(R.string.custom_tag_management_title),
+                        onClick = { navigator.navigate(CustomTagManagementDestination()) }
                     )
                 }
             }

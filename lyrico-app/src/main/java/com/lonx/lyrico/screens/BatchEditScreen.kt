@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +58,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.ui.components.rememberTintedPainter
@@ -99,7 +99,6 @@ import top.yukonga.miuix.kmp.icon.basic.ArrowUpDown
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Settings
@@ -125,6 +124,7 @@ fun BatchEditScreen(
     val viewModel: BatchEditViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val visibleFieldGroups by viewModel.visibleFieldGroups.collectAsStateWithLifecycle()
+    val visibleCustomKeys by viewModel.visibleCustomKeys.collectAsStateWithLifecycle()
 
     var showCoverOptionsSheet by remember { mutableStateOf(false) }
     var showSelectedCoverSheet by remember { mutableStateOf(false) }
@@ -134,6 +134,7 @@ fun BatchEditScreen(
     var showAddCustomTagDialog by remember { mutableStateOf(false) }
     var showSelectedValueSheet by remember { mutableStateOf(false) }
     var selectedValueField by remember { mutableStateOf<BatchEditField?>(null) }
+    var selectedCustomValueKey by remember { mutableStateOf<String?>(null) }
     var selectedValueOptions by remember { mutableStateOf<List<BatchEditSelectableValue>>(emptyList()) }
     var selectedValueOptionsLoading by remember { mutableStateOf(false) }
     var expandedFabMenu by remember { mutableStateOf(false) }
@@ -150,6 +151,10 @@ fun BatchEditScreen(
         .toSet()
     val editPreviews = remember(uiState, visibleFieldCodes) {
         viewModel.buildEditPreviews(visibleFieldCodes)
+    }
+
+    LaunchedEffect(visibleCustomKeys, uiState.selectedSongsVersion) {
+        viewModel.loadCustomTagPreviewValues(visibleCustomKeys)
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -186,11 +191,24 @@ fun BatchEditScreen(
 
     fun openSelectedValueSheet(field: BatchEditField) {
         selectedValueField = field
+        selectedCustomValueKey = null
         selectedValueOptions = emptyList()
         selectedValueOptionsLoading = true
         showSelectedValueSheet = true
         scope.launch {
             selectedValueOptions = viewModel.getSelectedSongFieldValues(field)
+            selectedValueOptionsLoading = false
+        }
+    }
+
+    fun openSelectedCustomValueSheet(key: String) {
+        selectedValueField = null
+        selectedCustomValueKey = key
+        selectedValueOptions = emptyList()
+        selectedValueOptionsLoading = true
+        showSelectedValueSheet = true
+        scope.launch {
+            selectedValueOptions = viewModel.getSelectedSongCustomTagValues(key)
             selectedValueOptionsLoading = false
         }
     }
@@ -739,49 +757,44 @@ fun BatchEditScreen(
                                         }
                                     }
 
-                                    // 自定义标签组
-                                    if (
-                                        visibleGroupCodes.contains(EditFieldRegistry.GROUP_CUSTOM_TAGS) &&
-                                        visibleFieldCodes.contains("custom_tags.custom_tags") &&
-                                        uiState.customFields.isNotEmpty()
-                                    ) {
+                                    if (visibleCustomKeys.isNotEmpty()) {
                                         item(key = "custom_fields") {
-                                            SmallTitle(text = stringResource(R.string.group_custom_tags))
-                                            Card(
-                                                modifier = Modifier.padding(
-                                                    horizontal = 12.dp,
-                                                    vertical = 6.dp
-                                                )
-                                            ) {
-                                                Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                                                    uiState.customFields.forEachIndexed { index, field ->
-                                                        BatchEditCustomFieldItem(
-                                                            field = field,
-                                                            onKeyChange = { newKey ->
-                                                                viewModel.updateCustomField(
-                                                                    index,
-                                                                    newKey,
-                                                                    field.value
-                                                                )
-                                                            },
-                                                            onValueChange = { newValue ->
-                                                                viewModel.updateCustomField(
-                                                                    index,
-                                                                    field.key,
-                                                                    newValue
-                                                                )
-                                                            },
-                                                            onRemove = {
-                                                                viewModel.removeCustomField(
-                                                                    index
-                                                                )
-                                                            }
-                                                        )
+                                            Column {
+                                                SmallTitle(text = stringResource(R.string.group_custom_tags))
+                                                Card(
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 12.dp,
+                                                        vertical = 6.dp
+                                                    )
+                                                ) {
+                                                    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                                                        visibleCustomKeys.forEach { key ->
+                                                            BatchEditCustomFieldItem(
+                                                                keyName = key,
+                                                                value = uiState.customFields
+                                                                    .firstOrNull { it.key == key }
+                                                                    ?.value
+                                                                    ?: "<keep>",
+                                                                onValueChange = { value ->
+                                                                    viewModel.setCustomFieldValue(
+                                                                        key = key,
+                                                                        value = value
+                                                                    )
+                                                                },
+                                                                onKeep = {
+                                                                    viewModel.keepCustomField(key)
+                                                                },
+                                                                onSelectFromSongs = {
+                                                                    openSelectedCustomValueSheet(key)
+                                                                },
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
+
                                     // 歌词组
                                     if (visibleGroupCodes.contains(EditFieldRegistry.GROUP_LYRICS)) {
                                         item(key = "lyrics") {
@@ -959,7 +972,8 @@ fun BatchEditScreen(
     WindowBottomSheet(
         show = showSelectedValueSheet,
         enableNestedScroll = false,
-        title = selectedValueField?.let { stringResource(it.labelResId) }.orEmpty(),
+        title = selectedValueField?.let { stringResource(it.labelResId) }
+            ?: selectedCustomValueKey.orEmpty(),
         onDismissRequest = { showSelectedValueSheet = false }
     ) {
         Column(
@@ -1001,6 +1015,9 @@ fun BatchEditScreen(
                                     onClick = {
                                         selectedValueField?.let { field ->
                                             applySelectedValue(field, option.value)
+                                        }
+                                        selectedCustomValueKey?.let { key ->
+                                            viewModel.setCustomFieldValue(key, option.value)
                                         }
                                         showSelectedValueSheet = false
                                     }
@@ -1201,20 +1218,14 @@ fun BatchEditScreen(
         }
     }
 
-    // 添加自定义标签 BottomSheet
     WindowDialog(
         show = showAddCustomTagDialog,
         title = stringResource(R.string.action_add_custom_tag),
         onDismissRequest = { showAddCustomTagDialog = false }
     ) {
-        // 临时存储新自定义标签内容
         var newCustomTagKey by remember { mutableStateOf("") }
         var newCustomTagValue by remember { mutableStateOf("") }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-
+        Column(modifier = Modifier.fillMaxWidth()) {
             TextField(
                 value = newCustomTagKey,
                 onValueChange = { newCustomTagKey = it },
@@ -1230,14 +1241,10 @@ fun BatchEditScreen(
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
+            Row(horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(
                     text = stringResource(R.string.cancel),
-                    onClick = {
-                        showAddCustomTagDialog = false
-                    },
+                    onClick = { showAddCustomTagDialog = false },
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(20.dp))
@@ -1245,11 +1252,9 @@ fun BatchEditScreen(
                     text = stringResource(R.string.confirm),
                     onClick = {
                         if (newCustomTagKey.isNotBlank()) {
-                            viewModel.addCustomField(
-                                CustomTagField(
-                                    newCustomTagKey,
-                                    newCustomTagValue
-                                )
+                            viewModel.addCustomFieldAndShow(
+                                key = newCustomTagKey,
+                                value = newCustomTagValue,
                             )
                             showAddCustomTagDialog = false
                         }
@@ -1260,6 +1265,7 @@ fun BatchEditScreen(
             }
         }
     }
+
 }
 
 @Composable
@@ -1715,48 +1721,47 @@ private fun BatchEditFieldItem(
  */
 @Composable
 private fun BatchEditCustomFieldItem(
-    field: CustomTagField,
-    onKeyChange: (String) -> Unit,
+    keyName: String,
+    value: String,
     onValueChange: (String) -> Unit,
-    onRemove: () -> Unit
+    onKeep: () -> Unit,
+    onSelectFromSongs: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(vertical = 6.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.label_custom_tag),
-                style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = onRemove) {
-                Icon(
-                    MiuixIcons.Delete,
-                    contentDescription = stringResource(R.string.action_remove_custom_tag)
-                )
+    val isKeep = value == "<keep>"
+
+    TextField(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        value = value,
+        onValueChange = onValueChange,
+        label = keyName + if (isKeep) " (无修改)" else "",
+        trailingIcon = {
+            Row {
+                IconButton(onClick = {
+                    if (isKeep) {
+                        onValueChange("")
+                    } else {
+                        onKeep()
+                    }
+                }) {
+                    Icon(
+                        imageVector = if (isKeep) MiuixIcons.Close else MiuixIcons.Undo,
+                        contentDescription = null,
+                        tint = if (isKeep)
+                            MiuixTheme.colorScheme.primary
+                        else
+                            MiuixTheme.colorScheme.error
+                    )
+                }
+                IconButton(onClick = onSelectFromSongs) {
+                    Icon(
+                        imageVector = MiuixIcons.Basic.ArrowUpDown,
+                        contentDescription = stringResource(R.string.batch_edit_select_from_selected_songs)
+                    )
+                }
             }
         }
-
-        TextField(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            value = field.key,
-            onValueChange = onKeyChange,
-            label = stringResource(R.string.label_custom_tag_name)
-        )
-        TextField(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            value = field.value,
-            onValueChange = onValueChange,
-            label = stringResource(R.string.label_custom_tag_value)
-        )
-    }
+    )
 }
 

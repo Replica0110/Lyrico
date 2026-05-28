@@ -11,7 +11,7 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.SettingsDefaults
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.utils.RenameEngine
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.worker.processor.RenameFilesTaskConfig
@@ -59,7 +59,7 @@ data class SongForBatchRename(
 
 class BatchRenameViewModel(
     private val settingsRepository: SettingsRepository,
-    private val songRepository: SongRepository,
+    private val songLibraryRepository: SongLibraryRepository,
     private val selectionManager: com.lonx.lyrico.data.SharedSelectionManager,
     private val batchTaskRepository: BatchTaskRepository,
     private val batchTaskScheduler: BatchTaskScheduler
@@ -83,7 +83,7 @@ class BatchRenameViewModel(
         if (selectedUris.isNotEmpty()) {
             viewModelScope.launch(Dispatchers.IO) {
                 val songList = selectedUris.mapNotNull { path ->
-                    val songEntity = songRepository.getSongByUri(path)
+                    val songEntity = songLibraryRepository.getSongByUri(path)
                     songEntity?.let {
                         SongForBatchRename(
                             uri = it.uri,
@@ -314,7 +314,7 @@ class BatchRenameViewModel(
 
         viewModelScope.launch {
             val songsToRename = selectedUris.mapNotNull { uri ->
-                songRepository.getSongByUri(uri)
+                songLibraryRepository.getSongByUri(uri)
             }
             if (songsToRename.isEmpty()) {
                 _uiState.update { it.copy(isRenamingInProgress = false) }

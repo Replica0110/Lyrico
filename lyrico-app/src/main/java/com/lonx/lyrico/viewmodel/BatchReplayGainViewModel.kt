@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.repository.BatchTaskRepository
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import kotlinx.coroutines.Job
@@ -36,7 +36,7 @@ data class BatchReplayGainUiState(
 )
 
 class BatchReplayGainViewModel(
-    private val songRepository: SongRepository,
+    private val songLibraryRepository: SongLibraryRepository,
     private val batchTaskRepository: BatchTaskRepository,
     private val batchTaskScheduler: BatchTaskScheduler
 ) : ViewModel() {
@@ -142,7 +142,7 @@ class BatchReplayGainViewModel(
 
         viewModelScope.launch {
             val songs = uris.mapNotNull { uri ->
-                songRepository.getSongByUri(uri)
+                songLibraryRepository.getSongByUri(uri)
             }
             if (songs.isEmpty()) {
                 _uiState.update { it.copy(isRunning = false, showProgressDialog = false) }

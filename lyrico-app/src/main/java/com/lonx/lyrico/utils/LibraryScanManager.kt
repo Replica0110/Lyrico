@@ -3,13 +3,16 @@ package com.lonx.lyrico.utils
 import android.content.Context
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.entity.FolderEntity
-import com.lonx.lyrico.data.repository.LibraryScanProgress
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.song.scan.LibraryScanProgress
+import com.lonx.lyrico.data.song.scan.LibraryScanRequest
+import com.lonx.lyrico.domain.song.usecase.SynchronizeLibraryUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -37,7 +40,8 @@ class LibraryScanManagerImpl(
     private val appScope: CoroutineScope,
     private val context: Context,
     private val database: LyricoDatabase,
-    private val songRepository: SongRepository
+    private val settingsRepository: SettingsRepository,
+    private val synchronizeLibraryUseCase: SynchronizeLibraryUseCase
 ) : LibraryScanManager {
 
     private val folderDao = database.folderDao()
@@ -190,12 +194,16 @@ class LibraryScanManagerImpl(
             }
 
             try {
-                songRepository.synchronize(
-                    fullRescan = request.fullRescan,
-                    folderIds = request.folderIds
-                ) { progress ->
-                    _state.update { it.copy(progress = progress) }
-                }
+                synchronizeLibraryUseCase(
+                    request = LibraryScanRequest(
+                        fullRescan = request.fullRescan,
+                        folderIds = request.folderIds,
+                        ignoreShortAudio = settingsRepository.ignoreShortAudio.first()
+                    ),
+                    onProgress = { progress ->
+                        _state.update { it.copy(progress = progress) }
+                    }
+                )
                 request.onSuccessActions.forEach { action -> action() }
             } catch (e: Exception) {
                 _state.update { it.copy(error = e.message ?: e::class.java.simpleName) }

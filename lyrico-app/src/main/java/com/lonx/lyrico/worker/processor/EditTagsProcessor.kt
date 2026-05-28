@@ -5,7 +5,10 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.domain.song.usecase.BatchEditSongsUseCase
+import com.lonx.lyrico.domain.song.usecase.BatchTagEditItemRequest
+import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
 import com.lonx.lyrico.utils.LyricEncoder
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -52,7 +55,8 @@ data class EditTagsCustomField(
 )
 
 class EditTagsProcessor(
-    private val songRepository: SongRepository
+    private val songLibraryRepository: SongLibraryRepository,
+    private val batchEditSongsUseCase: BatchEditSongsUseCase
 ) : BatchTaskProcessor {
 
     override suspend fun process(
@@ -64,30 +68,28 @@ class EditTagsProcessor(
             Json.decodeFromString<EditTagsTaskConfig>(it)
         } ?: throw BatchTaskSkippedException("No config")
 
-        val currentTag = try {
-            songRepository.readAudioTagData(item.songUri)
+        val song = songLibraryRepository.getSongByUri(item.songUri)
+            ?: throw BatchTaskSkippedException("Song not found")
+
+        val result = try {
+            batchEditSongsUseCase.editOne(
+                BatchTagEditItemRequest(
+                    song = song,
+                    tagDataFactory = { _, currentTag -> buildMergedTag(currentTag, config) }
+                )
+            )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to read tags: ${item.songUri}", e)
-            throw BatchTaskSkippedException("Read failed")
+            Log.e(TAG, "Failed to edit tags: ${item.songUri}", e)
+            throw Exception("Write failed", e)
         }
 
-        val mergedTag = buildMergedTag(currentTag, config)
-        if (mergedTag == currentTag) {
-            throw BatchTaskSkippedException("No changes")
+        if (result.skippedReason != null) {
+            throw BatchTaskSkippedException(result.skippedReason)
         }
-
-        val success = try {
-            songRepository.overwriteAudioTags(item.songUri, mergedTag)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to write tags: ${item.songUri}", e)
-            false
-        }
-
-        if (!success) {
+        if (result.result !is EditSongTagsResult.Success) {
             throw Exception("Write failed")
         }
 
-        songRepository.updateSongMetadata(mergedTag, item.songUri, System.currentTimeMillis())
         return BatchTaskProcessResult()
     }
 

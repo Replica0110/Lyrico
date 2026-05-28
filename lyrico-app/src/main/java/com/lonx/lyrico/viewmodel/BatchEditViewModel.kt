@@ -19,7 +19,11 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.CustomTagSettingsRepository
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.data.song.search.SongSearchRepository
+import com.lonx.lyrico.data.song.tag.AudioTagRepository
+import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
+import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.utils.UriUtils
@@ -153,7 +157,10 @@ data class BatchEditSelectableCover(
 )
 
 class BatchEditViewModel(
-    private val songRepository: SongRepository,
+    private val songLibraryRepository: SongLibraryRepository,
+    private val songSearchRepository: SongSearchRepository,
+    private val audioTagRepository: AudioTagRepository,
+    private val overwriteSongTagsUseCase: OverwriteSongTagsUseCase,
     private val selectionManager: SharedSelectionManager,
     private val batchTaskRepository: BatchTaskRepository,
     private val batchTaskScheduler: BatchTaskScheduler,
@@ -202,7 +209,7 @@ class BatchEditViewModel(
         _uiState.update { it.copy(songCount = uris.size) }
         viewModelScope.launch(Dispatchers.IO) {
             selectedSongs = uris.mapNotNull { uri ->
-                songRepository.getSongByUri(uri)
+                songLibraryRepository.getSongByUri(uri)
             }
             _uiState.update { it.copy(selectedSongsVersion = it.selectedSongsVersion + 1) }
         }
@@ -375,7 +382,7 @@ class BatchEditViewModel(
     suspend fun getSelectedSongFieldValues(field: BatchEditField): List<BatchEditSelectableValue> =
         withContext(Dispatchers.IO) {
             val fieldColumn = field.databaseColumnName() ?: return@withContext emptyList()
-            songRepository.getDistinctSongFieldValues(selectedUris, fieldColumn)
+            songSearchRepository.getDistinctSongFieldValues(selectedUris, fieldColumn)
                 .map { fieldValue ->
                     BatchEditSelectableValue(
                         title = fieldValue.value,
@@ -396,7 +403,7 @@ class BatchEditViewModel(
 
             selectedSongs.mapNotNull { song ->
                 val value = try {
-                    songRepository.readAudioTagData(song.uri)
+                    audioTagRepository.read(song.uri)
                         .customFields
                         .firstOrNull { field ->
                             normalizeCustomTagKey(field.key) == normalizedKey
@@ -457,7 +464,7 @@ class BatchEditViewModel(
     suspend fun getSelectedSongCover(uri: String): Any? =
         withContext(Dispatchers.IO) {
             try {
-                val tagData = songRepository.readAudioTagData(uri)
+                val tagData = audioTagRepository.read(uri)
                 tagData.pictures.firstOrNull()?.data ?: tagData.picUrl
             } catch (e: Exception) {
                 Log.e(TAG, "读取已选歌曲封面失败: $uri", e)
@@ -473,7 +480,7 @@ class BatchEditViewModel(
             ensureSelectedSongsLoaded()
             val values = selectedSongs.associate { song ->
                 val customValues = try {
-                    songRepository.readAudioTagData(song.uri)
+                    audioTagRepository.read(song.uri)
                         .customFields
                         .mapNotNull { field ->
                             val key = normalizeCustomTagKey(field.key) ?: return@mapNotNull null
@@ -615,7 +622,7 @@ class BatchEditViewModel(
         if (selectedSongs.size == selectedUris.size) return
         selectedSongs = withContext(Dispatchers.IO) {
             selectedUris.mapNotNull { uri ->
-                songRepository.getSongByUri(uri)
+                songLibraryRepository.getSongByUri(uri)
             }
         }
         _uiState.update { it.copy(selectedSongsVersion = it.selectedSongsVersion + 1) }
@@ -647,7 +654,7 @@ class BatchEditViewModel(
             }
 
             val songs = selectedUris.mapNotNull { uri ->
-                songRepository.getSongByUri(uri)
+                songLibraryRepository.getSongByUri(uri)
             }
             if (songs.isEmpty()) {
                 _uiState.update {
@@ -912,7 +919,7 @@ class BatchEditViewModel(
         // 读取当前标签
         val uriString = uri
         val currentTag = try {
-            songRepository.readAudioTagData(uriString)
+            audioTagRepository.read(uriString)
         } catch (e: Exception) {
             Log.e(TAG, "无法读取标签: $uri", e)
             return false
@@ -923,11 +930,7 @@ class BatchEditViewModel(
 
         // 写入文件
         return try {
-            val success = songRepository.overwriteAudioTags(uriString, mergedTag)
-            if (success) {
-                songRepository.updateSongMetadata(mergedTag, uriString, System.currentTimeMillis())
-            }
-            success
+            overwriteSongTagsUseCase(uriString, mergedTag) is EditSongTagsResult.Success
         } catch (e: Exception) {
             Log.e(TAG, "写入标签失败: $uri", e)
             false
@@ -1139,10 +1142,10 @@ class BatchEditViewModel(
         _uiState.update { it.copy(errorMessage = null) }
 
         // 查询同专辑的歌曲封面
-        val sameAlbumSongs = songRepository.getSongsByAlbum(targetAlbum, targetArtist)
+        val sameAlbumSongs = songLibraryRepository.getSongsByAlbum(targetAlbum, targetArtist)
         for (song in sameAlbumSongs) {
             try {
-                val tagData = songRepository.readAudioTagData(song.uri)
+                val tagData = audioTagRepository.read(song.uri)
                 val cover = tagData.pictures.firstOrNull()?.data ?: tagData.picUrl
                 if (cover != null) {
                     val title = "${song.title} - ${song.artist}"

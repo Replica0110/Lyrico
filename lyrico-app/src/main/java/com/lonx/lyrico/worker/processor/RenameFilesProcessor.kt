@@ -4,8 +4,9 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.CharacterMappingRule
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
-import com.lonx.lyrico.data.repository.RenameSongResult
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.domain.song.usecase.RenameSongResult
+import com.lonx.lyrico.domain.song.usecase.RenameSongUseCase
 import com.lonx.lyrico.utils.ConflictResolver
 import com.lonx.lyrico.utils.FileNameSanitizer
 import com.lonx.lyrico.utils.FormatParser
@@ -26,7 +27,8 @@ data class RenameFilesTaskResult(
 )
 
 class RenameFilesProcessor(
-    private val songRepository: SongRepository
+    private val songLibraryRepository: SongLibraryRepository,
+    private val renameSongUseCase: RenameSongUseCase
 ) : BatchTaskProcessor {
 
     override suspend fun process(
@@ -38,7 +40,7 @@ class RenameFilesProcessor(
             kotlinx.serialization.json.Json.decodeFromString<RenameFilesTaskConfig>(it)
         } ?: throw BatchTaskSkippedException("No config")
 
-        val song = songRepository.getSongByUri(item.songUri)
+        val song = songLibraryRepository.getSongByUri(item.songUri)
             ?: throw BatchTaskSkippedException("Song not found")
 
         val tagData = convertToAudioTagData(song)
@@ -60,21 +62,23 @@ class RenameFilesProcessor(
             throw BatchTaskSkippedException("Same file name")
         }
 
-        val result = songRepository.renameSongAndGetResult(song, newFileName)
-            ?: throw Exception("Failed to rename file")
+        val result = renameSongUseCase(song, newFileName)
+        if (result !is RenameSongResult.Success) {
+            throw Exception("Failed to rename file")
+        }
 
         return BatchTaskProcessResult(
             resultJson = kotlinx.serialization.json.Json.encodeToString(
                 RenameFilesTaskResult.serializer(),
                 RenameFilesTaskResult(
                     originalUri = result.oldUri,
-                    newUri = result.newUri,
+                    newUri = result.song.uri,
                     originalPath = song.filePath,
-                    newPath = result.newFilePath
+                    newPath = result.song.filePath
                 )
             ),
-            updatedFilePath = result.newFilePath,
-            updatedFileName = result.newFileName
+            updatedFilePath = result.song.filePath,
+            updatedFileName = result.song.fileName
         )
     }
 

@@ -7,14 +7,17 @@ import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
+import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
 import com.lonx.lyrico.utils.LyricDecoder
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.viewmodel.LyricsFormatConfig
 import kotlinx.serialization.json.Json
 
 class LyricsFormatProcessor(
-    private val songRepository: SongRepository
+    private val songLibraryRepository: SongLibraryRepository,
+    private val patchSongTagsUseCase: PatchSongTagsUseCase
 ) : BatchTaskProcessor {
 
     override suspend fun process(
@@ -26,7 +29,7 @@ class LyricsFormatProcessor(
             Json.decodeFromString<LyricsFormatConfig>(it)
         } ?: throw BatchTaskSkippedException("No config")
 
-        val song = songRepository.getSongByUri(item.songUri)
+        val song = songLibraryRepository.getSongByUri(item.songUri)
             ?: throw BatchTaskSkippedException("Song not found")
 
         val lyrics = song.lyrics
@@ -45,20 +48,14 @@ class LyricsFormatProcessor(
             throw BatchTaskSkippedException("Converted lyrics are unchanged")
         }
 
-        val success = songRepository.patchAudioTags(
+        val result = patchSongTagsUseCase(
             item.songUri,
             AudioTagData(lyrics = convertedLyrics)
         )
 
-        if (!success) {
+        if (result !is EditSongTagsResult.Success) {
             throw Exception("Write failed")
         }
-
-        songRepository.updateSongMetadata(
-            AudioTagData(lyrics = convertedLyrics),
-            item.songUri,
-            System.currentTimeMillis()
-        )
 
         return BatchTaskProcessResult()
     }

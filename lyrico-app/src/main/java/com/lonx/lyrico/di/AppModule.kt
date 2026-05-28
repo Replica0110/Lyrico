@@ -22,13 +22,38 @@ import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
 import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepositoryImpl
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
-import com.lonx.lyrico.data.repository.SongRepository
-import com.lonx.lyrico.data.repository.SongRepositoryImpl
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepositoryImpl
 import com.lonx.lyrico.data.repository.UpdateRepository
 import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepositoryImpl
+import com.lonx.lyrico.data.song.file.AudioFileAccess
+import com.lonx.lyrico.data.song.file.SongFileRepository
+import com.lonx.lyrico.data.song.file.SongFileRepositoryImpl
+import com.lonx.lyrico.data.song.mapper.RawPropertiesFormatter
+import com.lonx.lyrico.data.song.mapper.SongMetadataMapper
+import com.lonx.lyrico.data.song.mapper.SortKeyUpdater
+import com.lonx.lyrico.data.song.scan.LibraryScanRepository
+import com.lonx.lyrico.data.song.scan.LibraryScanRepositoryImpl
+import com.lonx.lyrico.data.song.search.SongSearchRepository
+import com.lonx.lyrico.data.song.search.SongSearchRepositoryImpl
+import com.lonx.lyrico.data.song.tag.AudioTagMutationResolver
+import com.lonx.lyrico.data.song.tag.AudioTagRepository
+import com.lonx.lyrico.data.song.tag.AudioTagRepositoryImpl
+import com.lonx.lyrico.data.song.tag.DefaultImageBytesFetcher
+import com.lonx.lyrico.data.song.tag.ImageBytesFetcher
+import com.lonx.lyrico.data.song.tag.ImageMimeTypeDetector
+import com.lonx.lyrico.data.song.tag.PictureMutationResolver
+import com.lonx.lyrico.data.song.tag.TagMapBuilder
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
+import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
+import com.lonx.lyrico.domain.song.usecase.BatchEditSongsUseCase
+import com.lonx.lyrico.domain.song.usecase.EditSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.RenameSongUseCase
+import com.lonx.lyrico.domain.song.usecase.SynchronizeLibraryUseCase
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.plugin.source.ScriptSearchSourceFactory
@@ -181,18 +206,40 @@ val appModule = module {
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
     single<PlaybackRepository> { PlaybackRepositoryImpl() }
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
-    single<SongRepository> { SongRepositoryImpl(get(), androidContext(), get(), get(), get(), get(), get(), get()) }
+    single { AudioFileAccess(androidContext()) }
+    single { ImageMimeTypeDetector() }
+    single<ImageBytesFetcher> { DefaultImageBytesFetcher(get(), get()) }
+    single { PictureMutationResolver(get(), get()) }
+    single { TagMapBuilder() }
+    single { AudioTagMutationResolver(get(), get()) }
+    single<AudioTagRepository> { AudioTagRepositoryImpl(androidContext(), get(), get(), get()) }
+    single<SongFileRepository> { SongFileRepositoryImpl(androidContext(), get(), get()) }
+    single { RawPropertiesFormatter() }
+    single { SortKeyUpdater() }
+    single { SongMetadataMapper(get(), get()) }
+    single<SongLibraryRepository> { SongLibraryRepositoryImpl(get<LyricoDatabase>().songDao()) }
+    single<SongSearchRepository> { SongSearchRepositoryImpl(get<LyricoDatabase>().songDao()) }
+    single<LibraryScanRepository> {
+        LibraryScanRepositoryImpl(androidContext(), get(), get(), get(), get(), get(), get(), get())
+    }
+    single { EditSongTagsUseCase(get(), get(), get(), get(), get()) }
+    single { BatchEditSongsUseCase(get(), get()) }
+    single { PatchSongTagsUseCase(get(), get()) }
+    single { OverwriteSongTagsUseCase(get(), get()) }
+    single { DeleteSongsUseCase(get(), get(), get(), get()) }
+    single { RenameSongUseCase(get(), get(), get(), get()) }
+    single { SynchronizeLibraryUseCase(get()) }
     single<SourcePluginRepository> { SourcePluginRepositoryImpl(get()) }
-    single<LibraryScanManager> { LibraryScanManagerImpl(get(), androidContext(), get(), get()) }
+    single<LibraryScanManager> { LibraryScanManagerImpl(get(), androidContext(), get(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
     single<AppLogRepository> { AppLogRepositoryImpl(get(), get()) }
     single<GhContributorRepository> { GhContributorRepositoryImpl(get(), get()) }
     single { BatchTaskScheduler(androidContext(), get()) }
-    single { LyricsFormatProcessor(get()) }
-    single { ReplayGainProcessor(get(), get()) }
-    single { MatchMetadataProcessor(get(), get(), get()) }
-    single { RenameFilesProcessor(get()) }
-    single { EditTagsProcessor(get()) }
+    single { LyricsFormatProcessor(get(), get()) }
+    single { ReplayGainProcessor(get(), get(), get()) }
+    single { MatchMetadataProcessor(get(), get(), get(), get(), get()) }
+    single { RenameFilesProcessor(get(), get()) }
+    single { EditTagsProcessor(get(), get()) }
     single { BatchExportProcessor(androidContext(), get()) }
     single { BatchTaskProcessorFactory(mapOf(
         BatchTaskType.CONVERT_LYRICS_FORMAT to get<LyricsFormatProcessor>(),
@@ -205,8 +252,8 @@ val appModule = module {
     )) }
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
-    viewModel { SongListViewModel(get(), get(), get(), get(), get()) }
-    viewModel { SongSelectionViewModel(get(), get(), get()) }
+    viewModel { SongListViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { SongSelectionViewModel(get(), get(), get(), get()) }
     viewModel { LocalSearchViewModel(get(), get()) }
     viewModel { (albumId: Long) ->
         AlbumDetailViewModel(
@@ -227,7 +274,7 @@ val appModule = module {
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get()) }
     viewModel { SearchSourceConfigViewModel(get(), get(), get()) }
-    viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
     viewModel { CustomTagManagementViewModel(get(), get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get(), get()) }
@@ -238,7 +285,7 @@ val appModule = module {
     viewModel { BatchRenameViewModel(get(), get(), get(), get(), get()) }
     viewModel { CharacterMappingViewModel(get()) }
     viewModel { BatchExportViewModel(get(), get(), get()) }
-    viewModel { BatchEditViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { BatchEditViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { BatchReplayGainViewModel(get(), get(), get()) }
     viewModel { BatchLyricsFormatViewModel(get(), get(), get()) }
     viewModel { (taskId: String) -> BatchTaskDetailViewModel(taskId, get(), get()) }

@@ -7,8 +7,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.repository.LibraryScanProgress
-import com.lonx.lyrico.data.repository.LibraryScanStage
+import com.lonx.lyrico.data.song.scan.LibraryScanProgress
+import com.lonx.lyrico.data.song.scan.LibraryScanStage
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 

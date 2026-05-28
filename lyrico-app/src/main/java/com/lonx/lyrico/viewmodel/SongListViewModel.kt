@@ -7,9 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.data.model.search.LocalSearchType
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.data.song.search.SongSearchRepository
 import com.lonx.lyrico.utils.LibraryScanManager
 import com.lonx.lyrico.utils.UpdateManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,7 +54,8 @@ data class SongListUiState(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SongListViewModel(
-    private val songRepository: SongRepository,
+    private val songLibraryRepository: SongLibraryRepository,
+    private val songSearchRepository: SongSearchRepository,
     private val settingsRepository: SettingsRepository,
     private val updateManager: UpdateManager,
     private val libraryScanManager: LibraryScanManager,
@@ -88,9 +90,9 @@ class SongListViewModel(
         Triple(sort, query, type)
     }.flatMapLatest { (sort, query, type) ->
         if (query.isBlank()) {
-            songRepository.observeSongs(sort.sortBy, sort.order)
+            songLibraryRepository.observeSongs(sort.sortBy, sort.order)
         } else {
-            songRepository.searchSongs(query, type)
+            songSearchRepository.searchSongs(query, type)
         }
     }.onEach {
         _uiState.update { it.copy(isSearching = false) }

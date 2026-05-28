@@ -8,7 +8,7 @@ import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.utils.LibraryScanManager
 import com.lonx.lyrico.utils.UriUtils
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +36,7 @@ class FolderManagerViewModel(
     private val application: Application,
     private val appScope: CoroutineScope,
     private val libraryIndexRepository: LibraryIndexRepository,
-    private val songRepository: SongRepository
+    private val songLibraryRepository: SongLibraryRepository
 ) : ViewModel() {
 
     private companion object {
@@ -61,7 +61,7 @@ class FolderManagerViewModel(
             if (folderId == null) {
                 kotlinx.coroutines.flow.flowOf(emptyList())
             } else {
-                songRepository.observeSongs(sortInfo.sortBy, sortInfo.order, folderId)
+                songLibraryRepository.observeSongs(sortInfo.sortBy, sortInfo.order, folderId)
             }
         }.stateIn(
             viewModelScope,

@@ -42,7 +42,10 @@ import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
 import com.lonx.lyrico.data.repository.PlaybackRepository
 import com.lonx.lyrico.data.repository.SettingsDefaults
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.data.song.tag.AudioTagRepository
+import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
+import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.CoverSourceType
 import com.lonx.lyrico.utils.LyricDecoder
@@ -113,7 +116,9 @@ private data class LyricsFormatConversionSession(
 )
 
 class EditMetadataViewModel(
-    private val songRepository: SongRepository,
+    private val songLibraryRepository: SongLibraryRepository,
+    private val audioTagRepository: AudioTagRepository,
+    private val overwriteSongTagsUseCase: OverwriteSongTagsUseCase,
     private val settingsRepository: SettingsRepository,
     private val playbackRepository: PlaybackRepository,
     private val replayGainScanner: ReplayGainScanner,
@@ -192,11 +197,11 @@ class EditMetadataViewModel(
         viewModelScope.launch {
             try {
                 // 1. 获取数据库实体
-                val song = songRepository.getSongByUri(uriString)
+                val song = songLibraryRepository.getSongByUri(uriString)
                 currentSong = song
 
                 // 2. 读取文件标签
-                val audioTagData = songRepository.readAudioTagData(uriString)
+                val audioTagData = audioTagRepository.read(uriString)
                 val displayFileName = song?.fileName ?: audioTagData.fileName
                 val displayPicture = audioTagData.pictures.frontCoverOrFallback()
                 val displayCover = displayPicture?.data
@@ -655,41 +660,40 @@ class EditMetadataViewModel(
             }
 
             try {
-                val success = songRepository.overwriteAudioTags(uriString, audioTagData)
-
-                if (success) {
-                    val newModifiedTime = System.currentTimeMillis()
-
-                    val updateSuccess = if (currentSong != null) {
-                        songRepository.updateSongMetadata(
-                            audioTagData,
-                            uriString, // 传入 URI
-                            newModifiedTime
-                        )
-                    } else {
-                        true
-                    }
-
-                    if (updateSuccess) {
-                        val savedDisplayPicture = audioTagData.pictures.frontCoverOrFallback()
+                when (val saveResult = overwriteSongTagsUseCase(uriString, audioTagData)) {
+                    is EditSongTagsResult.Success -> {
+                        val savedTagData = saveResult.tagData
+                        val savedDisplayPicture = savedTagData.pictures.frontCoverOrFallback()
                         val savedDisplayCover = savedDisplayPicture?.data
-                            ?: audioTagData.picUrl?.takeIf { picUrl -> picUrl.isNotBlank() }
+                            ?: savedTagData.picUrl?.takeIf { picUrl -> picUrl.isNotBlank() }
 
                         _uiState.update {
                             it.copy(
                                 isSaving = false,
                                 saveSuccess = true,
                                 isEditing = false,
-                                originalTagData = audioTagData,
-                                editingTagData = audioTagData,
+                                originalTagData = savedTagData,
+                                editingTagData = savedTagData,
                                 originalCover = savedDisplayCover,
                                 coverUri = savedDisplayCover,
                                 picture = savedDisplayPicture,
                             )
                         }
-                    } else {
-                        val reason = "Database metadata update returned false"
-                        recordSaveFailure(uriString, reason)
+                        currentSong = saveResult.song
+                    }
+                    is EditSongTagsResult.PermissionRequired -> {
+                        Log.w(TAG, "需要用户授权修改文件: $uriString")
+                        _uiState.update {
+                            it.copy(
+                                isSaving = false,
+                                permissionIntentSender = saveResult.intentSender
+                            )
+                        }
+                    }
+                    is EditSongTagsResult.Failed -> {
+                        val reason = saveResult.error.localizedMessage
+                            ?: saveResult.error::class.java.simpleName
+                        recordSaveFailure(uriString, reason, saveResult.error)
                         _uiState.update {
                             it.copy(
                                 isSaving = false,
@@ -698,18 +702,6 @@ class EditMetadataViewModel(
                                 saveFailureLogText = buildSaveFailureLog(uriString, reason)
                             )
                         }
-                    }
-                } else {
-                    // 逻辑上的写入失败（非权限问题）
-                    val reason = "Audio tag writer returned false"
-                    recordSaveFailure(uriString, reason)
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            saveSuccess = false,
-                            saveFailureMessage = reason,
-                            saveFailureLogText = buildSaveFailureLog(uriString, reason)
-                        )
                     }
                 }
 
@@ -1264,14 +1256,14 @@ class EditMetadataViewModel(
         val currentAlbum = _uiState.value.editingTagData?.album ?: return emptyList()
         val currentArtist = _uiState.value.editingTagData?.artist ?: ""
 
-        val sameAlbumSongs = songRepository.getSongsByAlbum(currentAlbum, currentArtist)
+        val sameAlbumSongs = songLibraryRepository.getSongsByAlbum(currentAlbum, currentArtist)
         val covers = mutableListOf<Pair<String, Any?>>()
 
         for (song in sameAlbumSongs) {
             if (song.uri == currentSongUri) continue // 跳过当前歌曲
             
             try {
-                val tagData = songRepository.readAudioTagData(song.uri)
+                val tagData = audioTagRepository.read(song.uri)
                 val cover = tagData.pictures.firstOrNull()?.data ?: tagData.picUrl
                 if (cover != null) {
                     val title = "${song.title} - ${song.artist}"

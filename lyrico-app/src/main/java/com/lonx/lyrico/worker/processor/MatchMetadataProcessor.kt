@@ -18,7 +18,10 @@ import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
 import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
 import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.SongRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.data.song.tag.AudioTagRepository
+import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
+import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.MetadataFieldResolver
@@ -34,7 +37,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class MatchMetadataProcessor(
-    private val songRepository: SongRepository,
+    private val audioTagRepository: AudioTagRepository,
+    private val patchSongTagsUseCase: PatchSongTagsUseCase,
+    private val songLibraryRepository: SongLibraryRepository,
     private val settingsRepository: SettingsRepository,
     private val searchSourceProvider: SearchSourceProvider
 ) : BatchTaskProcessor {
@@ -55,7 +60,7 @@ class MatchMetadataProcessor(
             val values = config.sourceSettings[source.id].orEmpty()
             source.applyConfig(SourceRuntimeConfig(values))
         }
-        val song = songRepository.getSongByUri(item.songUri)
+        val song = songLibraryRepository.getSongByUri(item.songUri)
             ?: throw BatchTaskSkippedException("Song not found")
 
         val plan = buildPlan(matchConfig, config.metadataFieldWriteRules, song, sources)
@@ -280,12 +285,10 @@ class MatchMetadataProcessor(
         }
 
         onProgress(0.9f)
-        val success = songRepository.patchAudioTags(song.uri, tagDataToWrite)
-        if (!success) {
+        val result = patchSongTagsUseCase(song.uri, tagDataToWrite)
+        if (result !is EditSongTagsResult.Success) {
             throw Exception("Write failed")
         }
-        val savedTagData = songRepository.readAudioTagData(song.uri)
-        songRepository.updateSongMetadata(savedTagData, song.uri, System.currentTimeMillis())
         onProgress(1f)
 
         return BatchTaskProcessResult()
@@ -330,7 +333,7 @@ class MatchMetadataProcessor(
 
     private suspend fun hasEmbeddedCover(song: SongEntity): Boolean {
         return runCatching {
-            songRepository.readAudioTagData(song.uri).pictures.isNotEmpty()
+            audioTagRepository.read(song.uri).pictures.isNotEmpty()
         }.getOrDefault(false)
     }
 

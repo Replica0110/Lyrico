@@ -63,6 +63,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 data class EditMetadataUiState(
     val songInfo: SongInfo? = null,
@@ -228,15 +229,17 @@ class EditMetadataViewModel(
     }
 
     fun updateCustomFieldValue(key: String, value: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
+
         updateTag {
             val fields = customFields.toMutableList()
-            val index = fields.indexOfFirst { it.key == key }
+            val index = fields.indexOfFirst { it.key.equals(normalizedKey, ignoreCase = true) }
 
             if (index >= 0) {
-                fields[index] = fields[index].copy(value = value)
+                fields[index] = fields[index].copy(key = normalizedKey, value = value)
             } else {
                 fields += CustomTagField(
-                    key = key,
+                    key = normalizedKey,
                     value = value,
                 )
             }
@@ -246,22 +249,26 @@ class EditMetadataViewModel(
     }
 
     fun removeCustomFieldValue(key: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
+
         updateTag {
             copy(
-                customFields = customFields.filterNot { it.key == key }
+                customFields = customFields.filterNot { it.key.equals(normalizedKey, ignoreCase = true) }
             )
         }
     }
 
     fun revertCustomField(key: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
         val original = _uiState.value.originalTagData
             ?.customFields
             .orEmpty()
-            .firstOrNull { it.key == key }
+            .firstOrNull { it.key.equals(normalizedKey, ignoreCase = true) }
+            ?.copy(key = normalizedKey)
 
         updateTag {
             val fields = customFields
-                .filterNot { it.key == key }
+                .filterNot { it.key.equals(normalizedKey, ignoreCase = true) }
                 .toMutableList()
 
             if (original != null) {
@@ -273,11 +280,23 @@ class EditMetadataViewModel(
     }
 
     fun addCustomFieldAndShow(key: String, value: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
+
         viewModelScope.launch {
-            customTagSettingsRepository.addVisibleKey(key)
+            customTagSettingsRepository.addVisibleKey(normalizedKey)
         }
 
-        updateCustomFieldValue(key, value)
+        updateCustomFieldValue(normalizedKey, value)
+    }
+
+    private fun normalizeCustomTagKey(input: String): String? {
+        val key = input.trim()
+        return when {
+            key.isBlank() -> null
+            key.length > 64 -> null
+            key.any { it == '\n' || it == '\r' } -> null
+            else -> key.uppercase(Locale.ROOT)
+        }
     }
     /**
      * 打开弹窗前准备：拍快照，并重置累计偏移量

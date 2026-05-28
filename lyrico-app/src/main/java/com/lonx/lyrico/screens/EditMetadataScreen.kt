@@ -784,7 +784,8 @@ fun EditMetadataScreen(
                             visibleCustomKeys.forEach { key ->
                                 val field = editingTagData?.customFields
                                     .orEmpty()
-                                    .firstOrNull { it.key == key }
+                                    .firstOrNull { it.key.equals(key, ignoreCase = true) }
+                                    ?.copy(key = key)
                                     ?: CustomTagField(
                                         key = key,
                                         value = "",
@@ -792,7 +793,8 @@ fun EditMetadataScreen(
 
                                 val originalField = originalTagData?.customFields
                                     .orEmpty()
-                                    .firstOrNull { it.key == key }
+                                    .firstOrNull { it.key.equals(key, ignoreCase = true) }
+                                    ?.copy(key = key)
 
                                 CustomMetadataFieldEditor(
                                     field = field,
@@ -1886,17 +1888,8 @@ private fun CustomMetadataFieldEditor(
                 }
             }
         }
-
-        Text(
-            text = field.key,
-            style = MiuixTheme.textStyles.body2,
-            color = MiuixTheme.colorScheme.onSurface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-        )
         MetadataInputField(
-            label = stringResource(R.string.label_custom_tag_value),
+            label = field.key,
             value = field.value,
             onValueChange = onValueChange,
             isModified = false,

@@ -9,6 +9,7 @@ import com.lonx.lyrico.data.repository.SongRepository
 import com.lonx.lyrico.utils.LyricEncoder
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.util.Locale
 
 @Serializable
 data class EditTagsTaskConfig(
@@ -145,8 +146,9 @@ class EditTagsProcessor(
         if (config.customFields.isNotEmpty()) {
             tag = tag.copy(customFields = tag.customFields.toMutableList().apply {
                 config.customFields.forEach { newField ->
-                    val field = CustomTagField(newField.key, newField.value)
-                    val existingIndex = indexOfFirst { it.key == field.key }
+                    val key = normalizeCustomTagKey(newField.key) ?: return@forEach
+                    val field = CustomTagField(key, newField.value)
+                    val existingIndex = indexOfFirst { it.key.equals(field.key, ignoreCase = true) }
                     if (existingIndex >= 0) {
                         this[existingIndex] = field
                     } else {
@@ -161,6 +163,16 @@ class EditTagsProcessor(
 
     private fun parseLyricsOffset(input: String): Int {
         return input.trim().toIntOrNull() ?: 0
+    }
+
+    private fun normalizeCustomTagKey(input: String): String? {
+        val key = input.trim()
+        return when {
+            key.isBlank() -> null
+            key.length > 64 -> null
+            key.any { it == '\n' || it == '\r' } -> null
+            else -> key.uppercase(Locale.ROOT)
+        }
     }
 
     private companion object {

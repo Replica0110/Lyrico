@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import com.lonx.lyrico.data.model.entity.SongCustomTagKeyEntity
 import kotlinx.coroutines.flow.Flow
+import java.util.Locale
 
 @Dao
 interface SongCustomTagKeyDao {
@@ -50,6 +51,7 @@ interface SongCustomTagKeyDao {
         val items = keys
             .map { it.trim() }
             .filter { it.isNotBlank() }
+            .map { it.uppercase(Locale.ROOT) }
             .distinct()
             .map { key ->
                 SongCustomTagKeyEntity(

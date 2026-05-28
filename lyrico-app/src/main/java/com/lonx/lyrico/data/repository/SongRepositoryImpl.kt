@@ -44,6 +44,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
+import java.util.Locale
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -1136,7 +1137,7 @@ class SongRepositoryImpl(
                 }
 
             audioTagData.customFields.forEach { field ->
-                val key = field.key.trim()
+                val key = field.key.trim().uppercase(Locale.ROOT)
                 if (key.isEmpty() || AudioTagKeys.isReserved(key)) return@forEach
                 updates[key] = field.value.trim()
             }

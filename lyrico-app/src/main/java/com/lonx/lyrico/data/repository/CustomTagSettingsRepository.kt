@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.util.Locale
 
 @Serializable
 data class CustomTagSettings(
@@ -52,6 +53,8 @@ class CustomTagSettingsRepository(
     }
 
     suspend fun removeVisibleKey(key: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
+
         context.settingsDataStore.edit { preferences ->
             val current = preferences[CUSTOM_TAG_SETTINGS]
                 ?.let { decodeSettings(it) }
@@ -61,7 +64,7 @@ class CustomTagSettingsRepository(
             preferences[CUSTOM_TAG_SETTINGS] =
                 encodeSettings(
                     current.copy(
-                        visibleKeys = current.visibleKeys - key
+                        visibleKeys = current.visibleKeys - normalizedKey
                     )
                 )
         }
@@ -112,7 +115,7 @@ class CustomTagSettingsRepository(
             key.isBlank() -> null
             key.length > 64 -> null
             key.any { it == '\n' || it == '\r' } -> null
-            else -> key
+            else -> key.uppercase(Locale.ROOT)
         }
     }
 

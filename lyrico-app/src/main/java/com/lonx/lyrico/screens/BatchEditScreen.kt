@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +58,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.ui.components.rememberTintedPainter
@@ -99,7 +99,6 @@ import top.yukonga.miuix.kmp.icon.basic.ArrowUpDown
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
-import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Settings
@@ -125,6 +124,7 @@ fun BatchEditScreen(
     val viewModel: BatchEditViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val visibleFieldGroups by viewModel.visibleFieldGroups.collectAsStateWithLifecycle()
+    val visibleCustomKeys by viewModel.visibleCustomKeys.collectAsStateWithLifecycle()
 
     var showCoverOptionsSheet by remember { mutableStateOf(false) }
     var showSelectedCoverSheet by remember { mutableStateOf(false) }
@@ -150,6 +150,10 @@ fun BatchEditScreen(
         .toSet()
     val editPreviews = remember(uiState, visibleFieldCodes) {
         viewModel.buildEditPreviews(visibleFieldCodes)
+    }
+
+    LaunchedEffect(visibleCustomKeys, uiState.selectedSongsVersion) {
+        viewModel.loadCustomTagPreviewValues(visibleCustomKeys)
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -739,6 +743,38 @@ fun BatchEditScreen(
                                         }
                                     }
 
+                                    if (visibleCustomKeys.isNotEmpty()) {
+                                        item(key = "custom_fields") {
+                                            Column {
+                                                SmallTitle(text = stringResource(R.string.group_custom_tags))
+                                                Card(
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 12.dp,
+                                                        vertical = 6.dp
+                                                    )
+                                                ) {
+                                                    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                                                        visibleCustomKeys.forEach { key ->
+                                                            BatchEditCustomFieldItem(
+                                                                keyName = key,
+                                                                value = uiState.customFields
+                                                                    .firstOrNull { it.key == key }
+                                                                    ?.value
+                                                                    ?: "<keep>",
+                                                                onValueChange = { value ->
+                                                                    viewModel.updateCustomFieldValue(
+                                                                        key = key,
+                                                                        value = value
+                                                                    )
+                                                                }
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
                                     // 歌词组
                                     if (visibleGroupCodes.contains(EditFieldRegistry.GROUP_LYRICS)) {
                                         item(key = "lyrics") {
@@ -817,9 +853,18 @@ fun BatchEditScreen(
             style = ExpandableFabMenuStyle.default().copy(
                 mainIcon = MiuixIcons.Add
             ),
-            itemCount = 2,
+            itemCount = 3,
             onExpandedChange = { expandedFabMenu = it }
         ) {
+            FabMenuItem(
+                label = stringResource(R.string.action_add_custom_tag),
+                icon = MiuixIcons.Add,
+                enabled = !uiState.isSaving,
+                onClick = {
+                    expandedFabMenu = false
+                    showAddCustomTagDialog = true
+                }
+            )
             FabMenuItem(
                 label = stringResource(R.string.edit_field_visibility_settings),
                 icon = MiuixIcons.Settings,
@@ -1149,20 +1194,14 @@ fun BatchEditScreen(
         }
     }
 
-    // 添加自定义标签 BottomSheet
     WindowDialog(
         show = showAddCustomTagDialog,
         title = stringResource(R.string.action_add_custom_tag),
         onDismissRequest = { showAddCustomTagDialog = false }
     ) {
-        // 临时存储新自定义标签内容
         var newCustomTagKey by remember { mutableStateOf("") }
         var newCustomTagValue by remember { mutableStateOf("") }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-
+        Column(modifier = Modifier.fillMaxWidth()) {
             TextField(
                 value = newCustomTagKey,
                 onValueChange = { newCustomTagKey = it },
@@ -1178,14 +1217,10 @@ fun BatchEditScreen(
             )
 
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
+            Row(horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(
                     text = stringResource(R.string.cancel),
-                    onClick = {
-                        showAddCustomTagDialog = false
-                    },
+                    onClick = { showAddCustomTagDialog = false },
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(20.dp))
@@ -1193,11 +1228,9 @@ fun BatchEditScreen(
                     text = stringResource(R.string.confirm),
                     onClick = {
                         if (newCustomTagKey.isNotBlank()) {
-                            viewModel.addCustomField(
-                                CustomTagField(
-                                    newCustomTagKey,
-                                    newCustomTagValue
-                                )
+                            viewModel.addCustomFieldAndShow(
+                                key = newCustomTagKey,
+                                value = newCustomTagValue,
                             )
                             showAddCustomTagDialog = false
                         }
@@ -1208,6 +1241,7 @@ fun BatchEditScreen(
             }
         }
     }
+
 }
 
 @Composable
@@ -1663,11 +1697,12 @@ private fun BatchEditFieldItem(
  */
 @Composable
 private fun BatchEditCustomFieldItem(
-    field: CustomTagField,
-    onKeyChange: (String) -> Unit,
+    keyName: String,
+    value: String,
     onValueChange: (String) -> Unit,
-    onRemove: () -> Unit
 ) {
+    val isKeep = value == "<keep>"
+
     Column(modifier = Modifier.padding(vertical = 6.dp)) {
         Row(
             modifier = Modifier
@@ -1676,15 +1711,24 @@ private fun BatchEditCustomFieldItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = stringResource(R.string.label_custom_tag),
+                text = keyName,
                 style = MiuixTheme.textStyles.body2,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                color = MiuixTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = onRemove) {
+            IconButton(onClick = {
+                onValueChange(if (isKeep) "" else "<keep>")
+            }) {
                 Icon(
-                    MiuixIcons.Delete,
-                    contentDescription = stringResource(R.string.action_remove_custom_tag)
+                    imageVector = if (isKeep) MiuixIcons.Close else MiuixIcons.Undo,
+                    contentDescription = null,
+                    tint = if (isKeep)
+                        MiuixTheme.colorScheme.primary
+                    else
+                        MiuixTheme.colorScheme.error
                 )
             }
         }
@@ -1693,17 +1737,9 @@ private fun BatchEditCustomFieldItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 4.dp),
-            value = field.key,
-            onValueChange = onKeyChange,
-            label = stringResource(R.string.label_custom_tag_name)
-        )
-        TextField(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            value = field.value,
+            value = value,
             onValueChange = onValueChange,
-            label = stringResource(R.string.label_custom_tag_value)
+            label = keyName + if (isKeep) " (无修改)" else "",
         )
     }
 }

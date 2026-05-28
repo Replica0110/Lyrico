@@ -21,7 +21,7 @@ class PictureMutationResolver(
             PictureUpdate.RemoveAllPictures -> PictureWriteCommand.ReplaceAll(emptyList())
             is PictureUpdate.ReplaceFrontCover -> {
                 val bytes = imageBytesFetcher.fetch(update.source)
-                    ?: return PictureWriteCommand.Unchanged
+                    ?: throw IllegalStateException("Unable to read cover image source: ${update.source}")
                 val picture = AudioPicture(
                     data = bytes,
                     mimeType = (update.source as? PictureSource.Bytes)?.mimeType

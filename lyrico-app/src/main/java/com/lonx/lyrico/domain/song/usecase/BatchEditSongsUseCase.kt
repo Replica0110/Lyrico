@@ -6,6 +6,12 @@ import com.lonx.lyrico.data.song.tag.AudioTagMutation
 import com.lonx.lyrico.data.song.tag.AudioTagMutationFactory
 import com.lonx.lyrico.data.song.tag.AudioTagMutationMode
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 data class BatchTagEditRequest(
     val songs: List<SongEntity>,
@@ -75,14 +81,22 @@ class BatchEditSongsUseCase(
     }
 
     suspend operator fun invoke(request: BatchTagEditRequest): BatchTagEditResult {
-        val items = request.songs.map { song ->
-            editOne(
-                BatchTagEditItemRequest(
-                    song = song,
-                    tagDataFactory = request.tagDataFactory,
-                    dryRun = request.dryRun
-                )
-            )
+        val concurrency = request.concurrency.coerceAtLeast(1)
+        val semaphore = Semaphore(concurrency)
+        val items = coroutineScope {
+            request.songs.map { song ->
+                async(Dispatchers.IO) {
+                    semaphore.withPermit {
+                        editOne(
+                            BatchTagEditItemRequest(
+                                song = song,
+                                tagDataFactory = request.tagDataFactory,
+                                dryRun = request.dryRun
+                            )
+                        )
+                    }
+                }
+            }.awaitAll()
         }
 
         return BatchTagEditResult(

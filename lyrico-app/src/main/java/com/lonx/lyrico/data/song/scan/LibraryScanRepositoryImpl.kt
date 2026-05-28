@@ -153,10 +153,9 @@ class LibraryScanRepositoryImpl(
 
             val deletedUris = dbSyncInfos
                 .filter { info ->
-                    when (info.source) {
-                        "SAF" -> info.folderId in successfulScannedFolderIds && info.uri !in deviceUris
-                        else -> true
-                    }
+                    info.source == "SAF" &&
+                        info.folderId in successfulScannedFolderIds &&
+                        info.uri !in deviceUris
                 }
                 .map { it.uri }
                 .toSet()

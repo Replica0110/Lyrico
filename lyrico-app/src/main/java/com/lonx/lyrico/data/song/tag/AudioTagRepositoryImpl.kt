@@ -21,15 +21,22 @@ class AudioTagRepositoryImpl(
     private val appLogRepository: AppLogRepository
 ) : AudioTagRepository {
 
-    override suspend fun read(uri: String): AudioTagData = withContext(Dispatchers.IO) {
+    override suspend fun read(uri: String): AudioTagData = readLenient(uri)
+
+    private suspend fun readLenient(uri: String): AudioTagData = withContext(Dispatchers.IO) {
         val displayName = fileAccess.getDisplayName(uri)
         try {
-            readFromUri(uri, displayName)
+            readFromUri(uri, displayName, strict = false)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to read audio tags: $uri", e)
             logMetadataException("Failed to read audio tags", e, uri)
             AudioTagData(fileName = displayName)
         }
+    }
+
+    private suspend fun readStrict(uri: String): AudioTagData = withContext(Dispatchers.IO) {
+        val displayName = fileAccess.getDisplayName(uri)
+        readFromUri(uri, displayName, strict = true)
     }
 
     override suspend fun overwrite(
@@ -48,7 +55,7 @@ class AudioTagRepositoryImpl(
 
     private suspend fun write(uri: String, mutation: AudioTagMutation): AudioTagWriteResult {
         return try {
-            val current = read(uri)
+            val current = readStrict(uri)
             val resolved = mutationResolver.resolve(uri, current, mutation)
 
             fileAccess.openWritableDescriptor(uri)?.use { descriptor ->
@@ -79,7 +86,7 @@ class AudioTagRepositoryImpl(
                 }
             } ?: return AudioTagWriteResult.Failed(IllegalStateException("Unable to open writable descriptor"))
 
-            AudioTagWriteResult.Success(read(uri))
+            AudioTagWriteResult.Success(readStrict(uri))
         } catch (e: Exception) {
             fileAccess.writePermissionFromThrowable(uri, e)?.let { intentSender ->
                 return AudioTagWriteResult.PermissionRequired(intentSender)
@@ -90,16 +97,27 @@ class AudioTagRepositoryImpl(
         }
     }
 
-    private suspend fun readFromUri(uri: String, displayName: String): AudioTagData {
+    private suspend fun readFromUri(
+        uri: String,
+        displayName: String,
+        strict: Boolean
+    ): AudioTagData {
         fileAccess.openReadableDescriptor(uri)?.use { descriptor ->
             return AudioTagReader.read(descriptor, readPictures = true).copy(fileName = displayName)
         }
-        return readFromStreamCache(uri, displayName)
+        return readFromStreamCache(uri, displayName, strict)
     }
 
-    private suspend fun readFromStreamCache(uriString: String, displayName: String): AudioTagData {
+    private suspend fun readFromStreamCache(
+        uriString: String,
+        displayName: String,
+        strict: Boolean
+    ): AudioTagData {
         val uri = uriString.toUri()
-        if (uri.scheme != "content") return AudioTagData(fileName = displayName)
+        if (uri.scheme != "content") {
+            if (strict) throw IllegalStateException("Unable to open readable descriptor: $uriString")
+            return AudioTagData(fileName = displayName)
+        }
 
         val cacheDir = File(context.cacheDir, "external-audio-read-cache").apply { mkdirs() }
         val tempFile = withContext(Dispatchers.IO) {
@@ -111,7 +129,10 @@ class AudioTagRepositoryImpl(
                 tempFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
-            } ?: return AudioTagData(fileName = displayName)
+            } ?: run {
+                if (strict) throw IllegalStateException("Unable to open input stream: $uriString")
+                return AudioTagData(fileName = displayName)
+            }
 
             ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                 return AudioTagReader.read(descriptor, readPictures = true).copy(fileName = displayName)

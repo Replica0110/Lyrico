@@ -626,11 +626,24 @@ class EditMetadataViewModel(
         _uiState.update { it.copy(exportCoverResult = null) }
     }
     fun revertCover() {
-        _uiState.update {
-            it.copy(
-                coverUri = it.originalCover,
-                editingTagData = it.editingTagData?.copy(picUrl = null)
-            )
+        _uiState.update { state ->
+            val original = state.originalTagData
+            if (original == null) {
+                state.copy(
+                    coverUri = state.originalCover,
+                    editingTagData = state.editingTagData?.copy(picUrl = null)
+                )
+            } else {
+                val displayPicture = original.pictures.frontCoverOrFallback()
+                state.copy(
+                    coverUri = state.originalCover,
+                    picture = displayPicture,
+                    editingTagData = state.editingTagData?.copy(
+                        pictures = original.pictures,
+                        picUrl = null
+                    )
+                )
+            }
         }
     }
 

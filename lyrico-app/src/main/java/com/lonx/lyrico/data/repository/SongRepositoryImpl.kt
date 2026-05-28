@@ -744,9 +744,15 @@ class SongRepositoryImpl(
                 fileLastModified = lastModified
             ).withSortKeysUpdated()
 
+            val savedCustomFields = runCatching {
+                readAudioTagData(contentUri).customFields
+            }.getOrNull()
+
             database.withTransaction {
                 songDao.update(updatedSong)
-                customTagKeyRepository.replaceForSong(contentUri, audioTagData.customFields)
+                if (savedCustomFields != null) {
+                    customTagKeyRepository.replaceForSong(contentUri, savedCustomFields)
+                }
                 libraryIndexRepository.reindexSongInTransaction(updatedSong)
             }
 
@@ -1214,6 +1220,12 @@ class SongRepositoryImpl(
                 } else if (star == 0) {
                     updateTagIfPresent("POPM", "", listOf("RATING", "RATE"))
                 }
+            }
+
+            audioTagData.customFields.forEach { field ->
+                val key = field.key.trim().uppercase(Locale.ROOT)
+                if (key.isEmpty() || AudioTagKeys.isReserved(key)) return@forEach
+                updates[key] = field.value.trim()
             }
 
             if (updates.isNotEmpty()) {

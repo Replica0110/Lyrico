@@ -284,6 +284,8 @@ class MatchMetadataProcessor(
         if (!success) {
             throw Exception("Write failed")
         }
+        val savedTagData = songRepository.readAudioTagData(song.uri)
+        songRepository.updateSongMetadata(savedTagData, song.uri, System.currentTimeMillis())
         onProgress(1f)
 
         return BatchTaskProcessResult()

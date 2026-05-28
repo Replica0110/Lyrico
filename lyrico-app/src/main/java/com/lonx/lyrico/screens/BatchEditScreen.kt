@@ -99,6 +99,7 @@ import top.yukonga.miuix.kmp.icon.basic.ArrowUpDown
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
+import top.yukonga.miuix.kmp.icon.extended.Delete
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Settings
@@ -761,12 +762,19 @@ fun BatchEditScreen(
                                                                     .firstOrNull { it.key == key }
                                                                     ?.value
                                                                     ?: "<keep>",
+                                                                clear = key in uiState.customFieldClearKeys,
                                                                 onValueChange = { value ->
-                                                                    viewModel.updateCustomFieldValue(
+                                                                    viewModel.setCustomFieldValue(
                                                                         key = key,
                                                                         value = value
                                                                     )
-                                                                }
+                                                                },
+                                                                onKeep = {
+                                                                    viewModel.keepCustomField(key)
+                                                                },
+                                                                onClear = {
+                                                                    viewModel.clearCustomField(key)
+                                                                },
                                                             )
                                                         }
                                                     }
@@ -1699,9 +1707,18 @@ private fun BatchEditFieldItem(
 private fun BatchEditCustomFieldItem(
     keyName: String,
     value: String,
+    clear: Boolean,
     onValueChange: (String) -> Unit,
+    onKeep: () -> Unit,
+    onClear: () -> Unit,
 ) {
     val isKeep = value == "<keep>"
+    val displayedValue = if (clear) "" else value
+    val labelSuffix = when {
+        clear -> " (" + stringResource(R.string.batch_custom_tag_clear) + ")"
+        isKeep -> " (" + stringResource(R.string.batch_custom_tag_keep) + ")"
+        else -> " (" + stringResource(R.string.batch_custom_tag_set) + ")"
+    }
 
     Column(modifier = Modifier.padding(vertical = 6.dp)) {
         Row(
@@ -1719,28 +1736,46 @@ private fun BatchEditCustomFieldItem(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = {
-                onValueChange(if (isKeep) "" else "<keep>")
-            }) {
-                Icon(
-                    imageVector = if (isKeep) MiuixIcons.Close else MiuixIcons.Undo,
-                    contentDescription = null,
-                    tint = if (isKeep)
-                        MiuixTheme.colorScheme.primary
-                    else
-                        MiuixTheme.colorScheme.error
-                )
+            Row {
+                IconButton(onClick = {
+                    if (isKeep) onValueChange("") else onKeep()
+                }) {
+                    Icon(
+                        imageVector = if (isKeep) MiuixIcons.Close else MiuixIcons.Undo,
+                        contentDescription = null,
+                        tint = if (isKeep)
+                            MiuixTheme.colorScheme.primary
+                        else
+                            MiuixTheme.colorScheme.error
+                    )
+                }
+                IconButton(onClick = onClear) {
+                    Icon(
+                        MiuixIcons.Delete,
+                        contentDescription = stringResource(R.string.batch_custom_tag_clear),
+                        tint = MiuixTheme.colorScheme.error
+                    )
+                }
             }
         }
 
-        TextField(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            value = value,
-            onValueChange = onValueChange,
-            label = keyName + if (isKeep) " (无修改)" else "",
-        )
+        if (clear) {
+            Text(
+                text = stringResource(R.string.batch_custom_tag_clear_summary),
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        } else {
+            TextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                value = displayedValue,
+                onValueChange = onValueChange,
+                label = keyName + labelSuffix,
+            )
+        }
     }
 }
 

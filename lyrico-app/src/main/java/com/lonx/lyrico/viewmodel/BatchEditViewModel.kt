@@ -112,6 +112,7 @@ data class BatchEditUiState(
 
     /** 自定义标签 */
     val customFields: List<CustomTagField> = emptyList(),
+    val customFieldClearKeys: Set<String> = emptySet(),
 
     /** 保存进度显示相关字段 */
     val saveProgressBottomSheet: Boolean = false,  // 是否显示保存进度对话框
@@ -311,7 +312,7 @@ class BatchEditViewModel(
 
     // ── 自定义标签 ──────────────────────────────────────────
 
-    fun updateCustomFieldValue(key: String, value: String) {
+    fun setCustomFieldValue(key: String, value: String) {
         val normalizedKey = normalizeCustomTagKey(key) ?: return
 
         _uiState.update { state ->
@@ -319,11 +320,36 @@ class BatchEditViewModel(
                 .filterNot { it.key.equals(normalizedKey, ignoreCase = true) }
                 .toMutableList()
 
-            if (value != EditTagsTaskConfig.KEEP_VALUE) {
-                nextFields += CustomTagField(normalizedKey, value)
-            }
+            nextFields += CustomTagField(normalizedKey, value)
 
-            state.copy(customFields = nextFields)
+            state.copy(
+                customFields = nextFields,
+                customFieldClearKeys = state.customFieldClearKeys - normalizedKey,
+            )
+        }
+    }
+
+    fun keepCustomField(key: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
+
+        _uiState.update { state ->
+            state.copy(
+                customFields = state.customFields
+                    .filterNot { it.key.equals(normalizedKey, ignoreCase = true) },
+                customFieldClearKeys = state.customFieldClearKeys - normalizedKey,
+            )
+        }
+    }
+
+    fun clearCustomField(key: String) {
+        val normalizedKey = normalizeCustomTagKey(key) ?: return
+
+        _uiState.update { state ->
+            state.copy(
+                customFields = state.customFields
+                    .filterNot { it.key.equals(normalizedKey, ignoreCase = true) },
+                customFieldClearKeys = state.customFieldClearKeys + normalizedKey,
+            )
         }
     }
 
@@ -334,7 +360,7 @@ class BatchEditViewModel(
             customTagSettingsRepository.addVisibleKey(normalizedKey)
         }
 
-        updateCustomFieldValue(normalizedKey, value)
+        setCustomFieldValue(normalizedKey, value)
     }
 
     private fun normalizeCustomTagKey(input: String): String? {
@@ -569,6 +595,22 @@ class BatchEditViewModel(
                         )
                     )
                 }
+
+            state.customFieldClearKeys.forEach { key ->
+                val oldValue = customTagPreviewValues[song.uri]
+                    ?.get(normalizeCustomTagKey(key))
+                    .orEmpty()
+                if (oldValue.isNotEmpty()) {
+                    add(
+                        BatchEditPreviewChange(
+                            labelResId = null,
+                            customLabel = key,
+                            oldValue = oldValue,
+                            newValue = ""
+                        )
+                    )
+                }
+            }
         }
     }
 
@@ -680,6 +722,9 @@ class BatchEditViewModel(
             customFields = customFields
                 .filter { it.key.isNotBlank() && it.value != keep }
                 .distinctBy { it.key },
+            customFieldClearKeys = customFieldClearKeys
+                .mapNotNull { normalizeCustomTagKey(it) }
+                .toSet(),
         )
     }
 
@@ -783,7 +828,10 @@ class BatchEditViewModel(
             customFields = customFields
                 .filter { it.key.isNotBlank() && it.value != keep }
                 .distinctBy { it.key }
-                .map { EditTagsCustomField(it.key, it.value) }
+                .map { EditTagsCustomField(key = it.key, value = it.value) } +
+                customFieldClearKeys.map { key ->
+                    EditTagsCustomField(key = key, value = null, clear = true)
+                }
         )
     }
 
@@ -960,8 +1008,12 @@ class BatchEditViewModel(
             }
         }
 
-        if (state.customFields.isNotEmpty()) {
+        if (state.customFields.isNotEmpty() || state.customFieldClearKeys.isNotEmpty()) {
             tag = tag.copy(customFields = tag.customFields.toMutableList().apply {
+                state.customFieldClearKeys.forEach { clearKey ->
+                    val key = normalizeCustomTagKey(clearKey) ?: return@forEach
+                    removeAll { it.key.equals(key, ignoreCase = true) }
+                }
                 state.customFields.forEach { newField ->
                     val key = normalizeCustomTagKey(newField.key) ?: return@forEach
                     val field = CustomTagField(key = key, value = newField.value)

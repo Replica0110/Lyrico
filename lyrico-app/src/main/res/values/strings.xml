@@ -359,9 +359,9 @@
     <string name="custom_tags_empty">No custom tags yet. Tap \"Add Tag\" to create one.</string>
     <string name="custom_tag_management_title">Custom tag management</string>
     <string name="custom_tag_visible_section">Tags shown in editor</string>
-    <string name="custom_tag_visible_summary">Custom tags added here will be shown on the song edit page.</string>
+    <string name="custom_tag_visible_summary">Custom tags added here will be shown on the song edit page and batch edit page.</string>
     <string name="custom_tag_discovered_section">All discovered tags</string>
-    <string name="custom_tag_discovered_summary">These tags were found in the current music library and can be added to the editor.</string>
+    <string name="custom_tag_discovered_summary">These tags were found in the current music library and can be added to the editor and batch editor.</string>
     <string name="custom_tag_add_key">Add custom tag key</string>
     <string name="custom_tag_key">Tag key</string>
     <string name="custom_tag_key_hint">Enter a custom audio tag key, for example SOURCE, MOOD, or CATALOG_NO.</string>
@@ -369,12 +369,16 @@
     <string name="custom_tag_remove_visible">Remove from editor</string>
     <string name="custom_tag_already_visible">Shown</string>
     <string name="custom_tag_empty_visible_title">No custom tags added</string>
-    <string name="custom_tag_empty_visible_summary">After adding a tag key, it will be shown on the song edit page.</string>
+    <string name="custom_tag_empty_visible_summary">After adding a tag key, it will be shown on the song edit page and batch edit page.</string>
     <string name="custom_tag_remove_notice">Removing a tag from the editor does not delete existing song data.</string>
     <string name="custom_tag_search_hint">Search tag key</string>
     <string name="custom_tag_song_count">%1$d songs</string>
     <string name="custom_tag_delete_current_value">Delete value from current song</string>
     <string name="custom_tag_delete_current_value_summary">This only deletes the tag from the current song. It does not remove the tag from the editor display list.</string>
+    <string name="batch_custom_tag_keep">Keep</string>
+    <string name="batch_custom_tag_set">Set value</string>
+    <string name="batch_custom_tag_clear">Clear tag</string>
+    <string name="batch_custom_tag_clear_summary">Saving will delete this custom tag from all selected songs.</string>
     <string name="label_file_size">File Size</string>
     <!-- Cover Editor -->
     <string name="status_modified">Modified</string>

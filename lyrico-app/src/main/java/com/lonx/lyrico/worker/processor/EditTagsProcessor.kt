@@ -48,7 +48,8 @@ data class EditTagsTaskConfig(
 @Serializable
 data class EditTagsCustomField(
     val key: String = "",
-    val value: String = ""
+    val value: String? = "",
+    val clear: Boolean = false,
 )
 
 class EditTagsProcessor(
@@ -147,12 +148,9 @@ class EditTagsProcessor(
             tag = tag.copy(customFields = tag.customFields.toMutableList().apply {
                 config.customFields.forEach { newField ->
                     val key = normalizeCustomTagKey(newField.key) ?: return@forEach
-                    val field = CustomTagField(key, newField.value)
-                    val existingIndex = indexOfFirst { it.key.equals(field.key, ignoreCase = true) }
-                    if (existingIndex >= 0) {
-                        this[existingIndex] = field
-                    } else {
-                        add(field)
+                    removeAll { it.key.equals(key, ignoreCase = true) }
+                    if (!newField.clear) {
+                        add(CustomTagField(key, newField.value.orEmpty()))
                     }
                 }
             })

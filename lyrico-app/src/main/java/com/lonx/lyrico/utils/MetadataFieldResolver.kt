@@ -1,5 +1,6 @@
 package com.lonx.lyrico.utils
 
+import android.util.Log
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
@@ -53,8 +54,8 @@ class MetadataFieldResolver(
             replayGainReferenceLoudness = second.replayGainReferenceLoudness
                 ?: first.replayGainReferenceLoudness,
             picUrl = second.picUrl ?: first.picUrl,
-            pictures = if (second.pictures.isNotEmpty()) second.pictures else first.pictures,
-            customFields = if (second.customFields.isNotEmpty()) second.customFields else first.customFields
+            pictures = second.pictures.ifEmpty { first.pictures },
+            customFields = second.customFields.ifEmpty { first.customFields }
         )
     }
 
@@ -62,19 +63,119 @@ class MetadataFieldResolver(
         rule: PluginMetadataFieldWriteRule,
         scoredResults: List<ScoredSearchResult>
     ): String? {
-        return scoredResults
-            .asSequence()
+        val candidates = scoredResults
             .filter { it.result.pluginId == rule.pluginId }
-            .filter { source ->
-                source.source?.metadataFields
-                    ?.any { it.key == rule.normalizedKey && it.writeable && !it.internal } != false
-            }
-            .filter { it.score >= minimumScore }
             .sortedByDescending { it.score }
-            .mapNotNull { it.result.normalizedFields()[rule.normalizedKey]?.takeIf(String::isNotBlank) }
+        return candidates
+            .asSequence()
+            .filter { it.score >= minimumScore }
+            .mapNotNull {
+                it.result.normalizedFields()[rule.normalizedKey]
+                    ?.takeIf(String::isNotBlank)
+            }
             .firstOrNull()
     }
+    fun resolve(
+        scoredResults: List<ScoredSearchResult>,
+        rules: List<PluginMetadataFieldWriteRule>
+    ): AudioTagData {
+        var output = AudioTagData()
 
+        rules.asSequence()
+            .filter { it.mode != PluginMetadataWriteMode.DISABLED }
+            .forEach { rule ->
+                val value = findBestValue(rule, scoredResults) ?: return@forEach
+                output = putCandidate(output, rule, value)
+            }
+
+        return output
+    }
+    private fun putCandidate(
+        currentOutput: AudioTagData,
+        rule: PluginMetadataFieldWriteRule,
+        value: String
+    ): AudioTagData {
+        return when (rule.target) {
+            PluginMetadataFieldTarget.TITLE ->
+                currentOutput.copy(title = value)
+
+            PluginMetadataFieldTarget.ARTIST ->
+                currentOutput.copy(artist = value)
+
+            PluginMetadataFieldTarget.ALBUM ->
+                currentOutput.copy(album = value)
+
+            PluginMetadataFieldTarget.ALBUM_ARTIST ->
+                currentOutput.copy(albumArtist = value)
+
+            PluginMetadataFieldTarget.GENRE ->
+                currentOutput.copy(genre = value)
+
+            PluginMetadataFieldTarget.DATE ->
+                currentOutput.copy(date = value)
+
+            PluginMetadataFieldTarget.TRACK_NUMBER ->
+                currentOutput.copy(trackNumber = value)
+
+            PluginMetadataFieldTarget.DISC_NUMBER ->
+                currentOutput.copy(discNumber = parseIntTag(value))
+
+            PluginMetadataFieldTarget.COMPOSER ->
+                currentOutput.copy(composer = value)
+
+            PluginMetadataFieldTarget.LYRICIST ->
+                currentOutput.copy(lyricist = value)
+
+            PluginMetadataFieldTarget.COMMENT ->
+                currentOutput.copy(comment = value)
+
+            PluginMetadataFieldTarget.LYRICS ->
+                currentOutput.copy(lyrics = value)
+
+            PluginMetadataFieldTarget.COVER ->
+                currentOutput.copy(picUrl = value)
+
+            PluginMetadataFieldTarget.LANGUAGE ->
+                currentOutput.copy(language = value)
+
+            PluginMetadataFieldTarget.COPYRIGHT ->
+                currentOutput.copy(copyright = value)
+
+            PluginMetadataFieldTarget.RATING ->
+                currentOutput.copy(rating = parseIntTag(value))
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN ->
+                currentOutput.copy(replayGainTrackGain = value)
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK ->
+                currentOutput.copy(replayGainTrackPeak = value)
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN ->
+                currentOutput.copy(replayGainAlbumGain = value)
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK ->
+                currentOutput.copy(replayGainAlbumPeak = value)
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS ->
+                currentOutput.copy(replayGainReferenceLoudness = value)
+
+            PluginMetadataFieldTarget.CUSTOM -> {
+                val key = rule.customTagKey?.takeIf { it.isNotBlank() } ?: rule.normalizedKey
+                val updated = currentOutput.customFields
+                    .filterNot { it.key == key } +
+                        CustomTagField(key = key, value = value)
+
+                currentOutput.copy(customFields = updated)
+            }
+        }
+    }
+    private fun parseIntTag(value: String): Int? {
+        return value
+            .substringBefore("/")
+            .filter { it.isDigit() }
+            .takeIf { it.isNotBlank() }
+            ?.toIntOrNull()
+    }
     private fun writeIfAllowed(
         currentOutput: AudioTagData,
         currentSong: SongEntity,

@@ -77,11 +77,12 @@ class MatchMetadataProcessor(
 
         val separator = config.separator
 
-        val shouldWriteLyrics = shouldWriteTarget(
-            plan = plan,
-            target = PluginMetadataFieldTarget.LYRICS,
-            song = song
-        )
+        val shouldWriteLyrics = when (plan.targetModes[PluginMetadataFieldTarget.LYRICS]) {
+            PluginMetadataWriteMode.OVERWRITE -> true
+            PluginMetadataWriteMode.SUPPLEMENT -> song.lyrics.isNullOrBlank()
+            PluginMetadataWriteMode.DISABLED,
+            null -> false
+        }
 
         val lyricConfig = if (shouldWriteLyrics) {
             config.lyricRenderConfig ?: settingsRepository.getLyricRenderConfig()
@@ -247,32 +248,13 @@ class MatchMetadataProcessor(
 
         onProgress(0.75f)
 
-        val processedFields = finalMatch.source?.let { source ->
-            val processConfig = config.pluginFieldProcessConfigs[source.id]
-                ?: defaultPluginFieldProcessConfig(source.id)
-
-            fieldProcessor.processFields(
-                pluginId = source.id,
-                fields = finalMatch.result.normalizedFields(),
-                config = processConfig,
-                fieldDefinitions = source.metadataFields,
-                writeRules = plan.metadataRules
-            )
-        }.orEmpty()
-
-        val normalizedFields = finalMatch.result.normalizedFields()
-
-        val standardTagData = buildStandardTagData(
+        val standardCandidate = buildCandidateData(
             plan = plan,
-            song = song,
-            processedFields = processedFields,
-            normalizedFields = normalizedFields,
             finalMatch = finalMatch,
             newLyrics = newLyrics
         )
 
-        val metadataTagData = metadataFieldResolver.resolve(
-            currentSong = song,
+        val metadataCandidate = metadataFieldResolver.resolve(
             scoredResults = allScoredResults.map { scoredResult ->
                 val source = scoredResult.source ?: return@map scoredResult
                 val processConfig = config.pluginFieldProcessConfigs[source.id]
@@ -293,12 +275,18 @@ class MatchMetadataProcessor(
             rules = plan.metadataRules
         )
 
-        val tagDataToWrite = metadataFieldResolver.mergeNonNull(
-            metadataTagData,
-            standardTagData
+        val mergedCandidate = metadataFieldResolver.mergeNonNull(
+            metadataCandidate,
+            standardCandidate
         )
 
-        if (standardTagData.isEmpty() && metadataTagData.isEmpty()) {
+        val tagDataToWrite = filterByBatchWriteMode(
+            candidate = mergedCandidate,
+            song = song,
+            targetModes = plan.targetModes
+        )
+
+        if (tagDataToWrite.isEmpty()) {
             throw BatchTaskSkippedException("No fields to update")
         }
 
@@ -345,205 +333,190 @@ class MatchMetadataProcessor(
         )
     }
 
-    private suspend fun shouldWriteTarget(
-        plan: MatchMetadataPlan,
-        target: PluginMetadataFieldTarget,
-        song: SongEntity
-    ): Boolean {
-        return when (plan.targetModes[target]) {
-            PluginMetadataWriteMode.OVERWRITE -> true
-            PluginMetadataWriteMode.SUPPLEMENT -> isTargetBlank(target, song)
-            PluginMetadataWriteMode.DISABLED,
-            null -> false
+    private fun filterByBatchWriteMode(
+        candidate: AudioTagData,
+        song: SongEntity,
+        targetModes: Map<PluginMetadataFieldTarget, PluginMetadataWriteMode>
+    ): AudioTagData {
+        fun canWrite(target: PluginMetadataFieldTarget): Boolean {
+            return when (targetModes[target]) {
+                PluginMetadataWriteMode.OVERWRITE -> true
+                PluginMetadataWriteMode.SUPPLEMENT -> isTargetBlank(target, song)
+                PluginMetadataWriteMode.DISABLED,
+                null -> false
+            }
         }
-    }
 
-    private suspend fun isTargetBlank(
+        return AudioTagData(
+            title = if (canWrite(PluginMetadataFieldTarget.TITLE)) candidate.title else null,
+            artist = if (canWrite(PluginMetadataFieldTarget.ARTIST)) candidate.artist else null,
+            album = if (canWrite(PluginMetadataFieldTarget.ALBUM)) candidate.album else null,
+            albumArtist = if (canWrite(PluginMetadataFieldTarget.ALBUM_ARTIST)) candidate.albumArtist else null,
+            genre = if (canWrite(PluginMetadataFieldTarget.GENRE)) candidate.genre else null,
+            date = if (canWrite(PluginMetadataFieldTarget.DATE)) candidate.date else null,
+            language = if (canWrite(PluginMetadataFieldTarget.LANGUAGE)) candidate.language else null,
+            trackNumber = if (canWrite(PluginMetadataFieldTarget.TRACK_NUMBER)) candidate.trackNumber else null,
+            discNumber = if (canWrite(PluginMetadataFieldTarget.DISC_NUMBER)) candidate.discNumber else null,
+            composer = if (canWrite(PluginMetadataFieldTarget.COMPOSER)) candidate.composer else null,
+            lyricist = if (canWrite(PluginMetadataFieldTarget.LYRICIST)) candidate.lyricist else null,
+            comment = if (canWrite(PluginMetadataFieldTarget.COMMENT)) candidate.comment else null,
+            lyrics = if (canWrite(PluginMetadataFieldTarget.LYRICS)) candidate.lyrics else null,
+            copyright = if (canWrite(PluginMetadataFieldTarget.COPYRIGHT)) candidate.copyright else null,
+            rating = if (canWrite(PluginMetadataFieldTarget.RATING)) candidate.rating else null,
+            replayGainTrackGain = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN)) {
+                candidate.replayGainTrackGain
+            } else {
+                null
+            },
+            replayGainTrackPeak = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK)) {
+                candidate.replayGainTrackPeak
+            } else {
+                null
+            },
+            replayGainAlbumGain = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN)) {
+                candidate.replayGainAlbumGain
+            } else {
+                null
+            },
+            replayGainAlbumPeak = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK)) {
+                candidate.replayGainAlbumPeak
+            } else {
+                null
+            },
+            replayGainReferenceLoudness = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS)) {
+                candidate.replayGainReferenceLoudness
+            } else {
+                null
+            },
+            picUrl = if (canWrite(PluginMetadataFieldTarget.COVER)) candidate.picUrl else null,
+            customFields = if (canWrite(PluginMetadataFieldTarget.CUSTOM)) {
+                candidate.customFields
+            } else {
+                emptyList()
+            }
+        )
+    }
+    private fun isTargetBlank(
         target: PluginMetadataFieldTarget,
         song: SongEntity
     ): Boolean {
         return when (target) {
-            PluginMetadataFieldTarget.TITLE -> song.title.isNullOrBlank()
-            PluginMetadataFieldTarget.ARTIST -> song.artist.isNullOrBlank()
-            PluginMetadataFieldTarget.ALBUM -> song.album.isNullOrBlank()
-            PluginMetadataFieldTarget.ALBUM_ARTIST -> song.albumArtist.isNullOrBlank()
-            PluginMetadataFieldTarget.GENRE -> song.genre.isNullOrBlank()
-            PluginMetadataFieldTarget.DATE -> song.date.isNullOrBlank()
-            PluginMetadataFieldTarget.TRACK_NUMBER -> song.trackerNumber.isNullOrBlank()
-            PluginMetadataFieldTarget.DISC_NUMBER -> song.discNumber == null
-            PluginMetadataFieldTarget.COMPOSER -> song.composer.isNullOrBlank()
-            PluginMetadataFieldTarget.LYRICIST -> song.lyricist.isNullOrBlank()
-            PluginMetadataFieldTarget.COMMENT -> song.comment.isNullOrBlank()
-            PluginMetadataFieldTarget.LYRICS -> song.lyrics.isNullOrBlank()
-            PluginMetadataFieldTarget.COVER -> !hasEmbeddedCover(song)
-            PluginMetadataFieldTarget.LANGUAGE -> true
-            PluginMetadataFieldTarget.COPYRIGHT -> true
-            PluginMetadataFieldTarget.RATING -> true
-            PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN -> song.replayGainTrackGain.isNullOrBlank()
-            PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK -> song.replayGainTrackPeak.isNullOrBlank()
-            PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN -> true
-            PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK -> true
+            PluginMetadataFieldTarget.TITLE ->
+                song.title.isNullOrBlank()
+
+            PluginMetadataFieldTarget.ARTIST ->
+                song.artist.isNullOrBlank()
+
+            PluginMetadataFieldTarget.ALBUM ->
+                song.album.isNullOrBlank()
+
+            PluginMetadataFieldTarget.ALBUM_ARTIST ->
+                song.albumArtist.isNullOrBlank()
+
+            PluginMetadataFieldTarget.GENRE ->
+                song.genre.isNullOrBlank()
+
+            PluginMetadataFieldTarget.DATE ->
+                song.date.isNullOrBlank()
+
+            PluginMetadataFieldTarget.TRACK_NUMBER ->
+                song.trackerNumber.isNullOrBlank()
+
+            PluginMetadataFieldTarget.DISC_NUMBER ->
+                song.discNumber == null
+
+            PluginMetadataFieldTarget.COMPOSER ->
+                song.composer.isNullOrBlank()
+
+            PluginMetadataFieldTarget.LYRICIST ->
+                song.lyricist.isNullOrBlank()
+
+            PluginMetadataFieldTarget.COMMENT ->
+                song.comment.isNullOrBlank()
+
+            PluginMetadataFieldTarget.LYRICS ->
+                song.lyrics.isNullOrBlank()
+
+            PluginMetadataFieldTarget.LANGUAGE ->
+                song.language.isNullOrBlank()
+
+            PluginMetadataFieldTarget.COPYRIGHT ->
+                song.copyright.isNullOrBlank()
+
+            PluginMetadataFieldTarget.RATING ->
+                song.rating == null
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN ->
+                song.replayGainTrackGain.isNullOrBlank()
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK ->
+                song.replayGainTrackPeak.isNullOrBlank()
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN ->
+                song.replayGainAlbumGain.isNullOrBlank()
+
+            PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK ->
+                song.replayGainAlbumPeak.isNullOrBlank()
+
             PluginMetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS ->
                 song.replayGainReferenceLoudness.isNullOrBlank()
-            PluginMetadataFieldTarget.CUSTOM -> true
+
+            PluginMetadataFieldTarget.COVER ->
+                false
+
+            PluginMetadataFieldTarget.CUSTOM ->
+                true
         }
     }
 
-    private suspend fun hasEmbeddedCover(song: SongEntity): Boolean {
-        return runCatching {
-            audioTagRepository.read(song.uri).pictures.isNotEmpty()
-        }.getOrDefault(false)
-    }
-
-    private suspend fun buildStandardTagData(
+    private fun buildCandidateData(
         plan: MatchMetadataPlan,
-        song: SongEntity,
-        processedFields: Map<String, String>,
-        normalizedFields: Map<String, String>,
         finalMatch: ScoredSearchResult,
         newLyrics: String?
     ): AudioTagData {
-        fun field(vararg keys: String): String? {
-            for (key in keys) {
-                processedFields[key]
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { return it }
-
-                normalizedFields[key]
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { return it }
-            }
-
-            return null
-        }
-
-        suspend fun writable(target: PluginMetadataFieldTarget): Boolean {
-            return shouldWriteTarget(
-                plan = plan,
-                target = target,
-                song = song
-            )
+        fun enabled(target: PluginMetadataFieldTarget): Boolean {
+            return plan.targetModes[target] != null &&
+                    plan.targetModes[target] != PluginMetadataWriteMode.DISABLED
         }
 
         return AudioTagData(
-            title = if (writable(PluginMetadataFieldTarget.TITLE)) {
-                field("title") ?: finalMatch.result.title.takeIf { it.isNotBlank() }
+            title = if (enabled(PluginMetadataFieldTarget.TITLE)) {
+                finalMatch.result.title.takeIf { it.isNotBlank() }
             } else {
                 null
             },
-            artist = if (writable(PluginMetadataFieldTarget.ARTIST)) {
-                field("artist", "artists") ?: finalMatch.result.artist.takeIf { it.isNotBlank() }
+            artist = if (enabled(PluginMetadataFieldTarget.ARTIST)) {
+                finalMatch.result.artist.takeIf { it.isNotBlank() }
             } else {
                 null
             },
-            album = if (writable(PluginMetadataFieldTarget.ALBUM)) {
-                field("album") ?: finalMatch.result.album.takeIf { it.isNotBlank() }
+            album = if (enabled(PluginMetadataFieldTarget.ALBUM)) {
+                finalMatch.result.album.takeIf { it.isNotBlank() }
             } else {
                 null
             },
-            albumArtist = if (writable(PluginMetadataFieldTarget.ALBUM_ARTIST)) {
-                field("album_artist", "albumArtist", "albumartist")
+            date = if (enabled(PluginMetadataFieldTarget.DATE)) {
+                finalMatch.result.date.takeIf { it.isNotBlank() }
             } else {
                 null
             },
-            genre = if (writable(PluginMetadataFieldTarget.GENRE)) {
-                field("genre")
+            trackNumber = if (enabled(PluginMetadataFieldTarget.TRACK_NUMBER)) {
+                finalMatch.result.trackNumber.takeIf { it.isNotBlank() }
             } else {
                 null
             },
-            date = if (writable(PluginMetadataFieldTarget.DATE)) {
-                field("date", "year", "release_date", "releaseDate")
-                    ?: finalMatch.result.date.takeIf { it.isNotBlank() }
-            } else {
-                null
-            },
-            trackNumber = if (writable(PluginMetadataFieldTarget.TRACK_NUMBER)) {
-                field("track_number", "trackNumber", "track")
-                    ?: finalMatch.result.trackNumber.takeIf { it.isNotBlank() }
-            } else {
-                null
-            },
-            discNumber = if (writable(PluginMetadataFieldTarget.DISC_NUMBER)) {
-                field("disc_number", "discNumber", "disc")?.toInt()
-            } else {
-                null
-            },
-            composer = if (writable(PluginMetadataFieldTarget.COMPOSER)) {
-                field("composer")
-            } else {
-                null
-            },
-            lyricist = if (writable(PluginMetadataFieldTarget.LYRICIST)) {
-                field("lyricist", "writer", "author")
-            } else {
-                null
-            },
-            lyrics = if (writable(PluginMetadataFieldTarget.LYRICS)) {
+            lyrics = if (enabled(PluginMetadataFieldTarget.LYRICS)) {
                 newLyrics
             } else {
                 null
             },
-            picUrl = if (writable(PluginMetadataFieldTarget.COVER)) {
+            picUrl = if (enabled(PluginMetadataFieldTarget.COVER)) {
                 finalMatch.result.picUrl.takeIf { it.isNotBlank() }
-                    ?: field("cover_url", "picUrl", "cover", "artwork")
-            } else {
-                null
-            },
-            comment = if (writable(PluginMetadataFieldTarget.COMMENT)) {
-                field("comment", "subtitle", "description")
-            } else {
-                null
-            },
-            replayGainTrackGain = if (writable(PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN)) {
-                field(
-                    "replaygain_track_gain",
-                    "replay_gain_track_gain",
-                    "track_gain"
-                )
-            } else {
-                null
-            },
-            replayGainTrackPeak = if (writable(PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK)) {
-                field(
-                    "replaygain_track_peak",
-                    "replay_gain_track_peak",
-                    "track_peak"
-                )
-            } else {
-                null
-            },
-            replayGainAlbumGain = if (writable(PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN)) {
-                field(
-                    "replaygain_album_gain",
-                    "replay_gain_album_gain",
-                    "album_gain"
-                )
-            } else {
-                null
-            },
-            replayGainAlbumPeak = if (writable(PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK)) {
-                field(
-                    "replaygain_album_peak",
-                    "replay_gain_album_peak",
-                    "album_peak"
-                )
-            } else {
-                null
-            },
-            replayGainReferenceLoudness = if (
-                writable(PluginMetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS)
-            ) {
-                field(
-                    "replaygain_reference_loudness",
-                    "replay_gain_reference_loudness",
-                    "reference_loudness"
-                )
             } else {
                 null
             }
         )
     }
-
     private fun AudioTagData.isEmpty(): Boolean {
         return title == null &&
                 artist == null &&

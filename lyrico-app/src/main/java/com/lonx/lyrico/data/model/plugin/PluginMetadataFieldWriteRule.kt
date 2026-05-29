@@ -50,11 +50,28 @@ object PluginMetadataFieldWriteRuleFactory {
         searchSources: List<SearchSource>
     ): List<PluginMetadataFieldWriteRule> {
         val defaults = buildDefaultRules(searchSources)
-        val validSavedRules = savedRules.filterNotNull()
-        return defaults.map { defaultRule ->
-            validSavedRules.firstOrNull {
-                it.pluginId == defaultRule.pluginId && it.normalizedKey == defaultRule.normalizedKey
-            }?.let { it.copy(fieldKey = it.normalizedKey) } ?: defaultRule
+
+        val mergedDefaults = defaults.map { defaultRule ->
+            savedRules.firstOrNull {
+                it.pluginId == defaultRule.pluginId &&
+                        it.normalizedKey == defaultRule.normalizedKey
+            }?.let { savedRule ->
+                savedRule.copy(fieldKey = savedRule.normalizedKey)
+            } ?: defaultRule
         }
+
+        val defaultKeys = defaults
+            .map { it.pluginId to it.normalizedKey }
+            .toSet()
+
+        val extraSavedRules = savedRules
+            .filter { savedRule ->
+                savedRule.pluginId to savedRule.normalizedKey !in defaultKeys
+            }
+            .map { savedRule ->
+                savedRule.copy(fieldKey = savedRule.normalizedKey)
+            }
+
+        return mergedDefaults + extraSavedRules
     }
 }

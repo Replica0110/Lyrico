@@ -20,8 +20,8 @@ import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
 import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.MetadataFieldResolver
@@ -286,7 +286,7 @@ class MatchMetadataProcessor(
 
         onProgress(0.9f)
         val result = patchSongTagsUseCase(song.uri, tagDataToWrite)
-        if (result !is EditSongTagsResult.Success) {
+        if (result !is SaveAudioTagsResult.Success) {
             throw Exception("Write failed")
         }
         onProgress(1f)

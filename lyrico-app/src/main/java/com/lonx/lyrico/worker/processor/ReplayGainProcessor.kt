@@ -4,8 +4,8 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
-import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
 import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.ReplayGainCalculateState
 import com.lonx.lyrico.utils.ReplayGainScanner
 
@@ -62,7 +62,7 @@ class ReplayGainProcessor(
         )
 
         val result = patchSongTagsUseCase(item.songUri, tagData)
-        if (result !is EditSongTagsResult.Success) {
+        if (result !is SaveAudioTagsResult.Success) {
             throw Exception("Write failed")
         }
 

@@ -44,8 +44,8 @@ import com.lonx.lyrico.data.repository.SettingsDefaults
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
 import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.CoverSourceType
 import com.lonx.lyrico.utils.LyricDecoder
@@ -674,7 +674,7 @@ class EditMetadataViewModel(
 
             try {
                 when (val saveResult = overwriteSongTagsUseCase(uriString, audioTagData)) {
-                    is EditSongTagsResult.Success -> {
+                    is SaveAudioTagsResult.Success -> {
                         val savedTagData = saveResult.tagData
                         val savedDisplayPicture = savedTagData.pictures.frontCoverOrFallback()
                         val savedDisplayCover = savedDisplayPicture?.data
@@ -694,7 +694,7 @@ class EditMetadataViewModel(
                         }
                         currentSong = saveResult.song
                     }
-                    is EditSongTagsResult.PermissionRequired -> {
+                    is SaveAudioTagsResult.PermissionRequired -> {
                         Log.w(TAG, "需要用户授权修改文件: $uriString")
                         _uiState.update {
                             it.copy(
@@ -703,7 +703,7 @@ class EditMetadataViewModel(
                             )
                         }
                     }
-                    is EditSongTagsResult.Failed -> {
+                    is SaveAudioTagsResult.Failed -> {
                         val reason = saveResult.error.localizedMessage
                             ?: saveResult.error::class.java.simpleName
                         recordSaveFailure(uriString, reason, saveResult.error)

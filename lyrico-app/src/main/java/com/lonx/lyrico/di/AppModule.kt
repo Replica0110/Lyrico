@@ -49,10 +49,10 @@ import com.lonx.lyrico.data.song.tag.TagMapBuilder
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
 import com.lonx.lyrico.domain.song.usecase.BatchEditSongsUseCase
-import com.lonx.lyrico.domain.song.usecase.EditSongTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.RenameSongUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SynchronizeLibraryUseCase
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -222,10 +222,10 @@ val appModule = module {
     single<LibraryScanRepository> {
         LibraryScanRepositoryImpl(androidContext(), get(), get(), get(), get(), get(), get(), get())
     }
-    single { EditSongTagsUseCase(get(), get(), get(), get(), get()) }
+    single { SaveAudioTagsUseCase(get(), get(), get(), get(), get(), get()) }
     single { BatchEditSongsUseCase(get(), get()) }
-    single { PatchSongTagsUseCase(get(), get()) }
-    single { OverwriteSongTagsUseCase(get(), get()) }
+    single { PatchSongTagsUseCase(get()) }
+    single { OverwriteSongTagsUseCase(get()) }
     single { DeleteSongsUseCase(get(), get(), get(), get()) }
     single { RenameSongUseCase(get(), get(), get(), get()) }
     single { SynchronizeLibraryUseCase(get()) }

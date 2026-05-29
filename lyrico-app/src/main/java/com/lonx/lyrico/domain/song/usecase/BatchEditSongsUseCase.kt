@@ -39,13 +39,13 @@ data class BatchTagEditItemResult(
     val currentTag: AudioTagData?,
     val editedTag: AudioTagData?,
     val mutation: AudioTagMutation?,
-    val result: EditSongTagsResult?,
+    val result: SaveAudioTagsResult?,
     val skippedReason: String? = null
 )
 
 class BatchEditSongsUseCase(
     private val audioTagRepository: AudioTagRepository,
-    private val editSongTagsUseCase: EditSongTagsUseCase
+    private val saveAudioTagsUseCase: SaveAudioTagsUseCase
 ) {
     suspend fun editOne(request: BatchTagEditItemRequest): BatchTagEditItemResult {
         val currentTag = audioTagRepository.read(request.song.uri)
@@ -68,7 +68,7 @@ class BatchEditSongsUseCase(
         val result = if (request.dryRun) {
             null
         } else {
-            editSongTagsUseCase(request.song, mutation)
+            saveAudioTagsUseCase(request.song.uri, mutation)
         }
 
         return BatchTagEditItemResult(
@@ -101,10 +101,10 @@ class BatchEditSongsUseCase(
 
         return BatchTagEditResult(
             total = request.songs.size,
-            success = items.count { it.result is EditSongTagsResult.Success },
+            success = items.count { it.result is SaveAudioTagsResult.Success },
             failed = items.count {
-                it.result is EditSongTagsResult.Failed ||
-                    it.result is EditSongTagsResult.PermissionRequired
+                it.result is SaveAudioTagsResult.Failed ||
+                    it.result is SaveAudioTagsResult.PermissionRequired
             },
             skipped = items.count { it.skippedReason != null } +
                 if (request.dryRun) items.count { it.skippedReason == null } else 0,

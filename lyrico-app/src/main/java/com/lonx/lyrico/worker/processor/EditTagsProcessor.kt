@@ -8,7 +8,7 @@ import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.domain.song.usecase.BatchEditSongsUseCase
 import com.lonx.lyrico.domain.song.usecase.BatchTagEditItemRequest
-import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.LyricEncoder
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -86,7 +86,7 @@ class EditTagsProcessor(
         if (result.skippedReason != null) {
             throw BatchTaskSkippedException(result.skippedReason)
         }
-        if (result.result !is EditSongTagsResult.Success) {
+        if (result.result !is SaveAudioTagsResult.Success) {
             throw Exception("Write failed")
         }
 

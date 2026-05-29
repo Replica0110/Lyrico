@@ -22,8 +22,8 @@ import com.lonx.lyrico.data.repository.CustomTagSettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.search.SongSearchRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
 import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.utils.UriUtils
@@ -930,7 +930,7 @@ class BatchEditViewModel(
 
         // 写入文件
         return try {
-            overwriteSongTagsUseCase(uriString, mergedTag) is EditSongTagsResult.Success
+            overwriteSongTagsUseCase(uriString, mergedTag) is SaveAudioTagsResult.Success
         } catch (e: Exception) {
             Log.e(TAG, "写入标签失败: $uri", e)
             false

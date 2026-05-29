@@ -8,8 +8,8 @@ import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
-import com.lonx.lyrico.domain.song.usecase.EditSongTagsResult
 import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.LyricDecoder
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.viewmodel.LyricsFormatConfig
@@ -53,7 +53,7 @@ class LyricsFormatProcessor(
             AudioTagData(lyrics = convertedLyrics)
         )
 
-        if (result !is EditSongTagsResult.Success) {
+        if (result !is SaveAudioTagsResult.Success) {
             throw Exception("Write failed")
         }
 

@@ -12,8 +12,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.lonx.lyrico.data.editfield.EditFieldVisibilityOverridesJson
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
-import com.lonx.lyrico.data.model.BatchMatchField
-import com.lonx.lyrico.data.model.BatchMatchMode
 import com.lonx.lyrico.data.model.CharacterMappingConfig
 import com.lonx.lyrico.data.model.CharacterMappingDefaults
 import com.lonx.lyrico.data.model.ConversionMode
@@ -37,6 +35,8 @@ import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
+import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
+import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -876,25 +876,77 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     private fun decodeBatchMatchConfig(configJson: String): BatchMatchConfig {
         return try {
             val root = jsonFormatter.parseToJsonElement(configJson).jsonObject
-            val fieldsObject = root["fields"]?.jsonObject
-            val fields = fieldsObject?.mapNotNull { (fieldName, modeElement) ->
-                val field = BatchMatchField.entries.firstOrNull { it.name == fieldName }
-                    ?: return@mapNotNull null
-                val mode = modeElement.jsonPrimitive.contentOrNull
-                    ?.let { runCatching { BatchMatchMode.valueOf(it) }.getOrNull() }
-                    ?: return@mapNotNull null
-                field to mode
-            }?.toMap()
+
+            val newTargetModes = root["targetModes"]
+                ?.jsonObject
+                ?.mapNotNull { (targetName, modeElement) ->
+                    val target = decodePluginMetadataFieldTarget(targetName)
+                        ?: return@mapNotNull null
+
+                    val mode = decodePluginMetadataWriteMode(
+                        modeElement.jsonPrimitive.contentOrNull
+                    ) ?: return@mapNotNull null
+
+                    target to mode
+                }
+                ?.toMap()
+
+            val legacyTargetModes = root["fields"]
+                ?.jsonObject
+                ?.mapNotNull { (fieldName, modeElement) ->
+                    val target = legacyBatchFieldToTarget(fieldName)
+                        ?: return@mapNotNull null
+
+                    val mode = decodePluginMetadataWriteMode(
+                        modeElement.jsonPrimitive.contentOrNull
+                    ) ?: return@mapNotNull null
+
+                    target to mode
+                }
+                ?.toMap()
+
+            val defaultConfig = BatchMatchConfigDefaults.DEFAULT_CONFIG
 
             BatchMatchConfig(
-                fields = fields ?: BatchMatchConfigDefaults.DEFAULT_CONFIG.fields,
-                concurrency = root["concurrency"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
-                    ?: BatchMatchConfigDefaults.DEFAULT_CONFIG.concurrency,
-                preferFileName = root["preferFileName"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull()
-                    ?: BatchMatchConfigDefaults.DEFAULT_CONFIG.preferFileName
+                targetModes = defaultConfig.targetModes +
+                        (newTargetModes ?: legacyTargetModes).orEmpty(),
+                concurrency = root["concurrency"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.toIntOrNull()
+                    ?: defaultConfig.concurrency,
+                preferFileName = root["preferFileName"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.toBooleanStrictOrNull()
+                    ?: defaultConfig.preferFileName
             )
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             BatchMatchConfigDefaults.DEFAULT_CONFIG
+        }
+    }
+
+    private fun decodePluginMetadataFieldTarget(name: String): PluginMetadataFieldTarget? {
+        return PluginMetadataFieldTarget.entries.firstOrNull { it.name == name }
+    }
+
+    private fun decodePluginMetadataWriteMode(name: String?): PluginMetadataWriteMode? {
+        return name
+            ?.let { value -> runCatching { PluginMetadataWriteMode.valueOf(value) }.getOrNull() }
+    }
+
+    private fun legacyBatchFieldToTarget(fieldName: String): PluginMetadataFieldTarget? {
+        return when (fieldName) {
+            "TITLE" -> PluginMetadataFieldTarget.TITLE
+            "ARTIST" -> PluginMetadataFieldTarget.ARTIST
+            "ALBUM" -> PluginMetadataFieldTarget.ALBUM
+            "GENRE" -> PluginMetadataFieldTarget.GENRE
+            "DATE" -> PluginMetadataFieldTarget.DATE
+            "TRACK_NUMBER" -> PluginMetadataFieldTarget.TRACK_NUMBER
+            "LYRICS" -> PluginMetadataFieldTarget.LYRICS
+            "COMMENT" -> PluginMetadataFieldTarget.COMMENT
+            "COVER" -> PluginMetadataFieldTarget.COVER
+            else -> null
         }
     }
 

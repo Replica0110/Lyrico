@@ -3,55 +3,118 @@ package com.lonx.lyrico.data.model
 import android.os.Parcelable
 import androidx.annotation.StringRes
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
+import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 
 @Parcelize
 @Serializable
 data class BatchMatchConfig(
-    val fields: Map<BatchMatchField, BatchMatchMode>,
+    val targetModes: Map<PluginMetadataFieldTarget, PluginMetadataWriteMode>,
     val concurrency: Int = 3,
     val preferFileName: Boolean = false
-) : Parcelable {
-}
+) : Parcelable
 
-@Serializable
-enum class BatchMatchMode(
-    @field:StringRes val labelRes: Int
-) {
-    SUPPLEMENT(R.string.batch_match_mode_supplement), // 仅为空时补充
-    OVERWRITE(R.string.batch_match_mode_overwrite)   // 覆盖
-}
+data class BatchMatchTargetGroup(
+    @field:StringRes val titleRes: Int,
+    val targets: List<PluginMetadataFieldTarget>
+)
 
-@Serializable
-enum class BatchMatchField(
-    @field:StringRes val labelRes: Int,
-    @field:StringRes val summaryRes: Int = 0
-) {
-    TITLE(R.string.label_title),
-    ARTIST(R.string.label_artists),
-    ALBUM(R.string.label_album),
-    GENRE(R.string.label_genre),
-    DATE(R.string.label_year),
-    TRACK_NUMBER(R.string.label_track_number),
-    LYRICS(R.string.label_lyrics),
-    COMMENT(R.string.label_comment),
-    COVER(R.string.label_cover)
-}
 object BatchMatchConfigDefaults {
+    val BATCH_MATCH_TARGETS = listOf(
+        PluginMetadataFieldTarget.TITLE,
+        PluginMetadataFieldTarget.ARTIST,
+        PluginMetadataFieldTarget.ALBUM,
+        PluginMetadataFieldTarget.ALBUM_ARTIST,
+        PluginMetadataFieldTarget.GENRE,
+        PluginMetadataFieldTarget.DATE,
+        PluginMetadataFieldTarget.TRACK_NUMBER,
+        PluginMetadataFieldTarget.DISC_NUMBER,
+        PluginMetadataFieldTarget.COMPOSER,
+        PluginMetadataFieldTarget.LYRICIST,
+        PluginMetadataFieldTarget.COMMENT,
+        PluginMetadataFieldTarget.LYRICS,
+        PluginMetadataFieldTarget.COVER,
+        PluginMetadataFieldTarget.LANGUAGE,
+        PluginMetadataFieldTarget.COPYRIGHT,
+        PluginMetadataFieldTarget.RATING,
+        PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN,
+        PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK,
+        PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN,
+        PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK,
+        PluginMetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
+    )
+
+    val DEFAULT_ENABLED_TARGETS = setOf(
+        PluginMetadataFieldTarget.TITLE,
+        PluginMetadataFieldTarget.ARTIST,
+        PluginMetadataFieldTarget.ALBUM,
+        PluginMetadataFieldTarget.GENRE,
+        PluginMetadataFieldTarget.DATE,
+        PluginMetadataFieldTarget.TRACK_NUMBER,
+        PluginMetadataFieldTarget.LYRICS,
+        PluginMetadataFieldTarget.COVER
+    )
+
     val DEFAULT_CONFIG = BatchMatchConfig(
-        fields = mapOf(
-            BatchMatchField.TITLE to BatchMatchMode.SUPPLEMENT,
-            BatchMatchField.ARTIST to BatchMatchMode.SUPPLEMENT,
-            BatchMatchField.ALBUM to BatchMatchMode.SUPPLEMENT,
-            BatchMatchField.GENRE to BatchMatchMode.SUPPLEMENT,
-            BatchMatchField.DATE to BatchMatchMode.SUPPLEMENT,
-            BatchMatchField.TRACK_NUMBER to BatchMatchMode.SUPPLEMENT,
-            BatchMatchField.LYRICS to BatchMatchMode.SUPPLEMENT,
-            BatchMatchField.COMMENT to BatchMatchMode.SUPPLEMENT,
-            BatchMatchField.COVER to BatchMatchMode.SUPPLEMENT
-        ),
+        targetModes = BATCH_MATCH_TARGETS.associateWith { target ->
+            if (target in DEFAULT_ENABLED_TARGETS) {
+                PluginMetadataWriteMode.SUPPLEMENT
+            } else {
+                PluginMetadataWriteMode.DISABLED
+            }
+        },
         concurrency = 3,
         preferFileName = false
+    )
+
+    val TARGET_GROUPS = listOf(
+        BatchMatchTargetGroup(
+            titleRes = R.string.field_group_basic_info,
+            targets = listOf(
+                PluginMetadataFieldTarget.TITLE,
+                PluginMetadataFieldTarget.ARTIST,
+                PluginMetadataFieldTarget.ALBUM,
+                PluginMetadataFieldTarget.ALBUM_ARTIST,
+                PluginMetadataFieldTarget.GENRE,
+                PluginMetadataFieldTarget.DATE,
+                PluginMetadataFieldTarget.TRACK_NUMBER,
+                PluginMetadataFieldTarget.DISC_NUMBER
+            )
+        ),
+        BatchMatchTargetGroup(
+            titleRes = R.string.field_group_credits,
+            targets = listOf(
+                PluginMetadataFieldTarget.COMPOSER,
+                PluginMetadataFieldTarget.LYRICIST
+            )
+        ),
+        BatchMatchTargetGroup(
+            titleRes = R.string.field_group_lyrics_cover,
+            targets = listOf(
+                PluginMetadataFieldTarget.LYRICS,
+                PluginMetadataFieldTarget.COVER
+            )
+        ),
+        BatchMatchTargetGroup(
+            titleRes = R.string.field_group_extra_info,
+            targets = listOf(
+                PluginMetadataFieldTarget.COMMENT,
+                PluginMetadataFieldTarget.LANGUAGE,
+                PluginMetadataFieldTarget.COPYRIGHT,
+                PluginMetadataFieldTarget.RATING
+            )
+        ),
+        BatchMatchTargetGroup(
+            titleRes = R.string.field_group_replay_gain,
+            targets = listOf(
+                PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN,
+                PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK,
+                PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN,
+                PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK,
+                PluginMetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS
+            )
+        )
     )
 }

@@ -10,7 +10,6 @@ import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
 import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
 import com.lonx.lyrico.data.model.plugin.PluginMetadataField
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
 import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -107,18 +106,6 @@ class SearchSourceConfigViewModel(
                 saved = false
             )
         }
-    }
-
-    fun updateMetadataRuleTarget(rule: PluginMetadataFieldWriteRule, target: PluginMetadataFieldTarget) {
-        updateMetadataRule(rule.copy(target = target))
-    }
-
-    fun updateMetadataRuleMode(rule: PluginMetadataFieldWriteRule, mode: PluginMetadataWriteMode) {
-        updateMetadataRule(rule.copy(mode = mode))
-    }
-
-    fun updateMetadataRuleCustomTagKey(rule: PluginMetadataFieldWriteRule, customTagKey: String) {
-        updateMetadataRule(rule.copy(customTagKey = customTagKey.takeIf { it.isNotBlank() }))
     }
 
     fun updateAllMetadataRules(mode: PluginMetadataWriteMode) {

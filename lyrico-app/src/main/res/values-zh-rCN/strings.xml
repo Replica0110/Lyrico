@@ -368,8 +368,7 @@
     <string name="batch_match_config_title">批量匹配配置</string>
     <string name="batch_match_config_concurrency">并发数</string>
     <string name="batch_match_config_rate_limit_tip">并发数越高，匹配速度越快，但可能导致请求失败或被临时限制</string>
-    <string name="batch_match_mode_supplement">补充</string>
-    <string name="batch_match_mode_overwrite">覆盖</string>
+
     <string name="only_translation_if_available">仅下载翻译歌词</string>
     <string name="only_translation_if_available_hint">若存在翻译，仅下载翻译歌词（需启用翻译下载）</string>
     <string name="remove_empty_lines">移除空行</string>
@@ -789,4 +788,11 @@
 
     <string name="folder_tab_folders">文件夹</string>
     <string name="folder_tab_songs">歌曲</string>
+
+
+    <string name="field_group_basic_info">基础信息</string>
+    <string name="field_group_credits">创作人员</string>
+    <string name="field_group_lyrics_cover">歌词与封面</string>
+    <string name="field_group_extra_info">扩展信息</string>
+    <string name="field_group_replay_gain">ReplayGain</string>
 </resources>

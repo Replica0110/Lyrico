@@ -382,7 +382,7 @@ class BatchTaskWorker(
             appendLine("separator=${config.separator}")
             appendLine("preferFileName=${config.matchConfig.preferFileName}")
             appendLine("enabledSources=${config.enabledSourceOrderIds.joinToString(" > ").ifBlank { "(default)" }}")
-            appendLine("fields=${config.matchConfig.fields.toSortedMap(compareBy { it.name }).entries.joinToString(", ") { "${it.key.name}:${it.value.name}" }}")
+            appendLine("fields=${config.matchConfig.targetModes.toSortedMap(compareBy { it.name }).entries.joinToString(", ") { "${it.key.name}:${it.value.name}" }}")
             val metadataRules = config.metadataFieldWriteRules
                 .filter { it.mode != PluginMetadataWriteMode.DISABLED }
                 .map { "${it.pluginId}.${it.normalizedKey}:${it.mode.name}" }
@@ -436,7 +436,7 @@ class BatchTaskWorker(
             appendLine("modifiedFields=${modifiedFields.joinToString(", ").ifBlank { "(none)" }}")
             if (config.ratingModified) appendLine("rating=${config.rating}")
             if (config.lyricsOffset.isNotBlank()) appendLine("lyricsOffset=${config.lyricsOffset}")
-            appendLine("customFieldKeys=${config.customFields.map { it.key }.joinToString(", ").ifBlank { "(none)" }}")
+            appendLine("customFieldKeys=${config.customFields.joinToString(", ") { it.key }.ifBlank { "(none)" }}")
             appendSanitizedValue("title", config.title, keep)
             appendSanitizedValue("artist", config.artist, keep)
             appendSanitizedValue("albumArtist", config.albumArtist, keep)

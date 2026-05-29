@@ -1,5 +1,6 @@
 package com.lonx.audiotag
 
+import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.model.AudioProperties
 import com.lonx.audiotag.model.AudioPropertiesReadStyle
 import com.lonx.audiotag.model.Metadata
@@ -69,7 +70,7 @@ public object TagLib {
     @JvmStatic
     public fun getFrontCover(fd: Int): Picture? {
         val pictures = getPictures(fd)
-        return pictures.find { picture -> picture.pictureType == "Front Cover" }
+        return pictures.find { picture -> picture.pictureType == AudioPictureType.FrontCover.tagLibName }
             ?: pictures.firstOrNull()
     }
 

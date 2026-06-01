@@ -312,6 +312,7 @@ fun PluginManagerScreen(
         endAction = {
             androidx.compose.material3.TextButton(
                 onClick = {
+                    showImportPreviewSheet = false
                     viewModel.installPendingImport()
                 },
                 colors = ButtonColors(

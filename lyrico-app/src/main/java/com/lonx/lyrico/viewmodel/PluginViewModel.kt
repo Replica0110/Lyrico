@@ -101,16 +101,18 @@ class PluginViewModel(
             publishMessage("No pending plugin import")
             return
         }
+
         val selectedRoots = _uiState.value.selectedImportRoots
         if (selectedRoots.isEmpty()) {
             publishMessage("No plugin selected")
             return
         }
+
         val allowDowngrade = session.candidates.any { candidate ->
             candidate.relativeRootInArchive in selectedRoots &&
-                candidate.versionConflict == PluginVersionConflict.DOWNGRADE
+                    candidate.versionConflict == PluginVersionConflict.DOWNGRADE
         }
-        _uiState.update { it.copy(pendingImport = null, selectedImportRoots = emptySet()) }
+
         runBusy("Plugin imported") {
             val result = installer.installPrepared(
                 session = session,
@@ -118,20 +120,37 @@ class PluginViewModel(
                 selectedRoots = selectedRoots,
                 allowDowngrade = allowDowngrade
             )
+
             result.installed.forEach { plugin ->
                 pluginManager.invalidate(plugin.id)
             }
+
             if (result.installed.isEmpty()) {
                 val failureReason = result.failed.firstOrNull()?.reason ?: "No installable plugin found"
-                logPluginError("Install failed", failureReason, result.failed.joinToString("\n") { "${it.rootPath}: ${it.reason}" })
+                logPluginError(
+                    message = "Install failed",
+                    detail = failureReason,
+                    fullDetail = result.failed.joinToString("\n") { "${it.rootPath}: ${it.reason}" }
+                )
                 error(failureReason)
             }
         }
     }
+    fun discardPendingImportFiles() {
+        _uiState.value.pendingImport?.let { installer.discardImport(it) }
+    }
+    fun clearPendingImport() {
+        _uiState.update {
+            it.copy(
+                pendingImport = null,
+                selectedImportRoots = emptySet()
+            )
+        }
+    }
 
     fun dismissPendingImport() {
-        _uiState.value.pendingImport?.let { installer.discardImport(it) }
-        _uiState.update { it.copy(pendingImport = null, selectedImportRoots = emptySet()) }
+        discardPendingImportFiles()
+        clearPendingImport()
     }
 
     fun setEnabled(id: String, enabled: Boolean) {

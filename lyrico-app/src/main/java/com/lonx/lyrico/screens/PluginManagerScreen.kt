@@ -283,17 +283,19 @@ fun PluginManagerScreen(
         show = showImportPreviewSheet,
         title = stringResource(R.string.plugin_import_found_title),
         onDismissRequest = {
+            viewModel.discardPendingImportFiles()
             showImportPreviewSheet = false
         },
         enableNestedScroll = false,
         onDismissFinished = {
             if (!showImportPreviewSheet) {
-                viewModel.dismissPendingImport()
+                viewModel.clearPendingImport()
             }
         },
         startAction = {
             androidx.compose.material3.TextButton(
                 onClick = {
+                    viewModel.discardPendingImportFiles()
                     showImportPreviewSheet = false
                 },
                 colors = ButtonColors(
@@ -312,8 +314,8 @@ fun PluginManagerScreen(
         endAction = {
             androidx.compose.material3.TextButton(
                 onClick = {
-                    showImportPreviewSheet = false
                     viewModel.installPendingImport()
+                    showImportPreviewSheet = false
                 },
                 colors = ButtonColors(
                     containerColor = Color.Transparent,

@@ -294,7 +294,7 @@ fun PluginManagerScreen(
         startAction = {
             androidx.compose.material3.TextButton(
                 onClick = {
-                    viewModel.dismissPendingImport()
+                    showImportPreviewSheet = false
                 },
                 colors = ButtonColors(
                     containerColor = Color.Transparent,

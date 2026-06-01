@@ -1,3 +1,5 @@
+import { STANDARD_FIELD_KEYS } from './spec.js';
+
 export function parseSongResults(rawJson, plugin) {
   const root = parseJson(rawJson);
   const items = Array.isArray(root)
@@ -9,6 +11,7 @@ export function parseSongResults(rawJson, plugin) {
     .map(item => {
       const id = firstString(item, ['id', 'songId', 'trackId']);
       if (!id) return null;
+      const fieldResult = sanitizeFields(stringMap(firstObject(item, ['fields', 'metadata']) ?? {}));
       return {
         id,
         pluginId: plugin.manifest.id,
@@ -20,7 +23,9 @@ export function parseSongResults(rawJson, plugin) {
         date: firstString(item, ['date', 'releaseDate', 'release_date']) ?? '',
         trackNumber: firstString(item, ['trackNumber', 'trackerNumber', 'track_number']) ?? '',
         picUrl: firstString(item, ['picUrl', 'coverUrl', 'cover_url', 'artworkUrl']) ?? '',
-        fields: stringMap(firstObject(item, ['fields', 'metadata']) ?? {})
+        fields: fieldResult.fields,
+        internal: sanitizeInternal(stringMap(firstObject(item, ['internal']) ?? {})),
+        ignoredFields: fieldResult.ignoredFields
       };
     })
     .filter(Boolean);
@@ -133,6 +138,9 @@ export function validateFunctionResult(functionName, rawJson, plugin) {
       for (const [index, item] of parsed.entries()) {
         if (!item.title) warnings.push(`result[${index}] has empty title`);
         if (!item.artist && functionName === 'searchSongs') warnings.push(`result[${index}] has empty artist`);
+        for (const key of Object.keys(item.ignoredFields ?? {})) {
+          warnings.push(`result[${index}] ignored unknown fields key "${key}"; platform-private values belong in internal`);
+        }
       }
     }
   } catch (error) {
@@ -140,6 +148,30 @@ export function validateFunctionResult(functionName, rawJson, plugin) {
   }
 
   return { parsed, warnings, errors };
+}
+
+function sanitizeFields(fields) {
+  const accepted = {};
+  const ignored = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (STANDARD_FIELD_KEYS.has(key) && value.trim()) {
+      accepted[key] = value;
+    } else if (value.trim()) {
+      ignored[key] = value;
+    }
+  }
+  return { fields: accepted, ignoredFields: ignored };
+}
+
+function sanitizeInternal(internal) {
+  const accepted = {};
+  let count = 0;
+  for (const [key, value] of Object.entries(internal)) {
+    if (!key || key.length > 64 || value.length > 4096 || count >= 64) continue;
+    accepted[key] = value;
+    count += 1;
+  }
+  return accepted;
 }
 
 function parseJson(rawJson) {

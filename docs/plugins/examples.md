@@ -1,6 +1,8 @@
 # 从零编写插件
 
-这是开发者编写插件的第一站。本文从零开始构建一个完整的 Lyrico 插件，展示 manifest、插件函数、配置项、元数据字段、辅助脚本和打包方式如何配合工作。
+这是开发者编写插件的第一站。本文从零开始构建一个完整的 Lyrico 插件，展示 manifest、插件函数、配置项、运行结果字段、辅助脚本和打包方式如何配合工作。
+
+当前协议中，manifest 不再声明 `requiredHostApis` 或 `metadataFields`。插件应在运行结果中用 `fields` 返回宿主标准字段，用 `internal` 返回平台私有上下文。
 
 示例插件名为 **"MusicLib"**，对接一个虚构的 `https://api.musiclib.example.com` 音乐 API。
 
@@ -8,7 +10,7 @@
 
 - 支持歌曲搜索、歌词获取、封面搜索
 - 使用用户配置的 API Key 进行鉴权
-- 写入标题、艺术家、专辑、封面等元数据
+- 返回标题、艺术家、专辑、封面等标准元数据
 - 提供超时时间、地区等可配置选项
 
 ## 目录结构
@@ -40,15 +42,6 @@ com.musiclib.source/
   "includeDirs": ["lib"],
   "icon": "icon.png",
   "capabilities": ["searchSongs", "getLyrics", "searchCovers"],
-  "requiredHostApis": [
-    "http.getText",
-    "http.postText",
-    "crypto.md5",
-    "base64.encodeText",
-    "log.debug",
-    "log.warn",
-    "log.error"
-  ],
   "configFields": [
     {
       "key": "api_key",
@@ -93,73 +86,6 @@ com.musiclib.source/
         { "value": "800", "label": "800 × 800" },
         { "value": "1200", "label": "1200 × 1200" }
       ]
-    }
-  ],
-  "metadataFields": [
-    {
-      "key": "title",
-      "title": "歌曲标题",
-      "group": "基本信息",
-      "type": "text",
-      "writeable": true,
-      "defaultTarget": "TITLE",
-      "defaultMode": "OVERWRITE"
-    },
-    {
-      "key": "artist",
-      "title": "艺术家",
-      "group": "基本信息",
-      "type": "text",
-      "writeable": true,
-      "defaultTarget": "ARTIST",
-      "defaultMode": "OVERWRITE"
-    },
-    {
-      "key": "album",
-      "title": "专辑名",
-      "group": "基本信息",
-      "type": "text",
-      "writeable": true,
-      "defaultTarget": "ALBUM",
-      "defaultMode": "OVERWRITE"
-    },
-    {
-      "key": "date",
-      "title": "发行日期",
-      "group": "基本信息",
-      "type": "date",
-      "writeable": true,
-      "defaultTarget": "DATE",
-      "defaultMode": "SUPPLEMENT"
-    },
-    {
-      "key": "track_number",
-      "title": "音轨号",
-      "group": "基本信息",
-      "type": "number",
-      "writeable": true,
-      "defaultTarget": "TRACK_NUMBER",
-      "defaultMode": "SUPPLEMENT"
-    },
-    {
-      "key": "cover_url",
-      "title": "封面图片",
-      "group": "媒体",
-      "type": "url",
-      "writeable": true,
-      "defaultTarget": "COVER",
-      "defaultMode": "SUPPLEMENT"
-    },
-    {
-      "key": "musiclib_id",
-      "title": "MusicLib ID",
-      "group": "内部",
-      "type": "text",
-      "writeable": false,
-      "internal": true,
-      "defaultTarget": "CUSTOM",
-      "defaultMode": "DISABLED",
-      "targetOptions": ["COMMENT", "CUSTOM"]
     }
   ]
 }
@@ -336,7 +262,10 @@ function mapSong(item, request) {
     album: (item.album || {}).name || "",
     date: formatDate(item.release_time * 1000),
     track_number: String(item.track_number || ""),
-    cover_url: coverUrl,
+    cover_url: coverUrl
+  };
+
+  var internal = {
     musiclib_id: String(item.id || "")
   };
 
@@ -349,7 +278,8 @@ function mapSong(item, request) {
     date: fields.date,
     trackNumber: fields.track_number,
     picUrl: coverUrl,
-    fields: fields
+    fields: fields,
+    internal: internal
   };
 }
 
@@ -383,8 +313,8 @@ function searchSongs(request) {
 
 function getLyrics(request) {
   var song = request.song || {};
-  var fields = song.fields || {};
-  var trackId = fields.musiclib_id || song.id || "";
+  var internal = song.internal || {};
+  var trackId = internal.musiclib_id || song.id || "";
 
   if (!trackId) return null;
 
@@ -452,7 +382,7 @@ ZIP 包根层级即插件根目录（`com.musiclib.source/`），不要包含多
 
 1. 解压到临时目录
 2. 找到 `com.musiclib.source/manifest.json`
-3. 验证 `id` 格式、`apiVersion` 匹配、`requiredHostApis` 合法性
+3. 验证 `id` 格式、`apiVersion` 匹配和 `capabilities` 合法性
 4. 验证 `source.js` 存在、`.js` 扩展名、大小合法
 5. 验证 `lib/` 目录存在
 6. 验证 `icon.png` 存在且格式合法

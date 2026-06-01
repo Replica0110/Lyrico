@@ -103,7 +103,8 @@ function searchSongs(request) {
 | 发行日期 | `date`, `releaseDate`, `release_date` |
 | 音轨号 | `trackNumber`, `trackerNumber`, `track_number` |
 | 封面 URL | `picUrl`, `coverUrl`, `cover_url`, `artworkUrl` |
-| 扩展字段 | `fields`, `metadata` |
+| 标准元数据字段 | `fields`, `metadata` |
+| 插件私有上下文 | `internal` |
 
 `artist` 字段还支持数组格式（自动以 `/` 连接）：
 
@@ -115,9 +116,9 @@ function searchSongs(request) {
 }
 ```
 
-### fields 扩展字段
+### fields 标准字段
 
-`fields` 是一个自由键值对 Map，用于传递额外元数据。这些键名应对应 `manifest.json` 中 `metadataFields` 声明的 `key`：
+`fields` 只允许放入宿主标准字段。未知 key 会被忽略并产生调试 warning；平台私有 ID、hash、token 等上下文必须放入 `internal`。
 
 ```json
 {
@@ -130,11 +131,18 @@ function searchSongs(request) {
     "album": "专辑名",
     "date": "2024-01-01",
     "track_number": "3",
-    "cover_url": "https://...",
-    "source_platform_key": "encrypted_metadata_string..."
+    "cover_url": "https://..."
+  },
+  "internal": {
+    "song_id": "12345",
+    "lyrics_id": "abc"
   }
 }
 ```
+
+当前标准字段包括：`title`、`artist`、`album`、`album_artist`、`genre`、`date`、`track_number`、`disc_number`、`composer`、`lyricist`、`comment`、`lyrics`、`cover_url`、`language`、`copyright`、`rating`、`replaygain_track_gain`、`replaygain_track_peak`、`replaygain_album_gain`、`replaygain_album_peak`、`replaygain_reference_loudness`。
+
+`internal` 不展示、不写入标签、不参与批量匹配字段配置，只会原样传回产生该结果的同一个插件。
 
 ---
 
@@ -155,8 +163,10 @@ function searchSongs(request) {
     "sourceId": "com.example.music_source",
     "pluginId": "com.example.music_source",
     "fields": {
-      "source_platform_key": "encrypted_metadata_string...",
       "title": "示例歌曲"
+    },
+    "internal": {
+      "lyrics_id": "abc"
     }
   },
   "config": {}
@@ -172,7 +182,8 @@ function searchSongs(request) {
 | `song.duration` | `long` | 时长（毫秒） |
 | `song.sourceId` | `string` | 源插件 ID |
 | `song.pluginId` | `string` | 插件 ID |
-| `song.fields` | `object` | 搜索时返回的扩展字段 |
+| `song.fields` | `object` | 搜索时返回的标准字段 |
+| `song.internal` | `object` | 搜索时返回的插件私有上下文 |
 | `config` | `object` | 用户配置项 |
 
 ### 返回值

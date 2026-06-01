@@ -44,9 +44,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
-import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.model.plugin.PluginCapability
 import com.lonx.lyrico.data.model.plugin.FieldProcessRule
 import com.lonx.lyrico.data.model.plugin.FieldScriptConversionMode
@@ -56,6 +55,7 @@ import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
 import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
 import com.lonx.lyrico.data.model.plugin.PluginFieldValueType
 import com.lonx.lyrico.data.model.plugin.PluginMetadataField
+import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.plugin.valueType
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.utils.isSatisfied
@@ -106,26 +106,16 @@ fun PluginConfigScreen(
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val scope = rememberCoroutineScope()
 
-    val tabs = remember(uiState.capabilities, uiState.metadataFields) {
+    val tabs = remember(uiState.capabilities, uiState.fieldProcessFields) {
         buildList {
             add(PluginConfigTab.Basic)
-            if (PluginCapability.GET_LYRICS in uiState.capabilities || uiState.metadataFields.isNotEmpty()) {
+            if (uiState.fieldProcessFields.isNotEmpty()) {
                 add(PluginConfigTab.FieldProcess)
-            }
-            if (uiState.metadataFields.isNotEmpty()) {
-                add(PluginConfigTab.Metadata)
             }
         }
     }
     val pagerState = rememberPagerState(pageCount = { tabs.size.coerceAtLeast(1) })
 
-    var editingFieldKey by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-
-    var showMetadataRuleSheet by rememberSaveable {
-        mutableStateOf(false)
-    }
     var editingProcessFieldKey by rememberSaveable {
         mutableStateOf<String?>(null)
     }
@@ -154,22 +144,8 @@ fun PluginConfigScreen(
 
     val title = uiState.title.ifBlank { stringResource(R.string.plugin_config_title) }
 
-    val editingField = remember(editingFieldKey, uiState.metadataFields) {
-        uiState.metadataFields.firstOrNull { it.key == editingFieldKey }
-    }
-
-    val editingRule = remember(editingFieldKey, uiState.pluginId, uiState.metadataRules) {
-        uiState.metadataRules.firstOrNull {
-            it.pluginId == uiState.pluginId && it.normalizedKey == editingFieldKey
-        }
-    }
-    val editingProcessField = remember(editingProcessFieldKey, uiState.metadataFields) {
-        uiState.metadataFields.firstOrNull { it.key == editingProcessFieldKey }
-    }
-    val editingProcessRule = remember(editingProcessFieldKey, uiState.pluginId, uiState.metadataRules) {
-        uiState.metadataRules.firstOrNull {
-            it.pluginId == uiState.pluginId && it.normalizedKey == editingProcessFieldKey
-        }
+    val editingProcessField = remember(editingProcessFieldKey, uiState.fieldProcessFields) {
+        uiState.fieldProcessFields.firstOrNull { it.key == editingProcessFieldKey }
     }
 
     val hasConfigContent by remember {
@@ -177,14 +153,6 @@ fun PluginConfigScreen(
             uiState.errorMessage == null &&
                     !uiState.isLoading &&
                     uiState.configFields.any { it.dependency.isSatisfied(uiState.values) }
-        }
-    }
-
-    val hasMetadataContent by remember {
-        derivedStateOf {
-            uiState.errorMessage == null &&
-                    !uiState.isLoading &&
-                    uiState.metadataFields.isNotEmpty()
         }
     }
 
@@ -259,7 +227,7 @@ fun PluginConfigScreen(
                 )
             }
 
-            if (!hasConfigContent && !hasMetadataContent && !hasFieldProcessContent) {
+            if (!hasConfigContent && !hasFieldProcessContent) {
                 Text(
                     text = stringResource(R.string.source_config_empty),
                     modifier = Modifier
@@ -286,8 +254,8 @@ fun PluginConfigScreen(
                     )
 
                     PluginConfigTab.FieldProcess -> PluginFieldProcessConfigTab(
-                        metadataFields = uiState.metadataFields,
-                        metadataRules = uiState.metadataRules,
+                        metadataFields = uiState.fieldProcessFields,
+                        metadataRules = emptyList<PluginMetadataFieldWriteRule>(),
                         config = uiState.fieldProcessConfig ?: PluginFieldProcessConfig(uiState.pluginId),
                         hasContent = uiState.fieldProcessConfig != null,
                         topAppBarScrollBehavior = topAppBarScrollBehavior,
@@ -298,42 +266,16 @@ fun PluginConfigScreen(
                         onConfigChange = viewModel::updateFieldProcessConfig
                     )
 
-                    PluginConfigTab.Metadata -> PluginMetadataTab(
-                        pluginId = uiState.pluginId,
-                        metadataFields = uiState.metadataFields,
-                        metadataRules = uiState.metadataRules,
-                        hasContent = hasMetadataContent,
-                        topAppBarScrollBehavior = topAppBarScrollBehavior,
-                        onDisableAll = { viewModel.updateAllMetadataRules(PluginMetadataWriteMode.DISABLED) },
-                        onSupplementAll = { viewModel.updateAllMetadataRules(PluginMetadataWriteMode.SUPPLEMENT) },
-                        onOverwriteAll = { viewModel.updateAllMetadataRules(PluginMetadataWriteMode.OVERWRITE) },
-                        onEditField = { fieldKey ->
-                            editingFieldKey = fieldKey
-                            showMetadataRuleSheet = true
-                        }
-                    )
+                    PluginConfigTab.Metadata -> Unit
                 }
             }
         }
     }
 
-    MetadataRuleBottomSheet(
-        show = showMetadataRuleSheet,
-        field = editingField,
-        rule = editingRule,
-        onDismissRequest = {
-            showMetadataRuleSheet = false
-        },
-        onDismissFinished = {
-            editingFieldKey = null
-        },
-        onRuleChanged = viewModel::updateMetadataRule
-    )
-
     FieldProcessRuleBottomSheet(
         show = showFieldProcessRuleSheet,
         field = editingProcessField,
-        writeRule = editingProcessRule,
+        writeRule = null,
         config = uiState.fieldProcessConfig,
         onDismissRequest = {
             showFieldProcessRuleSheet = false
@@ -1019,10 +961,10 @@ private fun MetadataRulePreference(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = when (rule.mode) {
-                        PluginMetadataWriteMode.DISABLED ->
+                        MetadataWriteMode.DISABLED ->
                             MiuixTheme.colorScheme.onSurfaceVariantActions
-                        PluginMetadataWriteMode.SUPPLEMENT,
-                        PluginMetadataWriteMode.OVERWRITE ->
+                        MetadataWriteMode.SUPPLEMENT,
+                        MetadataWriteMode.OVERWRITE ->
                             MiuixTheme.colorScheme.primary
                     },
                     maxLines = 1,
@@ -1088,7 +1030,7 @@ private fun MetadataRuleBottomSheet(
                 ?: listOf(currentField.defaultTarget)
         }
 
-        val selectedModeIndex = PluginMetadataWriteMode.entries
+        val selectedModeIndex = MetadataWriteMode.entries
             .indexOf(currentRule.mode)
             .coerceAtLeast(0)
 
@@ -1114,10 +1056,10 @@ private fun MetadataRuleBottomSheet(
             ) {
                 WindowDropdownPreference(
                     title = stringResource(R.string.source_config_write_mode),
-                    items = PluginMetadataWriteMode.entries.map { stringResource(it.labelRes) },
+                    items = MetadataWriteMode.entries.map { stringResource(it.labelRes) },
                     selectedIndex = selectedModeIndex,
                     onSelectedIndexChange = { index ->
-                        PluginMetadataWriteMode.entries.getOrNull(index)?.let { mode ->
+                        MetadataWriteMode.entries.getOrNull(index)?.let { mode ->
                             onRuleChanged(
                                 currentRule.copy(
                                     fieldKey = currentRule.normalizedKey,
@@ -1139,7 +1081,7 @@ private fun MetadataRuleBottomSheet(
                                 currentRule.copy(
                                     fieldKey = currentRule.normalizedKey,
                                     target = target,
-                                    customTagKey = if (target == PluginMetadataFieldTarget.CUSTOM) {
+                                    customTagKey = if (target == MetadataFieldTarget.CUSTOM) {
                                         currentRule.customTagKey
                                     } else {
                                         null
@@ -1150,7 +1092,7 @@ private fun MetadataRuleBottomSheet(
                     }
                 )
 
-                AnimatedVisibility(visible = currentRule.target == PluginMetadataFieldTarget.CUSTOM) {
+                AnimatedVisibility(visible = currentRule.target == MetadataFieldTarget.CUSTOM) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

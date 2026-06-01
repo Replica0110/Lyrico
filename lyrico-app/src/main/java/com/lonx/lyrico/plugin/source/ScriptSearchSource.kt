@@ -3,7 +3,6 @@ package com.lonx.lyrico.plugin.source
 import android.util.Log
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginManifest
-import com.lonx.lyrico.data.model.plugin.PluginMetadataField
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
@@ -31,7 +30,6 @@ class ScriptSearchSource(
         manifest.capabilities.toSet()
             .ifEmpty { setOf(PluginCapability.SEARCH_SONGS) }
     override val configFields: List<PluginConfigField> = manifest.configFields
-    override val metadataFields: List<PluginMetadataField> = manifest.metadataFields
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
         Thread(
             null,
@@ -74,11 +72,21 @@ class ScriptSearchSource(
                 config = config.values
             )
             val raw = runtime.call(FUNCTION_SEARCH_SONGS, json.encodeToString(request))
-            parser.parseSongResults(
+            val results = parser.parseSongResults(
                 rawJson = raw,
                 pluginId = id,
                 pluginName = name
             )
+            Log.d(
+                TAG,
+                "searchSongs plugin=$id version=${manifest.versionName}(${
+                    manifest.versionCode
+                }) keyword=$keyword resultCount=${results.size} " +
+                        "top=${results.take(3).map { result ->
+                            "${result.id}:${result.title}|keys=${result.fields.keys}|commentBlank=${result.fields["comment"].isNullOrBlank()}"
+                        }} rawPreview=${raw.take(1000)}"
+            )
+            results
         }.onFailure { throwable ->
             Log.w(TAG, "search failed for plugin $id (${manifest.name})", throwable)
         }.getOrDefault(emptyList())
@@ -124,6 +132,30 @@ class ScriptSearchSource(
             }.getOrDefault(emptyList())
         }
 
+    override suspend fun searchCovers(song: SongSearchResult, pageSize: Int): List<SongSearchResult> =
+        withContext(quickJsDispatcher) {
+            runCatching {
+                if (PluginCapability.SEARCH_COVERS !in capabilities) {
+                    return@withContext emptyList()
+                }
+
+                val request = PluginSearchCoversRequest(
+                    keyword = listOf(song.title, song.artist).filter { it.isNotBlank() }.joinToString(" "),
+                    song = song.toPluginSongRequest(),
+                    pageSize = pageSize,
+                    config = config.values
+                )
+                val raw = runtime.call(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
+                parser.parseSongResults(
+                    rawJson = raw,
+                    pluginId = id,
+                    pluginName = name
+                )
+            }.onFailure { throwable ->
+                Log.w(TAG, "searchCover failed for plugin $id (${manifest.name})", throwable)
+            }.getOrDefault(emptyList())
+        }
+
     override fun close() {
         runCatching {
             if (runtimeDelegate.isInitialized()) {
@@ -145,7 +177,8 @@ class ScriptSearchSource(
             duration = duration,
             sourceId = pluginId,
             pluginId = pluginId,
-            fields = normalizedFields()
+            fields = fields,
+            internal = internal
         )
     }
 

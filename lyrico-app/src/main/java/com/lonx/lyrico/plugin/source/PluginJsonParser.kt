@@ -6,6 +6,8 @@ import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import com.lonx.lyrico.data.model.lyrics.isWordByWord
+import com.lonx.lyrico.data.model.lyrics.sanitizePluginInternal
+import com.lonx.lyrico.data.model.lyrics.sanitizeStandardFields
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -37,7 +39,8 @@ class PluginJsonParser(
             val artist = obj.string("artist", "artists", "singer").orEmpty()
             val album = obj.string("album", "albumName").orEmpty()
             val duration = obj.long("duration", "durationMs", "duration_ms") ?: 0L
-            val fields = obj.stringMap("fields", "metadata").orEmpty()
+            val fields = obj.stringMap("fields", "metadata").orEmpty().sanitizeStandardFields()
+            val internal = obj.stringMap("internal").orEmpty().sanitizePluginInternal()
 
             SongSearchResult(
                 id = id,
@@ -50,7 +53,8 @@ class PluginJsonParser(
                 date = obj.string("date", "releaseDate", "release_date").orEmpty(),
                 trackNumber = obj.string("trackNumber", "trackerNumber", "track_number").orEmpty(),
                 picUrl = obj.string("picUrl", "coverUrl", "cover_url", "artworkUrl").orEmpty(),
-                fields = fields
+                fields = fields,
+                internal = internal
             )
         }
     }

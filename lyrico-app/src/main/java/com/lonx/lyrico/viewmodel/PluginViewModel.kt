@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.PluginFieldProcessConfigRepository
@@ -124,7 +123,6 @@ class PluginViewModel(
             result.installed.forEach { plugin ->
                 pluginManager.invalidate(plugin.id)
             }
-            syncMetadataRules()
             if (result.installed.isEmpty()) {
                 val failureReason = result.failed.firstOrNull()?.reason ?: "No installable plugin found"
                 logPluginError("Install failed", failureReason, result.failed.joinToString("\n") { "${it.rootPath}: ${it.reason}" })
@@ -231,15 +229,6 @@ class PluginViewModel(
                 repository.uninstallPlugin(id)
             }
         }
-    }
-
-    private suspend fun syncMetadataRules() {
-        val sources = pluginManager.getEnabledSources()
-        val mergedRules = PluginMetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
-            savedRules = settingsRepository.getMetadataFieldWriteRules(),
-            searchSources = sources
-        )
-        settingsRepository.saveMetadataFieldWriteRules(mergedRules)
     }
 
     private suspend fun logPluginError(message: String, detail: String, fullDetail: String? = null) {

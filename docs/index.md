@@ -28,7 +28,7 @@ features:
     details: 使用 JavaScript 编写搜索源插件，扩展歌曲搜索、歌词获取和封面搜索能力。
   - icon: ⚙️
     title: 插件配置
-    details: 通过 manifest 声明配置项和可写元数据字段，由应用生成对应配置界面。
+    details: 通过 manifest 声明必要配置项，由应用生成对应配置界面。
   - icon: 📚
     title: 开发参考
     details: 查看插件结构、宿主 API、插件函数、配置项和完整示例等开发资料。

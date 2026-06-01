@@ -5,8 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRuleFactory
 import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
@@ -58,18 +56,6 @@ class BatchMatchViewModel(
 
     private val allSources: StateFlow<List<SearchSource>> =
         searchSourceProvider.observeAllSources()
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
-    private val metadataFieldWriteRules: StateFlow<List<PluginMetadataFieldWriteRule>> =
-        combine(
-            settingsRepository.metadataFieldWriteRules,
-            allSources
-        ) { savedRules, sources ->
-            PluginMetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
-                savedRules = savedRules,
-                searchSources = sources
-            )
-        }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val sourceSettings: StateFlow<Map<String, SourceRuntimeConfig>> =
@@ -198,7 +184,6 @@ class BatchMatchViewModel(
                     matchConfig = matchConfig,
                     separator = separator.value,
                     enabledSourceOrderIds = currentOrderIds,
-                    metadataFieldWriteRules = metadataFieldWriteRules.value,
                     sourceSettings = sourceSettings.value.mapValues { it.value.values },
                     pluginFieldProcessConfigs = pluginFieldProcessConfigs.value,
                     lyricRenderConfig = lyricRenderConfig.value,

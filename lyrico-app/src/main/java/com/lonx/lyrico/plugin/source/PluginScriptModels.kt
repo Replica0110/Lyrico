@@ -14,6 +14,7 @@ data class PluginSearchSongsRequest(
 @Serializable
 data class PluginSearchCoversRequest(
     val keyword: String,
+    val song: PluginSongRequest? = null,
     val pageSize: Int = 5,
     val config: Map<String, String> = emptyMap()
 )
@@ -33,5 +34,6 @@ data class PluginSongRequest(
     val duration: Long,
     val sourceId: String,
     val pluginId: String,
-    val fields: Map<String, String> = emptyMap()
+    val fields: Map<String, String> = emptyMap(),
+    val internal: Map<String, String> = emptyMap()
 )

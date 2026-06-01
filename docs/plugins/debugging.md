@@ -2,6 +2,8 @@
 
 Lyrico 提供桌面端插件调试验证工具，可以在开发机上直接校验、运行和打包插件，避免每次修改后都手动导入到 Android 应用中验证。
 
+当前协议不再校验 `requiredHostApis` 或 `metadataFields`。调试重点是 manifest 基础字段、入口文件、运行函数返回值、`fields` 标准 key 和 `internal` 大小限制。
+
 工具位置：
 
 ```text
@@ -42,8 +44,10 @@ lyrico-plugin validate ./my-plugin
 - `manifest.json` 是否存在且格式正确
 - 插件 ID、版本号、API 版本是否合法
 - `entry`、`includeDirs`、`icon` 是否存在且路径安全
-- `capabilities` 和 `requiredHostApis` 是否受支持
-- `configFields` 和 `metadataFields` 结构是否正确
+- `capabilities` 是否受支持
+- `configFields` 结构是否正确
+- 运行结果中的 `fields` 是否只包含标准字段
+- `internal` 是否满足数量和大小限制
 - 插件目录大小是否超过应用限制
 
 ## 查看插件摘要
@@ -52,7 +56,7 @@ lyrico-plugin validate ./my-plugin
 lyrico-plugin inspect ./my-plugin
 ```
 
-会输出插件信息、能力声明、配置项、元数据字段和脚本加载顺序。
+会输出插件信息、能力声明、配置项和脚本加载顺序。
 
 ## 执行插件函数
 

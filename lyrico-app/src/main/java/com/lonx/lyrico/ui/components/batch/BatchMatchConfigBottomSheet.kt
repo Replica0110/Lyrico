@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
-import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
@@ -57,16 +57,16 @@ fun BatchMatchConfigBottomSheet(
     val targetGroups = remember { BatchMatchConfigDefaults.TARGET_GROUPS }
 
     fun updateTarget(
-        target: PluginMetadataFieldTarget,
+        target: MetadataFieldTarget,
         isSelected: Boolean,
-        mode: PluginMetadataWriteMode
+        mode: MetadataWriteMode
     ) {
         val currentMap = config.targetModes.toMutableMap()
         currentMap[target] = if (isSelected) {
-            mode.takeIf { it != PluginMetadataWriteMode.DISABLED }
-                ?: PluginMetadataWriteMode.SUPPLEMENT
+            mode.takeIf { it != MetadataWriteMode.DISABLED }
+                ?: MetadataWriteMode.SUPPLEMENT
         } else {
-            PluginMetadataWriteMode.DISABLED
+            MetadataWriteMode.DISABLED
         }
         config = config.copy(targetModes = currentMap)
     }
@@ -101,12 +101,12 @@ fun BatchMatchConfigBottomSheet(
                             }
 
                             items(group.targets, key = { it.name }) { target ->
-                                val mode = config.targetModes[target] ?: PluginMetadataWriteMode.DISABLED
-                                val isSelected = mode != PluginMetadataWriteMode.DISABLED
+                                val mode = config.targetModes[target] ?: MetadataWriteMode.DISABLED
+                                val isSelected = mode != MetadataWriteMode.DISABLED
                                 val effectiveMode = if (isSelected) {
                                     mode
                                 } else {
-                                    PluginMetadataWriteMode.SUPPLEMENT
+                                    MetadataWriteMode.SUPPLEMENT
                                 }
 
                                 BatchMatchTargetItem(
@@ -120,10 +120,10 @@ fun BatchMatchConfigBottomSheet(
                                         updateTarget(
                                             target = target,
                                             isSelected = isSelected,
-                                            mode = if (effectiveMode == PluginMetadataWriteMode.OVERWRITE) {
-                                                PluginMetadataWriteMode.SUPPLEMENT
+                                            mode = if (effectiveMode == MetadataWriteMode.OVERWRITE) {
+                                                MetadataWriteMode.SUPPLEMENT
                                             } else {
-                                                PluginMetadataWriteMode.OVERWRITE
+                                                MetadataWriteMode.OVERWRITE
                                             }
                                         )
                                     }
@@ -149,11 +149,11 @@ fun BatchMatchConfigBottomSheet(
                             val updatedTargetModes = config.targetModes.toMutableMap()
 
                             if (checked) {
-                                if (updatedTargetModes[PluginMetadataFieldTarget.TITLE] != PluginMetadataWriteMode.DISABLED) {
-                                    updatedTargetModes[PluginMetadataFieldTarget.TITLE] = PluginMetadataWriteMode.OVERWRITE
+                                if (updatedTargetModes[MetadataFieldTarget.TITLE] != MetadataWriteMode.DISABLED) {
+                                    updatedTargetModes[MetadataFieldTarget.TITLE] = MetadataWriteMode.OVERWRITE
                                 }
-                                if (updatedTargetModes[PluginMetadataFieldTarget.ARTIST] != PluginMetadataWriteMode.DISABLED) {
-                                    updatedTargetModes[PluginMetadataFieldTarget.ARTIST] = PluginMetadataWriteMode.OVERWRITE
+                                if (updatedTargetModes[MetadataFieldTarget.ARTIST] != MetadataWriteMode.DISABLED) {
+                                    updatedTargetModes[MetadataFieldTarget.ARTIST] = MetadataWriteMode.OVERWRITE
                                 }
                             }
 
@@ -212,9 +212,9 @@ fun BatchMatchConfigBottomSheet(
 
 @Composable
 private fun BatchMatchTargetItem(
-    target: PluginMetadataFieldTarget,
+    target: MetadataFieldTarget,
     isSelected: Boolean,
-    mode: PluginMetadataWriteMode,
+    mode: MetadataWriteMode,
     onCheckedChange: (Boolean) -> Unit,
     onModeToggle: () -> Unit
 ) {
@@ -243,7 +243,7 @@ private fun BatchMatchTargetItem(
                 }
 
                 Switch(
-                    checked = mode == PluginMetadataWriteMode.OVERWRITE,
+                    checked = mode == MetadataWriteMode.OVERWRITE,
                     onCheckedChange = { onModeToggle() },
                     enabled = isSelected
                 )

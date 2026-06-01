@@ -1,7 +1,5 @@
 package com.lonx.lyrico.data.model.plugin
 
-import androidx.annotation.StringRes
-import com.lonx.lyrico.R
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -24,13 +22,12 @@ data class PluginManifest(
     val author: String = "",
     val description: String = "",
     val apiVersion: Int,
+    val minHostApiVersion: Int = 1,
     val entry: String = "source.js",
     val includeDirs: List<String> = emptyList(),
     val icon: String? = null,
     val capabilities: Set<PluginCapability> = emptySet(),
-    val requiredHostApis: Set<String> = emptySet(),
-    val configFields: List<PluginConfigField> = emptyList(),
-    val metadataFields: List<PluginMetadataField> = emptyList()
+    val configFields: List<PluginConfigField> = emptyList()
 )
 
 @Serializable
@@ -156,74 +153,4 @@ object PluginConfigDependencySerializer : KSerializer<PluginConfigDependency> {
             )
         }
     }
-}
-
-@Serializable
-data class PluginMetadataField(
-    val key: String,
-    val title: String,
-    val summary: String = "",
-    val group: String = "extended",
-    val type: PluginMetadataFieldType = PluginMetadataFieldType.TEXT,
-    val writeable: Boolean = true,
-    val internal: Boolean = false,
-    val defaultTarget: PluginMetadataFieldTarget = PluginMetadataFieldTarget.COMMENT,
-    val defaultMode: PluginMetadataWriteMode = PluginMetadataWriteMode.DISABLED,
-    val defaultCustomTagKey: String = "",
-    val targetOptions: List<PluginMetadataFieldTarget> = emptyList()
-)
-
-@Serializable
-enum class PluginMetadataFieldType {
-    @SerialName("text")
-    TEXT,
-    @SerialName("number")
-    NUMBER,
-    @SerialName("date")
-    DATE,
-    @SerialName("lyrics")
-    LYRICS,
-    @SerialName("cover")
-    COVER,
-    @SerialName("binary")
-    BINARY,
-    @SerialName("url")
-    URL
-}
-
-@Serializable
-enum class PluginMetadataWriteMode(
-    @field:StringRes val labelRes: Int
-) {
-    DISABLED(R.string.extra_write_mode_disabled),
-    SUPPLEMENT(R.string.extra_write_mode_supplement),
-    OVERWRITE(R.string.extra_write_mode_overwrite)
-}
-
-@Serializable
-enum class PluginMetadataFieldTarget(
-    @field:StringRes val labelRes: Int
-) {
-    TITLE(R.string.label_title),
-    ARTIST(R.string.label_artists),
-    ALBUM(R.string.label_album),
-    ALBUM_ARTIST(R.string.label_album_artist),
-    GENRE(R.string.label_genre),
-    DATE(R.string.label_date),
-    TRACK_NUMBER(R.string.label_track_number),
-    DISC_NUMBER(R.string.label_disc_number),
-    COMPOSER(R.string.label_composer),
-    LYRICIST(R.string.label_lyricist),
-    COMMENT(R.string.label_comment),
-    LYRICS(R.string.label_lyrics),
-    COVER(R.string.label_cover),
-    LANGUAGE(R.string.label_language),
-    COPYRIGHT(R.string.label_copyright),
-    RATING(R.string.label_rating),
-    REPLAY_GAIN_TRACK_GAIN(R.string.label_replaygain_track_gain),
-    REPLAY_GAIN_TRACK_PEAK(R.string.label_replaygain_track_peak),
-    REPLAY_GAIN_ALBUM_GAIN(R.string.label_replaygain_album_gain),
-    REPLAY_GAIN_ALBUM_PEAK(R.string.label_replaygain_album_peak),
-    REPLAY_GAIN_REFERENCE_LOUDNESS(R.string.label_replaygain_reference_loudness),
-    CUSTOM(R.string.label_custom)
 }

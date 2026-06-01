@@ -1,5 +1,7 @@
 package com.lonx.lyrico.data.model.plugin
 
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 import kotlinx.serialization.Serializable
 
@@ -7,8 +9,8 @@ import kotlinx.serialization.Serializable
 data class PluginMetadataFieldWriteRule(
     val pluginId: String,
     val fieldKey: String,
-    val target: PluginMetadataFieldTarget = PluginMetadataFieldTarget.COMMENT,
-    val mode: PluginMetadataWriteMode = PluginMetadataWriteMode.DISABLED,
+    val target: MetadataFieldTarget = MetadataFieldTarget.COMMENT,
+    val mode: MetadataWriteMode = MetadataWriteMode.DISABLED,
     val customTagKey: String? = null
 ) {
     val normalizedKey: String
@@ -30,48 +32,13 @@ object PluginMetadataFieldKeyAlias {
 
 object PluginMetadataFieldWriteRuleFactory {
     fun buildDefaultRules(searchSources: List<SearchSource>): List<PluginMetadataFieldWriteRule> {
-        return searchSources.flatMap { source ->
-            source.metadataFields
-                .filter { it.writeable && !it.internal }
-                .map { field ->
-                    PluginMetadataFieldWriteRule(
-                        pluginId = source.id,
-                        fieldKey = field.key,
-                        target = field.defaultTarget,
-                        mode = field.defaultMode,
-                        customTagKey = field.defaultCustomTagKey.takeIf { it.isNotBlank() }
-                    )
-                }
-        }
+        return emptyList()
     }
 
     fun mergeWithDeclaredFields(
         savedRules: List<PluginMetadataFieldWriteRule>,
         searchSources: List<SearchSource>
     ): List<PluginMetadataFieldWriteRule> {
-        val defaults = buildDefaultRules(searchSources)
-
-        val mergedDefaults = defaults.map { defaultRule ->
-            savedRules.firstOrNull {
-                it.pluginId == defaultRule.pluginId &&
-                        it.normalizedKey == defaultRule.normalizedKey
-            }?.let { savedRule ->
-                savedRule.copy(fieldKey = savedRule.normalizedKey)
-            } ?: defaultRule
-        }
-
-        val defaultKeys = defaults
-            .map { it.pluginId to it.normalizedKey }
-            .toSet()
-
-        val extraSavedRules = savedRules
-            .filter { savedRule ->
-                savedRule.pluginId to savedRule.normalizedKey !in defaultKeys
-            }
-            .map { savedRule ->
-                savedRule.copy(fieldKey = savedRule.normalizedKey)
-            }
-
-        return mergedDefaults + extraSavedRules
+        return emptyList()
     }
 }

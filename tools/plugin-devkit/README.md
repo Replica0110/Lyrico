@@ -41,10 +41,10 @@ lyrico-plugin validate ./my-plugin
 - 插件 ID、版本号、API 版本
 - `entry`、`includeDirs`、`icon`
 - `capabilities`
-- `requiredHostApis`
 - `configFields`
-- `metadataFields`
 - 插件目录大小
+- 运行结果中的 `fields` 是否只使用宿主标准字段
+- `internal` 是否满足数量和大小限制
 
 `configFields` 支持 `text`、`password`、`number`、`switch`、`dropdown`、`textarea` 和只展示说明、不写入运行时配置的 `markdown` 类型。
 
@@ -56,7 +56,7 @@ lyrico-plugin validate ./my-plugin
 lyrico-plugin inspect ./my-plugin
 ```
 
-包括插件信息、能力、宿主 API、配置项、元数据字段和脚本加载顺序。
+包括插件信息、能力、配置项和脚本加载顺序。
 
 ### test
 

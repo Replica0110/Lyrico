@@ -17,45 +17,28 @@ export const CONFIG_FIELD_TYPES = new Set([
   'markdown'
 ]);
 
-export const METADATA_FIELD_TYPES = new Set([
-  'text',
-  'number',
+export const STANDARD_FIELD_KEYS = new Set([
+  'title',
+  'artist',
+  'album',
+  'album_artist',
+  'genre',
   'date',
+  'track_number',
+  'disc_number',
+  'composer',
+  'lyricist',
+  'comment',
   'lyrics',
-  'cover',
-  'binary',
-  'url'
-]);
-
-export const METADATA_WRITE_MODES = new Set([
-  'DISABLED',
-  'SUPPLEMENT',
-  'OVERWRITE'
-]);
-
-export const METADATA_TARGETS = new Set([
-  'TITLE',
-  'ARTIST',
-  'ALBUM',
-  'ALBUM_ARTIST',
-  'GENRE',
-  'DATE',
-  'TRACK_NUMBER',
-  'DISC_NUMBER',
-  'COMPOSER',
-  'LYRICIST',
-  'COMMENT',
-  'LYRICS',
-  'COVER',
-  'LANGUAGE',
-  'COPYRIGHT',
-  'RATING',
-  'REPLAY_GAIN_TRACK_GAIN',
-  'REPLAY_GAIN_TRACK_PEAK',
-  'REPLAY_GAIN_ALBUM_GAIN',
-  'REPLAY_GAIN_ALBUM_PEAK',
-  'REPLAY_GAIN_REFERENCE_LOUDNESS',
-  'CUSTOM'
+  'cover_url',
+  'language',
+  'copyright',
+  'rating',
+  'replaygain_track_gain',
+  'replaygain_track_peak',
+  'replaygain_album_gain',
+  'replaygain_album_peak',
+  'replaygain_reference_loudness'
 ]);
 
 export const HOST_APIS = new Set([

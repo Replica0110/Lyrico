@@ -35,8 +35,8 @@ import com.lonx.lyrico.viewmodel.SortBy
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
-import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -926,26 +926,26 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    private fun decodePluginMetadataFieldTarget(name: String): PluginMetadataFieldTarget? {
-        return PluginMetadataFieldTarget.entries.firstOrNull { it.name == name }
+    private fun decodePluginMetadataFieldTarget(name: String): MetadataFieldTarget? {
+        return MetadataFieldTarget.entries.firstOrNull { it.name == name }
     }
 
-    private fun decodePluginMetadataWriteMode(name: String?): PluginMetadataWriteMode? {
+    private fun decodePluginMetadataWriteMode(name: String?): MetadataWriteMode? {
         return name
-            ?.let { value -> runCatching { PluginMetadataWriteMode.valueOf(value) }.getOrNull() }
+            ?.let { value -> runCatching { MetadataWriteMode.valueOf(value) }.getOrNull() }
     }
 
-    private fun legacyBatchFieldToTarget(fieldName: String): PluginMetadataFieldTarget? {
+    private fun legacyBatchFieldToTarget(fieldName: String): MetadataFieldTarget? {
         return when (fieldName) {
-            "TITLE" -> PluginMetadataFieldTarget.TITLE
-            "ARTIST" -> PluginMetadataFieldTarget.ARTIST
-            "ALBUM" -> PluginMetadataFieldTarget.ALBUM
-            "GENRE" -> PluginMetadataFieldTarget.GENRE
-            "DATE" -> PluginMetadataFieldTarget.DATE
-            "TRACK_NUMBER" -> PluginMetadataFieldTarget.TRACK_NUMBER
-            "LYRICS" -> PluginMetadataFieldTarget.LYRICS
-            "COMMENT" -> PluginMetadataFieldTarget.COMMENT
-            "COVER" -> PluginMetadataFieldTarget.COVER
+            "TITLE" -> MetadataFieldTarget.TITLE
+            "ARTIST" -> MetadataFieldTarget.ARTIST
+            "ALBUM" -> MetadataFieldTarget.ALBUM
+            "GENRE" -> MetadataFieldTarget.GENRE
+            "DATE" -> MetadataFieldTarget.DATE
+            "TRACK_NUMBER" -> MetadataFieldTarget.TRACK_NUMBER
+            "LYRICS" -> MetadataFieldTarget.LYRICS
+            "COMMENT" -> MetadataFieldTarget.COMMENT
+            "COVER" -> MetadataFieldTarget.COVER
             else -> null
         }
     }

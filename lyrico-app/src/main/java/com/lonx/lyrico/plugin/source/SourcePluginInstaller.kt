@@ -440,9 +440,6 @@ class SourcePluginInstaller(
         require(manifest.apiVersion == HostApiRegistry.PLUGIN_API_VERSION) {
             "Unsupported plugin apiVersion: ${manifest.apiVersion}"
         }
-        require(manifest.requiredHostApis.all { it in HostApiRegistry.SUPPORTED_HOST_APIS }) {
-            "Unsupported host APIs: ${manifest.requiredHostApis - HostApiRegistry.SUPPORTED_HOST_APIS}"
-        }
         require(manifest.capabilities.isEmpty() || PluginCapability.SEARCH_SONGS in manifest.capabilities) {
             "A source plugin must support SEARCH_SONGS"
         }

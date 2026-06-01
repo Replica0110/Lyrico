@@ -2,10 +2,8 @@ package com.lonx.lyrico.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRuleFactory
-import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
 import com.lonx.lyrico.data.model.plugin.PluginCapability
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
 import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
@@ -26,9 +24,8 @@ data class SearchSourceConfigUiState(
     val title: String = "",
     val capabilities: Set<PluginCapability> = emptySet(),
     val configFields: List<PluginConfigField> = emptyList(),
-    val metadataFields: List<PluginMetadataField> = emptyList(),
+    val fieldProcessFields: List<PluginMetadataField> = emptyList(),
     val values: Map<String, String> = emptyMap(),
-    val metadataRules: List<PluginMetadataFieldWriteRule> = emptyList(),
     val fieldProcessConfig: PluginFieldProcessConfig? = null,
     val validationErrors: Map<String, String> = emptyMap(),
     val isLoading: Boolean = true,
@@ -43,8 +40,6 @@ class SearchSourceConfigViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchSourceConfigUiState())
     val uiState: StateFlow<SearchSourceConfigUiState> = _uiState.asStateFlow()
-
-    private var allMetadataRules: List<PluginMetadataFieldWriteRule> = emptyList()
 
     fun load(pluginId: String) {
         viewModelScope.launch {
@@ -61,10 +56,17 @@ class SearchSourceConfigViewModel(
             val defaults = valueFields.associate { it.key to it.defaultValue }
             val saved = settingsRepository.getSourceSettings(sourceImpl.id).values
             val fieldProcessConfig = pluginFieldProcessConfigRepository.getConfig(sourceImpl.id)
-            allMetadataRules = PluginMetadataFieldWriteRuleFactory.mergeWithDeclaredFields(
-                savedRules = settingsRepository.getMetadataFieldWriteRules(),
-                searchSources = allSources
-            )
+            val fieldProcessFields = if (PluginCapability.GET_LYRICS in sourceImpl.capabilities) {
+                listOf(
+                    PluginMetadataField(
+                        key = "lyrics",
+                        title = "歌词",
+                        defaultTarget = MetadataFieldTarget.LYRICS
+                    )
+                )
+            } else {
+                emptyList()
+            }
 
             _uiState.update {
                 it.copy(
@@ -72,11 +74,8 @@ class SearchSourceConfigViewModel(
                     title = sourceImpl.name,
                     capabilities = sourceImpl.capabilities,
                     configFields = fields,
-                    metadataFields = sourceImpl.metadataFields.filter { field ->
-                        field.writeable && !field.internal
-                    },
+                    fieldProcessFields = fieldProcessFields,
                     values = defaults + saved,
-                    metadataRules = allMetadataRules.filter { rule -> rule.pluginId == sourceImpl.id },
                     fieldProcessConfig = fieldProcessConfig,
                     validationErrors = emptyMap(),
                     isLoading = false,
@@ -92,38 +91,6 @@ class SearchSourceConfigViewModel(
             it.copy(
                 values = it.values + (key to value),
                 validationErrors = it.validationErrors - key,
-                saved = false
-            )
-        }
-    }
-
-    fun updateMetadataRule(rule: PluginMetadataFieldWriteRule) {
-        _uiState.update {
-            it.copy(
-                metadataRules = it.metadataRules.map { old ->
-                    if (old.pluginId == rule.pluginId && old.normalizedKey == rule.normalizedKey) rule else old
-                },
-                saved = false
-            )
-        }
-    }
-
-    fun updateAllMetadataRules(mode: PluginMetadataWriteMode) {
-        val state = _uiState.value
-        val pluginId = state.pluginId
-        val writableKeys = state.metadataFields
-            .filter { it.writeable && !it.internal }
-            .mapTo(mutableSetOf()) { it.key }
-
-        _uiState.update {
-            it.copy(
-                metadataRules = it.metadataRules.map { rule ->
-                    if (rule.pluginId == pluginId && rule.normalizedKey in writableKeys) {
-                        rule.copy(fieldKey = rule.normalizedKey, mode = mode)
-                    } else {
-                        rule
-                    }
-                },
                 saved = false
             )
         }
@@ -166,18 +133,11 @@ class SearchSourceConfigViewModel(
                 pluginId,
                 state.values.filterKeys { it in valueFieldKeys }
             )
-            val updatedRules = allMetadataRules.map { old ->
-                state.metadataRules.firstOrNull {
-                    it.pluginId == old.pluginId && it.normalizedKey == old.normalizedKey
-                } ?: old
-            }
-            settingsRepository.saveMetadataFieldWriteRules(updatedRules)
             state.fieldProcessConfig?.let { config ->
                 pluginFieldProcessConfigRepository.updateConfig(
                     config.copy(pluginId = config.pluginId.ifBlank { pluginId })
                 )
             }
-            allMetadataRules = settingsRepository.getMetadataFieldWriteRules()
             _uiState.update { it.copy(saved = true, validationErrors = emptyMap()) }
         }
     }

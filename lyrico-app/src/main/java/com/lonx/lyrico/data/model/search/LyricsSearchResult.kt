@@ -1,6 +1,7 @@
 package com.lonx.lyrico.data.model.search
 
 import android.os.Parcelable
+import com.lonx.lyrico.data.model.lyrics.sanitizeStandardFields
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -19,7 +20,7 @@ data class LyricsSearchResult(
 ) : Parcelable {
     fun normalizedFields(): Map<String, String> {
         return buildMap {
-            putAll(fields)
+            putAll(fields.sanitizeStandardFields())
 
             title?.takeIf { it.isNotBlank() }?.let { putIfAbsent("title", it) }
             artist?.takeIf { it.isNotBlank() }?.let { putIfAbsent("artist", it) }

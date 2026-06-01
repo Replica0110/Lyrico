@@ -1,9 +1,9 @@
 package com.lonx.lyrico.data.model.lyrics
 
 import android.os.Parcelable
+import com.lonx.lyrico.data.model.metadata.StandardPluginField
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
-import kotlin.collections.get
 
 @Parcelize
 @Serializable
@@ -11,6 +11,7 @@ data class SongSearchResult(
     val id: String,
     val pluginId: String,
     val pluginName: String,
+    // UI 快速展示字段
     val title: String = "",
     val artist: String = "",
     val album: String = "",
@@ -18,16 +19,20 @@ data class SongSearchResult(
     val date: String = "",
     val trackNumber: String = "",
     val picUrl: String = "",
-    val fields: Map<String, String> = emptyMap()
+
+    // 标准元数据字段
+    val fields: Map<String, String> = emptyMap(),
+
+    // 插件私有上下文
+    val internal: Map<String, String> = emptyMap()
 ) : Parcelable {
     fun normalizedFields(): Map<String, String> {
         return buildMap {
-            putAll(fields)
+            putAll(fields.sanitizeStandardFields())
 
             if (title.isNotBlank()) putIfAbsent("title", title)
             if (artist.isNotBlank()) putIfAbsent("artist", artist)
             if (album.isNotBlank()) putIfAbsent("album", album)
-            if (duration > 0) putIfAbsent("duration", duration.toString())
             if (date.isNotBlank()) putIfAbsent("date", date)
             if (trackNumber.isNotBlank()) putIfAbsent("track_number", trackNumber)
             if (picUrl.isNotBlank()) putIfAbsent("cover_url", picUrl)
@@ -35,11 +40,19 @@ data class SongSearchResult(
     }
 }
 
-object MetadataFieldKeys {
-    const val TITLE = "title"
-    const val ARTIST = "artist"
-    const val ALBUM = "album"
-    const val DATE = "date"
-    const val TRACK_NUMBER = "track_number"
-    const val COVER_URL = "cover_url"
+fun Map<String, String>.sanitizeStandardFields(): Map<String, String> {
+    return asSequence()
+        .filter { (key, value) ->
+            StandardPluginField.fromKey(key) != null && value.isNotBlank()
+        }
+        .associate { (key, value) -> key to value }
+}
+
+fun Map<String, String>.sanitizePluginInternal(): Map<String, String> {
+    return asSequence()
+        .filter { (key, value) ->
+            key.isNotBlank() && key.length <= 64 && value.length <= 4096
+        }
+        .take(64)
+        .associate { (key, value) -> key to value }
 }

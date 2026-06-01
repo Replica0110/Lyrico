@@ -64,9 +64,7 @@ async function commandInspect(args) {
     versionName: plugin.manifest.versionName,
     apiVersion: plugin.manifest.apiVersion,
     capabilities: effectiveCapabilities(plugin.manifest),
-    requiredHostApis: plugin.manifest.requiredHostApis ?? [],
     configFields: (plugin.manifest.configFields ?? []).map(field => ({ key: field.key, type: field.type, required: !!field.required })),
-    metadataFields: (plugin.manifest.metadataFields ?? []).map(field => ({ key: field.key, type: field.type ?? 'text', target: field.defaultTarget ?? 'COMMENT' })),
     files: plugin.files
   };
 
@@ -77,9 +75,7 @@ async function commandInspect(args) {
     console.log(`Version: ${summary.versionName} (${summary.versionCode})`);
     console.log(`API: ${summary.apiVersion}`);
     console.log(`Capabilities: ${summary.capabilities.join(', ')}`);
-    console.log(`Required host APIs: ${summary.requiredHostApis.length ? summary.requiredHostApis.join(', ') : '(none)'}`);
     console.log(`Config fields: ${summary.configFields.length ? summary.configFields.map(field => `${field.key}:${field.type}`).join(', ') : '(none)'}`);
-    console.log(`Metadata fields: ${summary.metadataFields.length ? summary.metadataFields.map(field => `${field.key}:${field.target}`).join(', ') : '(none)'}`);
     console.log('Script load order:');
     summary.files.forEach(file => console.log(`  - ${file}`));
   }

@@ -3,11 +3,7 @@ import path from 'node:path';
 import {
   CAPABILITIES,
   CONFIG_FIELD_TYPES,
-  HOST_APIS,
   LIMITS,
-  METADATA_FIELD_TYPES,
-  METADATA_TARGETS,
-  METADATA_WRITE_MODES,
   PLUGIN_API_VERSION
 } from './spec.js';
 import {
@@ -113,14 +109,15 @@ export function validateManifestShape(manifest, report = new Report()) {
 
   validateStringArray(manifest, report, 'includeDirs');
   validateEnumArray(manifest, report, 'capabilities', CAPABILITIES);
-  validateEnumArray(manifest, report, 'requiredHostApis', HOST_APIS);
 
   if (Array.isArray(manifest.capabilities) && manifest.capabilities.length > 0 && !manifest.capabilities.includes('searchSongs')) {
     report.error('source plugins must support searchSongs when capabilities are declared');
   }
 
   validateConfigFields(manifest.configFields, report);
-  validateMetadataFields(manifest.metadataFields, report);
+  warnRemovedManifestField(manifest, report, 'requiredHostApis');
+  warnRemovedManifestField(manifest, report, 'returnedFields');
+  warnRemovedManifestField(manifest, report, 'metadataFields');
 
   return report;
 }
@@ -216,37 +213,6 @@ function validateConfigFields(fields, report) {
   });
 }
 
-function validateMetadataFields(fields, report) {
-  if (fields === undefined) return;
-  if (!Array.isArray(fields)) {
-    report.error('metadataFields must be an array');
-    return;
-  }
-
-  const keys = new Set();
-  fields.forEach((field, index) => {
-    const prefix = `metadataFields[${index}]`;
-    if (!isPlainObject(field)) {
-      report.error(`${prefix} must be an object`);
-      return;
-    }
-    validateKeyedObject(field, report, prefix, keys);
-    requireString(field, report, 'title', prefix);
-    if (field.type !== undefined && !METADATA_FIELD_TYPES.has(field.type)) {
-      report.error(`${prefix}.type is invalid`, field.type);
-    }
-    if (field.defaultMode !== undefined && !METADATA_WRITE_MODES.has(field.defaultMode)) {
-      report.error(`${prefix}.defaultMode is invalid`, field.defaultMode);
-    }
-    if (field.defaultTarget !== undefined && !METADATA_TARGETS.has(field.defaultTarget)) {
-      report.error(`${prefix}.defaultTarget is invalid`, field.defaultTarget);
-    }
-    if (field.targetOptions !== undefined) {
-      validateEnumArray({ targetOptions: field.targetOptions }, report, `${prefix}.targetOptions`, METADATA_TARGETS);
-    }
-  });
-}
-
 function validateKeyedObject(field, report, prefix, keys) {
   if (typeof field.key !== 'string' || field.key.trim() === '') {
     report.error(`${prefix}.key is required`);
@@ -254,6 +220,12 @@ function validateKeyedObject(field, report, prefix, keys) {
     report.error(`${prefix}.key is duplicated`, field.key);
   } else {
     keys.add(field.key);
+  }
+}
+
+function warnRemovedManifestField(manifest, report, fieldName) {
+  if (manifest[fieldName] !== undefined) {
+    report.warn(`${fieldName} is ignored by the current plugin protocol`);
   }
 }
 

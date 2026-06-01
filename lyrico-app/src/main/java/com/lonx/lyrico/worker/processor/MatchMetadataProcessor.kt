@@ -1,5 +1,6 @@
 package com.lonx.lyrico.worker.processor
 
+import android.util.Log
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.ScoredSearchResult
@@ -9,12 +10,12 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
+import com.lonx.lyrico.data.model.metadata.MetadataApplyPolicy
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
 import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldTarget
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRuleFactory
-import com.lonx.lyrico.data.model.plugin.PluginMetadataWriteMode
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
+import com.lonx.lyrico.data.model.metadata.SearchResultApplier
 import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
@@ -24,7 +25,6 @@ import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.MatchScoreDetail
-import com.lonx.lyrico.utils.MetadataFieldResolver
 import com.lonx.lyrico.utils.MusicMatchUtils
 import com.lonx.lyrico.utils.PluginFieldPostProcessor
 import kotlinx.coroutines.Dispatchers
@@ -41,8 +41,6 @@ class MatchMetadataProcessor(
     private val settingsRepository: SettingsRepository,
     private val searchSourceProvider: SearchSourceProvider
 ) : BatchTaskProcessor {
-    private val metadataFieldResolver = MetadataFieldResolver()
-
     override suspend fun process(
         task: BatchTaskEntity,
         item: BatchTaskItemEntity,
@@ -64,9 +62,7 @@ class MatchMetadataProcessor(
             ?: throw BatchTaskSkippedException("Song not found")
 
         val plan = buildPlan(
-            matchConfig = matchConfig,
-            metadataRules = config.metadataFieldWriteRules,
-            sources = sources
+            matchConfig = matchConfig
         )
 
         if (!plan.requiresSearch) {
@@ -76,11 +72,12 @@ class MatchMetadataProcessor(
         onProgress(0.05f)
 
         val separator = config.separator
+        val currentTag = audioTagRepository.read(song.uri)
 
-        val shouldWriteLyrics = when (plan.targetModes[PluginMetadataFieldTarget.LYRICS]) {
-            PluginMetadataWriteMode.OVERWRITE -> true
-            PluginMetadataWriteMode.SUPPLEMENT -> song.lyrics.isNullOrBlank()
-            PluginMetadataWriteMode.DISABLED,
+        val shouldWriteLyrics = when (plan.targetModes[MetadataFieldTarget.LYRICS]) {
+            MetadataWriteMode.OVERWRITE -> true
+            MetadataWriteMode.SUPPLEMENT -> currentTag.lyrics.isNullOrBlank()
+            MetadataWriteMode.DISABLED,
             null -> false
         }
 
@@ -143,9 +140,25 @@ class MatchMetadataProcessor(
                             source = source
                         ) to detail
                     }
-                } catch (_: Exception) {
+                } catch (throwable: Exception) {
+                    Log.w(
+                        TAG,
+                        "Search source failed. songUri=${song.uri}, source=${source.id}, query=$query",
+                        throwable
+                    )
                     emptyList()
                 }
+
+                Log.d(
+                    TAG,
+                    "Search source results. songUri=${song.uri}, source=${source.id}, " +
+                            "query=$query, count=${sourceResults.size}, " +
+                            "top=${sourceResults.take(3).map { (scored, detail) ->
+                                "${scored.result.id}:${scored.result.title}|score=${detail.finalScore}" +
+                                        "|text=${detail.textScore}|keys=${scored.result.normalizedFields().keys}" +
+                                        "|commentBlank=${scored.result.normalizedFields()["comment"].isNullOrBlank()}"
+                            }}"
+                )
 
                 allScoredResults += sourceResults.map { (scoredResult, _) ->
                     scoredResult
@@ -207,6 +220,16 @@ class MatchMetadataProcessor(
         val finalMatch = bestMatch ?: throw BatchTaskSkippedException("No match found")
         val finalDetail = bestMatchDetail ?: throw BatchTaskSkippedException("No match detail found")
 
+        Log.d(
+            TAG,
+            "Selected match. songUri=${song.uri}, source=${finalMatch.source?.id}, " +
+                    "result=${finalMatch.result.id}:${finalMatch.result.title}, " +
+                    "score=${finalDetail.finalScore}, textScore=${finalDetail.textScore}, " +
+                    "normalizedKeys=${finalMatch.result.normalizedFields().keys}, " +
+                    "commentBlank=${finalMatch.result.normalizedFields()["comment"].isNullOrBlank()}, " +
+                    "targetModes=${plan.targetModes}"
+        )
+
         if (finalDetail.finalScore < 0.76 || finalDetail.textScore < 0.72) {
             throw BatchTaskSkippedException(
                 "Match score too low: final=${finalDetail.finalScore}, text=${finalDetail.textScore}"
@@ -248,45 +271,37 @@ class MatchMetadataProcessor(
 
         onProgress(0.75f)
 
-        val standardCandidate = buildCandidateData(
-            plan = plan,
-            finalMatch = finalMatch,
-            newLyrics = newLyrics
+        val sourceId = finalMatch.source?.id.orEmpty()
+        val processConfig = config.pluginFieldProcessConfigs[sourceId]
+            ?: defaultPluginFieldProcessConfig(sourceId)
+        val candidateFields = fieldProcessor.processFields(
+            pluginId = sourceId,
+            fields = finalMatch.result.normalizedFields() +
+                    newLyrics?.takeIf { it.isNotBlank() }?.let { mapOf("lyrics" to it) }.orEmpty(),
+            config = processConfig,
+            fieldDefinitions = emptyList(),
+            writeRules = emptyList()
         )
 
-        val metadataCandidate = metadataFieldResolver.resolve(
-            scoredResults = allScoredResults.map { scoredResult ->
-                val source = scoredResult.source ?: return@map scoredResult
-                val processConfig = config.pluginFieldProcessConfigs[source.id]
-                    ?: defaultPluginFieldProcessConfig(source.id)
-
-                scoredResult.copy(
-                    result = scoredResult.result.copy(
-                        fields = fieldProcessor.processFields(
-                            pluginId = source.id,
-                            fields = scoredResult.result.normalizedFields(),
-                            config = processConfig,
-                            fieldDefinitions = source.metadataFields,
-                            writeRules = plan.metadataRules
-                        )
-                    )
-                )
-            },
-            rules = plan.metadataRules
-        )
-
-        val mergedCandidate = metadataFieldResolver.mergeNonNull(
-            metadataCandidate,
-            standardCandidate
-        )
-
-        val tagDataToWrite = filterByBatchWriteMode(
-            candidate = mergedCandidate,
-            song = song,
-            targetModes = plan.targetModes
+        val tagDataToWrite = SearchResultApplier.buildPatch(
+            current = currentTag,
+            fields = candidateFields,
+            policy = MetadataApplyPolicy(plan.targetModes)
         )
 
         if (tagDataToWrite.isEmpty()) {
+            Log.w(
+                TAG,
+                "Skipping match metadata with empty patch. " +
+                        "songUri=${song.uri}, source=$sourceId, " +
+                        "targetModes=${plan.targetModes}, " +
+                        "normalizedKeys=${finalMatch.result.normalizedFields().keys}, " +
+                        "candidateKeys=${candidateFields.keys}, " +
+                        "candidateCommentBlank=${candidateFields["comment"].isNullOrBlank()}, " +
+                        "currentCommentBlank=${currentTag.comment.isNullOrBlank()}, " +
+                        "databaseCommentBlank=${song.comment.isNullOrBlank()}, " +
+                        "score=${finalDetail.finalScore}, textScore=${finalDetail.textScore}"
+            )
             throw BatchTaskSkippedException("No fields to update")
         }
 
@@ -302,219 +317,14 @@ class MatchMetadataProcessor(
         return BatchTaskProcessResult()
     }
 
-    private fun buildPlan(
-        matchConfig: BatchMatchConfig,
-        metadataRules: List<PluginMetadataFieldWriteRule>,
-        sources: List<SearchSource>
-    ): MatchMetadataPlan {
+    private fun buildPlan(matchConfig: BatchMatchConfig): MatchMetadataPlan {
         val enabledTargetModes = matchConfig.targetModes
             .filterValues { mode ->
-                mode != PluginMetadataWriteMode.DISABLED
-            }
-
-        val applicableMetadataRules = PluginMetadataFieldWriteRuleFactory
-            .mergeWithDeclaredFields(
-                savedRules = metadataRules,
-                searchSources = sources
-            )
-            .filter { rule ->
-                rule.mode != PluginMetadataWriteMode.DISABLED
-            }
-            .mapNotNull { rule ->
-                val batchMode = enabledTargetModes[rule.target]
-                    ?: return@mapNotNull null
-
-                rule.copy(mode = batchMode)
+                mode != MetadataWriteMode.DISABLED
             }
 
         return MatchMetadataPlan(
-            targetModes = enabledTargetModes,
-            metadataRules = applicableMetadataRules
-        )
-    }
-
-    private fun filterByBatchWriteMode(
-        candidate: AudioTagData,
-        song: SongEntity,
-        targetModes: Map<PluginMetadataFieldTarget, PluginMetadataWriteMode>
-    ): AudioTagData {
-        fun canWrite(target: PluginMetadataFieldTarget): Boolean {
-            return when (targetModes[target]) {
-                PluginMetadataWriteMode.OVERWRITE -> true
-                PluginMetadataWriteMode.SUPPLEMENT -> isTargetBlank(target, song)
-                PluginMetadataWriteMode.DISABLED,
-                null -> false
-            }
-        }
-
-        return AudioTagData(
-            title = if (canWrite(PluginMetadataFieldTarget.TITLE)) candidate.title else null,
-            artist = if (canWrite(PluginMetadataFieldTarget.ARTIST)) candidate.artist else null,
-            album = if (canWrite(PluginMetadataFieldTarget.ALBUM)) candidate.album else null,
-            albumArtist = if (canWrite(PluginMetadataFieldTarget.ALBUM_ARTIST)) candidate.albumArtist else null,
-            genre = if (canWrite(PluginMetadataFieldTarget.GENRE)) candidate.genre else null,
-            date = if (canWrite(PluginMetadataFieldTarget.DATE)) candidate.date else null,
-            language = if (canWrite(PluginMetadataFieldTarget.LANGUAGE)) candidate.language else null,
-            trackNumber = if (canWrite(PluginMetadataFieldTarget.TRACK_NUMBER)) candidate.trackNumber else null,
-            discNumber = if (canWrite(PluginMetadataFieldTarget.DISC_NUMBER)) candidate.discNumber else null,
-            composer = if (canWrite(PluginMetadataFieldTarget.COMPOSER)) candidate.composer else null,
-            lyricist = if (canWrite(PluginMetadataFieldTarget.LYRICIST)) candidate.lyricist else null,
-            comment = if (canWrite(PluginMetadataFieldTarget.COMMENT)) candidate.comment else null,
-            lyrics = if (canWrite(PluginMetadataFieldTarget.LYRICS)) candidate.lyrics else null,
-            copyright = if (canWrite(PluginMetadataFieldTarget.COPYRIGHT)) candidate.copyright else null,
-            rating = if (canWrite(PluginMetadataFieldTarget.RATING)) candidate.rating else null,
-            replayGainTrackGain = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN)) {
-                candidate.replayGainTrackGain
-            } else {
-                null
-            },
-            replayGainTrackPeak = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK)) {
-                candidate.replayGainTrackPeak
-            } else {
-                null
-            },
-            replayGainAlbumGain = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN)) {
-                candidate.replayGainAlbumGain
-            } else {
-                null
-            },
-            replayGainAlbumPeak = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK)) {
-                candidate.replayGainAlbumPeak
-            } else {
-                null
-            },
-            replayGainReferenceLoudness = if (canWrite(PluginMetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS)) {
-                candidate.replayGainReferenceLoudness
-            } else {
-                null
-            },
-            picUrl = if (canWrite(PluginMetadataFieldTarget.COVER)) candidate.picUrl else null,
-            customFields = if (canWrite(PluginMetadataFieldTarget.CUSTOM)) {
-                candidate.customFields
-            } else {
-                emptyList()
-            }
-        )
-    }
-    private fun isTargetBlank(
-        target: PluginMetadataFieldTarget,
-        song: SongEntity
-    ): Boolean {
-        return when (target) {
-            PluginMetadataFieldTarget.TITLE ->
-                song.title.isNullOrBlank()
-
-            PluginMetadataFieldTarget.ARTIST ->
-                song.artist.isNullOrBlank()
-
-            PluginMetadataFieldTarget.ALBUM ->
-                song.album.isNullOrBlank()
-
-            PluginMetadataFieldTarget.ALBUM_ARTIST ->
-                song.albumArtist.isNullOrBlank()
-
-            PluginMetadataFieldTarget.GENRE ->
-                song.genre.isNullOrBlank()
-
-            PluginMetadataFieldTarget.DATE ->
-                song.date.isNullOrBlank()
-
-            PluginMetadataFieldTarget.TRACK_NUMBER ->
-                song.trackerNumber.isNullOrBlank()
-
-            PluginMetadataFieldTarget.DISC_NUMBER ->
-                song.discNumber == null
-
-            PluginMetadataFieldTarget.COMPOSER ->
-                song.composer.isNullOrBlank()
-
-            PluginMetadataFieldTarget.LYRICIST ->
-                song.lyricist.isNullOrBlank()
-
-            PluginMetadataFieldTarget.COMMENT ->
-                song.comment.isNullOrBlank()
-
-            PluginMetadataFieldTarget.LYRICS ->
-                song.lyrics.isNullOrBlank()
-
-            PluginMetadataFieldTarget.LANGUAGE ->
-                song.language.isNullOrBlank()
-
-            PluginMetadataFieldTarget.COPYRIGHT ->
-                song.copyright.isNullOrBlank()
-
-            PluginMetadataFieldTarget.RATING ->
-                song.rating == null
-
-            PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_GAIN ->
-                song.replayGainTrackGain.isNullOrBlank()
-
-            PluginMetadataFieldTarget.REPLAY_GAIN_TRACK_PEAK ->
-                song.replayGainTrackPeak.isNullOrBlank()
-
-            PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_GAIN ->
-                song.replayGainAlbumGain.isNullOrBlank()
-
-            PluginMetadataFieldTarget.REPLAY_GAIN_ALBUM_PEAK ->
-                song.replayGainAlbumPeak.isNullOrBlank()
-
-            PluginMetadataFieldTarget.REPLAY_GAIN_REFERENCE_LOUDNESS ->
-                song.replayGainReferenceLoudness.isNullOrBlank()
-
-            PluginMetadataFieldTarget.COVER ->
-                false
-
-            PluginMetadataFieldTarget.CUSTOM ->
-                true
-        }
-    }
-
-    private fun buildCandidateData(
-        plan: MatchMetadataPlan,
-        finalMatch: ScoredSearchResult,
-        newLyrics: String?
-    ): AudioTagData {
-        fun enabled(target: PluginMetadataFieldTarget): Boolean {
-            return plan.targetModes[target] != null &&
-                    plan.targetModes[target] != PluginMetadataWriteMode.DISABLED
-        }
-
-        return AudioTagData(
-            title = if (enabled(PluginMetadataFieldTarget.TITLE)) {
-                finalMatch.result.title.takeIf { it.isNotBlank() }
-            } else {
-                null
-            },
-            artist = if (enabled(PluginMetadataFieldTarget.ARTIST)) {
-                finalMatch.result.artist.takeIf { it.isNotBlank() }
-            } else {
-                null
-            },
-            album = if (enabled(PluginMetadataFieldTarget.ALBUM)) {
-                finalMatch.result.album.takeIf { it.isNotBlank() }
-            } else {
-                null
-            },
-            date = if (enabled(PluginMetadataFieldTarget.DATE)) {
-                finalMatch.result.date.takeIf { it.isNotBlank() }
-            } else {
-                null
-            },
-            trackNumber = if (enabled(PluginMetadataFieldTarget.TRACK_NUMBER)) {
-                finalMatch.result.trackNumber.takeIf { it.isNotBlank() }
-            } else {
-                null
-            },
-            lyrics = if (enabled(PluginMetadataFieldTarget.LYRICS)) {
-                newLyrics
-            } else {
-                null
-            },
-            picUrl = if (enabled(PluginMetadataFieldTarget.COVER)) {
-                finalMatch.result.picUrl.takeIf { it.isNotBlank() }
-            } else {
-                null
-            }
+            targetModes = enabledTargetModes
         )
     }
     private fun AudioTagData.isEmpty(): Boolean {
@@ -537,14 +347,17 @@ class MatchMetadataProcessor(
                 replayGainAlbumPeak == null &&
                 replayGainReferenceLoudness == null
     }
+
+    companion object {
+        private const val TAG = "MatchMetadataProcessor"
+    }
 }
 
 private data class MatchMetadataPlan(
-    val targetModes: Map<PluginMetadataFieldTarget, PluginMetadataWriteMode>,
-    val metadataRules: List<PluginMetadataFieldWriteRule>
+    val targetModes: Map<MetadataFieldTarget, MetadataWriteMode>
 ) {
     val requiresSearch: Boolean
-        get() = targetModes.isNotEmpty() || metadataRules.isNotEmpty()
+        get() = targetModes.isNotEmpty()
 }
 
 @Serializable
@@ -552,7 +365,6 @@ data class MatchMetadataTaskConfig(
     val matchConfig: BatchMatchConfig,
     val separator: String,
     val enabledSourceOrderIds: List<String>,
-    val metadataFieldWriteRules: List<PluginMetadataFieldWriteRule> = emptyList(),
     val sourceSettings: Map<String, Map<String, String>> = emptyMap(),
     val pluginFieldProcessConfigs: Map<String, PluginFieldProcessConfig> = emptyMap(),
     val lyricRenderConfig: LyricRenderConfig? = null,

@@ -28,8 +28,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,10 +58,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.data.model.search.LyricsSearchResult
 import com.lonx.lyrico.plugin.source.PluginImportSession
 import com.lonx.lyrico.plugin.source.PluginInstallCandidate
 import com.lonx.lyrico.plugin.source.PluginInstallFailed
 import com.lonx.lyrico.plugin.source.PluginVersionConflict
+import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.library.LibraryEmptyState
 import com.lonx.lyrico.ui.components.plugin.PluginIcon
@@ -98,6 +102,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import java.io.File
 
 @Composable
 @Destination<RootGraph>(route = "plugin_manager")
@@ -131,6 +136,14 @@ fun PluginManagerScreen(
     }
     var showUninstallDialog by rememberSaveable { mutableStateOf(false) }
     var pendingUninstallPluginId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showImportPreviewSheet by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(pendingImport) {
+        if (pendingImport != null) {
+            showImportPreviewSheet = true
+        }
+    }
+
     Scaffold(
         topBar = {
             SmallTopAppBar(
@@ -267,18 +280,28 @@ fun PluginManagerScreen(
     )
 
     WindowBottomSheet(
-        show = pendingImport != null,
+        show = showImportPreviewSheet,
         title = stringResource(R.string.plugin_import_found_title),
         onDismissRequest = {
-            viewModel.dismissPendingImport()
+            showImportPreviewSheet = false
         },
         enableNestedScroll = false,
-        onDismissFinished = {},
+        onDismissFinished = {
+            if (!showImportPreviewSheet) {
+                viewModel.dismissPendingImport()
+            }
+        },
         startAction = {
             androidx.compose.material3.TextButton(
                 onClick = {
                     viewModel.dismissPendingImport()
-                }
+                },
+                colors = ButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = colorScheme.onSurface,
+                    disabledContainerColor =  Color.Transparent,
+                    disabledContentColor = colorScheme.disabledOnSurface
+                )
             ) {
                 Text(
                     text = stringResource(R.string.cancel),
@@ -291,8 +314,13 @@ fun PluginManagerScreen(
                 onClick = {
                     viewModel.installPendingImport()
                 },
-
-                ) {
+                colors = ButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = colorScheme.primary,
+                    disabledContainerColor =  Color.Transparent,
+                    disabledContentColor = colorScheme.disabledPrimary
+                )
+            ) {
                 Text(
                     text = stringResource(R.string.plugin_import_install),
                     color = colorScheme.primary
@@ -301,78 +329,61 @@ fun PluginManagerScreen(
         },
         content = {
             pendingImport?.let { session ->
-                PluginImportPreviewContent(
-                    session = session,
-                    selectedRoots = uiState.selectedImportRoots,
-                    onCandidateCheckedChange = { root, checked ->
-                        viewModel.setImportCandidateSelected(root, checked)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    if (session.candidates.isNotEmpty()) {
+                        SmallTitle(
+                            text = stringResource(
+                                R.string.plugin_import_installable_title,
+                                session.candidates.size
+                            ),
+                            insideMargin = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                        )
                     }
-                )
+
+                    session.candidates.forEach { candidate ->
+                        val selected =
+                            candidate.relativeRootInArchive in uiState.selectedImportRoots
+
+                        PluginImportCandidateItem(
+                            candidate = candidate,
+                            selected = selected,
+                            onCheckedChange = { checked ->
+                                viewModel.setImportCandidateSelected(
+                                    candidate.relativeRootInArchive,
+                                    checked
+                                )
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                if (session.failed.isNotEmpty()) {
+                    SmallTitle(
+                        text = stringResource(
+                            R.string.plugin_import_failed_title,
+                            session.failed.size
+                        ),
+                        textColor = colorScheme.error
+                    )
+
+                    session.failed.forEach { failed ->
+                        PluginImportFailedItem(failed = failed)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     )
 }
 
-@Composable
-private fun PluginImportPreviewContent(
-    session: PluginImportSession,
-    selectedRoots: Set<String>,
-    onCandidateCheckedChange: (String, Boolean) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 460.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(vertical = 4.dp)
-    ) {
-        if (session.candidates.isNotEmpty()) {
-            item("installable-title") {
-                SmallTitle(
-                    text = stringResource(
-                        R.string.plugin_import_installable_title,
-                        session.candidates.size
-                    ),
-                    insideMargin = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                )
-            }
-
-            items(
-                items = session.candidates,
-                key = { candidate -> candidate.relativeRootInArchive }
-            ) { candidate ->
-                val selected = candidate.relativeRootInArchive in selectedRoots
-
-                PluginImportCandidateItem(
-                    candidate = candidate,
-                    selected = selected,
-                    onCheckedChange = { checked ->
-                        onCandidateCheckedChange(candidate.relativeRootInArchive, checked)
-                    }
-                )
-            }
-        }
-
-        if (session.failed.isNotEmpty()) {
-            item("failed-title") {
-                SmallTitle(
-                    text = stringResource(
-                        R.string.plugin_import_failed_title,
-                        session.failed.size
-                    ),
-                    textColor = colorScheme.error
-                )
-            }
-
-            items(
-                items = session.failed,
-                key = { failed -> "${failed.rootPath}:${failed.reason}" }
-            ) { failed ->
-                PluginImportFailedItem(failed = failed)
-            }
-        }
-    }
-}
 
 @Composable
 private fun PluginImportCandidateItem(
@@ -383,6 +394,13 @@ private fun PluginImportCandidateItem(
     val manifest = candidate.manifest
     val conflictText = candidate.versionConflict.toImportConflictText()
     val conflictColor = candidate.versionConflict.toImportConflictColor()
+    val iconPath = manifest.icon?.let { File(candidate.pluginRoot, it).absolutePath }
+    val versionText = if (candidate.existingPlugin != null) {
+        "${candidate.existingPlugin.versionName} -> ${manifest.versionName}"
+    } else {
+        manifest.versionName
+    }
+    val locationText = candidate.relativeRootInArchive.ifBlank { "/" }
 
     Card(
         colors = CardDefaults.defaultColors(
@@ -390,11 +408,18 @@ private fun PluginImportCandidateItem(
         )
     ) {
         BasicComponent(
-            insideMargin = PaddingValues(8.dp),
+            insideMargin = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
             onClick = {
                 onCheckedChange(!selected)
             },
             startAction = {
+                PluginIcon(
+                    iconPath = iconPath,
+                    contentDescription = manifest.name,
+                    size = 34.dp
+                )
+            },
+            endActions = {
                 Checkbox(
                     state = if (selected) ToggleableState.On else ToggleableState.Off,
                     onClick = {
@@ -403,7 +428,6 @@ private fun PluginImportCandidateItem(
                 )
             }
         ) {
-
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -423,8 +447,6 @@ private fun PluginImportCandidateItem(
                 )
             }
 
-            Spacer(modifier = Modifier.height(3.dp))
-
             Text(
                 text = manifest.id,
                 fontSize = 12.sp,
@@ -433,37 +455,27 @@ private fun PluginImportCandidateItem(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ImportInfoRow(
-                label = stringResource(R.string.plugin_import_version),
-                value = if (candidate.existingPlugin != null) {
-                    "${candidate.existingPlugin.versionName} -> ${manifest.versionName}"
-                } else {
-                    manifest.versionName
-                }
+            Text(
+                text = stringResource(R.string.plugin_import_version, versionText),
+                fontSize = 12.sp,
+                color = colorScheme.onSurfaceVariantSummary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-
-            ImportInfoRow(
-                label = stringResource(R.string.plugin_import_path),
-                value = candidate.relativeRootInArchive.ifBlank { "/" }
-            )
-
-            ImportInfoRow(
-                label = stringResource(R.string.plugin_import_include_dirs),
-                value = manifest.includeDirs.joinToString().ifBlank {
-                    stringResource(R.string.plugin_import_none)
-                }
+            Text(
+                text = stringResource(R.string.plugin_import_path,locationText),
+                fontSize = 12.sp,
+                color = colorScheme.onSurfaceVariantSummary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             if (manifest.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-
                 Text(
-                    text = manifest.description,
-                    fontSize = 13.sp,
+                    text = stringResource(R.string.plugin_import_description,manifest.description),
+                    fontSize = 12.sp,
                     color = colorScheme.onSurfaceVariantSummary,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -614,36 +626,6 @@ private fun ImportStatusBadge(
             .background(color.copy(alpha = 0.14f))
             .padding(horizontal = 6.dp, vertical = 2.dp)
     )
-}
-
-@Composable
-private fun ImportInfoRow(
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.width(72.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Text(
-            text = value,
-            fontSize = 12.sp,
-            color = colorScheme.onSurfaceVariantSummary,
-            modifier = Modifier.weight(1f),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
 }
 
 @Composable

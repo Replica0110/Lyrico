@@ -743,10 +743,9 @@
     <string name="plugin_import_install">Install</string>
     <string name="plugin_import_installable_title">Installable plugins (%1$d)</string>
     <string name="plugin_import_failed_title">Failed plugins (%1$d)</string>
-    <string name="plugin_import_version">Version</string>
-    <string name="plugin_import_path">Path</string>
-    <string name="plugin_import_include_dirs">Include dirs</string>
-    <string name="plugin_import_none">None</string>
+    <string name="plugin_import_version">Version: %1$s</string>
+    <string name="plugin_import_path">Path: %1$s</string>
+    <string name="plugin_import_description">Description: %1$s</string>
     <string name="plugin_import_unknown_path">Unknown path</string>
     <string name="plugin_import_conflict_new">New</string>
     <string name="plugin_import_conflict_update">Update</string>

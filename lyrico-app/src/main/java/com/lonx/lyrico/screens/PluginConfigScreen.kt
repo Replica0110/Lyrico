@@ -5,16 +5,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -27,7 +23,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -37,16 +32,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
-import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
-import com.lonx.lyrico.data.model.plugin.PluginMetadataField
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.utils.isSatisfied
 import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
@@ -55,7 +45,6 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import org.koin.androidx.compose.koinViewModel
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
@@ -64,11 +53,9 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
@@ -80,7 +67,6 @@ import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 @Composable
 @Destination<RootGraph>(route = "plugin_config")
@@ -149,6 +135,10 @@ fun PluginConfigScreen(
                 .fillMaxSize()
                 .imePadding()
                 .padding(scaffoldTopHorizontalPadding(paddingValues))
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                .verticalScroll(rememberScrollState())
         ) {
             if (uiState.errorMessage != null) {
                 Text(
@@ -193,26 +183,20 @@ fun PluginConfigScreen(
                 }
             }
 
-            LazyColumn(
-                modifier = Modifier
-                    .scrollEndHaptic()
-                    .overScrollVertical()
-                    .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
-                contentPadding = PaddingValues(bottom = 12.dp),
-                overscrollEffect = null
-            ) {
-                pluginConfigFormItems(
-                    fields = uiState.configFields,
-                    values = uiState.values,
-                    validationErrors = uiState.validationErrors,
-                    onValueChange = viewModel::updateValue
-                )
-            }
+            PluginConfigFormItems(
+                fields = uiState.configFields,
+                values = uiState.values,
+                validationErrors = uiState.validationErrors,
+                onValueChange = viewModel::updateValue
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
 
-private fun LazyListScope.pluginConfigFormItems(
+@Composable
+private fun PluginConfigFormItems(
     fields: List<PluginConfigField>,
     values: Map<String, String>,
     validationErrors: Map<String, String>,
@@ -233,42 +217,34 @@ private fun LazyListScope.pluginConfigFormItems(
             return@forEach
         }
 
-        item("config_title_$group") {
-            SmallTitle(
-                text = if (group == DEFAULT_CONFIG_GROUP) {
-                    stringResource(R.string.source_config_basic)
-                } else {
-                    group
-                }
-            )
-        }
+        SmallTitle(
+            text = if (group == DEFAULT_CONFIG_GROUP) {
+                stringResource(R.string.source_config_basic)
+            } else {
+                group
+            }
+        )
 
-        item("config_card_$group") {
-            Card(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .padding(bottom = 12.dp)
+        Card(
+            modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.animateContentSize()
             ) {
-                Column(
-                    modifier = Modifier.animateContentSize()
-                ) {
-                    groupFields.forEach { field ->
-                        val visible by remember(field.dependency, values) {
-                            derivedStateOf {
-                                field.dependency.isSatisfied(values)
-                            }
-                        }
+                groupFields.forEach { field ->
+                    val visible = field.dependency.isSatisfied(values)
 
-                        AnimatedVisibility(visible = visible) {
-                            PluginConfigFormItem(
-                                field = field,
-                                value = values[field.key].orEmpty(),
-                                error = validationErrors[field.key],
-                                onValueChange = { value ->
-                                    onValueChange(field.key, value)
-                                }
-                            )
-                        }
+                    AnimatedVisibility(visible = visible) {
+                        PluginConfigFormItem(
+                            field = field,
+                            value = values[field.key].orEmpty(),
+                            error = validationErrors[field.key],
+                            onValueChange = { value ->
+                                onValueChange(field.key, value)
+                            }
+                        )
                     }
                 }
             }

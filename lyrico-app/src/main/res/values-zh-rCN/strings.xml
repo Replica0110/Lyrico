@@ -754,10 +754,9 @@
     <string name="plugin_import_install">安装</string>
     <string name="plugin_import_installable_title">可安装插件（%1$d）</string>
     <string name="plugin_import_failed_title">无法安装（%1$d）</string>
-    <string name="plugin_import_version">版本</string>
-    <string name="plugin_import_path">路径</string>
-    <string name="plugin_import_include_dirs">包含目录</string>
-    <string name="plugin_import_none">无</string>
+    <string name="plugin_import_version">版本: %1$s</string>
+    <string name="plugin_import_path">路径: %1$s</string>
+    <string name="plugin_import_description">描述: %1$s</string>
     <string name="plugin_import_unknown_path">未知路径</string>
     <string name="plugin_import_conflict_new">新安装</string>
     <string name="plugin_import_conflict_update">更新</string>

@@ -63,6 +63,7 @@ import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.search.LyricsSearchResult
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.rememberTintedPainter
@@ -324,14 +325,18 @@ fun SearchResultsScreen(
                                             if (lyrics != null) {
                                                 resultNavigator.navigateBack(
                                                     LyricsSearchResult(
-                                                        title = null,
-                                                        artist = null,
-                                                        album = null,
+                                                        title = song.title,
+                                                        artist = song.artist,
+                                                        album = song.album,
                                                         lyrics = lyrics,
-                                                        date = null,
-                                                        trackerNumber = null,
-                                                        picUrl = null,
-                                                        lyricsOnly = true
+                                                        date = song.date,
+                                                        trackerNumber = song.trackNumber,
+                                                        picUrl = song.picUrl,
+                                                        pluginId = song.pluginId,
+                                                        pluginName = song.pluginName,
+                                                        lyricsOnly = true,
+                                                        applyTargets = setOf(MetadataFieldTarget.LYRICS),
+                                                        fields = song.fields
                                                     )
                                                 )
                                             }
@@ -465,14 +470,18 @@ fun SearchResultsScreen(
                         onClick = {
                             resultNavigator.navigateBack(
                                 LyricsSearchResult(
-                                    title = null,
-                                    artist = null,
-                                    album = null,
+                                    title = currentSong.title,
+                                    artist = currentSong.artist,
+                                    album = currentSong.album,
                                     lyrics = lyricsText,
-                                    date = null,
-                                    trackerNumber = null,
-                                    picUrl = null,
-                                    lyricsOnly = true
+                                    date = currentSong.date,
+                                    trackerNumber = currentSong.trackNumber,
+                                    picUrl = currentSong.picUrl,
+                                    pluginId = currentSong.pluginId,
+                                    pluginName = currentSong.pluginName,
+                                    lyricsOnly = true,
+                                    applyTargets = setOf(MetadataFieldTarget.LYRICS),
+                                    fields = currentSong.fields
                                 )
                             )
                         },

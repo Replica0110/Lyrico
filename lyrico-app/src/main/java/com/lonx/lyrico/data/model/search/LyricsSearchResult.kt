@@ -2,6 +2,7 @@ package com.lonx.lyrico.data.model.search
 
 import android.os.Parcelable
 import com.lonx.lyrico.data.model.lyrics.sanitizeStandardFields
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
@@ -16,6 +17,7 @@ data class LyricsSearchResult(
     val pluginId: String = "",
     val pluginName: String = "",
     val lyricsOnly: Boolean = false,
+    val applyTargets: Set<MetadataFieldTarget> = emptySet(),
     val fields: Map<String, String> = emptyMap()
 ) : Parcelable {
     fun normalizedFields(): Map<String, String> {

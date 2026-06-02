@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.CustomTagField
+import com.lonx.audiotag.model.frontCoverOrFallback
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.SharedSelectionManager
 import com.lonx.lyrico.data.editfield.EditFieldScene
@@ -465,7 +466,7 @@ class BatchEditViewModel(
         withContext(Dispatchers.IO) {
             try {
                 val tagData = audioTagRepository.read(uri)
-                tagData.pictures.firstOrNull()?.data ?: tagData.picUrl
+                tagData.pictures.frontCoverOrFallback()?.data
             } catch (e: Exception) {
                 Log.e(TAG, "读取已选歌曲封面失败: $uri", e)
                 null
@@ -1146,7 +1147,7 @@ class BatchEditViewModel(
         for (song in sameAlbumSongs) {
             try {
                 val tagData = audioTagRepository.read(song.uri)
-                val cover = tagData.pictures.firstOrNull()?.data ?: tagData.picUrl
+                val cover = tagData.pictures.frontCoverOrFallback()?.data
                 if (cover != null) {
                     val title = "${song.title} - ${song.artist}"
                     return listOf(title to cover)

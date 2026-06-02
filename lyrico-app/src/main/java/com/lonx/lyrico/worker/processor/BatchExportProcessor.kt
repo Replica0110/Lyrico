@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.lonx.audiotag.model.frontCoverOrFallback
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
@@ -45,7 +46,7 @@ class BatchExportProcessor(
         val result = when (task.type) {
             BatchTaskType.EXPORT_LYRICS -> exportLyrics(item, tagData.lyrics, directory)
             BatchTaskType.EXPORT_COVER -> {
-                val coverSource = tagData.pictures.firstOrNull()?.data ?: tagData.picUrl
+                val coverSource = tagData.pictures.frontCoverOrFallback()?.data
                 exportCover(item, coverSource, directory)
             }
             else -> throw IllegalArgumentException("Unsupported export task type: ${task.type}")

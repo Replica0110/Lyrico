@@ -32,7 +32,10 @@ import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.sanitizeStandardFields
 import com.lonx.lyrico.data.model.metadata.MetadataApplyPolicy
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.model.metadata.SearchResultApplier
+import com.lonx.lyrico.data.model.metadata.StandardPluginField
 import com.lonx.lyrico.data.model.search.LyricsSearchResult
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
@@ -349,15 +352,8 @@ class EditMetadataViewModel(
                     removeEmptyLines = renderConfig?.removeEmptyLines ?: SettingsDefaults.REMOVE_EMPTY_LINES
                 )
             )
-            val rawFields = if (result.lyricsOnly) {
-                result.lyrics
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { mapOf("lyrics" to it) }
-                    .orEmpty()
-            } else {
-                result.normalizedFields() +
-                        result.lyrics?.takeIf { it.isNotBlank() }?.let { mapOf("lyrics" to it) }.orEmpty()
-            }
+            val rawFields = result.normalizedFields() +
+                    result.lyrics?.takeIf { it.isNotBlank() }?.let { mapOf("lyrics" to it) }.orEmpty()
             val processedFields = fieldProcessor.processFields(
                 pluginId = result.pluginId,
                 fields = rawFields.sanitizeStandardFields(),
@@ -365,19 +361,35 @@ class EditMetadataViewModel(
                 fieldDefinitions = emptyList(),
                 writeRules = emptyList()
             )
+            val applyTargets = when {
+                result.applyTargets.isNotEmpty() -> result.applyTargets
+                result.lyricsOnly -> setOf(MetadataFieldTarget.LYRICS)
+                else -> processedFields.keys
+                    .mapNotNull { key -> StandardPluginField.fromKey(key)?.target }
+                    .toSet()
+            }
+            val applyPolicy = MetadataApplyPolicy(
+                applyTargets.associateWith { MetadataWriteMode.OVERWRITE }
+            )
             val applied = SearchResultApplier.applyFields(
                 current = current,
                 fields = processedFields,
-                policy = MetadataApplyPolicy.overwriteAvailableFields(processedFields)
+                policy = applyPolicy
             )
             if (!result.lyrics.isNullOrBlank()) {
                 lyricsFormatConversionSession = null
             }
+            val nextCoverUri = if (applyPolicy.modeOf(MetadataFieldTarget.COVER) != MetadataWriteMode.DISABLED) {
+                applied.picUrl
+                    ?.takeIf { it.isNotBlank() && it != current.picUrl }
+                    ?: state.coverUri
+            } else {
+                state.coverUri
+            }
             state.copy(
                 isEditing = true,
                 editingTagData = applied,
-                coverUri = applied.picUrl
-                    ?.takeIf { it.isNotBlank() && it != current.picUrl }
+                coverUri = nextCoverUri
             )
         }
     }
@@ -612,7 +624,6 @@ class EditMetadataViewModel(
                         val savedTagData = saveResult.tagData
                         val savedDisplayPicture = savedTagData.pictures.frontCoverOrFallback()
                         val savedDisplayCover = savedDisplayPicture?.data
-                            ?: savedTagData.picUrl?.takeIf { picUrl -> picUrl.isNotBlank() }
 
                         _uiState.update {
                             it.copy(
@@ -1211,7 +1222,7 @@ class EditMetadataViewModel(
             
             try {
                 val tagData = audioTagRepository.read(song.uri)
-                val cover = tagData.pictures.firstOrNull()?.data ?: tagData.picUrl
+                val cover = tagData.pictures.frontCoverOrFallback()?.data
                 if (cover != null) {
                     val title = "${song.title} - ${song.artist}"
                     covers.add(title to cover)

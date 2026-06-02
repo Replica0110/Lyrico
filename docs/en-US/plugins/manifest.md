@@ -76,29 +76,268 @@ If `capabilities` is declared, source plugins must include `searchSongs`.
 
 ## configFields
 
-`configFields` is the extensible manifest declaration that affects runtime behavior. User settings are passed to plugin functions through `request.config`.
+`configFields` declares user-configurable options. Saved values are passed into every plugin function call through `request.config`.
 
-Supported types:
+Config field JSON structure:
 
-| Type | Use |
-|------|-----|
-| `text` | Single-line text |
-| `password` | Secret, cookie, or token |
-| `number` | Number |
-| `switch` | Boolean switch |
-| `dropdown` | Option list |
-| `textarea` | Multi-line text |
-| `markdown` | Explanatory text, not saved to runtime config |
+| Field | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `key` | `string` | Yes | - | Config key, read via `request.config[key]` in JS |
+| `title` | `string` | Yes | - | Label shown in the config UI |
+| `summary` | `string` | No | `null` | Descriptive text shown below the input |
+| `group` | `string` | No | `""` | Group name; fields with the same group are rendered together in a card. Defaults to "Basic" |
+| `type` | `string` | Yes | - | Input control type, determines UI rendering |
+| `required` | `boolean` | No | `false` | Whether the field must be filled before saving |
+| `defaultValue` | `string` | No | `""` | Initial value when the plugin is first loaded |
+| `options` | `Option[]` | No | `[]` | Option list, required only for `dropdown` type |
+| `dependency` | `Dependency` | No | `null` | Conditional visibility rule, see [Dependency System](#dependency-system-dependency) |
 
-## Runtime Result Fields
+`Option` structure:
 
-Plugin function results use `fields` and `internal`:
+| Field | Type | Description |
+|------|------|-------------|
+| `value` | `string` | Actual value stored in config |
+| `label` | `string` | Display text in the dropdown list |
+| `summary` | `string` | Extra description shown in grey in the dropdown |
 
-| Field | Use |
-|------|-----|
-| `fields` | Host-standard metadata fields for display, matching, and candidate application |
-| `internal` | Plugin-private context passed only back to the same plugin |
+### Type Reference
 
-`fields` only accepts standard keys. Unknown keys are ignored and shown as debugging warnings. Platform IDs, hashes, tokens, lyrics IDs, and album IDs belong in `internal`.
+Each `type` controls how the field appears and behaves in the UI.
 
-Standard keys: `title`, `artist`, `album`, `album_artist`, `genre`, `date`, `track_number`, `disc_number`, `composer`, `lyricist`, `comment`, `lyrics`, `cover_url`, `language`, `copyright`, `rating`, `replaygain_track_gain`, `replaygain_track_peak`, `replaygain_album_gain`, `replaygain_album_peak`, `replaygain_reference_loudness`.
+#### text — Single-line text
+
+```json
+{ "key": "server_url", "title": "Server URL", "summary": "Base URL of the API", "type": "text", "required": true, "defaultValue": "https://api.example.com" }
+```
+
+#### password — Secret / token
+
+Input is masked. Suitable for API keys, tokens, cookies, and other sensitive data.
+
+```json
+{ "key": "api_token", "title": "API Token", "summary": "Get from your service provider dashboard", "type": "password", "required": true, "defaultValue": "" }
+```
+
+#### number — Numeric input
+
+Restricts input to digit characters. Useful for timeout seconds, page size, etc.
+
+```json
+{ "key": "timeout", "title": "Timeout (seconds)", "summary": "HTTP request timeout", "type": "number", "defaultValue": "15" }
+```
+
+#### switch — Toggle
+
+Boolean-like control stored as the string `"true"` or `"false"`. Convert explicitly in JS.
+
+```json
+{ "key": "use_proxy", "title": "Use proxy", "summary": "Route requests through a proxy server", "type": "switch", "defaultValue": "false" }
+```
+
+JS: `var useProxy = request.config.use_proxy === "true";`
+
+#### dropdown — Dropdown selector
+
+```json
+{
+  "key": "lyrics_source",
+  "title": "Lyrics source",
+  "summary": "Which lyrics source the plugin should prefer",
+  "type": "dropdown",
+  "required": true,
+  "defaultValue": "official",
+  "options": [
+    { "value": "official", "label": "Official lyrics", "summary": "LRC provided by the copyright holder" },
+    { "value": "user", "label": "User-uploaded lyrics", "summary": "Translation submitted by users" }
+  ]
+}
+```
+
+#### textarea — Multi-line text
+
+Suitable for long JSON config, custom scripts, multi-line notes.
+
+```json
+{ "key": "custom_headers", "title": "Custom headers", "summary": "One header per line, format: Key: Value", "type": "textarea", "defaultValue": "" }
+```
+
+#### markdown — Explanatory text
+
+Display-only field. Not included in `request.config`. Use for usage instructions, notes, sponsorship info. `defaultValue` is rendered as Markdown body; `title` as heading.
+
+```json
+{
+  "key": "help_note",
+  "title": "Usage instructions",
+  "type": "markdown",
+  "defaultValue": "### How to get an API Key\n\n1. Register an account\n2. Go to API Management\n3. Click Generate Key\n\n> Free tier: 1000 requests/day"
+}
+```
+
+### Grouping
+
+Fields sharing the same `group` value are rendered together in a single card, with the group name as the card title. Empty values default to "Basic".
+
+```json
+"configFields": [
+  { "key": "api_key", "title": "API Key", "group": "Authentication", "type": "password", "required": true },
+  { "key": "api_secret", "title": "API Secret", "group": "Authentication", "type": "password" },
+  { "key": "region", "title": "Region", "group": "Request", "type": "dropdown", "defaultValue": "cn", "options": [...] },
+  { "key": "timeout", "title": "Timeout (s)", "group": "Request", "type": "number", "defaultValue": "15" },
+  { "key": "cover_size", "title": "Cover size", "group": "Cover", "type": "dropdown", "defaultValue": "800", "options": [...] }
+]
+```
+
+The UI renders three cards: **Authentication** (2 items), **Request** (2 items), **Cover** (1 item).
+
+### Dependency System (`dependency`)
+
+`dependency` controls field visibility: the field only appears in the UI when its condition is satisfied. Four sub-types are supported:
+
+| Type | Description |
+|------|-------------|
+| `match` | Visible when a specified field equals a given value |
+| `and` | Visible when all sub-conditions are met |
+| `or` | Visible when any sub-condition is met |
+| `not` | Visible when the condition is NOT met |
+
+#### match — Simple equality
+
+```json
+{
+  "key": "proxy_url",
+  "title": "Proxy URL",
+  "type": "text",
+  "dependency": { "match": { "key": "use_proxy", "value": "true" } }
+}
+```
+
+#### and — All conditions
+
+```json
+{
+  "key": "token_url",
+  "title": "Token endpoint",
+  "type": "text",
+  "dependency": {
+    "and": {
+      "conditions": [
+        { "match": { "key": "auth_type", "value": "oauth" } },
+        { "match": { "key": "custom_server", "value": "true" } }
+      ]
+    }
+  }
+}
+```
+
+#### or — Any condition
+
+```json
+{
+  "key": "proxy_exclude",
+  "title": "Proxy exclusion domains",
+  "type": "text",
+  "dependency": {
+    "or": {
+      "conditions": [
+        { "match": { "key": "use_proxy", "value": "true" } },
+        { "match": { "key": "use_vpn", "value": "true" } }
+      ]
+    }
+  }
+}
+```
+
+#### not — Negation
+
+```json
+{
+  "key": "custom_host",
+  "title": "Custom host",
+  "type": "text",
+  "dependency": {
+    "not": {
+      "condition": { "match": { "key": "server_mode", "value": "auto" } }
+    }
+  }
+}
+```
+
+### Complete Config Example
+
+Combining all features into a realistic `configFields` array:
+
+```json
+"configFields": [
+  {
+    "key": "help_intro",
+    "title": "Welcome",
+    "type": "markdown",
+    "defaultValue": "This plugin connects to the **MusicApi** service.\n\nEnter your API Key below to get started."
+  },
+  {
+    "key": "api_key",
+    "title": "API Key",
+    "summary": "Get one at https://example.com/console",
+    "group": "Authentication",
+    "type": "password",
+    "required": true
+  },
+  {
+    "key": "use_custom_host",
+    "title": "Custom server",
+    "group": "Authentication",
+    "type": "switch",
+    "defaultValue": "false"
+  },
+  {
+    "key": "custom_host",
+    "title": "Server host",
+    "group": "Authentication",
+    "type": "text",
+    "dependency": { "match": { "key": "use_custom_host", "value": "true" } }
+  },
+  {
+    "key": "lyrics_source",
+    "title": "Lyrics source",
+    "group": "Lyrics",
+    "type": "dropdown",
+    "defaultValue": "official",
+    "options": [
+      { "value": "official", "label": "Official lyrics" },
+      { "value": "translated", "label": "Translated lyrics" }
+    ]
+  },
+  {
+    "key": "cover_size",
+    "title": "Cover size",
+    "group": "Cover",
+    "type": "dropdown",
+    "defaultValue": "800",
+    "options": [
+      { "value": "300", "label": "300 × 300" },
+      { "value": "800", "label": "800 × 800" },
+      { "value": "1200", "label": "1200 × 1200" }
+    ]
+  },
+  {
+    "key": "timeout",
+    "title": "Timeout (s)",
+    "group": "Request",
+    "type": "number",
+    "defaultValue": "15"
+  },
+  {
+    "key": "help_footer",
+    "title": "Notes",
+    "type": "markdown",
+    "defaultValue": "> Free tier: 1000 requests/day\n> Open an issue on GitHub for support"
+  }
+]
+```
+
+## Runtime Data Return
+
+Plugin functions return search data through two JSON objects: `fields` (host-standard metadata fields like title, artist) and `internal` (plugin-private context like platform IDs, tokens).
+
+See [Configuration And Result Fields](./config-metadata.md) for the full standard field list, `internal` size constraints, and host write policies.

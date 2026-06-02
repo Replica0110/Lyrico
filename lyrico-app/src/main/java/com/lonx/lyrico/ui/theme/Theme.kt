@@ -1,6 +1,9 @@
 package com.lonx.lyrico.ui.theme
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import com.lonx.lyrico.data.model.ThemeMode
@@ -16,6 +19,7 @@ fun LyricoTheme(
     monetEnabled: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    val rippleIndication = ripple()
     val controller = remember(colorMode, keyColor, monetEnabled) {
         if (monetEnabled) {
             when (colorMode) {
@@ -34,6 +38,12 @@ fun LyricoTheme(
 
     MiuixTheme(
         controller = controller,
-        content = content,
+        content = {
+            CompositionLocalProvider(
+                LocalIndication provides rippleIndication
+            ) {
+                content()
+            }
+        }
     )
 }

@@ -244,7 +244,10 @@ fun LocalSearchScreen(
                         ) {
                             LocalSearchTypeTabs(
                                 selectedTab = currentTab,
-                                onTabSelected = { currentTab = it }
+                                onTabSelected = {
+                                    if (isSelectionMode) selectionViewModel.exitSelectionMode()
+                                    currentTab = it
+                                }
                             )
                         }
                     }

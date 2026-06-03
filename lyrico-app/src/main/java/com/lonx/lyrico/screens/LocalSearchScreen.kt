@@ -38,12 +38,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.search.LocalSearchResultTab
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.search.AlbumSongItem
 import com.lonx.lyrico.ui.components.search.ArtistSongItem
+import com.lonx.lyrico.ui.components.search.LocalSearchTypeTabs
 import com.lonx.lyrico.ui.components.search.SearchSectionHeader
 import com.lonx.lyrico.ui.components.selection.dragSelection
 import com.lonx.lyrico.ui.components.song.SongActionSheets
@@ -80,6 +82,7 @@ fun LocalSearchScreen(
     val selectionViewModel: SongSelectionViewModel = koinViewModel()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var currentTab by remember { mutableStateOf(LocalSearchResultTab.SONGS) }
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
@@ -91,9 +94,14 @@ fun LocalSearchScreen(
     var showDetailSheet by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
-    val hasResults = uiState.songs.isNotEmpty() ||
-        uiState.albums.isNotEmpty() ||
-        uiState.artists.isNotEmpty()
+    val hasCurrentTabResults = when (currentTab) {
+        LocalSearchResultTab.ARTISTS -> uiState.artists.isNotEmpty()
+        LocalSearchResultTab.ALBUMS -> uiState.albums.isNotEmpty()
+        LocalSearchResultTab.SONGS -> uiState.songs.isNotEmpty()
+    }
+    val showArtists = currentTab == LocalSearchResultTab.ARTISTS
+    val showAlbums = currentTab == LocalSearchResultTab.ALBUMS
+    val showSongs = currentTab == LocalSearchResultTab.SONGS
     val songIndexByLazyListKey = remember(uiState.songs) {
         uiState.songs
             .mapIndexed { index, song -> localSearchSongKey(song) to index }
@@ -201,6 +209,12 @@ fun LocalSearchScreen(
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                         )
                     }
+                    if (searchQuery.isNotBlank()) {
+                        LocalSearchTypeTabs(
+                            selectedTab = currentTab,
+                            onTabSelected = { currentTab = it }
+                        )
+                    }
                 }
             }
         ) { paddingValues ->
@@ -236,13 +250,13 @@ fun LocalSearchScreen(
                 ),
                 overscrollEffect = null
             ) {
-                if (searchQuery.isNotBlank() && !hasResults) {
+                if (searchQuery.isNotBlank() && !hasCurrentTabResults) {
                     item {
                         SearchEmptyCard()
                     }
                 }
 
-                if (uiState.artists.isNotEmpty()) {
+                if (showArtists && uiState.artists.isNotEmpty()) {
                     item {
                         SearchSectionHeader(
                             title = stringResource(R.string.search_section_artists),
@@ -269,7 +283,7 @@ fun LocalSearchScreen(
                     }
                 }
 
-                if (uiState.albums.isNotEmpty()) {
+                if (showAlbums && uiState.albums.isNotEmpty()) {
                     item {
                         SearchSectionHeader(
                             title = stringResource(R.string.search_section_albums),
@@ -297,7 +311,7 @@ fun LocalSearchScreen(
                     }
                 }
 
-                if (uiState.songs.isNotEmpty()) {
+                if (showSongs && uiState.songs.isNotEmpty()) {
                     item {
                         SearchSectionHeader(
                             title = stringResource(R.string.search_section_songs),

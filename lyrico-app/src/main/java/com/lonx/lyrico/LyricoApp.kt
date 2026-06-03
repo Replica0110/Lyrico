@@ -10,23 +10,25 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface as MaterialSurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.rememberNavController
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.theme.UiEngine
+import com.moriafly.salt.ui.SaltTheme
 import com.ramcosta.composedestinations.DestinationsNavHost
 import com.ramcosta.composedestinations.animations.NavHostAnimatedDestinationStyle
 import com.ramcosta.composedestinations.generated.NavGraphs
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.spec.Direction
-import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Surface as MiuixSurface
 
 @Composable
 fun LyricoApp(externalUri: Uri?) {
-    Surface(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    val content: @Composable () -> Unit = {
         val externalUriString = externalUri?.toString()
         key(externalUriString) {
             val navController = rememberNavController()
@@ -88,5 +90,18 @@ fun LyricoApp(externalUri: Uri?) {
                 }
             )
         }
+    }
+
+    if (LocalUiEngine.current == UiEngine.Miuix) {
+        MiuixSurface(
+            modifier = Modifier.fillMaxSize(),
+            content = content
+        )
+    } else {
+        MaterialSurface(
+            modifier = Modifier.fillMaxSize(),
+            color = SaltTheme.colors.background,
+            content = content
+        )
     }
 }

@@ -16,10 +16,12 @@ import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
+import com.lonx.lyrico.ui.theme.UiEngine
 import kotlinx.coroutines.flow.Flow
 
 
 interface SettingsRepository {
+
     val batchMatchConfig: Flow<BatchMatchConfig>
     val metadataFieldWriteRules: Flow<List<PluginMetadataFieldWriteRule>>
     val sourceSettingsByIdFlow: Flow<Map<String, SourceRuntimeConfig>>
@@ -44,6 +46,7 @@ interface SettingsRepository {
     val enabledSearchSources: Flow<Set<String>>
     val searchPageSize: Flow<Int>
     val themeMode: Flow<ThemeMode>
+    val uiEngine: Flow<UiEngine>
     val keyColor: Flow<KeyColor>
     val monetEnable: Flow<Boolean>
     val onlyTranslationIfAvailable: Flow<Boolean>
@@ -102,4 +105,5 @@ interface SettingsRepository {
     suspend fun getArtistSplitConfig(): ArtistSplitConfig
     suspend fun getLibraryIndexVersion(): Int
     suspend fun saveLibraryIndexVersion(version: Int)
+    suspend fun saveUiEngine(uiEngine: UiEngine)
 }

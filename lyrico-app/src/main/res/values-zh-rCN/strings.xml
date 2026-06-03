@@ -777,4 +777,7 @@
     <string name="field_group_lyrics_cover">歌词与封面</string>
     <string name="field_group_extra_info">扩展信息</string>
     <string name="field_group_replay_gain">ReplayGain</string>
+    <string name="ui_theme_saltui">SaltUI</string>
+    <string name="ui_theme_miuix">Miuix</string>
+    <string name="ui_engine">UI 引擎</string>
 </resources>

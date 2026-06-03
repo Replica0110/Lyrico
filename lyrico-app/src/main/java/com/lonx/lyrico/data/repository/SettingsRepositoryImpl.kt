@@ -37,6 +37,7 @@ import com.lonx.lyrico.viewmodel.SortOrder
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
+import com.lonx.lyrico.ui.theme.UiEngine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -81,6 +82,8 @@ object SettingsDefaults {
     const val SEARCH_PAGE_SIZE = 10
 
     val THEME_MODE = ThemeMode.AUTO
+
+    val UI_ENGINE = UiEngine.SaltUI
 }
 
 class SettingsRepositoryImpl(private val context: Context) : SettingsRepository {
@@ -112,6 +115,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val ENABLED_SEARCH_SOURCES = stringPreferencesKey("enabled_search_sources")
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val UI_ENGINE = stringPreferencesKey("ui_engine")
         val MONET_ENABLE = booleanPreferencesKey("monet_enable")
         val KEY_THEME_COLOR = intPreferencesKey("theme_color_argb")
         val ONLY_TRANSLATION_IF_AVAILABLE = booleanPreferencesKey("only_translation_if_available")
@@ -256,6 +260,19 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
             }
         }
+    override val uiEngine: Flow<UiEngine>
+        get() = context.settingsDataStore.data.map { preferences ->
+            val uiEngineName = preferences[PreferencesKeys.UI_ENGINE]
+            if (uiEngineName.isNullOrBlank()) {
+                SettingsDefaults.UI_ENGINE
+            } else {
+                try {
+                    UiEngine.valueOf(uiEngineName)
+                } catch (e: IllegalArgumentException) {
+                    SettingsDefaults.UI_ENGINE
+                }
+            }
+        }
     override val keyColor: Flow<KeyColor>
         get() = context.settingsDataStore.data.map { preferences ->
             // 检查 DataStore 中是否有保存颜色的 Key
@@ -366,8 +383,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
 
     override val themeConfigFlow: Flow<ThemeConfig> =
-        combine(themeMode, monetEnable, keyColor) { theme, monet, keyColor ->
+        combine(uiEngine, themeMode, monetEnable, keyColor) { uiEngine, theme, monet, keyColor ->
             ThemeConfig(
+                uiEngine = uiEngine,
                 themeMode = theme,
                 monetEnable = monet,
                 keyColor = keyColor
@@ -485,6 +503,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun saveThemeMode(mode: ThemeMode) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = mode.name
+        }
+    }
+
+    override suspend fun saveUiEngine(uiEngine: UiEngine) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.UI_ENGINE] = uiEngine.name
         }
     }
     override suspend fun saveMonetEnable(enabled: Boolean) {

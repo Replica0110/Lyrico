@@ -16,6 +16,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.Scaffold as MaterialScaffold
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,13 +35,15 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.ui.components.update.UpdateDialog
 import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.ui.theme.LyricoTheme
+import com.lonx.lyrico.ui.theme.UiEngine
+import com.moriafly.salt.ui.SaltTheme
 import com.lonx.lyrico.utils.UpdateManager
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
 
@@ -115,6 +119,9 @@ open class MainActivity : ComponentActivity() {
             val keyColor by settingsRepository.keyColor.collectAsStateWithLifecycle(
                 initialValue = KeyColors.first()
             )
+            val uiEngine by settingsRepository.uiEngine.collectAsStateWithLifecycle(
+                initialValue = UiEngine.SaltUI
+            )
             val darkMode = when (themeMode) {
                 ThemeMode.DARK -> true
                 ThemeMode.AUTO -> isSystemInDarkTheme()
@@ -145,6 +152,7 @@ open class MainActivity : ComponentActivity() {
             val context = this
 
             LyricoTheme(
+                uiEngine = uiEngine,
                 colorMode = themeMode,
                 monetEnabled = monetEnable,
                 keyColor = keyColor.color
@@ -159,11 +167,7 @@ open class MainActivity : ComponentActivity() {
                     }
                 }
 
-                Scaffold(
-                    popupHost = { MiuixPopupHost() },
-                    containerColor = MiuixTheme.colorScheme.background,
-                    contentWindowInsets = WindowInsets(0, 0, 0, 0)
-                ) {
+                val appContent: @Composable () -> Unit = {
                     LyricoApp(externalUri = externalUri)
 
                     updateState.releaseInfo?.let { releaseInfo ->
@@ -179,6 +183,23 @@ open class MainActivity : ComponentActivity() {
                             },
                             releaseNote = releaseInfo.releaseNotes,
                         )
+                    }
+                }
+
+                if (uiEngine == UiEngine.Miuix) {
+                    MiuixScaffold(
+                        popupHost = { MiuixPopupHost() },
+                        containerColor = MiuixTheme.colorScheme.background,
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+                    ) {
+                        appContent()
+                    }
+                } else {
+                    MaterialScaffold(
+                        containerColor = SaltTheme.colors.background,
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+                    ) {
+                        appContent()
                     }
                 }
             }

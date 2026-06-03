@@ -44,6 +44,8 @@ import com.lonx.lyrico.ui.components.RoundedRectanglePainter
 import com.lonx.lyrico.ui.components.getSystemWallpaperColor
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.theme.KeyColors
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.theme.UiEngine
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.SettingsEvent
 import com.lonx.lyrico.viewmodel.SettingsViewModel
@@ -64,6 +66,7 @@ import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -102,6 +105,7 @@ fun SettingsScreen(
     val artistSeparator = settingsUiState.separator
     val romaEnabled = settingsUiState.romaEnabled
     val themeMode = settingsUiState.themeMode
+    val uiEngine = settingsUiState.uiEngine
     val monetEnable = settingsUiState.monetEnable
     val currentKeyColor = settingsUiState.keyColor
     val translationEnabled = settingsUiState.translationEnabled
@@ -209,6 +213,24 @@ fun SettingsScreen(
             }
         }
     }
+    if (LocalUiEngine.current == UiEngine.SaltUI) {
+        SaltSettingsScreen(
+            navigator = navigator,
+            settingsViewModel = settingsViewModel,
+            settingsUiState = settingsUiState,
+            folderUiState = folderUiState,
+            scope = scope,
+            onExportSettings = {
+                val currentTime = System.currentTimeMillis()
+                exportLauncher.launch("lyrico_settings_backup_${currentTime}.json")
+            },
+            onImportSettings = {
+                importLauncher.launch(arrayOf("application/json"))
+            }
+        )
+        return // Skip Miuix settings screen
+    }
+
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     Scaffold(
         topBar = {
@@ -343,6 +365,19 @@ fun SettingsScreen(
                         onSelectedIndexChange = { index ->
                             settingsViewModel.setThemeMode(ThemeMode.entries[index])
                         }
+                    )
+                    val entry = DropdownEntry(UiEngine.entries.map {
+                        DropdownItem(
+                            text = stringResource(it.labelRes),
+                            selected = it == uiEngine,
+                            onClick = {
+                                settingsViewModel.setUiEngine(it)
+                            }
+                        )
+                    })
+                    WindowDropdownPreference(
+                        title = stringResource(R.string.ui_engine),
+                        entry = entry,
                     )
                     SwitchPreference(
                         title = stringResource(R.string.monet),

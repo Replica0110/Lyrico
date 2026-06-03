@@ -22,6 +22,7 @@ import com.lonx.lyrico.data.model.toArtistSeparator
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.ui.theme.KeyColors
+import com.lonx.lyrico.ui.theme.UiEngine
 import com.lonx.lyrico.utils.CacheManager
 import com.lonx.lyrico.utils.UiMessage
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ data class SettingsUiState(
     val enabledSearchSources: Set<String> = emptySet(),
     val searchPageSize: Int = 20,
     val themeMode: ThemeMode = ThemeMode.AUTO,
+    val uiEngine: UiEngine = UiEngine.SaltUI,
     val monetEnable: Boolean = false,
     val keyColor: KeyColor = KeyColors[1],
     val onlyTranslationIfAvailable: Boolean = false,
@@ -100,6 +102,7 @@ class SettingsViewModel(
             enabledSearchSources = base.search.enabledSearchSources,
             searchPageSize = base.search.searchPageSize,
             themeMode = base.theme.themeMode,
+            uiEngine = base.theme.uiEngine,
             ignoreShortAudio = base.ignoreShortAudio,
             monetEnable = base.theme.monetEnable,
             keyColor = base.theme.keyColor,
@@ -293,6 +296,12 @@ class SettingsViewModel(
                     UiMessage.StringResource(R.string.import_failed, e.message ?: "Unknown error")
                 ))
             }
+        }
+    }
+
+    fun setUiEngine(uiEngine: UiEngine) {
+        viewModelScope.launch {
+            settingsRepository.saveUiEngine(uiEngine)
         }
     }
 

@@ -766,4 +766,7 @@
     <string name="field_group_lyrics_cover">Lyrics &amp; cover</string>
     <string name="field_group_extra_info">Extra info</string>
     <string name="field_group_replay_gain">ReplayGain</string>
+    <string name="ui_theme_saltui">SaltUI</string>
+    <string name="ui_theme_miuix">Miuix</string>
+    <string name="ui_engine">UI engine</string>
 </resources>

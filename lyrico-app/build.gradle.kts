@@ -97,6 +97,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.reorderable)
+    implementation("io.github.moriafly:salt-ui-android:2.9.0-beta02")
     implementation(libs.compose.markdown)
     implementation(libs.lazycolumnscrollbar)
     // AndroidX

@@ -193,7 +193,7 @@
 
     <!-- Song Menu Bottom Sheet -->
     <string name="menu_play_music">Play Music</string>
-    <string name="menu_play_music_sub">Play audio using system player</string>
+    <string name="menu_play_music_sub">Play audio using external player</string>
     <string name="menu_song_info">Song Info</string>
     <string name="menu_share_song">Share Song</string>
     <string name="menu_delete_song">Delete Song</string>
@@ -364,7 +364,7 @@
     <string name="cd_play">Play</string>
     <!-- Song Menu -->
     <string name="menu_action_play">Play Music</string>
-    <string name="menu_action_play_sub">Play audio using system player</string>
+    <string name="menu_action_play_sub">Play audio using external player</string>
     <string name="menu_action_info">Song Info</string>
     <string name="menu_action_share">Share Song</string>
     <string name="menu_action_delete">Delete Song</string>
@@ -396,10 +396,6 @@
     <string name="import_failed">Import failed: %1$s</string>
     <string name="import_failed_format">Invalid configuration file format.</string>
 
-
-    <!-- Choose player -->
-    <string name="choose_player">Choose Player</string>
-    <string name="no_player_found">No available player found</string>
     <string name="unknown_error">An unknown error occurred: %1$s</string>
     <string name="unknown_error_simple">Unknown error</string>
     <string name="clear_songs">Clear All Songs</string>

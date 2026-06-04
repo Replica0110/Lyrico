@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 友链播放器选择 -->
+    <string name="choose_player">选择播放器</string>
+    <string name="play_with">播放方式</string>
+    <string name="recommended_players">推荐播放器</string>
+    <string name="friendly_player_cone_player">光锥音乐</string>
+    <string name="friendly_player_ella_music">Ella Music</string>
+    <string name="friendly_player_salt_player">Salt Player</string>
+    <string name="player_name_not_installed_format">%1$s (未安装)</string>
+    <string name="other_playback_methods">其他方式</string>
+    <string name="open_with_system_picker">使用系统选择器打开</string>
+    <string name="learn_more">了解</string>
+    <string name="player_open_failed">无法打开该播放器，已改用系统选择器</string>
+    <string name="player_install_source_unavailable">暂无可用的下载地址</string>
+    <string name="no_player_found">未找到可用播放器</string>
+</resources>

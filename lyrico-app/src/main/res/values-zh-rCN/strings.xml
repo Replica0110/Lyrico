@@ -197,7 +197,7 @@
 
     <!-- 歌曲菜单 -->
     <string name="menu_play_music">播放音乐</string>
-    <string name="menu_play_music_sub">调用系统播放器播放音频</string>
+    <string name="menu_play_music_sub">调用外部放器播放音频</string>
     <string name="menu_song_info">歌曲信息</string>
     <string name="menu_share_song">分享歌曲</string>
     <string name="menu_delete_song">删除歌曲</string>
@@ -336,7 +336,7 @@
 
     <!-- 歌曲菜单 -->
     <string name="menu_action_play">播放音乐</string>
-    <string name="menu_action_play_sub">调用系统播放器播放音频</string>
+    <string name="menu_action_play_sub">调用外部播放器播放音频</string>
     <string name="menu_action_info">歌曲信息</string>
     <string name="menu_action_share">分享歌曲</string>
     <string name="menu_action_delete">删除歌曲</string>
@@ -368,10 +368,6 @@
     <string name="import_failed">配置导入失败: %1$s</string>
     <string name="import_failed_format">无效的配置文件格式</string>
 
-
-    <!-- 选择播放器 -->
-    <string name="choose_player">选择播放器</string>
-    <string name="no_player_found">未找到可用播放器</string>
     <string name="unknown_error">发生未知错误: %1$s</string>
     <string name="clear_songs">清空歌曲</string>
 

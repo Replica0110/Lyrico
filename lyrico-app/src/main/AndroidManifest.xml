@@ -13,6 +13,17 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
+    <queries>
+        <package android:name="ink.trantor.coneplayer.gp" />
+        <package android:name="ink.trantor.coneplayer" />
+        <package android:name="com.ella.music" />
+        <package android:name="com.salt.music" />
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="audio/*" />
+        </intent>
+    </queries>
 
     <application
         android:name=".App"

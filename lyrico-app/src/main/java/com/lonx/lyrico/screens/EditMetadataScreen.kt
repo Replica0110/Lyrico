@@ -84,6 +84,7 @@ import com.lonx.lyrico.ui.components.getBitmap
 import com.lonx.lyrico.ui.components.crop.rememberImageCropperState
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
+import com.lonx.lyrico.ui.components.player.PlayerPickerBottomSheet
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
@@ -173,6 +174,7 @@ fun EditMetadataScreen(
     var showCropSheet by remember { mutableStateOf(false) }
     var showAddCustomTagDialog by remember { mutableStateOf(false) }
     var showLyricsFormatBottomSheet by remember { mutableStateOf(false) }
+    var showPlayerPicker by remember { mutableStateOf(false) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var isFabMenuExpanded by remember { mutableStateOf(false) }
     val currentShiftOffset by viewModel.currentShiftOffset.collectAsState()
@@ -933,7 +935,7 @@ fun EditMetadataScreen(
                 icon = MiuixIcons.Play,
                 onClick = {
                     isFabMenuExpanded = false
-                    viewModel.play(context)
+                    showPlayerPicker = true
                 }
             )
 
@@ -947,6 +949,11 @@ fun EditMetadataScreen(
             )
         }
     }
+    PlayerPickerBottomSheet(
+        show = showPlayerPicker,
+        uri = songFileUri.toUri(),
+        onDismissRequest = { showPlayerPicker = false }
+    )
     // 歌词操作
     WindowBottomSheet(
         show = showLyricsActionBottomSheet,

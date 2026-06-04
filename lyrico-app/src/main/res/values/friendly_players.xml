@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Friendly player picker -->
+    <string name="choose_player">Choose Player</string>
+    <string name="play_with">Play with</string>
+    <string name="recommended_players">Recommended players</string>
+    <string name="friendly_player_cone_player">Cone Player</string>
+    <string name="friendly_player_ella_music">Ella Music</string>
+    <string name="friendly_player_salt_player">Salt Player</string>
+    <string name="player_name_not_installed_format">%1$s (Not installed)</string>
+    <string name="other_playback_methods">Other methods</string>
+    <string name="open_with_system_picker">Open with system picker</string>
+    <string name="learn_more">Learn more</string>
+    <string name="player_open_failed">Unable to open this player. Using the system picker instead.</string>
+    <string name="player_install_source_unavailable">No download source is available</string>
+    <string name="no_player_found">No available player found</string>
+</resources>

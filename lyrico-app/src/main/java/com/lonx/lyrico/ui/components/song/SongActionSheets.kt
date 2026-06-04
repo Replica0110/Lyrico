@@ -2,6 +2,7 @@ package com.lonx.lyrico.ui.components.song
 
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -16,7 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.player.PlayerPickerBottomSheet
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -41,61 +44,78 @@ fun SongActionSheets(
     onRename: (SongEntity, String) -> Unit
 ) {
     val context = LocalContext.current
-    val song = selectedSong ?: return
+    var showPlayerPicker by remember { mutableStateOf(false) }
+    var pendingPlayUri by remember { mutableStateOf<Uri?>(null) }
+    val song = selectedSong
 
     val shareTitle = stringResource(R.string.share_chooser_title)
-    SongMenuBottomSheet(
-        show = showMenuSheet,
-        song = song,
-        onDismissRequest = onDismissMenu,
-        onDismissFinished = onDismissMenuFinished,
-        onPlay = { onPlay(song) },
-        showInfo = onShowDetail,
-        onDelete = onShowDelete,
-        onRename = onShowRename,
-        onShare = {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "audio/*"
-                putExtra(Intent.EXTRA_STREAM, song.uri.toUri())
-                putExtra(Intent.EXTRA_TITLE, song.title ?: song.fileName)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
+    if (song != null) {
+        SongMenuBottomSheet(
+            show = showMenuSheet,
+            song = song,
+            onDismissRequest = onDismissMenu,
+            onDismissFinished = onDismissMenuFinished,
+            onPlay = {
+                pendingPlayUri = song.getUri
+                showPlayerPicker = true
+                onDismissMenu()
+            },
+            showInfo = onShowDetail,
+            onDelete = onShowDelete,
+            onRename = onShowRename,
+            onShare = {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "audio/*"
+                    putExtra(Intent.EXTRA_STREAM, song.uri.toUri())
+                    putExtra(Intent.EXTRA_TITLE, song.title ?: song.fileName)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
 
-            context.startActivity(
-                Intent.createChooser(
-                    intent,
-                    shareTitle
+                context.startActivity(
+                    Intent.createChooser(
+                        intent,
+                        shareTitle
+                    )
                 )
-            )
-        }
-    )
+            }
+        )
 
-    SongDetailBottomSheet(
-        show = showDetailSheet,
-        song = song,
-        onDismissRequest = onDismissDetail
-    )
+        SongDetailBottomSheet(
+            show = showDetailSheet,
+            song = song,
+            onDismissRequest = onDismissDetail
+        )
 
-    YesNoDialog(
-        title = stringResource(R.string.dialog_delete_file_title),
-        show = showDeleteDialog,
-        summary = stringResource(
-            R.string.dialog_delete_file_content,
-            song.fileName
-        ),
-        onConfirm = {
-            onDismissMenu()
-            onDelete(song)
-        },
-        onDismissRequest = onDismissDelete
-    )
+        YesNoDialog(
+            title = stringResource(R.string.dialog_delete_file_title),
+            show = showDeleteDialog,
+            summary = stringResource(
+                R.string.dialog_delete_file_content,
+                song.fileName
+            ),
+            onConfirm = {
+                onDismissMenu()
+                onDelete(song)
+            },
+            onDismissRequest = onDismissDelete
+        )
 
-    RenameSongDialog(
-        show = showRenameDialog,
-        song = song,
-        onDismissRequest = onDismissRename,
-        onConfirm = { newFileName ->
-            onRename(song, newFileName)
+        RenameSongDialog(
+            show = showRenameDialog,
+            song = song,
+            onDismissRequest = onDismissRename,
+            onConfirm = { newFileName ->
+                onRename(song, newFileName)
+            }
+        )
+    }
+
+    PlayerPickerBottomSheet(
+        show = showPlayerPicker,
+        uri = pendingPlayUri,
+        onDismissRequest = {
+            showPlayerPicker = false
+            pendingPlayUri = null
         }
     )
 }

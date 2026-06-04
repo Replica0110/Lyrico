@@ -11,5 +11,6 @@ enum class AppLogType(
     METADATA(R.string.app_log_type_metadata),
     BATCH(R.string.app_log_type_batch),
     DATABASE(R.string.app_log_type_database),
-    NETWORK(R.string.app_log_type_network)
+    NETWORK(R.string.app_log_type_network),
+    PLUGIN(R.string.app_log_type_plugin)
 }

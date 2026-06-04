@@ -631,6 +631,7 @@
     <string name="app_log_type_batch">Batch</string>
     <string name="app_log_type_database">Database</string>
     <string name="app_log_type_network">Network</string>
+    <string name="app_log_type_plugin">Plugin</string>
     <string name="log_retention_title">Log retention</string>
     <string name="log_retention_summary">Controls how long app logs are kept</string>
     <string name="log_retention_none">Do not record</string>

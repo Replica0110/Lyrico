@@ -1,7 +1,11 @@
 package com.lonx.lyrico.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -62,7 +66,8 @@ private data class CoverSourceSearchResult(
 class CoverSearchViewModel(
     private val searchSourceProvider: SearchSourceProvider,
     private val settingsRepository: SettingsRepository,
-    searchSourceConfigApplier: SearchSourceConfigApplier
+    searchSourceConfigApplier: SearchSourceConfigApplier,
+    private val appLogRepository: AppLogRepository
 ) : ViewModel() {
 
     init {
@@ -155,6 +160,13 @@ class CoverSearchViewModel(
             val pageSize = settingsRepository.searchPageSize.first()
             
             val enabledSources = getSearchSources(searchConfig, allSourcesFlow.value)
+            if (enabledSources.isEmpty()) {
+                logCoverSearch(
+                    level = AppLogLevel.WARNING,
+                    message = "Cover search skipped: no enabled plugin source",
+                    detail = "keyword=$keyword"
+                )
+            }
 
             // 并行从所有启用的源搜索封面
             val sourceResults = enabledSources.map { sourceImpl ->
@@ -162,6 +174,13 @@ class CoverSearchViewModel(
                     try {
                         val source = sourceImpl.toUiModel()
                         val songs = sourceImpl.searchCovers(keyword, pageSize)
+                        val coverCount = songs.count { it.picUrl.isNotBlank() }
+                        logCoverSearch(
+                            level = AppLogLevel.DEBUG,
+                            message = "Cover source search finished: $coverCount cover(s)",
+                            detail = "keyword=$keyword\nsource=${sourceImpl.id}\nrawResultCount=${songs.size}\ncoverCount=$coverCount",
+                            relatedId = sourceImpl.id
+                        )
                         CoverSourceSearchResult(
                             covers = songs.filter { it.picUrl.isNotBlank() }.map { song ->
                                 CoverSearchResult(
@@ -176,6 +195,11 @@ class CoverSearchViewModel(
                         )
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
+                        logCoverSearchException(
+                            message = "Cover source search failed\nkeyword=$keyword\nsource=${sourceImpl.id}",
+                            throwable = e,
+                            relatedId = sourceImpl.id
+                        )
                         CoverSourceSearchResult(
                             error = e.toUiMessage()
                         )
@@ -186,6 +210,12 @@ class CoverSearchViewModel(
             val allCovers = sourceResults.flatMap { it.covers }
             val allSourcesFailed = enabledSources.isNotEmpty() &&
                 sourceResults.all { it.error != null }
+            logCoverSearch(
+                level = if (allSourcesFailed) AppLogLevel.WARNING else AppLogLevel.DEBUG,
+                message = "Cover search finished: ${allCovers.size} cover(s)",
+                detail = "keyword=$keyword\nsourceCount=${enabledSources.size}\ncoverCount=${allCovers.size}\n" +
+                        "failedSourceCount=${sourceResults.count { it.error != null }}"
+            )
 
             coverSearchState.update {
                 it.copy(
@@ -197,6 +227,10 @@ class CoverSearchViewModel(
 
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            logCoverSearchException(
+                message = "Cover search failed\nkeyword=$keyword",
+                throwable = e
+            )
             coverSearchState.update {
                 it.copy(
                     error = e.toUiMessage(),
@@ -218,5 +252,47 @@ class CoverSearchViewModel(
 
     private fun Throwable.toUiMessage(): UiMessage {
         return UiMessage.DynamicString(message ?: javaClass.simpleName)
+    }
+
+    private suspend fun logCoverSearch(
+        level: AppLogLevel,
+        message: String,
+        detail: String? = null,
+        relatedId: String? = null
+    ) {
+        runCatching {
+            appLogRepository.log(
+                level = level,
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = message,
+                detail = detail,
+                relatedId = relatedId
+            )
+        }.onFailure { throwable ->
+            Log.w(TAG, "Failed to write cover search log", throwable)
+        }
+    }
+
+    private suspend fun logCoverSearchException(
+        message: String,
+        throwable: Throwable,
+        relatedId: String? = null
+    ) {
+        runCatching {
+            appLogRepository.logException(
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = message,
+                throwable = throwable,
+                relatedId = relatedId
+            )
+        }.onFailure { logThrowable ->
+            Log.w(TAG, "Failed to write cover search exception log", logThrowable)
+        }
+    }
+
+    private companion object {
+        const val TAG = "CoverSearchViewModel"
     }
 }

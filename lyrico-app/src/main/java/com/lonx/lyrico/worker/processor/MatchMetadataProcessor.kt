@@ -7,6 +7,8 @@ import com.lonx.lyrico.data.model.ScoredSearchResult
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
@@ -17,6 +19,7 @@ import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.model.metadata.SearchResultApplier
 import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
@@ -32,13 +35,15 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.coroutines.cancellation.CancellationException
 
 class MatchMetadataProcessor(
     private val audioTagRepository: AudioTagRepository,
     private val patchSongTagsUseCase: PatchSongTagsUseCase,
     private val songLibraryRepository: SongLibraryRepository,
     private val settingsRepository: SettingsRepository,
-    private val searchSourceProvider: SearchSourceProvider
+    private val searchSourceProvider: SearchSourceProvider,
+    private val appLogRepository: AppLogRepository
 ) : BatchTaskProcessor {
     override suspend fun process(
         task: BatchTaskEntity,
@@ -140,10 +145,18 @@ class MatchMetadataProcessor(
                         ) to detail
                     }
                 } catch (throwable: Exception) {
+                    if (throwable is CancellationException) throw throwable
                     Log.w(
                         TAG,
                         "Search source failed. songUri=${song.uri}, source=${source.id}, query=$query",
                         throwable
+                    )
+                    logPluginBatchException(
+                        message = "Batch metadata match source failed\n" +
+                                "task=${task.taskId}\nitem=${item.itemId}\n" +
+                                "songUri=${song.uri}\nsource=${source.id}\nquery=$query",
+                        throwable = throwable,
+                        relatedId = source.id
                     )
                     emptyList()
                 }
@@ -153,10 +166,24 @@ class MatchMetadataProcessor(
                     "Search source results. songUri=${song.uri}, source=${source.id}, " +
                             "query=$query, count=${sourceResults.size}, " +
                             "top=${sourceResults.take(3).map { (scored, detail) ->
-                                "${scored.result.id}:${scored.result.title}|score=${detail.finalScore}" +
+                        "${scored.result.id}:${scored.result.title}|score=${detail.finalScore}" +
                                         "|text=${detail.textScore}|keys=${scored.result.normalizedFields().keys}" +
                                         "|commentBlank=${scored.result.normalizedFields()["comment"].isNullOrBlank()}"
                             }}"
+                )
+                logPluginBatch(
+                    level = AppLogLevel.DEBUG,
+                    message = "Batch metadata match source returned ${sourceResults.size} result(s)",
+                    detail = buildString {
+                        appendLine("task=${task.taskId}")
+                        appendLine("item=${item.itemId}")
+                        appendLine("songUri=${song.uri}")
+                        appendLine("source=${source.id}")
+                        appendLine("query=$query")
+                        appendLine("resultCount=${sourceResults.size}")
+                        appendLine("top=${sourceResults.take(3).map { (scored, detail) -> "${scored.result.id}:${scored.result.title}|score=${detail.finalScore}" }}")
+                    },
+                    relatedId = source.id
                 )
 
                 allScoredResults += sourceResults.map { (scoredResult, _) ->
@@ -228,6 +255,22 @@ class MatchMetadataProcessor(
                     "commentBlank=${finalMatch.result.normalizedFields()["comment"].isNullOrBlank()}, " +
                     "targetModes=${plan.targetModes}"
         )
+        logPluginBatch(
+            level = AppLogLevel.DEBUG,
+            message = "Batch metadata match selected result",
+            detail = buildString {
+                appendLine("task=${task.taskId}")
+                appendLine("item=${item.itemId}")
+                appendLine("songUri=${song.uri}")
+                appendLine("source=${finalMatch.source?.id}")
+                appendLine("result=${finalMatch.result.id}:${finalMatch.result.title}")
+                appendLine("score=${finalDetail.finalScore}")
+                appendLine("textScore=${finalDetail.textScore}")
+                appendLine("targetModes=${plan.targetModes}")
+                appendLine("normalizedKeys=${finalMatch.result.normalizedFields().keys}")
+            },
+            relatedId = finalMatch.source?.id
+        )
 
         if (finalDetail.finalScore < 0.76 || finalDetail.textScore < 0.72) {
             throw BatchTaskSkippedException(
@@ -259,7 +302,16 @@ class MatchMetadataProcessor(
                     }
                     deferred.await()
                 }
-            } catch (_: Exception) {
+            } catch (throwable: Exception) {
+                if (throwable is CancellationException) throw throwable
+                logPluginBatchException(
+                    message = "Batch metadata match lyrics fetch failed\n" +
+                            "task=${task.taskId}\nitem=${item.itemId}\n" +
+                            "songUri=${song.uri}\nsource=${finalMatch.source?.id}\n" +
+                            "result=${finalMatch.result.id}:${finalMatch.result.title}",
+                    throwable = throwable,
+                    relatedId = finalMatch.source?.id
+                )
                 null
             }
         } else {
@@ -310,6 +362,44 @@ class MatchMetadataProcessor(
         onProgress(1f)
 
         return BatchTaskProcessResult()
+    }
+
+    private suspend fun logPluginBatch(
+        level: AppLogLevel,
+        message: String,
+        detail: String? = null,
+        relatedId: String? = null
+    ) {
+        runCatching {
+            appLogRepository.log(
+                level = level,
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = message,
+                detail = detail,
+                relatedId = relatedId
+            )
+        }.onFailure { throwable ->
+            Log.w(TAG, "Failed to write batch plugin log", throwable)
+        }
+    }
+
+    private suspend fun logPluginBatchException(
+        message: String,
+        throwable: Throwable,
+        relatedId: String? = null
+    ) {
+        runCatching {
+            appLogRepository.logException(
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = message,
+                throwable = throwable,
+                relatedId = relatedId
+            )
+        }.onFailure { logThrowable ->
+            Log.w(TAG, "Failed to write batch plugin exception log", logThrowable)
+        }
     }
 
     private fun buildPlan(matchConfig: BatchMatchConfig): MatchMetadataPlan {

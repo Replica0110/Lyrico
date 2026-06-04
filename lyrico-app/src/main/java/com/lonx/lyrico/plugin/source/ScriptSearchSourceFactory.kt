@@ -2,6 +2,7 @@ package com.lonx.lyrico.plugin.source
 
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.model.plugin.PluginManifest
+import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +13,7 @@ import java.io.File
 
 class ScriptSearchSourceFactory(
     private val json: Json,
+    private val appLogRepository: AppLogRepository? = null,
     private val runtimeFactory: () -> PluginJsRuntime = { QuickJsRuntime() }
 ) {
     suspend fun create(plugin: SourcePluginEntity): ScriptSearchSource =
@@ -26,6 +28,7 @@ class ScriptSearchSourceFactory(
                 manifest = manifest,
                 script = script,
                 iconPath = plugin.iconPath,
+                appLogRepository = appLogRepository,
                 json = json,
                 runtimeFactory = runtimeFactory
             )

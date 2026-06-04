@@ -1,6 +1,9 @@
 package com.lonx.lyrico.plugin.source
 
+import android.util.Log
+import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 import kotlinx.coroutines.sync.Mutex
@@ -15,7 +18,8 @@ data class SearchSourceWithState(
 
 class PluginSearchSourceManager(
     private val repository: SourcePluginRepository,
-    private val factory: ScriptSearchSourceFactory
+    private val factory: ScriptSearchSourceFactory,
+    private val appLogRepository: AppLogRepository
 ) : AutoCloseable {
     private val cache = mutableMapOf<String, ScriptSearchSource>()
     private val cacheVersions = mutableMapOf<String, Long>()
@@ -70,7 +74,7 @@ class PluginSearchSourceManager(
         }
 
         return plugins.mapNotNull { plugin ->
-            runCatching {
+            try {
                 val existing = cache[plugin.id]
                 if (existing != null && cacheVersions[plugin.id] == plugin.updatedAt) {
                     existing
@@ -81,7 +85,25 @@ class PluginSearchSourceManager(
                         cacheVersions[plugin.id] = plugin.updatedAt
                     }
                 }
-            }.getOrNull()
+            } catch (throwable: Exception) {
+                logSourceBuildFailure(plugin, throwable)
+                null
+            }
+        }
+    }
+
+    private suspend fun logSourceBuildFailure(plugin: SourcePluginEntity, throwable: Throwable) {
+        runCatching {
+            appLogRepository.logException(
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = "Failed to build plugin search source\n" +
+                        "plugin=${plugin.id}\nname=${plugin.name}\nentry=${plugin.entryFile}",
+                throwable = throwable,
+                relatedId = plugin.id
+            )
+        }.onFailure { logThrowable ->
+            Log.w(TAG, "Failed to write plugin source build log", logThrowable)
         }
     }
 
@@ -89,5 +111,9 @@ class PluginSearchSourceManager(
         cache.values.forEach { it.close() }
         cache.clear()
         cacheVersions.clear()
+    }
+
+    private companion object {
+        const val TAG = "PluginSearchSourceManager"
     }
 }

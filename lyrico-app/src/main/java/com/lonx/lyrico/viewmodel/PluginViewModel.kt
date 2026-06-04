@@ -199,6 +199,11 @@ class PluginViewModel(
                     )
                 }
             } catch (e: TimeoutCancellationException) {
+                logPluginError(
+                    message = "Plugin action timed out",
+                    detail = "Timed out after ${ACTION_TIMEOUT_MS / 1000}s",
+                    fullDetail = e.stackTraceToString()
+                )
                 _uiState.update {
                     it.copy(
                         isBusy = false,
@@ -209,6 +214,11 @@ class PluginViewModel(
                 }
             } catch (e: Exception) {
                 val message = e.message ?: e.javaClass.simpleName
+                logPluginError(
+                    message = "Plugin action failed",
+                    detail = message,
+                    fullDetail = e.stackTraceToString()
+                )
                 _uiState.update {
                     it.copy(
                         isBusy = false,
@@ -251,7 +261,7 @@ class PluginViewModel(
         try {
             appLogRepository.log(
                 level = AppLogLevel.ERROR,
-                type = AppLogType.APP,
+                type = AppLogType.PLUGIN,
                 tag = TAG,
                 message = message,
                 detail = fullDetail ?: detail

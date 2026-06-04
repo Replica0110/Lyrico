@@ -642,6 +642,7 @@
     <string name="app_log_type_batch">批量</string>
     <string name="app_log_type_database">数据库</string>
     <string name="app_log_type_network">网络</string>
+    <string name="app_log_type_plugin">插件</string>
     <string name="log_retention_title">日志保留周期</string>
     <string name="log_retention_summary">控制应用日志保留多久</string>
     <string name="log_retention_none">不记录</string>

@@ -1,8 +1,12 @@
 package com.lonx.lyrico.plugin.source
 
+import android.util.Log
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.plugin.PluginCapability
 import com.lonx.lyrico.data.model.plugin.PluginManifest
+import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.plugin.runtime.HostApiRegistry
 import kotlinx.coroutines.Dispatchers
@@ -120,6 +124,7 @@ fun Throwable.toFailedPlugin(rootPathFallback: String = "."): PluginInstallFaile
 class SourcePluginInstaller(
     private val repository: SourcePluginRepository,
     private val json: Json,
+    private val appLogRepository: AppLogRepository,
     private val limits: PluginImportLimits = PluginImportLimits()
 ) {
 
@@ -135,6 +140,11 @@ class SourcePluginInstaller(
             extractZip(input, tempDir)
             val manifests = findManifestFiles(tempDir)
             if (manifests.isEmpty()) {
+                logInstaller(
+                    level = AppLogLevel.ERROR,
+                    message = "Plugin import failed: manifest not found",
+                    detail = "installRoot=${installRoot.absolutePath}"
+                )
                 return@withContext PluginImportSession(
                     tempDir = tempDir,
                     installRoot = installRoot,
@@ -159,9 +169,11 @@ class SourcePluginInstaller(
                 result.fold(
                     onSuccess = { candidate ->
                         if (candidate.manifest.id in duplicateIds) {
-                            failed += candidate.toFailed(
+                            val failure = candidate.toFailed(
                                 reason = "Duplicate plugin id in archive: ${candidate.manifest.id}"
                             )
+                            failed += failure
+                            logInstallFailure("Plugin import candidate rejected", failure)
                         } else {
                             val existing = repository.getPlugin(candidate.manifest.id)
                             candidates += candidate.copy(
@@ -171,7 +183,13 @@ class SourcePluginInstaller(
                         }
                     },
                     onFailure = { throwable ->
-                        failed += throwable.toFailedPlugin()
+                        val failure = throwable.toFailedPlugin()
+                        failed += failure
+                        logInstallerException(
+                            message = "Plugin import candidate validation failed",
+                            throwable = throwable,
+                            relatedId = failure.pluginId
+                        )
                     }
                 )
             }
@@ -183,6 +201,10 @@ class SourcePluginInstaller(
                 failed = failed
             )
         } catch (throwable: Throwable) {
+            logInstallerException(
+                message = "Plugin import preparation failed",
+                throwable = throwable
+            )
             tempDir.deleteRecursively()
             throw throwable
         }
@@ -201,9 +223,11 @@ class SourcePluginInstaller(
             }
             val installed = selectedCandidates.mapNotNull { candidate ->
                 if (candidate.versionConflict == PluginVersionConflict.DOWNGRADE && !allowDowngrade) {
-                    failed += candidate.toFailed(
+                    val failure = candidate.toFailed(
                         reason = "Import version is lower than installed version: ${candidate.manifest.id}"
                     )
+                    failed += failure
+                    logInstallFailure("Plugin install rejected", failure)
                     return@mapNotNull null
                 }
                 runCatching {
@@ -214,10 +238,27 @@ class SourcePluginInstaller(
                         enabled = enabled
                     )
                 }.onFailure { throwable ->
-                    failed += candidate.toFailed(
+                    val failure = candidate.toFailed(
                         reason = throwable.message ?: throwable.javaClass.simpleName
                     )
+                    failed += failure
+                    logInstallerException(
+                        message = "Plugin install failed\nplugin=${candidate.manifest.id}\n" +
+                                "name=${candidate.manifest.name}\nroot=${candidate.relativeRootInArchive}",
+                        throwable = throwable,
+                        relatedId = candidate.manifest.id
+                    )
                 }.getOrNull()
+            }
+            if (installed.isNotEmpty() || failed.isNotEmpty()) {
+                logInstaller(
+                    level = if (failed.isEmpty()) AppLogLevel.INFO else AppLogLevel.WARNING,
+                    message = "Plugin install finished: installed=${installed.size}, failed=${failed.size}",
+                    detail = buildString {
+                        appendLine("installed=${installed.map { "${it.id}:${it.versionName}(${it.versionCode})" }}")
+                        appendLine("failed=${failed.map { "${it.displayName}:${it.reason}" }}")
+                    }
+                )
             }
             PluginInstallResult(installed = installed, failed = failed)
         } finally {
@@ -415,6 +456,19 @@ class SourcePluginInstaller(
             updatedAt = now
         )
         repository.upsertPlugin(entity)
+        logInstaller(
+            level = AppLogLevel.INFO,
+            message = "Plugin installed: ${entity.name}",
+            detail = buildString {
+                appendLine("plugin=${entity.id}")
+                appendLine("version=${entity.versionName}(${entity.versionCode})")
+                appendLine("enabled=${entity.enabled}")
+                appendLine("entry=${entity.entryFile}")
+                appendLine("dir=${entity.pluginDir}")
+                appendLine("icon=${entity.iconPath.orEmpty()}")
+            },
+            relatedId = entity.id
+        )
         return entity
     }
 
@@ -511,8 +565,64 @@ class SourcePluginInstaller(
         }
     }
 
+    private suspend fun logInstallFailure(message: String, failure: PluginInstallFailed) {
+        logInstaller(
+            level = AppLogLevel.ERROR,
+            message = message,
+            detail = buildString {
+                appendLine("root=${failure.rootPath}")
+                appendLine("reason=${failure.reason}")
+                appendLine("plugin=${failure.pluginId.orEmpty()}")
+                appendLine("name=${failure.pluginName.orEmpty()}")
+                appendLine("version=${failure.versionName.orEmpty()}(${failure.versionCode ?: ""})")
+                appendLine("existing=${failure.existingVersionName.orEmpty()}(${failure.existingVersionCode ?: ""})")
+                appendLine("conflict=${failure.conflict}")
+            },
+            relatedId = failure.pluginId
+        )
+    }
+
+    private suspend fun logInstaller(
+        level: AppLogLevel,
+        message: String,
+        detail: String? = null,
+        relatedId: String? = null
+    ) {
+        runCatching {
+            appLogRepository.log(
+                level = level,
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = message,
+                detail = detail,
+                relatedId = relatedId
+            )
+        }.onFailure { throwable ->
+            Log.w(TAG, "Failed to write plugin installer log", throwable)
+        }
+    }
+
+    private suspend fun logInstallerException(
+        message: String,
+        throwable: Throwable,
+        relatedId: String? = null
+    ) {
+        runCatching {
+            appLogRepository.logException(
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = message,
+                throwable = throwable,
+                relatedId = relatedId
+            )
+        }.onFailure { logThrowable ->
+            Log.w(TAG, "Failed to write plugin installer exception log", logThrowable)
+        }
+    }
+
     private companion object {
         const val MANIFEST_FILE = "manifest.json"
+        const val TAG = "SourcePluginInstaller"
         val ID_PATTERN = Regex("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$")
         val SUPPORTED_ICON_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp")
     }

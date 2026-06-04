@@ -145,6 +145,7 @@ val appModule = module {
         val okHttpClient = get<OkHttpClient>()
         ScriptSearchSourceFactory(
             json = get(),
+            appLogRepository = get(),
             runtimeFactory = {
                 QuickJsRuntime(
                     hostApi = QuickJsHostApi(
@@ -162,8 +163,8 @@ val appModule = module {
             }
         )
     }
-    single { PluginSearchSourceManager(repository = get(), factory = get()) }
-    single { SourcePluginInstaller(repository = get(), json = get()) }
+    single { PluginSearchSourceManager(repository = get(), factory = get(), appLogRepository = get()) }
+    single { SourcePluginInstaller(repository = get(), json = get(), appLogRepository = get()) }
     single { SearchSourceProvider(pluginManager = get()) }
 
     single { SearchSourceConfigApplier(get(), get()) }
@@ -234,7 +235,7 @@ val appModule = module {
     single { BatchTaskScheduler(androidContext(), get()) }
     single { LyricsFormatProcessor(get(), get()) }
     single { ReplayGainProcessor(get(), get(), get()) }
-    single { MatchMetadataProcessor(get(), get(), get(), get(), get()) }
+    single { MatchMetadataProcessor(get(), get(), get(), get(), get(), get()) }
     single { RenameFilesProcessor(get(), get()) }
     single { EditTagsProcessor(get(), get()) }
     single { BatchExportProcessor(androidContext(), get()) }
@@ -268,8 +269,8 @@ val appModule = module {
     viewModel { ArtistSplitSettingsViewModel(get(), get()) }
     viewModel { AlbumLibraryViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get()) }
-    viewModel { SearchViewModel(get(), get(), get()) }
-    viewModel { CoverSearchViewModel(get(), get(), get()) }
+    viewModel { SearchViewModel(get(), get(), get(), get()) }
+    viewModel { CoverSearchViewModel(get(), get(), get(), get()) }
     viewModel { SearchSourceConfigViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }

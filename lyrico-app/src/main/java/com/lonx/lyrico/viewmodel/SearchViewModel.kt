@@ -1,12 +1,16 @@
 package com.lonx.lyrico.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -67,7 +71,8 @@ private data class SearchSourceState(
 class SearchViewModel(
     private val searchSourceProvider: SearchSourceProvider,
     private val settingsRepository: SettingsRepository,
-    searchSourceConfigApplier: SearchSourceConfigApplier
+    searchSourceConfigApplier: SearchSourceConfigApplier,
+    private val appLogRepository: AppLogRepository
 ) : ViewModel() {
 
     init {
@@ -220,6 +225,11 @@ class SearchViewModel(
                     ?: sourceImpls.firstOrNull()?.id
 
             if (source == null) {
+                logSearch(
+                    level = AppLogLevel.WARNING,
+                    message = "Search skipped: no enabled plugin source",
+                    detail = "keyword=$keyword\navailableSources=${sourceImpls.map { it.id }}"
+                )
                 searchState.update { it.copy(isSearching = false) }
                 return@launch
             }
@@ -248,6 +258,12 @@ class SearchViewModel(
 
             val results = searchFromSource(keyword, sourceId)
             cacheSearchResults(keyword, sourceId, results)
+            logSearch(
+                level = AppLogLevel.DEBUG,
+                message = "Search finished: ${results.size} result(s)",
+                detail = "keyword=$keyword\nsource=$sourceId\nresultCount=${results.size}\n" +
+                        "top=${results.take(5).map { "${it.id}:${it.title}" }}"
+            )
 
             searchState.update {
                 it.copy(
@@ -258,6 +274,11 @@ class SearchViewModel(
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            logSearchException(
+                message = "Search failed\nkeyword=$keyword\nsource=$sourceId",
+                throwable = e,
+                relatedId = sourceId
+            )
             searchState.update {
                 it.copy(
                     errors = it.errors + (sourceId to e.toUiMessage()),
@@ -274,7 +295,15 @@ class SearchViewModel(
         keyword: String,
         sourceId: String
     ): List<SongSearchResult> {
-        val sourceImpl = findSource(sourceId) ?: return emptyList()
+        val sourceImpl = findSource(sourceId) ?: run {
+            logSearch(
+                level = AppLogLevel.WARNING,
+                message = "Search skipped: source not found",
+                detail = "keyword=$keyword\nsource=$sourceId\navailableSources=${allSourcesFlow.value.map { it.id }}",
+                relatedId = sourceId
+            )
+            return emptyList()
+        }
 
         val separator = settingsRepository.separator.first()
         val pageSize = settingsRepository.searchPageSize.first()
@@ -324,6 +353,16 @@ class SearchViewModel(
 
             try {
                 val lyricsResult = getLyricsResult(song)
+                logSearch(
+                    level = if (lyricsResult == null) AppLogLevel.WARNING else AppLogLevel.DEBUG,
+                    message = if (lyricsResult == null) {
+                        "Lyrics load finished without usable lyrics"
+                    } else {
+                        "Lyrics load finished"
+                    },
+                    detail = "source=${song.pluginId}\nsong=${song.id}:${song.title}\npayloadType=${lyricsResult?.payloadType}",
+                    relatedId = song.pluginId
+                )
 
                 lyricsState.update {
                     it.copy(
@@ -334,6 +373,12 @@ class SearchViewModel(
                 }
 
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                logSearchException(
+                    message = "Lyrics load failed\nsource=${song.pluginId}\nsong=${song.id}:${song.title}",
+                    throwable = e,
+                    relatedId = song.pluginId
+                )
                 lyricsState.update {
                     it.copy(
                         error = e.toUiMessage(),
@@ -399,6 +444,44 @@ class SearchViewModel(
      */
     private fun findSource(sourceId: String): SearchSource? {
         return allSourcesFlow.value.firstOrNull { it.id == sourceId }
+    }
+
+    private suspend fun logSearch(
+        level: AppLogLevel,
+        message: String,
+        detail: String? = null,
+        relatedId: String? = null
+    ) {
+        runCatching {
+            appLogRepository.log(
+                level = level,
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = message,
+                detail = detail,
+                relatedId = relatedId
+            )
+        }.onFailure { throwable ->
+            Log.w(TAG, "Failed to write search log", throwable)
+        }
+    }
+
+    private suspend fun logSearchException(
+        message: String,
+        throwable: Throwable,
+        relatedId: String? = null
+    ) {
+        runCatching {
+            appLogRepository.logException(
+                type = AppLogType.PLUGIN,
+                tag = TAG,
+                message = message,
+                throwable = throwable,
+                relatedId = relatedId
+            )
+        }.onFailure { logThrowable ->
+            Log.w(TAG, "Failed to write search exception log", logThrowable)
+        }
     }
 
     /**
@@ -471,5 +554,9 @@ class SearchViewModel(
 
     private fun Throwable.toUiMessage(): UiMessage {
         return UiMessage.DynamicString(message ?: javaClass.simpleName)
+    }
+
+    private companion object {
+        const val TAG = "SearchViewModel"
     }
 }

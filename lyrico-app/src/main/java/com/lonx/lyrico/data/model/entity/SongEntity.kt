@@ -54,9 +54,6 @@ import androidx.room.PrimaryKey
  * @property sampleRate 采样率（Hz）
  * @property channels 声道数（1=单声道，2=立体声）
  *
- * —— 原始与扩展数据 ——
- * @property rawProperties 原始音频属性 JSON（用于调试或扩展字段存储）
- *
  * —— 文件与数据库状态 ——
  * @property fileLastModified 文件最后修改时间（毫秒，用于增量扫描）
  * @property fileAdded 文件添加时间（毫秒，用于排序）
@@ -138,8 +135,6 @@ data class SongEntity(
     val sampleRate: Int = 0,
     val channels: Int = 0,
 
-    val rawProperties: String? = null,
-
     val fileLastModified: Long = 0,
 
     @ColumnInfo(defaultValue = "0")
@@ -182,7 +177,6 @@ data class SongEntity(
         if (bitrate != other.bitrate) return false
         if (sampleRate != other.sampleRate) return false
         if (channels != other.channels) return false
-        if (rawProperties != other.rawProperties) return false
         if (fileLastModified != other.fileLastModified) return false
         if (fileAdded != other.fileAdded) return false
         if (dbUpdateTime != other.dbUpdateTime) return false
@@ -216,7 +210,6 @@ data class SongEntity(
         result = 31 * result + bitrate
         result = 31 * result + sampleRate
         result = 31 * result + channels
-        result = 31 * result + (rawProperties?.hashCode() ?: 0)
         result = 31 * result + fileLastModified.hashCode()
         result = 31 * result + fileAdded.hashCode()
         result = 31 * result + dbUpdateTime.hashCode()

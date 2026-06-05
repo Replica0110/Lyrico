@@ -5,8 +5,7 @@ import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.data.model.entity.SongEntity
 
 class SongMetadataMapper(
-    private val sortKeyUpdater: SortKeyUpdater,
-    private val rawPropertiesFormatter: RawPropertiesFormatter
+    private val sortKeyUpdater: SortKeyUpdater
 ) {
     fun applyAudioTagData(
         old: SongEntity,
@@ -35,7 +34,6 @@ class SongMetadataMapper(
             replayGainAlbumPeak = tag.replayGainAlbumPeak ?: old.replayGainAlbumPeak,
             replayGainReferenceLoudness = tag.replayGainReferenceLoudness
                 ?: old.replayGainReferenceLoudness,
-            rawProperties = rawPropertiesFormatter.format(tag.rawProperties) ?: old.rawProperties,
             fileLastModified = fileLastModified
         ).let(sortKeyUpdater::update)
     }
@@ -80,7 +78,6 @@ class SongMetadataMapper(
             bitrate = tag.bitrate,
             sampleRate = tag.sampleRate,
             channels = tag.channels,
-            rawProperties = rawPropertiesFormatter.format(tag.rawProperties),
             fileLastModified = file.lastModified,
             fileAdded = file.dateAdded,
             folderId = folderId

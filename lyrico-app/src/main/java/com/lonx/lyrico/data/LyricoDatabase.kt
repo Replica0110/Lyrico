@@ -38,7 +38,7 @@ import com.lonx.lyrico.data.model.entity.SourcePluginEntity
         SourcePluginEntity::class,
         SongCustomTagKeyEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3),
@@ -46,7 +46,12 @@ import com.lonx.lyrico.data.model.entity.SourcePluginEntity
         AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7),
         AutoMigration(from = 7, to = 8),
-        AutoMigration(from = 8, to = 9)
+        AutoMigration(from = 8, to = 9),
+        AutoMigration(
+            from = 14,
+            to = 15,
+            spec = DeleteRawPropertiesMigration::class
+        )
     ]
 )
 abstract class LyricoDatabase : RoomDatabase() {

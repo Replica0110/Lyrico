@@ -29,7 +29,6 @@ import com.lonx.lyrico.data.song.library.SongLibraryRepositoryImpl
 import com.lonx.lyrico.data.song.file.AudioFileAccess
 import com.lonx.lyrico.data.song.file.SongFileRepository
 import com.lonx.lyrico.data.song.file.SongFileRepositoryImpl
-import com.lonx.lyrico.data.song.mapper.RawPropertiesFormatter
 import com.lonx.lyrico.data.song.mapper.SongMetadataMapper
 import com.lonx.lyrico.data.song.mapper.SortKeyUpdater
 import com.lonx.lyrico.data.song.scan.LibraryScanRepository
@@ -212,9 +211,8 @@ val appModule = module {
     single { AudioTagMutationResolver(get(), get()) }
     single<AudioTagRepository> { AudioTagRepositoryImpl(androidContext(), get(), get(), get()) }
     single<SongFileRepository> { SongFileRepositoryImpl(androidContext(), get(), get()) }
-    single { RawPropertiesFormatter() }
     single { SortKeyUpdater() }
-    single { SongMetadataMapper(get(), get()) }
+    single { SongMetadataMapper(get()) }
     single<SongLibraryRepository> { SongLibraryRepositoryImpl(get<LyricoDatabase>().songDao()) }
     single<SongSearchRepository> { SongSearchRepositoryImpl(get<LyricoDatabase>().songDao()) }
     single<LibraryScanRepository> {

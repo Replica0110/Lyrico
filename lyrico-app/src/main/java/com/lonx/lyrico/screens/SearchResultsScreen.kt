@@ -7,6 +7,7 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,10 +25,11 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,7 +77,9 @@ import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.ui.theme.isDarkTheme
+import com.lonx.lyrico.utils.MusicMatchUtils
 import com.lonx.lyrico.viewmodel.SearchViewModel
+import com.lonx.lyrico.viewmodel.SearchSourceUiModel
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -104,7 +108,6 @@ import com.lonx.lyrico.ui.components.plugin.PluginIcon
 import com.lonx.lyrico.viewmodel.LyricsUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.basic.TabRow
 import java.net.URL
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -249,7 +252,7 @@ fun SearchResultsScreen(
                         iconPath = source.iconPath
                     )
                 },
-                selectedTabIndex = pagerState.currentPage,
+                selectedTabIndex = pagerState.targetPage,
                 onTabSelected = { index ->
                     scope.launch {
                         pagerState.animateScrollToPage(index)
@@ -257,6 +260,18 @@ fun SearchResultsScreen(
                 },
                 modifier = Modifier.padding(bottom = 10.dp)
             )
+
+            val allSourceResults = remember(
+                uiState.searchKeyword,
+                uiState.availableSources,
+                uiState.searchResults
+            ) {
+                optimizedAllSourceResults(
+                    keyword = uiState.searchKeyword,
+                    sources = uiState.availableSources,
+                    searchResults = uiState.searchResults
+                )
+            }
 
             /**
              * Pager
@@ -269,9 +284,7 @@ fun SearchResultsScreen(
                 val source = if (page == 0) null else uiState.availableSources.getOrNull(page - 1)
 
                 val results = if (page == 0) {
-                    uiState.availableSources.flatMap { tabSource ->
-                        uiState.searchResults[tabSource.id].orEmpty()
-                    }
+                    allSourceResults
                 } else {
                     uiState.searchResults[source?.id].orEmpty()
                 }
@@ -1172,6 +1185,32 @@ data class SourcePillTab(
     val imageVector: ImageVector? = null
 )
 
+private fun optimizedAllSourceResults(
+    keyword: String,
+    sources: List<SearchSourceUiModel>,
+    searchResults: Map<String, List<SongSearchResult>>
+): List<SongSearchResult> {
+    val localSegments = MusicMatchUtils.splitToSegments(keyword)
+
+    return sources
+        .flatMap { source ->
+            searchResults[source.id]
+                .orEmpty()
+                .mapIndexed { index, result ->
+                    result to MusicMatchUtils.calculateCoverMatchScore(
+                        localSegments = localSegments,
+                        coverTitle = result.title,
+                        coverArtist = result.artist,
+                        rankIndex = index
+                    )
+                }
+                .sortedByDescending { (_, score) -> score }
+                .take(ALL_SOURCE_RESULT_LIMIT)
+        }
+        .sortedByDescending { (_, score) -> score }
+        .map { (result, _) -> result }
+}
+
 @Composable
 fun SourcePillTabRow(
     tabs: List<SourcePillTab>,
@@ -1179,21 +1218,31 @@ fun SourcePillTabRow(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyRow(
+    val scrollState = rememberScrollState()
+    val bringIntoViewRequesters = remember(tabs.size) {
+        List(tabs.size) { BringIntoViewRequester() }
+    }
+
+    LaunchedEffect(selectedTabIndex, bringIntoViewRequesters) {
+        bringIntoViewRequesters.getOrNull(selectedTabIndex)?.bringIntoView()
+    }
+
+    Row(
         modifier = modifier
-            .fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .fillMaxWidth()
+            .horizontalScroll(scrollState)
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        items(tabs.size) { index ->
-            val tab = tabs[index]
+        tabs.forEachIndexed { index, tab ->
             val selected = index == selectedTabIndex
 
             Box(
                 modifier = Modifier
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .bringIntoViewRequester(bringIntoViewRequesters[index])
+                    .height(32.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(
                         if (selected) {
                             MiuixTheme.colorScheme.primary
@@ -1204,23 +1253,23 @@ fun SourcePillTabRow(
                     .clickable {
                         onTabSelected(index)
                     }
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 5.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     when {
                         tab.iconPath != null -> PluginIcon(
                             iconPath = tab.iconPath,
                             contentDescription = tab.label,
-                            size = 22.dp
+                            size = 18.dp
                         )
                         tab.imageVector != null -> Icon(
                             imageVector = tab.imageVector,
                             contentDescription = tab.label,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(16.dp),
                             tint = if (selected) {
                                 MiuixTheme.colorScheme.onPrimary
                             } else {
@@ -1230,7 +1279,7 @@ fun SourcePillTabRow(
                     }
                     Text(
                         text = tab.label,
-                        fontSize = 15.sp,
+                        fontSize = 13.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
                         color = if (selected) {
                             MiuixTheme.colorScheme.onPrimary
@@ -1245,6 +1294,8 @@ fun SourcePillTabRow(
         }
     }
 }
+
+private const val ALL_SOURCE_RESULT_LIMIT = 3
 
 /**
  * 专为 Miuix 重新设计的偏移面板组件

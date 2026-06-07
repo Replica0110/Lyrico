@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -263,6 +264,7 @@ fun LocalSearchScreen(
                             coverUri = artist.coverSongUri,
                             coverLastModified = artist.coverSongLastModified,
                             onClick = {
+                                selectionViewModel.exitSelectionMode()
                                 navigator.navigate(ArtistDetailDestination(artistId = artist.id))
                             }
                         )
@@ -285,10 +287,11 @@ fun LocalSearchScreen(
                             subtitle = listOfNotNull(
                                 album.albumArtist,
                                 stringResource(R.string.song_count, album.songCount)
-                            ).joinToString(" - "),
+                            ).joinToString(" · "),
                             coverUri = album.coverSongUri,
                             coverLastModified = album.coverSongLastModified,
                             onClick = {
+                                selectionViewModel.exitSelectionMode()
                                 navigator.navigate(
                                     AlbumDetailDestination(albumId = album.id)
                                 )
@@ -313,6 +316,7 @@ fun LocalSearchScreen(
                             isSelectionMode = isSelectionMode,
                             isSelected = selectedSongUris.contains(song.uri),
                             onClick = {
+                                selectionViewModel.exitSelectionMode()
                                 navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
                             },
                             onToggleSelection = {

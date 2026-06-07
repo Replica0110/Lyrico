@@ -664,8 +664,8 @@
     <string name="library_tab_songs">Songs</string>
     <string name="library_tab_artists">Artists</string>
     <string name="library_tab_albums">Albums</string>
-    <string name="artist_list_title">Artists %1$d</string>
-    <string name="album_list_title">Albums %1$d</string>
+    <string name="artist_list_title">Artists(%1$d)</string>
+    <string name="album_list_title">Albums(%1$d)</string>
     <string name="label_name">Name</string>
     <string name="label_song_count">Song count</string>
     <string name="label_album_count">Album count</string>
@@ -678,7 +678,7 @@
     <string name="artist_tab_albums">Albums</string>
     <string name="song_count">%1$d songs</string>
     <string name="album_count">%1$d albums</string>
-    <string name="album_song_count">%1$d albums - %2$d songs</string>
+    <string name="album_song_count">%1$d albums · %2$d songs</string>
     <string name="sort_ascending">Ascending</string>
     <string name="sort_descending">Descending</string>
     <string name="artist_split_settings_title">Artist split rules</string>

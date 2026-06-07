@@ -143,7 +143,7 @@ fun SongListItem(
             ) {
                 Text(
                     text = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -156,16 +156,18 @@ fun SongListItem(
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 13.sp,
                         maxLines = 1,
+                        fontWeight = FontWeight.Bold,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
                     if (!song.album.isNullOrBlank()) {
                         Text(
-                            text = " - ${song.album}",
+                            text = " · ${song.album}",
                             color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                             fontSize = 13.sp,
                             maxLines = 1,
+                            fontWeight = FontWeight.Bold,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
@@ -183,7 +185,8 @@ fun SongListItem(
                     Text(
                         text = String.format("%d:%02d", minutes, seconds),
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
@@ -193,7 +196,7 @@ fun SongListItem(
                         text = "${song.bitrate}kbps",
                         fontSize = 10.sp,
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
-                        fontWeight = FontWeight.Normal
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }

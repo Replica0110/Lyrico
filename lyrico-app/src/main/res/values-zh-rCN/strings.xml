@@ -675,8 +675,8 @@
     <string name="library_tab_songs">歌曲</string>
     <string name="library_tab_artists">艺术家</string>
     <string name="library_tab_albums">专辑</string>
-    <string name="artist_list_title">艺术家 %1$d</string>
-    <string name="album_list_title">专辑 %1$d</string>
+    <string name="artist_list_title">艺术家(%1$d)</string>
+    <string name="album_list_title">专辑(%1$d)</string>
     <string name="label_name">名称</string>
     <string name="label_song_count">歌曲数量</string>
     <string name="label_album_count">专辑数量</string>
@@ -689,7 +689,7 @@
     <string name="artist_tab_albums">专辑</string>
     <string name="song_count">%1$d 首</string>
     <string name="album_count">%1$d 张专辑</string>
-    <string name="album_song_count">%1$d 张专辑 - %2$d 首</string>
+    <string name="album_song_count">%1$d 张专辑 · %2$d 首</string>
     <string name="sort_ascending">升序</string>
     <string name="sort_descending">降序</string>
     <string name="artist_split_settings_title">艺术家拆分规则</string>
@@ -711,7 +711,7 @@
     <string name="rebuild_artist_index_now">立即重建艺术家索引</string>
     <string name="artist_index_current">当前艺术家索引已是最新</string>
     <string name="artist_index_rebuild_pending">拆分规则已更改，建议立即重建艺术家索引</string>
-    <string name="artist_index_rebuilding">正在重建艺术家索引...</string>
+    <string name="artist_index_rebuilding">正在重建艺术家索引…</string>
     <string name="artist_index_rebuild_complete">艺术家索引已重建</string>
     <string name="artist_index_rebuild_failed">艺术家索引重建失败</string>
     <string name="separator_input_hint">输入分隔符</string>

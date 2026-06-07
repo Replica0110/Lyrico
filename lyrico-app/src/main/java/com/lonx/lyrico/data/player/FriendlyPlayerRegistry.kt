@@ -15,7 +15,7 @@ object FriendlyPlayerRegistry {
         ),
         FriendlyPlayer(
             id = "ella_music",
-            displayNameRes = R.string.friendly_player_ella_music,
+            displayNameRes = R.string.friendly_player_halcyon,
             packageNames = listOf("com.ella.music"),
             websiteUrl = "https://github.com/Kifranei/Ella"
         ),

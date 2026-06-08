@@ -287,7 +287,36 @@ class QuickJsRuntime(
                     return hostCall("http.postBytesResponse", payload);
                   }
                 },
+                
+                xml: {
+                  getRootAttributes: function(xml) {
+                    return hostCall("xml.getRootAttributes", {
+                      xml: String(xml || "")
+                    });
+                  },
 
+                  findElements: function(xml, query) {
+                    return hostCall("xml.findElements", {
+                      xml: String(xml || ""),
+                      query: query || {}
+                    });
+                  },
+
+                  replaceChildrenByAttr: function(xml, options) {
+                    return hostCall("xml.replaceChildrenByAttr", {
+                      xml: String(xml || ""),
+                      options: options || {}
+                    });
+                  },
+
+                  removeElements: function(xml, query) {
+                    return hostCall("xml.removeElements", {
+                      xml: String(xml || ""),
+                      query: query || {}
+                    });
+                  }
+                },
+                
                 log: {
                   debug: function(tag, message) {
                     if (message === undefined) {

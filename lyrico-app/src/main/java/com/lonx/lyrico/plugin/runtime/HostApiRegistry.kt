@@ -30,6 +30,10 @@ object HostApiRegistry {
         "http.postBytesResponse",
         "log.debug",
         "log.warn",
-        "log.error"
+        "log.error",
+        "xml.getRootAttributes",
+        "xml.findElements",
+        "xml.replaceChildrenByAttr",
+        "xml.removeElements"
     )
 }

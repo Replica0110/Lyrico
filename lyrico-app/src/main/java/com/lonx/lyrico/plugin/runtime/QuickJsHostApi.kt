@@ -204,7 +204,33 @@ class QuickJsHostApi(
                     binaryResponse = true
                 ).toJsonObject()
             )
+            "xml.getRootAttributes" -> value(
+                HostXmlApi.getRootAttributes(
+                    xml = payload.string("xml")
+                )
+            )
 
+            "xml.findElements" -> value(
+                HostXmlApi.findElements(
+                    xml = payload.string("xml"),
+                    query = payload.obj("query") ?: JsonObject(emptyMap()),
+                    json = json
+                )
+            )
+
+            "xml.replaceChildrenByAttr" -> text(
+                HostXmlApi.replaceChildrenByAttr(
+                    xml = payload.string("xml"),
+                    options = payload.obj("options") ?: JsonObject(emptyMap())
+                )
+            )
+
+            "xml.removeElements" -> text(
+                HostXmlApi.removeElements(
+                    xml = payload.string("xml"),
+                    query = payload.obj("query") ?: JsonObject(emptyMap())
+                )
+            )
             "log.debug" -> {
                 Log.d(payload.logTag(), payload.string("message"))
                 text("")

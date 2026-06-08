@@ -58,7 +58,14 @@ class AudioTagRepositoryImpl(
             val current = readStrict(uri)
             val resolved = mutationResolver.resolve(uri, current, mutation)
 
-            fileAccess.openWritableDescriptor(uri)?.use { descriptor ->
+            val writableDescriptor = fileAccess.openWritableDescriptor(uri)
+                ?: return fileAccess.createWritePermissionIntentSender(uri)?.let { intentSender ->
+                    AudioTagWriteResult.PermissionRequired(intentSender)
+                } ?: AudioTagWriteResult.Failed(
+                    IllegalStateException("Unable to open writable descriptor")
+                )
+
+            writableDescriptor.use { descriptor ->
                 if (resolved.tags.isNotEmpty()) {
                     val tagsWritten = AudioTagWriter.writeTags(
                         pfd = descriptor,
@@ -84,7 +91,7 @@ class AudioTagRepositoryImpl(
                         }
                     }
                 }
-            } ?: return AudioTagWriteResult.Failed(IllegalStateException("Unable to open writable descriptor"))
+            }
 
             AudioTagWriteResult.Success(readStrict(uri))
         } catch (e: Exception) {

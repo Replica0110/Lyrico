@@ -38,11 +38,7 @@ class AudioFileAccess(
             return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
         }
 
-        return try {
-            context.contentResolver.openFileDescriptor(uri, "r")
-        } catch (e: Exception) {
-            null
-        }
+        return openContentDescriptor(uri, "r")
     }
 
     fun openWritableDescriptor(uriString: String): ParcelFileDescriptor? {
@@ -56,10 +52,7 @@ class AudioFileAccess(
             return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_WRITE)
         }
 
-        return tryOpenWritableContentDescriptor(uri)
-            ?: findMediaStoreAudioUri(uri)?.let { mediaStoreUri ->
-                context.contentResolver.openFileDescriptor(mediaStoreUri, "rw")
-            }
+        return openContentDescriptor(uri, "rw")
     }
 
     fun createWritePermissionIntentSender(uriString: String): IntentSender? {
@@ -67,11 +60,7 @@ class AudioFileAccess(
 
         return try {
             val uri = uriString.toUri()
-            val writableUri = when {
-                isMediaStoreItemUri(uri) -> uri
-                uri.scheme == "content" -> findMediaStoreAudioUri(uri)
-                else -> null
-            } ?: return null
+            val writableUri = uri.toWritableMediaStoreUri() ?: return null
 
             MediaStore.createWriteRequest(context.contentResolver, listOf(writableUri))
                 .intentSender
@@ -116,9 +105,26 @@ class AudioFileAccess(
         return context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
     }
 
-    private fun tryOpenWritableContentDescriptor(uri: Uri): ParcelFileDescriptor? {
+    private fun openContentDescriptor(uri: Uri, mode: String): ParcelFileDescriptor? {
+        val mediaStoreAudioUri = uri.toMediaStoreAudioUri()
+        if (mediaStoreAudioUri != null && mediaStoreAudioUri != uri) {
+            tryOpenContentDescriptor(mediaStoreAudioUri, mode)?.let { return it }
+        }
+
+        tryOpenContentDescriptor(uri, mode)?.let { return it }
+
+        if (mediaStoreAudioUri == null && uri.scheme == "content") {
+            findMediaStoreAudioUri(uri)?.let { matchedUri ->
+                tryOpenContentDescriptor(matchedUri, mode)?.let { return it }
+            }
+        }
+
+        return null
+    }
+
+    private fun tryOpenContentDescriptor(uri: Uri, mode: String): ParcelFileDescriptor? {
         return try {
-            context.contentResolver.openFileDescriptor(uri, "rw")
+            context.contentResolver.openFileDescriptor(uri, mode)
         } catch (e: SecurityException) {
             null
         } catch (e: FileNotFoundException) {
@@ -128,8 +134,13 @@ class AudioFileAccess(
         }
     }
 
+    private fun Uri.toWritableMediaStoreUri(): Uri? {
+        return toMediaStoreAudioUri()
+            ?: takeIf { scheme == "content" }?.let(::findMediaStoreAudioUri)
+    }
+
     private fun findMediaStoreAudioUri(sourceUri: Uri): Uri? {
-        if (isMediaStoreItemUri(sourceUri)) return sourceUri
+        sourceUri.toMediaStoreAudioUri()?.let { return it }
         if (sourceUri.scheme != "content") return null
 
         val displayName = getOpenableDisplayName(sourceUri)
@@ -195,6 +206,32 @@ class AudioFileAccess(
             Log.w(TAG, "Unable to match MediaStore audio uri: $sourceUri", e)
             null
         }
+    }
+
+    private fun Uri.toMediaStoreAudioUri(): Uri? {
+        if (scheme != "content" || authority != "media") return null
+        val id = runCatching { ContentUris.parseId(this) }.getOrNull()
+            ?.takeIf { it >= 0L }
+            ?: return null
+
+        return when {
+            isMediaStoreAudioItemUri(this) -> this
+            isMediaStoreFilesItemUri(this) -> ContentUris.withAppendedId(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                id
+            )
+            else -> null
+        }
+    }
+
+    private fun isMediaStoreAudioItemUri(uri: Uri): Boolean {
+        if (!isMediaStoreItemUri(uri)) return false
+        return uri.pathSegments.any { it == "audio" }
+    }
+
+    private fun isMediaStoreFilesItemUri(uri: Uri): Boolean {
+        if (!isMediaStoreItemUri(uri)) return false
+        return uri.pathSegments.any { it == "file" }
     }
 
     private fun isMediaStoreItemUri(uri: Uri): Boolean {

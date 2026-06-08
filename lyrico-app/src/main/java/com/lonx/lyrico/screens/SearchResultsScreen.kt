@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -81,6 +80,7 @@ import com.lonx.lyrico.utils.MusicMatchUtils
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrico.viewmodel.SearchSourceUiModel
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
+import com.lonx.lyrico.ui.components.bar.rememberSyncedTextFieldState
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.result.ResultBackNavigator
@@ -128,7 +128,10 @@ fun SearchResultsScreen(
     var pendingApplySong by remember { mutableStateOf<SongSearchResult?>(null) }
     var showApplyBottomSheet by remember { mutableStateOf(false) }
 
-
+    val songSearchState = rememberSyncedTextFieldState(
+        value = uiState.searchKeyword,
+        onValueChange = viewModel::onKeywordChanged
+    )
     val pagerState = rememberPagerState { uiState.availableSources.size + 1 }
 
     /**
@@ -178,13 +181,18 @@ fun SearchResultsScreen(
             ) {
                 SearchBar(
                     modifier = Modifier.padding(horizontal = 12.dp),
-                    value = uiState.searchKeyword,
-                    onValueChange = viewModel::onKeywordChanged,
+                    state = songSearchState,
                     placeholder = stringResource(id = R.string.search_lyrics_placeholder),
+                    onSearch = { keyword ->
+                        keyboardController?.hide()
+                        viewModel.onKeywordChanged(keyword)
+                        viewModel.performSearch()
+                    },
                     actions = {
                         MaterialTextButton(
                             onClick = {
                                 keyboardController?.hide()
+                                viewModel.onKeywordChanged(songSearchState.text.toString())
                                 viewModel.performSearch()
                             }
                         ) {
@@ -194,6 +202,7 @@ fun SearchResultsScreen(
                                 color = MiuixTheme.colorScheme.primary
                             )
                         }
+
                         IconButton(
                             onClick = {
                                 showLyricRenderConfigBottomSheet.value = true

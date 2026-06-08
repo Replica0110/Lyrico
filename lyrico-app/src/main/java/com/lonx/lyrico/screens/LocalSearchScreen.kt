@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
+import com.lonx.lyrico.ui.components.bar.rememberSyncedTextFieldState
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.search.AlbumSongItem
 import com.lonx.lyrico.ui.components.search.ArtistSongItem
@@ -100,6 +102,10 @@ fun LocalSearchScreen(
             .mapIndexed { index, song -> localSearchSongKey(song) to index }
             .toMap()
     }
+    val searchState = rememberSyncedTextFieldState(
+        value = searchQuery,
+        onValueChange = viewModel::onQueryChange
+    )
 
     BackHandler(enabled = isSelectionMode) {
         if (isFabMenuExpanded) {
@@ -191,11 +197,13 @@ fun LocalSearchScreen(
                             targetOffsetY = { -it / 3 }
                         ) + fadeOut(tween(300))
                     ) {
+
                         SearchBar(
-                            value = searchQuery,
-                            onValueChange = viewModel::onQueryChange,
+                            state = searchState,
                             placeholder = stringResource(R.string.local_search_hint),
-                            onSearch = { viewModel.onQueryChange(searchQuery) },
+                            onSearch = { keyword ->
+                                viewModel.onQueryChange(keyword)
+                            },
                             autoFocus = true,
                             modifier = Modifier
                                 .fillMaxWidth()

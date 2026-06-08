@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.bar.SearchBar
+import com.lonx.lyrico.ui.components.bar.rememberSyncedTextFieldState
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
@@ -77,6 +78,10 @@ fun SearchCoverScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState { uiState.availableSources.size + 1 }
+    val coverSearchState = rememberSyncedTextFieldState(
+        value = uiState.searchKeyword,
+        onValueChange = viewModel::onCoverKeywordChanged
+    )
 
     // 用于缓存图片尺寸的Map
     val imageSizeCache = remember { mutableStateOf<Map<String, Pair<Int, Int>>>(emptyMap()) }
@@ -97,15 +102,21 @@ fun SearchCoverScreen(
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(vertical = 8.dp)
             ) {
+
                 SearchBar(
                     modifier = Modifier.padding(horizontal = 12.dp),
-                    value = uiState.searchKeyword,
-                    onValueChange = viewModel::onCoverKeywordChanged,
+                    state = coverSearchState,
                     placeholder = stringResource(id = R.string.search_cover_placeholder),
+                    onSearch = { keyword ->
+                        keyboardController?.hide()
+                        viewModel.onCoverKeywordChanged(keyword)
+                        viewModel.performCoverSearch()
+                    },
                     actions = {
                         TextButton(
                             onClick = {
                                 keyboardController?.hide()
+                                viewModel.onCoverKeywordChanged(coverSearchState.text.toString())
                                 viewModel.performCoverSearch()
                             }
                         ) {

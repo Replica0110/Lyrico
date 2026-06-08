@@ -70,6 +70,7 @@ import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.SliderDefaults
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
@@ -78,6 +79,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.SliderPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
@@ -121,7 +123,6 @@ fun SettingsScreen(
     val tempSearchPageSize = remember(searchPageSize) {
         mutableIntStateOf(searchPageSize)
     }
-    val showSearchLimitConfigDialog = remember { mutableStateOf(false) }
     val showClearCacheDialog = remember { mutableStateOf(false) }
 
     val themeModeItems = ThemeMode.entries.map { stringResource(it.labelRes) }
@@ -266,61 +267,6 @@ fun SettingsScreen(
                 }
             }
         }
-        WindowDialog(
-            show = showSearchLimitConfigDialog.value,
-            title = stringResource(R.string.search_limit),
-            onDismissRequest = {
-                showSearchLimitConfigDialog.value = false
-            }
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(R.string.search_limit_tip),
-                    fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                var text by remember { mutableStateOf(searchPageSize.toString()) }
-                TextField(
-                    value = text,
-                    maxLines = 1,
-                    onValueChange = { newValue ->
-                        val digits = newValue.filter { it.isDigit() }
-                        if (digits.isEmpty()) {
-                            text = ""
-                        } else {
-                            val limited = digits.take(3)
-                            val num = limited.toIntOrNull()
-                            val clamped = num?.coerceIn(minSearchSize, maxSearchSize)
-                            text = clamped.toString()
-                        }
-                    }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    TextButton(
-                        text = stringResource(R.string.cancel),
-                        onClick = {
-                            showSearchLimitConfigDialog.value = false
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(20.dp))
-                    TextButton(
-                        text = stringResource(R.string.confirm),
-                        onClick = {
-                            tempSearchPageSize.intValue = text.toIntOrNull() ?: 1
-                            settingsViewModel.setSearchPageSize(tempSearchPageSize.intValue)
-                            showSearchLimitConfigDialog.value = false
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
-            }
-        }
         LazyColumn(
             modifier = Modifier
                 .scrollEndHaptic()
@@ -418,37 +364,20 @@ fun SettingsScreen(
                         title = stringResource(R.string.plugin_manager_title),
                         onClick = { navigator.navigate(PluginManagerDestination()) }
                     )
-                    ArrowPreference(
+                    SliderPreference(
                         title = stringResource(R.string.search_limit),
-                        endActions = {
-                            Text(
-                                text = "${tempSearchPageSize.intValue}",
-                                fontSize = MiuixTheme.textStyles.body2.fontSize,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            )
+                        showKeyPoints = true,
+                        valueText = tempSearchPageSize.intValue.toString(),
+                        summary = stringResource(R.string.search_limit_tip),
+                        valueRange = minSearchSize.toFloat()..maxSearchSize.toFloat(),
+                        steps = maxSearchSize - minSearchSize - 1,
+                        value = tempSearchPageSize.intValue.toFloat(),
+                        hapticEffect = SliderDefaults.SliderHapticEffect.Step,
+                        onValueChange = {
+                            tempSearchPageSize.intValue = it.roundToInt()
                         },
-                        onClick = {
-                            showSearchLimitConfigDialog.value = true
-                        },
-                        bottomAction = {
-                            Slider(
-                                showKeyPoints = true,
-                                valueRange = minSearchSize.toFloat()..maxSearchSize.toFloat(),
-                                steps = maxSearchSize - minSearchSize - 1,
-                                value = tempSearchPageSize.intValue.toFloat(),
-                                onValueChange = {
-                                    tempSearchPageSize.intValue = it.roundToInt()
-                                },
-                                onValueChangeFinished = {
-                                    settingsViewModel.setSearchPageSize(tempSearchPageSize.intValue)
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(BasicComponentDefaults.InsideMargin.calculateBottomPadding()))
-                            Text(
-                                text = stringResource(R.string.search_limit_tip),
-                                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                            )
+                        onValueChangeFinished = {
+                            settingsViewModel.setSearchPageSize(tempSearchPageSize.intValue)
                         }
                     )
                 }

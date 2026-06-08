@@ -27,7 +27,7 @@ room = "2.8.4"
 work = "2.11.2"
 tinypinyin = "2.0.3"
 monitor = "1.8.0"
-miuix = "0.9.1"
+miuix = "0.9.2"
 
 [libraries]
 aboutlibraries-compose-core = { module = "com.mikepenz:aboutlibraries-compose-core", version.ref = "aboutLibraries" }

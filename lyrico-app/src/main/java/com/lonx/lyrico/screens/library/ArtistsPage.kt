@@ -254,8 +254,8 @@ fun ArtistsPage(
                             .align(Alignment.CenterEnd)
                             .fillMaxHeight()
                             .padding(
-                                top = 8.dp,
-                                bottom = 8.dp
+                                top = 16.dp,
+                                bottom = 16.dp
                             )
                     )
                 }

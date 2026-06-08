@@ -220,6 +220,9 @@ fun ArtistDetailScreen(
                                 onToggleSelection = { song ->
                                     selectionViewModel.toggleSelection(song.uri)
                                 },
+                                onSwipeSelection = { song ->
+                                    selectionViewModel.swipeSelect(song, songs)
+                                },
                                 onDragSelectionStart = { index ->
                                     selectionViewModel.startDragSelection(index, songs)
                                 },
@@ -291,6 +294,7 @@ private fun ArtistSongsPage(
     topAppBarScrollBehavior: ScrollBehavior,
     onSongClick: (SongEntity) -> Unit,
     onToggleSelection: (SongEntity) -> Unit,
+    onSwipeSelection: (SongEntity) -> Unit,
     onDragSelectionStart: (Int) -> Unit,
     onDragSelectionChange: (Int, Int) -> Unit,
     onDragSelectionEnd: () -> Unit,
@@ -326,6 +330,7 @@ private fun ArtistSongsPage(
                 isSelected = selectedSongUris.contains(song.uri),
                 onClick = { onSongClick(song) },
                 onToggleSelection = { onToggleSelection(song) },
+                onSwipeSelection = { onSwipeSelection(song) },
                 trailingContent = {
                     Box(modifier = Modifier.padding(end = 8.dp)) {
                         SongListItemActions(

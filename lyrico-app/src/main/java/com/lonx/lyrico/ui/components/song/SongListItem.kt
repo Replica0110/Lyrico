@@ -2,9 +2,12 @@ package com.lonx.lyrico.ui.components.song
 
 import android.annotation.SuppressLint
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +20,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -37,6 +47,7 @@ import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.components.CoverRequest
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
+import kotlin.math.abs
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -51,8 +62,17 @@ fun SongListItem(
     isSelected: Boolean = false,
     onClick: () -> Unit,
     onToggleSelection: (() -> Unit)? = null,
+    onSwipeSelection: (() -> Unit)? = null,
 ) {
     val view = LocalView.current
+    val swipeThresholdPx = with(LocalDensity.current) { 56.dp.toPx() }
+    val maxSwipeOffsetPx = swipeThresholdPx * 1.35f
+    var swipeOffsetX by remember(song.uri) { mutableFloatStateOf(0f) }
+    val animatedSwipeOffsetX by animateFloatAsState(
+        targetValue = swipeOffsetX,
+        animationSpec = spring(),
+        label = "SongListItemSwipeOffset"
+    )
 
     val backgroundColor =
         if (isSelected) {
@@ -65,6 +85,45 @@ fun SongListItem(
         modifier = modifier
             .fillMaxWidth()
             .background(backgroundColor)
+            .graphicsLayer {
+                translationX = animatedSwipeOffsetX
+            }
+            .then(
+                if (onSwipeSelection != null) {
+                    Modifier.pointerInput(onSwipeSelection, swipeThresholdPx, maxSwipeOffsetPx) {
+                        var totalDragX = 0f
+
+                        detectHorizontalDragGestures(
+                            onDragStart = {
+                                totalDragX = 0f
+                                swipeOffsetX = 0f
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                totalDragX += dragAmount
+                                swipeOffsetX = totalDragX.coerceIn(
+                                    -maxSwipeOffsetPx,
+                                    maxSwipeOffsetPx
+                                )
+                                change.consume()
+                            },
+                            onDragEnd = {
+                                if (abs(totalDragX) >= swipeThresholdPx) {
+                                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                                    onSwipeSelection()
+                                }
+                                totalDragX = 0f
+                                swipeOffsetX = 0f
+                            },
+                            onDragCancel = {
+                                totalDragX = 0f
+                                swipeOffsetX = 0f
+                            }
+                        )
+                    }
+                } else {
+                    Modifier
+                }
+            )
             .combinedClickable(
                 onClick = {
                     if (isSelectionMode) {

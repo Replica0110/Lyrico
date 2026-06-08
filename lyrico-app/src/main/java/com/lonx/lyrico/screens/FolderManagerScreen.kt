@@ -884,6 +884,9 @@ private fun FolderPage(
                 onToggleSelection = { song ->
                     selectionViewModel.toggleSelection(song.uri)
                 },
+                onSwipeSelection = { song ->
+                    selectionViewModel.swipeSelect(song, snapshot.songs)
+                },
                 onShowSongMenu = onShowSongMenu,
                 onDragSelectionStart = { index ->
                     onDragSelectionStart(index, snapshot.songs)
@@ -982,6 +985,7 @@ private fun FolderCurrentSongsPage(
     topAppBarScrollBehavior: ScrollBehavior,
     onSongClick: (SongEntity) -> Unit,
     onToggleSelection: (SongEntity) -> Unit,
+    onSwipeSelection: (SongEntity) -> Unit,
     onShowSongMenu: (SongEntity) -> Unit,
     onDragSelectionStart: (Int) -> Unit,
     onDragSelectionChange: (Int, Int) -> Unit,
@@ -1024,6 +1028,9 @@ private fun FolderCurrentSongsPage(
                 },
                 onToggleSelection = {
                     onToggleSelection(song)
+                },
+                onSwipeSelection = {
+                    onSwipeSelection(song)
                 },
                 trailingContent = {
                     Box(modifier = Modifier.padding(end = 8.dp)) {

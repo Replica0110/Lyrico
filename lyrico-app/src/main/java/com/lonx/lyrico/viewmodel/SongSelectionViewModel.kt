@@ -29,6 +29,13 @@ class SongSelectionViewModel(
         selectionManager.toggle(uri)
     }
 
+    fun swipeSelect(song: SongEntity, visibleSongs: List<SongEntity>) {
+        selectionManager.selectSwipeRange(
+            uri = song.uri,
+            visibleUris = visibleSongs.map { it.uri }
+        )
+    }
+
     fun exitSelectionMode() {
         selectionManager.exitSelectionMode()
     }

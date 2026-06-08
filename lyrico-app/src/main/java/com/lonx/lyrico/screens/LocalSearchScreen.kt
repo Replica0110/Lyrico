@@ -330,6 +330,9 @@ fun LocalSearchScreen(
                             onToggleSelection = {
                                 selectionViewModel.toggleSelection(song.uri)
                             },
+                            onSwipeSelection = {
+                                selectionViewModel.swipeSelect(song, uiState.songs)
+                            },
                             trailingContent = {
                                 Box(modifier = Modifier.padding(end = 8.dp)) {
                                     SongListItemActions(

@@ -211,6 +211,9 @@ fun AlbumDetailScreen(
                                 onToggleSelection = {
                                     selectionViewModel.toggleSelection(song.uri)
                                 },
+                                onSwipeSelection = {
+                                    selectionViewModel.swipeSelect(song, songs)
+                                },
                                 trailingContent = {
                                     Box(modifier = Modifier.padding(end = 8.dp)) {
                                         SongListItemActions(

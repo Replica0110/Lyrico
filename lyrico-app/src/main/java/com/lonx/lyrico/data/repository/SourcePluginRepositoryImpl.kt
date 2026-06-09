@@ -35,6 +35,14 @@ class SourcePluginRepositoryImpl(
         dao.updateSortOrder(id = id, sortOrder = sortOrder, updatedAt = System.currentTimeMillis())
     }
 
+    override suspend fun updateCustomName(id: String, customName: String?) {
+        dao.updateCustomName(
+            id = id,
+            customName = customName?.trim()?.takeIf { it.isNotEmpty() },
+            updatedAt = System.currentTimeMillis()
+        )
+    }
+
     override suspend fun uninstallPlugin(id: String) {
         dao.delete(id)
     }

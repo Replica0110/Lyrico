@@ -61,6 +61,11 @@
     <!-- 搜索 -->
     <string name="search_limit">搜索限制数</string>
     <string name="search_limit_tip">限制每个源的搜索结果数量，设置更大的值会消耗更多流量，同时产生更多图片缓存</string>
+    <string name="search_source_tab_style">搜索源标签样式</string>
+    <string name="search_source_tab_style_icon_only">仅图标</string>
+    <string name="search_source_tab_style_text_only">仅文本</string>
+    <string name="search_source_tab_style_icon_and_text">图标和文本</string>
+    <string name="search_result_track_of_disc">track %1$s of disc %2$s</string>
     <string name="batch_match_prefer_filename">优先使用文件名匹配</string>
     <string name="batch_match_prefer_filename_summary">匹配时忽略内置标签，优先依靠文件名进行搜索以提高准确度，启用此功能时建议将标题和艺术家设置为覆盖模式</string>
     <!-- 歌词 -->
@@ -766,6 +771,8 @@
     <string name="plugin_import_archive">导入插件</string>
 
     <string name="plugin_config">配置</string>
+    <string name="plugin_custom_name">名称</string>
+    <string name="plugin_custom_name_hint">留空则使用原始名称：%1$s</string>
     <string name="plugin_uninstall">卸载</string>
     <string name="plugin_uninstall_confirm_message">确定要卸载"%1$s"吗？此操作无法撤销</string>
     <string name="plugin_update_source_configured">更新源</string>

@@ -62,6 +62,8 @@ import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -150,7 +152,10 @@ fun SearchCoverScreen(
              * Tabs
              */
             val tabs = listOf(
-                SourcePillTab(label = stringResource(id = R.string.search_type_all))
+                SourcePillTab(
+                    label = stringResource(id = R.string.search_type_all),
+                    imageVector = MiuixIcons.Search
+                )
             ) + uiState.availableSources.map { source ->
                 SourcePillTab(
                     label = source.labelRes?.let { stringResource(id = it) } ?: source.name,
@@ -160,6 +165,7 @@ fun SearchCoverScreen(
             SourcePillTabRow(
                 tabs = tabs,
                 selectedTabIndex = pagerState.currentPage,
+                tabStyle = uiState.searchSourceTabStyle,
                 onTabSelected = { index ->
                     scope.launch {
                         pagerState.animateScrollToPage(index)

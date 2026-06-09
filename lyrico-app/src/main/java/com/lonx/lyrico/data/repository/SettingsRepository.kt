@@ -8,6 +8,7 @@ import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.log.LogRetentionOption
 import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.SearchConfig
+import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.ThemeConfig
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.model.AlbumSortInfo
@@ -43,6 +44,7 @@ interface SettingsRepository {
     val searchSourceOrder: Flow<List<String>>
     val enabledSearchSources: Flow<Set<String>>
     val searchPageSize: Flow<Int>
+    val searchSourceTabStyle: Flow<SearchSourceTabStyle>
     val themeMode: Flow<ThemeMode>
     val keyColor: Flow<KeyColor>
     val monetEnable: Flow<Boolean>
@@ -77,6 +79,7 @@ interface SettingsRepository {
     suspend fun saveSearchSourceOrder(sources: List<String>)
     suspend fun saveEnabledSearchSources(sources: Set<String>)
     suspend fun saveSearchPageSize(size: Int)
+    suspend fun saveSearchSourceTabStyle(style: SearchSourceTabStyle)
     suspend fun saveThemeMode(mode: ThemeMode)
     suspend fun saveKeyColor(selectedKeyColor: KeyColor)
     suspend fun saveMonetEnable(enabled: Boolean)

@@ -25,6 +25,11 @@
     <string name="cd_no_results">No Result</string>
     <string name="search_limit">Search limit</string>
     <string name="search_limit_tip">Limits results per source. Higher values use more data and cache more images.</string>
+    <string name="search_source_tab_style">Search source tab style</string>
+    <string name="search_source_tab_style_icon_only">Icon only</string>
+    <string name="search_source_tab_style_text_only">Text only</string>
+    <string name="search_source_tab_style_icon_and_text">Icon and text</string>
+    <string name="search_result_track_of_disc">track %1$s of disc %2$s</string>
     <string name="local_search_hint">Search title / artist / album</string>
 
     <!-- Folder -->
@@ -755,6 +760,8 @@
     <string name="plugin_import_archive">Import Plugin</string>
 
     <string name="plugin_config">Configure</string>
+    <string name="plugin_custom_name">Name</string>
+    <string name="plugin_custom_name_hint">Leave empty to use the original name: %1$s</string>
     <string name="plugin_uninstall">Uninstall</string>
     <string name="plugin_uninstall_confirm_message">Are you sure you want to uninstall "%1$s"? This action cannot be undone.</string>
     <string name="plugin_update_source_configured">Update source</string>

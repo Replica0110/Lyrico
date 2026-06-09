@@ -1,13 +1,13 @@
 package com.lonx.lyrico.plugin.source
 
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.data.model.entity.displayName
 import com.lonx.lyrico.data.model.plugin.PluginManifest
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -27,6 +27,7 @@ class ScriptSearchSourceFactory(
             ScriptSearchSource(
                 manifest = manifest,
                 script = script,
+                displayName = plugin.displayName,
                 iconPath = plugin.iconPath,
                 appLogRepository = appLogRepository,
                 json = json,

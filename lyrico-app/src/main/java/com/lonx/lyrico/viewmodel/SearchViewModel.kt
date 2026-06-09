@@ -20,6 +20,7 @@ import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.SearchSource
+import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -58,6 +59,7 @@ data class SearchUiState(
     val searchError: UiMessage? = null,
     val searchErrors: Map<String, UiMessage> = emptyMap(),
     val lyricsState: LyricsUiState = LyricsUiState(),
+    val searchSourceTabStyle: SearchSourceTabStyle = SearchSourceTabStyle.ICON_AND_TEXT,
     val isInitializing: Boolean = true
 )
 
@@ -160,6 +162,8 @@ class SearchViewModel(
                 selectedSearchSource = selectedSource,
 
                 lyricsState = renderedLyrics,
+                searchSourceTabStyle = searchConfig?.searchSourceTabStyle
+                    ?: SearchSourceTabStyle.ICON_AND_TEXT,
                 isInitializing = searchConfig == null
             )
         }.stateIn(

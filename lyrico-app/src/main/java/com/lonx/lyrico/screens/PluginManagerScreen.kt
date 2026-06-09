@@ -25,14 +25,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,12 +56,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
-import com.lonx.lyrico.data.model.search.LyricsSearchResult
-import com.lonx.lyrico.plugin.source.PluginImportSession
+import com.lonx.lyrico.data.model.entity.displayName
 import com.lonx.lyrico.plugin.source.PluginInstallCandidate
 import com.lonx.lyrico.plugin.source.PluginInstallFailed
 import com.lonx.lyrico.plugin.source.PluginVersionConflict
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.library.LibraryEmptyState
@@ -93,16 +89,18 @@ import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Delete
+import top.yukonga.miuix.kmp.icon.extended.Rename
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import top.yukonga.miuix.kmp.window.WindowDialog
 import java.io.File
 
 @Composable
@@ -137,6 +135,9 @@ fun PluginManagerScreen(
     }
     var showUninstallDialog by rememberSaveable { mutableStateOf(false) }
     var pendingUninstallPluginId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showRenameDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingRenamePluginId by rememberSaveable { mutableStateOf<String?>(null) }
+    var customNameInput by rememberSaveable { mutableStateOf("") }
     var showImportPreviewSheet by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(pendingImport) {
@@ -245,6 +246,11 @@ fun PluginManagerScreen(
                                 pendingUninstallPluginId = plugin.id
                                 showUninstallDialog = true
                             },
+                            onRename = {
+                                pendingRenamePluginId = plugin.id
+                                customNameInput = plugin.customName ?: plugin.name
+                                showRenameDialog = true
+                            },
                             onCheckChanged = { enabled ->
                                 viewModel.setEnabled(plugin.id, enabled)
                             },
@@ -262,7 +268,7 @@ fun PluginManagerScreen(
         show = showUninstallDialog,
         title = stringResource(R.string.plugin_uninstall),
         summary = pendingUninstallPluginId?.let { id ->
-            plugins.find { it.id == id }?.name?.let { name ->
+            plugins.find { it.id == id }?.displayName?.let { name ->
                 stringResource(R.string.plugin_uninstall_confirm_message, name)
             }
         },
@@ -279,6 +285,64 @@ fun PluginManagerScreen(
             pendingUninstallPluginId = null
         }
     )
+
+    val pendingRenamePlugin = pendingRenamePluginId?.let { id ->
+        plugins.find { it.id == id }
+    }
+
+    WindowDialog(
+        title = stringResource(R.string.plugin_custom_name),
+        show = showRenameDialog,
+        onDismissRequest = {
+            showRenameDialog = false
+        },
+        onDismissFinished = {
+            pendingRenamePluginId = null
+        }
+    ) {
+        Column {
+            TextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = customNameInput,
+                label = stringResource(R.string.plugin_custom_name),
+                singleLine = true,
+                onValueChange = { customNameInput = it }
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(
+                    R.string.plugin_custom_name_hint,
+                    pendingRenamePlugin?.name.orEmpty()
+                ),
+                fontSize = 12.sp,
+                color = colorScheme.onSurfaceVariantSummary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TextButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = {
+                        showRenameDialog = false
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(20.dp))
+                TextButton(
+                    text = stringResource(R.string.confirm),
+                    onClick = {
+                        showRenameDialog = false
+                        pendingRenamePluginId?.let { id ->
+                            viewModel.setCustomName(id, customNameInput)
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary()
+                )
+            }
+        }
+    }
 
     YesNoBottomSheet(
         show = showImportPreviewSheet,
@@ -635,6 +699,7 @@ fun PluginItem(
     plugin: SourcePluginEntity,
     updateUrl: String,
     onUninstall: () -> Unit,
+    onRename: () -> Unit,
     onCheckChanged: (Boolean) -> Unit,
     onConfig: () -> Unit,
     modifier: Modifier = Modifier
@@ -643,7 +708,7 @@ fun PluginItem(
     val actionIconTint = colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f)
 
     val pluginId = plugin.id
-    val pluginName = plugin.name
+    val pluginName = plugin.displayName
     val pluginAuthor = plugin.author
     val pluginVersion = plugin.versionName
     val pluginDescription = plugin.description
@@ -767,6 +832,13 @@ fun PluginItem(
                 tint = actionIconTint,
                 background = secondaryContainer,
                 onClick = onConfig
+            )
+            PluginActionChip(
+                text = stringResource(R.string.plugin_custom_name),
+                icon = MiuixIcons.Rename,
+                tint = actionIconTint,
+                background = secondaryContainer,
+                onClick = onRename
             )
 
             Spacer(modifier = Modifier.weight(1f))

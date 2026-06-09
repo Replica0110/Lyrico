@@ -26,6 +26,7 @@ data class SettingsBackup(
     @SerialName("search_source_order") val searchSourceOrder: List<String>? = null,
     @SerialName("enabled_search_sources") val enabledSearchSources: List<String>? = null,
     @SerialName("search_page_size") val searchPageSize: Int? = null,
+    @SerialName("search_source_tab_style") val searchSourceTabStyle: String? = null,
     @SerialName("theme_mode") val themeMode: String? = null,
     @SerialName("only_translation_if_available") val onlyTranslationIfAvailable: Boolean? = null,
     @SerialName("limit_lyrics_input_lines") val limitLyricsInputLines: Boolean? = null,

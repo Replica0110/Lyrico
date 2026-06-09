@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
@@ -45,6 +46,7 @@ data class CoverSearchUiState(
     val availableSources: List<SearchSourceUiModel> = emptyList(),
     val isSearching: Boolean = false,
     val searchError: UiMessage? = null,
+    val searchSourceTabStyle: SearchSourceTabStyle = SearchSourceTabStyle.ICON_AND_TEXT,
     val isInitializing: Boolean = true
 )
 
@@ -106,6 +108,8 @@ class CoverSearchViewModel(
                 availableSources = filteredSources,
                 isSearching = search.isSearching,
                 searchError = search.error,
+                searchSourceTabStyle = searchConfig?.searchSourceTabStyle
+                    ?: SearchSourceTabStyle.ICON_AND_TEXT,
                 isInitializing = searchConfig == null
             )
         }.stateIn(

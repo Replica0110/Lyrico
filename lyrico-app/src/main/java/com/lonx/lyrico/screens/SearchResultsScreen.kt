@@ -33,10 +33,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.CircularProgressIndicator as MaterialCircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TextButton as MaterialTextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
@@ -60,40 +56,42 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.StandardPluginField
 import com.lonx.lyrico.data.model.search.LyricsSearchResult
 import com.lonx.lyrico.ui.components.bar.SearchBar
+import com.lonx.lyrico.ui.components.bar.rememberSyncedTextFieldState
+import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.base.PillButton
+import com.lonx.lyrico.ui.components.plugin.PluginIcon
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.lonx.lyrico.utils.MusicMatchUtils
-import com.lonx.lyrico.viewmodel.SearchViewModel
+import com.lonx.lyrico.viewmodel.LyricsUiState
 import com.lonx.lyrico.viewmodel.SearchSourceUiModel
-import com.lonx.lyrico.data.model.lyrics.SongSearchResult
-import com.lonx.lyrico.ui.components.bar.rememberSyncedTextFieldState
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
-import com.lonx.lyrico.ui.components.base.PillButton
+import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.result.ResultBackNavigator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Checkbox
@@ -102,20 +100,17 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Copy
+import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
-import com.lonx.lyrico.ui.components.plugin.PluginIcon
-import com.lonx.lyrico.viewmodel.LyricsUiState
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import java.net.URL
+import androidx.compose.material3.CircularProgressIndicator as MaterialCircularProgressIndicator
+import androidx.compose.material3.TextButton as MaterialTextButton
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -261,7 +256,10 @@ fun SearchResultsScreen(
              */
             SourcePillTabRow(
                 tabs = listOf(
-                    SourcePillTab(label = stringResource(id = R.string.search_type_all))
+                    SourcePillTab(
+                        label = stringResource(id = R.string.search_type_all),
+                        imageVector = MiuixIcons.Search
+                    )
                 ) + uiState.availableSources.map { source ->
                     SourcePillTab(
                         label = source.labelRes?.let { stringResource(id = it) } ?: source.name,
@@ -269,6 +267,7 @@ fun SearchResultsScreen(
                     )
                 },
                 selectedTabIndex = pagerState.targetPage,
+                tabStyle = uiState.searchSourceTabStyle,
                 onTabSelected = { index ->
                     scope.launch {
                         pagerState.animateScrollToPage(index)
@@ -510,8 +509,12 @@ fun SearchResultItem(
             .clip(RoundedCornerShape(CardDefaults.CornerRadius))
             .clickable(onClick = onClick),
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp)
+        val formattedDuration = formatSearchResultDuration(song.duration)
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -586,9 +589,31 @@ fun SearchResultItem(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
-                        SearchSourceBadge(
+                        SearchResultBadge(
                             text = song.pluginName.ifBlank { song.pluginId }
                         )
+                    }
+
+                    val fields = song.normalizedFields()
+                    val discNumber = fields["disc_number"].orEmpty()
+                    val composer = fields["composer"].orEmpty()
+                    val lyricist = fields["lyricist"].orEmpty()
+                    val comment = fields["comment"].orEmpty()
+                    val trackInfo = when {
+                        song.trackNumber.isNotBlank() && discNumber.isNotBlank() ->
+                            stringResource(
+                                R.string.search_result_track_of_disc,
+                                song.trackNumber,
+                                discNumber
+                            )
+
+                        song.trackNumber.isNotBlank() ->
+                            stringResource(R.string.label_track_number) + ": " + song.trackNumber
+
+                        discNumber.isNotBlank() ->
+                            stringResource(R.string.label_disc_number) + ": " + discNumber
+
+                        else -> ""
                     }
 
                     val artistAlbum = buildList {
@@ -608,31 +633,76 @@ fun SearchResultItem(
 
                     val extraInfo = buildList {
                         if (song.date.isNotBlank()) add(song.date)
-                        if (song.trackNumber.isNotBlank()) add("Track ${song.trackNumber}")
+                        if (trackInfo.isNotBlank()) add(trackInfo)
                     }.joinToString(" • ")
 
                     if (extraInfo.isNotEmpty()) {
-                        Text(
-                            text = extraInfo,
-                            style = MiuixTheme.textStyles.footnote2,
-                            color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        SearchResultMetadataText(text = extraInfo)
                     }
 
+                    if (lyricist.isNotEmpty()) {
+                        SearchResultMetadataText(text = stringResource(R.string.label_lyricist) + ": " + lyricist)
+                    }
+                    if (composer.isNotBlank()) {
+                        SearchResultMetadataText(text = stringResource(R.string.label_composer) + ": " + composer)
+                    }
+
+                    if (comment.isNotBlank()) {
+                        SearchResultMetadataText(
+                            text = stringResource(R.string.label_comment) + ": " + comment,
+                            maxLines = 2
+                        )
+                    }
                 }
             }
 
-
+            if (formattedDuration.isNotBlank()) {
+                SearchResultBadge(
+                    text = formattedDuration,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun SearchSourceBadge(text: String) {
+private fun SearchResultMetadataText(
+    text: String,
+    maxLines: Int = 1
+) {
+    Text(
+        text = text,
+        style = MiuixTheme.textStyles.footnote2,
+        color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+private fun formatSearchResultDuration(durationMs: Long): String {
+    if (durationMs <= 0L) return ""
+
+    val totalSeconds = durationMs / 1000
+    val seconds = totalSeconds % 60
+    val totalMinutes = totalSeconds / 60
+    val minutes = totalMinutes % 60
+    val hours = totalMinutes / 60
+
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%d:%02d".format(totalMinutes, seconds)
+    }
+}
+
+@Composable
+private fun SearchResultBadge(
+    text: String,
+    modifier: Modifier = Modifier
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(999.dp))
             .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.12f))
             .padding(horizontal = 8.dp, vertical = 3.dp),
@@ -1247,6 +1317,7 @@ private fun optimizedAllSourceResults(
 fun SourcePillTabRow(
     tabs: List<SourcePillTab>,
     selectedTabIndex: Int,
+    tabStyle: SearchSourceTabStyle,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1269,6 +1340,10 @@ fun SourcePillTabRow(
     ) {
         tabs.forEachIndexed { index, tab ->
             val selected = index == selectedTabIndex
+            val showIcon = tabStyle != SearchSourceTabStyle.TEXT_ONLY
+            val showText = tabStyle != SearchSourceTabStyle.ICON_ONLY
+            val iconOnly = showIcon && !showText
+            val horizontalPadding = if (iconOnly) 7.dp else 12.dp
 
             Box(
                 modifier = Modifier
@@ -1285,43 +1360,48 @@ fun SourcePillTabRow(
                     .clickable {
                         onTabSelected(index)
                     }
-                    .padding(horizontal = 12.dp, vertical = 5.dp),
+                    .padding(horizontal = horizontalPadding, vertical = 5.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    horizontalArrangement = Arrangement.spacedBy(if (showIcon && showText) 5.dp else 0.dp)
                 ) {
-                    when {
-                        tab.iconPath != null -> PluginIcon(
-                            iconPath = tab.iconPath,
-                            contentDescription = tab.label,
-                            size = 18.dp
-                        )
+                    if (showIcon) {
+                        when {
+                            tab.imageVector != null -> Icon(
+                                imageVector = tab.imageVector,
+                                contentDescription = tab.label,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (selected) {
+                                    MiuixTheme.colorScheme.onPrimary
+                                } else {
+                                    MiuixTheme.colorScheme.onSurface
+                                }
+                            )
 
-                        tab.imageVector != null -> Icon(
-                            imageVector = tab.imageVector,
-                            contentDescription = tab.label,
-                            modifier = Modifier.size(16.dp),
-                            tint = if (selected) {
+                            else -> PluginIcon(
+                                iconPath = tab.iconPath,
+                                contentDescription = tab.label,
+                                size = 18.dp
+                            )
+                        }
+                    }
+
+                    if (showText) {
+                        Text(
+                            text = tab.label,
+                            fontSize = 13.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                            color = if (selected) {
                                 MiuixTheme.colorScheme.onPrimary
                             } else {
                                 MiuixTheme.colorScheme.onSurface
-                            }
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Text(
-                        text = tab.label,
-                        fontSize = 13.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
-                        color = if (selected) {
-                            MiuixTheme.colorScheme.onPrimary
-                        } else {
-                            MiuixTheme.colorScheme.onSurface
-                        },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
             }
         }

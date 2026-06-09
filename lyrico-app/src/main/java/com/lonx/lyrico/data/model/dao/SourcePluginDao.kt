@@ -10,16 +10,16 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SourcePluginDao {
-    @Query("SELECT * FROM source_plugins ORDER BY sortOrder ASC, name ASC")
+    @Query("SELECT * FROM source_plugins ORDER BY sortOrder ASC, COALESCE(NULLIF(customName, ''), name) ASC")
     fun observeAll(): Flow<List<SourcePluginEntity>>
 
-    @Query("SELECT * FROM source_plugins WHERE enabled = 1 ORDER BY sortOrder ASC, name ASC")
+    @Query("SELECT * FROM source_plugins WHERE enabled = 1 ORDER BY sortOrder ASC, COALESCE(NULLIF(customName, ''), name) ASC")
     fun observeEnabled(): Flow<List<SourcePluginEntity>>
 
     @Query("SELECT * FROM source_plugins WHERE id = :id")
     suspend fun getById(id: String): SourcePluginEntity?
 
-    @Query("SELECT * FROM source_plugins ORDER BY sortOrder ASC, name ASC")
+    @Query("SELECT * FROM source_plugins ORDER BY sortOrder ASC, COALESCE(NULLIF(customName, ''), name) ASC")
     suspend fun getAll(): List<SourcePluginEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -30,6 +30,9 @@ interface SourcePluginDao {
 
     @Query("UPDATE source_plugins SET sortOrder = :sortOrder, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateSortOrder(id: String, sortOrder: Int, updatedAt: Long)
+
+    @Query("UPDATE source_plugins SET customName = :customName, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateCustomName(id: String, customName: String?, updatedAt: Long)
 
     @Query("DELETE FROM source_plugins WHERE id = :id")
     suspend fun delete(id: String)

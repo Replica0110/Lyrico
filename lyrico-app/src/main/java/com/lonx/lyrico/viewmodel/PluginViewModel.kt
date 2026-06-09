@@ -169,6 +169,14 @@ class PluginViewModel(
         }
     }
 
+    fun setCustomName(id: String, name: String) {
+        viewModelScope.launch {
+            repository.updateCustomName(id, name)
+            pluginManager.invalidate(id)
+            publishMessage("Plugin name saved")
+        }
+    }
+
 
     private fun runBusy(successMessage: String, block: suspend () -> Unit) {
         viewModelScope.launch {

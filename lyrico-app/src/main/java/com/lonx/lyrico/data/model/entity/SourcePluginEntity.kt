@@ -15,9 +15,13 @@ data class SourcePluginEntity(
     val pluginDir: String,
     val entryFile: String,
     val includeDirsJson: String,
+    val customName: String?,
     val iconPath: String?,
     val enabled: Boolean,
     val sortOrder: Int,
     val installedAt: Long,
     val updatedAt: Long
 )
+
+val SourcePluginEntity.displayName: String
+    get() = customName?.trim()?.takeIf { it.isNotEmpty() } ?: name

@@ -15,6 +15,7 @@ import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.StateFlow
@@ -43,6 +44,7 @@ data class SettingsUiState(
     val searchSourceOrder: List<String> = emptyList(),
     val enabledSearchSources: Set<String> = emptySet(),
     val searchPageSize: Int = 20,
+    val searchSourceTabStyle: SearchSourceTabStyle = SearchSourceTabStyle.ICON_AND_TEXT,
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val monetEnable: Boolean = false,
     val keyColor: KeyColor = KeyColors[1],
@@ -109,6 +111,7 @@ class SettingsViewModel(
             searchSourceOrder = base.search.searchSourceOrder,
             enabledSearchSources = base.search.enabledSearchSources,
             searchPageSize = base.search.searchPageSize,
+            searchSourceTabStyle = base.search.searchSourceTabStyle,
             themeMode = base.theme.themeMode,
             ignoreShortAudio = base.ignoreShortAudio,
             monetEnable = base.theme.monetEnable,
@@ -250,6 +253,12 @@ class SettingsViewModel(
     fun setSearchPageSize(size: Int) {
         viewModelScope.launch {
             settingsRepository.saveSearchPageSize(size)
+        }
+    }
+
+    fun setSearchSourceTabStyle(style: SearchSourceTabStyle) {
+        viewModelScope.launch {
+            settingsRepository.saveSearchSourceTabStyle(style)
         }
     }
 

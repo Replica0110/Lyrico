@@ -24,13 +24,14 @@ import kotlin.coroutines.cancellation.CancellationException
 class ScriptSearchSource(
     private val manifest: PluginManifest,
     private val script: String,
+    private val displayName: String = manifest.name,
     override val iconPath: String? = null,
     private val appLogRepository: AppLogRepository? = null,
     private val json: Json = defaultJson,
     private val runtimeFactory: () -> PluginJsRuntime = { QuickJsRuntime() }
 ) : SearchSource, AutoCloseable {
     override val id: String = manifest.id
-    override val name: String = manifest.name
+    override val name: String = displayName
     override val capabilities: Set<PluginCapability> =
         manifest.capabilities.toSet()
             .ifEmpty { setOf(PluginCapability.SEARCH_SONGS) }

@@ -21,6 +21,7 @@ import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.model.log.LogRetentionOption
 import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.SearchConfig
+import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.SettingsBackup
 import com.lonx.lyrico.data.model.SourceSettingsStore
 import com.lonx.lyrico.data.model.ThemeConfig
@@ -81,6 +82,7 @@ object SettingsDefaults {
     val SEARCH_SOURCE_ORDER = emptyList<String>()
     val DEFAULT_ENABLED_SEARCH_SOURCES = emptySet<String>()
     const val SEARCH_PAGE_SIZE = 10
+    val SEARCH_SOURCE_TAB_STYLE = SearchSourceTabStyle.ICON_AND_TEXT
 
     val THEME_MODE = ThemeMode.AUTO
 }
@@ -114,6 +116,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
         val ENABLED_SEARCH_SOURCES = stringPreferencesKey("enabled_search_sources")
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
+        val SEARCH_SOURCE_TAB_STYLE = stringPreferencesKey("search_source_tab_style")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val MONET_ENABLE = booleanPreferencesKey("monet_enable")
         val KEY_THEME_COLOR = intPreferencesKey("theme_color_argb")
@@ -246,6 +249,15 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.SEARCH_PAGE_SIZE] ?: SettingsDefaults.SEARCH_PAGE_SIZE
         }
 
+    override val searchSourceTabStyle: Flow<SearchSourceTabStyle>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SEARCH_SOURCE_TAB_STYLE]
+                ?.let { styleName ->
+                    runCatching { SearchSourceTabStyle.valueOf(styleName) }.getOrNull()
+                }
+                ?: SettingsDefaults.SEARCH_SOURCE_TAB_STYLE
+        }
+
     override val themeMode: Flow<ThemeMode>
         get() = context.settingsDataStore.data.map { preferences ->
             val modeName = preferences[PreferencesKeys.THEME_MODE]
@@ -363,12 +375,19 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
 
     override val searchConfigFlow: Flow<SearchConfig> =
-        combine(separator, searchSourceOrder, enabledSearchSources, searchPageSize) { sep, order, enabled, size ->
+        combine(
+            separator,
+            searchSourceOrder,
+            enabledSearchSources,
+            searchPageSize,
+            searchSourceTabStyle
+        ) { sep, order, enabled, size, tabStyle ->
             SearchConfig(
                 separator = sep,
                 searchSourceOrder = order,
                 enabledSearchSources = enabled,
-                searchPageSize = size
+                searchPageSize = size,
+                searchSourceTabStyle = tabStyle
             )
         }
 
@@ -480,6 +499,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun saveSearchPageSize(size: Int) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.SEARCH_PAGE_SIZE] = size
+        }
+    }
+
+    override suspend fun saveSearchSourceTabStyle(style: SearchSourceTabStyle) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.SEARCH_SOURCE_TAB_STYLE] = style.name
         }
     }
 
@@ -621,6 +646,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
             searchPageSize = prefs[PreferencesKeys.SEARCH_PAGE_SIZE]
                 ?: SettingsDefaults.SEARCH_PAGE_SIZE,
+            searchSourceTabStyle = prefs[PreferencesKeys.SEARCH_SOURCE_TAB_STYLE]
+                ?: SettingsDefaults.SEARCH_SOURCE_TAB_STYLE.name,
 
             themeMode = prefs[PreferencesKeys.THEME_MODE]
                 ?: SettingsDefaults.THEME_MODE.name,
@@ -698,6 +725,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
                 
                 backup.searchPageSize?.let { prefs[PreferencesKeys.SEARCH_PAGE_SIZE] = it }
+                backup.searchSourceTabStyle?.let { styleName ->
+                    runCatching { SearchSourceTabStyle.valueOf(styleName) }
+                        .getOrNull()
+                        ?.let { prefs[PreferencesKeys.SEARCH_SOURCE_TAB_STYLE] = it.name }
+                }
                 backup.themeMode?.let { prefs[PreferencesKeys.THEME_MODE] = it }
                 backup.monetEnable?.let { prefs[PreferencesKeys.MONET_ENABLE] = it }
                 backup.keyThemeColor?.let { prefs[PreferencesKeys.KEY_THEME_COLOR] = it }

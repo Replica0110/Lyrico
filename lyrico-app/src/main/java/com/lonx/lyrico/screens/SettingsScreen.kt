@@ -38,6 +38,7 @@ import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.ui.components.RoundedRectanglePainter
@@ -114,6 +115,7 @@ fun SettingsScreen(
     val folders = folderUiState.folders
     val totalFolders = folders.filter { it.addedBySaf }.size
     val conversionMode = settingsUiState.conversionMode
+    val searchSourceTabStyle = settingsUiState.searchSourceTabStyle
 
     val ignoredFolders = folders.count { it.isIgnored && it.addedBySaf }
     val searchPageSize = settingsUiState.searchPageSize
@@ -136,6 +138,9 @@ fun SettingsScreen(
     val conversionModeItems = ConversionMode.entries.map { stringResource(it.labelRes) }
     val selectedConversionModeIndex =
         ConversionMode.entries.indexOf(conversionMode).coerceAtLeast(0)
+    val searchSourceTabStyleItems = SearchSourceTabStyle.entries.map { stringResource(it.labelRes) }
+    val selectedSearchSourceTabStyleIndex =
+        SearchSourceTabStyle.entries.indexOf(searchSourceTabStyle).coerceAtLeast(0)
 
     val artistSeparators = remember {
         listOf(
@@ -364,6 +369,16 @@ fun SettingsScreen(
                     ArrowPreference(
                         title = stringResource(R.string.plugin_manager_title),
                         onClick = { navigator.navigate(PluginManagerDestination()) }
+                    )
+                    WindowDropdownPreference(
+                        title = stringResource(R.string.search_source_tab_style),
+                        items = searchSourceTabStyleItems,
+                        selectedIndex = selectedSearchSourceTabStyleIndex,
+                        onSelectedIndexChange = { index ->
+                            settingsViewModel.setSearchSourceTabStyle(
+                                SearchSourceTabStyle.entries[index]
+                            )
+                        }
                     )
                     SliderPreference(
                         title = stringResource(R.string.search_limit),

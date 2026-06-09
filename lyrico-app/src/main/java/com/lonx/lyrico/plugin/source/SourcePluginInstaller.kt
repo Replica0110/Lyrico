@@ -449,6 +449,7 @@ class SourcePluginInstaller(
             pluginDir = pluginDir.absolutePath,
             entryFile = manifest.entry,
             includeDirsJson = json.encodeToString(manifest.includeDirs),
+            customName = existing?.customName,
             iconPath = iconPath,
             enabled = existing?.enabled ?: enabled,
             sortOrder = existing?.sortOrder ?: nextSortOrder(),

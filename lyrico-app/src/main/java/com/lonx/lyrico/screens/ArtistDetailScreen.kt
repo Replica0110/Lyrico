@@ -47,11 +47,14 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.album.AlbumListItem
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
+import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.cover.CoverImage
+import com.lonx.lyrico.ui.components.library.AlbumActionBottomSheet
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.components.song.SongActionSheets
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
+import com.lonx.lyrico.viewmodel.AlbumActionsViewModel
 import com.lonx.lyrico.viewmodel.ArtistDetailViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
 import com.ramcosta.composedestinations.annotation.Destination
@@ -91,10 +94,18 @@ fun ArtistDetailScreen(
     val artist by viewModel.artist.collectAsStateWithLifecycle()
     val songs by viewModel.songs.collectAsStateWithLifecycle()
     val albums by viewModel.albums.collectAsStateWithLifecycle()
+
+    var selectedAlbum by remember { mutableStateOf<AlbumEntity?>(null) }
+    val albumActionsViewModel: AlbumActionsViewModel = koinViewModel()
+    val albumActionsUiState by albumActionsViewModel.uiState.collectAsStateWithLifecycle()
+
     val artistName = artist?.name.orEmpty()
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsStateWithLifecycle()
     val swipeAnchorUri by selectionViewModel.swipeAnchorUri.collectAsStateWithLifecycle()
+
+    var showAlbumActionSheet by remember { mutableStateOf(false) }
+    var showDeleteAlbumDialog by remember { mutableStateOf(false) }
     val swipeSelectionLabel = stringResource(
         if (!isSelectionMode) {
             R.string.swipe_selection_enter_selection
@@ -256,6 +267,10 @@ fun ArtistDetailScreen(
                                     navigator.navigate(
                                         AlbumDetailDestination(albumId = album.id)
                                     )
+                                },
+                                onAlbumActionClick = { album ->
+                                    selectedAlbum = album
+                                    showAlbumActionSheet = true
                                 }
                             )
                         }
@@ -284,7 +299,50 @@ fun ArtistDetailScreen(
                 )
             }
         }
+        selectedAlbum?.let { album ->
+            AlbumActionBottomSheet(
+                show = showAlbumActionSheet,
+                albumName = album.name,
+                isCalculatingReplayGain = albumActionsUiState.isCalculatingAlbumReplayGain,
+                onDismissRequest = { showAlbumActionSheet = false },
+                onDismissFinished = {
+                    if (!showAlbumActionSheet && !showDeleteAlbumDialog) {
+                        selectedAlbum = null
+                    }
+                },
+                onShare = {
+                    showAlbumActionSheet = false
+                    albumActionsViewModel.shareAlbum(context, album.id)
+                },
+                onDelete = {
+                    showAlbumActionSheet = false
+                    showDeleteAlbumDialog = true
+                },
+                onCalculateReplayGain = {
+                    showAlbumActionSheet = false
+                    albumActionsViewModel.calculateAlbumReplayGain(album.id)
+                }
+            )
 
+            YesNoDialog(
+                title = stringResource(R.string.dialog_delete_album_title),
+                show = showDeleteAlbumDialog,
+                summary = stringResource(
+                    R.string.dialog_delete_album_content,
+                    album.songCount,
+                    album.name
+                ),
+                onConfirm = {
+                    showDeleteAlbumDialog = false
+                    albumActionsViewModel.deleteAlbum(album.id)
+                    selectedAlbum = null
+                },
+                onDismissRequest = {
+                    showDeleteAlbumDialog = false
+                    selectedAlbum = null
+                }
+            )
+        }
         SongBatchSelectionActions(
             navigator = navigator,
             songs = songs,
@@ -356,7 +414,8 @@ private fun ArtistSongsPage(
 private fun ArtistAlbumsPage(
     albums: List<AlbumEntity>,
     topAppBarScrollBehavior: ScrollBehavior,
-    onAlbumClick: (AlbumEntity) -> Unit
+    onAlbumClick: (AlbumEntity) -> Unit,
+    onAlbumActionClick: (AlbumEntity) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -373,7 +432,21 @@ private fun ArtistAlbumsPage(
         ) { album ->
             AlbumListItem(
                 album = album,
-                onClick = { onAlbumClick(album) }
+                onClick = { onAlbumClick(album) },
+                trailingContent = {
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        IconButton(
+                            onClick = {
+                                onAlbumActionClick(album)
+                            }
+                        ) {
+                            Icon(
+                                MiuixIcons.More,
+                                contentDescription = "more"
+                            )
+                        }
+                    }
+                }
             )
         }
     }

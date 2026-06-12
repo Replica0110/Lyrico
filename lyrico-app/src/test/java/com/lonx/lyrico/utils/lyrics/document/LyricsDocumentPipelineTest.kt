@@ -115,6 +115,33 @@ class LyricsDocumentPipelineTest {
     }
 
     @Test
+    fun ttmlParserKeepsAppleBackgroundVocalsSeparateFromMainLine() {
+        val document = TtmlParser.parse(sampleWordLevelTtmlWithBackground())
+        val original = document.tracks.first { it.type == LyricsTrackType.Original }.lines.first()
+        val background = document.tracks.first { it.type == LyricsTrackType.Background }.lines.first()
+
+        assertEquals("it's me", original.visibleText())
+        assertEquals("(I'm the problem)", background.visibleText())
+        assertEquals(listOf("(I'm", " ", "the", " ", "problem)"), background.words.map { it.text })
+    }
+
+    @Test
+    fun ttmlWriterPreservesAppleBackgroundRoleAfterProcessing() {
+        val output = LyricsDocumentPipeline.process(
+            raw = sampleWordLevelTtmlWithBackground(),
+            sourceFormat = LyricFormat.TTML,
+            targetFormat = LyricFormat.TTML,
+            removeEmptyLines = true
+        ).orEmpty()
+
+        assertTrue(output.contains("""ttm:role="x-bg""""))
+        assertTrue(output.contains("(I'm"))
+        assertTrue(output.contains("problem)"))
+        assertTrue(output.contains(""">(I'm</span> <span begin=""""))
+        assertTrue(output.contains(""">the</span> <span begin=""""))
+    }
+
+    @Test
     fun lineLevelTtmlDowngradesToPlainLinesWhenTargetIsEnhancedLrc() {
         val output = LyricsDocumentPipeline.process(
             raw = sampleTtml(text = "在亿万人海相遇 有同样默契", secondText = "是多幺不容易"),
@@ -213,6 +240,24 @@ class LyricsDocumentPipelineTest {
                 <div>
                   <p begin="1.000" end="2.000" itunes:key="L1" ttm:agent="v1">
                     <span begin="1.000" end="1.200">I</span><span begin="1.200" end="1.300"> </span><span begin="1.300" end="2.000">had</span>
+                  </p>
+                </div>
+              </body>
+            </tt>
+        """.trimIndent()
+    }
+
+    private fun sampleWordLevelTtmlWithBackground(): String {
+        return """
+            <?xml version="1.0" encoding="utf-8"?>
+            <tt xmlns="http://www.w3.org/ns/ttml"
+                xmlns:itunes="http://music.apple.com/lyric-ttml-internal"
+                xmlns:ttm="http://www.w3.org/ns/ttml#metadata">
+              <body>
+                <div>
+                  <p begin="1.000" end="3.000" itunes:key="L1">
+                    <span begin="1.000" end="1.300">it's</span><span begin="1.300" end="1.450"> </span><span begin="1.450" end="1.800">me</span>
+                    <span ttm:role="x-bg"><span begin="1.600" end="1.900">(I'm</span> <span begin="2.000" end="2.200">the</span> <span begin="2.300" end="2.900">problem)</span></span>
                   </p>
                 </div>
               </body>

@@ -38,6 +38,7 @@ object TtmlParser : LyricsFormatParser {
         val originalLines = mutableListOf<LyricsDocumentLine>()
         val inlineTranslationLines = mutableListOf<LyricsDocumentLine>()
         val romanizationLines = mutableListOf<LyricsDocumentLine>()
+        val backgroundLines = mutableListOf<LyricsDocumentLine>()
 
         root.elementsByLocalName("p").forEach { p ->
             val start = p.attr("begin")?.let(::parseTtmlTimeMs)
@@ -64,6 +65,7 @@ object TtmlParser : LyricsFormatParser {
             when (role) {
                 "x-translation" -> inlineTranslationLines.add(line.copy(text = parsed.originalText))
                 "x-romanization" -> romanizationLines.add(line.copy(text = parsed.originalText))
+                "x-bg" -> backgroundLines.add(line.copy(text = parsed.originalText))
                 else -> {
                     originalLines.add(line)
                     if (parsed.translationText.isNotBlank()) {
@@ -86,6 +88,13 @@ object TtmlParser : LyricsFormatParser {
                             )
                         )
                     }
+                    backgroundLines.addAll(parsed.backgroundLines.map { background ->
+                        background.copy(
+                            startMs = background.startMs ?: start,
+                            endMs = background.endMs ?: end,
+                            linkKey = background.linkKey ?: linkKey
+                        )
+                    })
                 }
             }
         }
@@ -106,6 +115,9 @@ object TtmlParser : LyricsFormatParser {
             }
             if (romanizationLines.isNotEmpty()) {
                 add(LyricsTrack(type = LyricsTrackType.Romanization, lines = romanizationLines))
+            }
+            if (backgroundLines.isNotEmpty()) {
+                add(LyricsTrack(type = LyricsTrackType.Background, lines = backgroundLines))
             }
         }
 
@@ -158,6 +170,7 @@ object TtmlParser : LyricsFormatParser {
         val originalText: String,
         val translationText: String,
         val romanizationText: String,
+        val backgroundLines: List<LyricsDocumentLine>,
         val words: List<LyricsDocumentWord>
     )
 
@@ -166,6 +179,7 @@ object TtmlParser : LyricsFormatParser {
         val original = StringBuilder()
         val translation = StringBuilder()
         val romanization = StringBuilder()
+        val background = mutableListOf<LyricsDocumentLine>()
 
         fun appendVisibleText(node: Node, target: StringBuilder) {
             when (node.nodeType) {
@@ -199,22 +213,38 @@ object TtmlParser : LyricsFormatParser {
                     when (role) {
                         "x-translation" -> translation.append(normalizeTtmlText(text, trimEdges = true))
                         "x-romanization" -> romanization.append(normalizeTtmlText(text, trimEdges = true))
+                        "x-bg" -> background.add(
+                            LyricsDocumentLine(
+                                startMs = fallbackStart,
+                                endMs = fallbackEnd,
+                                text = normalizeTtmlText(text, trimEdges = false),
+                                words = parseContentWords(element, fallbackEnd),
+                                extensions = element.attributesAsExtensions()
+                            )
+                        )
                         else -> {
                             val start = element.attr("begin")?.let(::parseTtmlTimeMs)
                             val end = element.attr("end")?.let(::parseTtmlTimeMs)
-                            val normalized = normalizeTtmlText(text, trimEdges = start == null)
-                            val isFormattingWhitespace = normalized.isBlank() && (text.contains('\n') || text.contains('\r'))
-                            if (start != null && normalized.isNotEmpty() && !isFormattingWhitespace) {
-                                words.add(
-                                    LyricsDocumentWord(
-                                        startMs = start,
-                                        endMs = end ?: fallbackEnd,
-                                        text = normalized,
-                                        extensions = element.attributesAsExtensions()
+                            val parsedWords = parseContentWords(element, fallbackEnd)
+                            if (start != null) {
+                                val normalized = normalizeTtmlText(text, trimEdges = false)
+                                val isFormattingWhitespace =
+                                    normalized.isBlank() && (text.contains('\n') || text.contains('\r'))
+                                if (normalized.isNotEmpty() && !isFormattingWhitespace) {
+                                    words.add(
+                                        LyricsDocumentWord(
+                                            startMs = start,
+                                            endMs = end ?: fallbackEnd,
+                                            text = normalized,
+                                            extensions = element.attributesAsExtensions()
+                                        )
                                     )
-                                )
+                                }
+                            } else if (parsedWords.any { it.startMs != null }) {
+                                words.addAll(parsedWords)
+                            } else {
+                                appendOriginalText(text)
                             }
-                            if (start == null) appendOriginalText(normalized)
                         }
                     }
                 }
@@ -231,6 +261,7 @@ object TtmlParser : LyricsFormatParser {
             originalText = finalOriginal,
             translationText = normalizeTtmlText(translation.toString(), trimEdges = true),
             romanizationText = normalizeTtmlText(romanization.toString(), trimEdges = true),
+            backgroundLines = background,
             words = words.ifEmpty {
                 if (finalOriginal.isBlank()) {
                     emptyList()
@@ -245,6 +276,49 @@ object TtmlParser : LyricsFormatParser {
                 }
             }
         )
+    }
+
+    private fun parseContentWords(element: Element, fallbackEnd: Long): List<LyricsDocumentWord> {
+        val words = mutableListOf<LyricsDocumentWord>()
+
+        fun visit(node: Node) {
+            when (node.nodeType) {
+                Node.TEXT_NODE, Node.CDATA_SECTION_NODE -> {
+                    val rawText = node.nodeValue ?: ""
+                    val text = normalizeTtmlText(rawText, trimEdges = false)
+                    val isFormattingWhitespace = text.isBlank() && (rawText.contains('\n') || rawText.contains('\r'))
+                    if (text.isNotEmpty() && !isFormattingWhitespace) {
+                        words.add(LyricsDocumentWord(text = text))
+                    }
+                }
+
+                Node.ELEMENT_NODE -> {
+                    val child = node as Element
+                    val start = child.attr("begin")?.let(::parseTtmlTimeMs)
+                    val end = child.attr("end")?.let(::parseTtmlTimeMs)
+                    if (start != null) {
+                        val rawText = child.textContent ?: ""
+                        val text = normalizeTtmlText(rawText, trimEdges = false)
+                        val isFormattingWhitespace = text.isBlank() && (rawText.contains('\n') || rawText.contains('\r'))
+                        if (text.isNotEmpty() && !isFormattingWhitespace) {
+                            words.add(
+                                LyricsDocumentWord(
+                                    startMs = start,
+                                    endMs = end ?: fallbackEnd,
+                                    text = text,
+                                    extensions = child.attributesAsExtensions()
+                                )
+                            )
+                        }
+                    } else {
+                        child.childNodesList().forEach(::visit)
+                    }
+                }
+            }
+        }
+
+        element.childNodesList().forEach(::visit)
+        return words
     }
 }
 
@@ -263,8 +337,13 @@ object TtmlWriter : LyricsFormatWriter {
         appendHead(builder, document)
         builder.append("  <body>\n")
         builder.append("    <div>\n")
+        val backgroundByKey = document.linesByKey(LyricsTrackType.Background)
+        val backgroundByStart = document.linesByStart(LyricsTrackType.Background)
         document.tracks.firstOrNull { it.type == LyricsTrackType.Original }?.lines.orEmpty().forEach { line ->
-            appendOriginalLine(builder, line)
+            val backgroundLines = line.linkKey?.let { backgroundByKey[it] }
+                ?: line.startMs?.let { backgroundByStart[it] }
+                ?: emptyList()
+            appendOriginalLine(builder, line, backgroundLines)
         }
         builder.append("    </div>\n")
         builder.append("  </body>\n")
@@ -315,7 +394,11 @@ object TtmlWriter : LyricsFormatWriter {
         builder.append("  </head>\n")
     }
 
-    private fun appendOriginalLine(builder: StringBuilder, line: LyricsDocumentLine) {
+    private fun appendOriginalLine(
+        builder: StringBuilder,
+        line: LyricsDocumentLine,
+        backgroundLines: List<LyricsDocumentLine> = emptyList()
+    ) {
         val start = line.startMs ?: return
         val end = line.endMs ?: line.words.lastOrNull()?.endMs ?: (start + 2000)
         builder.append("      <p begin=\"")
@@ -329,24 +412,39 @@ object TtmlWriter : LyricsFormatWriter {
 
         if (line.words.size > 1) {
             line.words.forEach { word ->
-                val wordStart = word.startMs
-                val wordEnd = word.endMs
-                if (wordStart != null && wordEnd != null) {
-                    builder.append("<span begin=\"")
-                        .append(LyricFormatter.formatTtmlTimestamp(wordStart))
-                        .append("\" end=\"")
-                        .append(LyricFormatter.formatTtmlTimestamp(wordEnd))
-                        .append("\">")
-                        .append(escapeXml(word.text))
-                        .append("</span>")
-                } else {
-                    builder.append(escapeXml(word.text))
-                }
+                appendWord(builder, word)
             }
         } else {
             builder.append(escapeXml(line.visibleText()))
         }
+        backgroundLines.forEach { backgroundLine ->
+            if (backgroundLine.visibleText().isNotBlank()) {
+                builder.append("<span ttm:role=\"x-bg\">")
+                if (backgroundLine.words.isNotEmpty()) {
+                    backgroundLine.words.forEach { word -> appendWord(builder, word) }
+                } else {
+                    builder.append(escapeXml(backgroundLine.visibleText()))
+                }
+                builder.append("</span>")
+            }
+        }
         builder.append("</p>\n")
+    }
+
+    private fun appendWord(builder: StringBuilder, word: LyricsDocumentWord) {
+        val wordStart = word.startMs
+        val wordEnd = word.endMs
+        if (wordStart != null && wordEnd != null) {
+            builder.append("<span begin=\"")
+                .append(LyricFormatter.formatTtmlTimestamp(wordStart))
+                .append("\" end=\"")
+                .append(LyricFormatter.formatTtmlTimestamp(wordEnd))
+                .append("\">")
+                .append(escapeXml(word.text))
+                .append("</span>")
+        } else {
+            builder.append(escapeXml(word.text))
+        }
     }
 
     private fun LyricsAgentType.toTtmlType(): String? {
@@ -358,6 +456,24 @@ object TtmlWriter : LyricsFormatWriter {
             LyricsAgentType.Unknown -> null
         }
     }
+}
+
+private fun LyricsDocument.linesByKey(type: LyricsTrackType): Map<String, List<LyricsDocumentLine>> {
+    return tracks
+        .firstOrNull { it.type == type }
+        ?.lines
+        .orEmpty()
+        .groupBy { line -> line.linkKey.orEmpty() }
+        .filterKeys { it.isNotBlank() }
+}
+
+private fun LyricsDocument.linesByStart(type: LyricsTrackType): Map<Long, List<LyricsDocumentLine>> {
+    return tracks
+        .firstOrNull { it.type == type }
+        ?.lines
+        .orEmpty()
+        .mapNotNull { line -> line.startMs?.let { it to line } }
+        .groupBy({ it.first }, { it.second })
 }
 
 private fun Element.attr(localName: String, namespace: String? = null): String? {

@@ -378,7 +378,7 @@ object RemoveEmptyLinesPostProcessor : LyricsPostProcessor {
             }
             track.copy(lines = keptLines)
         }.map { track ->
-            if (track.type == LyricsTrackType.Translation || track.type == LyricsTrackType.Romanization) {
+            if (track.type.isLinkedToOriginal()) {
                 track.copy(lines = track.lines.filterNot {
                     it.linkKey in removedKeys || it.startMs?.let(removedStarts::contains) == true
                 })
@@ -407,7 +407,7 @@ class RemoveTagLinesPostProcessor(
             }
             track.copy(lines = keptLines)
         }.map { track ->
-            if (track.type == LyricsTrackType.Translation || track.type == LyricsTrackType.Romanization) {
+            if (track.type.isLinkedToOriginal()) {
                 track.copy(lines = track.lines.filterNot {
                     it.linkKey in removedKeys || it.startMs?.let(removedStarts::contains) == true
                 })
@@ -462,10 +462,18 @@ object OnlyTranslationPostProcessor : LyricsPostProcessor {
         return document.copy(
             tracks = listOf(original.copy(lines = merged)) +
                     document.tracks.filterNot {
-                        it.type == LyricsTrackType.Original || it.type == LyricsTrackType.Translation
+                        it.type == LyricsTrackType.Original ||
+                                it.type == LyricsTrackType.Translation ||
+                                it.type == LyricsTrackType.Background
                     }
         )
     }
+}
+
+private fun LyricsTrackType.isLinkedToOriginal(): Boolean {
+    return this == LyricsTrackType.Translation ||
+            this == LyricsTrackType.Romanization ||
+            this == LyricsTrackType.Background
 }
 
 class OffsetPostProcessor(

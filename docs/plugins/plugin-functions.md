@@ -245,7 +245,7 @@ function getLyrics(request) {
 支持的 raw `type` 值与对应内容字段：
 
 | `type` | 内容字段 | 说明 |
-|------|------|
+|------|------|------|
 | `rawPlainLrc` | `rawPlainLrc` | 普通 LRC |
 | `rawVerbatimLrc` | `rawVerbatimLrc` | 逐字 LRC |
 | `rawEnhancedLrc` | `rawEnhancedLrc` | 增强型逐字 LRC |

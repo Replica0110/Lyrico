@@ -1964,7 +1964,6 @@ private fun MetadataInputField(
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             label = fieldLabel,
             colors = colors,
-            lineLimits = TextFieldLineLimits.SingleLine,
             trailingIcon = if (isModified) {
                 {
                     IconButton(onClick = onRevert) {

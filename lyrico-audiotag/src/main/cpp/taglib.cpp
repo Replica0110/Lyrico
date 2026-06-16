@@ -11,42 +11,59 @@
 #include <memory>
 #include <stdexcept>
 
+template<typename FileType>
+TagLib::File *createSupportedFile(TagLib::IOStream *stream,
+                                  bool readAudioProperties,
+                                  TagLib::AudioProperties::ReadStyle audioPropertiesStyle) {
+    stream->seek(0);
+    if (!FileType::isSupported(stream)) {
+        return nullptr;
+    }
+    stream->seek(0);
+    return new FileType(stream, readAudioProperties, audioPropertiesStyle);
+}
 
 TagLib::File* createFileFromContent(TagLib::IOStream *stream,
                                     bool readAudioProperties,
                                     TagLib::AudioProperties::ReadStyle audioPropertiesStyle) {
-    stream->seek(0);
     TagLib::File *file = nullptr;
 
-    if (TagLib::MPEG::File::isSupported(stream))
-        file = new TagLib::MPEG::File(stream, readAudioProperties, audioPropertiesStyle);
-    else if (TagLib::Ogg::Vorbis::File::isSupported(stream))
-        file = new TagLib::Ogg::Vorbis::File(stream, readAudioProperties, audioPropertiesStyle);
-    else if (TagLib::FLAC::File::isSupported(stream))
-        file = new TagLib::FLAC::File(stream, readAudioProperties, audioPropertiesStyle);
-    else if (TagLib::Ogg::Opus::File::isSupported(stream))
-        file = new TagLib::Ogg::Opus::File(stream, readAudioProperties, audioPropertiesStyle);
-    else if (TagLib::MP4::File::isSupported(stream))
-        file = new TagLib::MP4::File(stream, readAudioProperties, audioPropertiesStyle);
-    else if (TagLib::RIFF::WAV::File::isSupported(stream))
-        file = new TagLib::RIFF::WAV::File(stream, readAudioProperties, audioPropertiesStyle);
+    file = createSupportedFile<TagLib::MPEG::File>(
+            stream, readAudioProperties, audioPropertiesStyle);
+    if (!file) {
+        file = createSupportedFile<TagLib::Ogg::Vorbis::File>(
+                stream, readAudioProperties, audioPropertiesStyle);
+    }
+    if (!file) {
+        file = createSupportedFile<TagLib::FLAC::File>(
+                stream, readAudioProperties, audioPropertiesStyle);
+    }
+    if (!file) {
+        file = createSupportedFile<TagLib::Ogg::Opus::File>(
+                stream, readAudioProperties, audioPropertiesStyle);
+    }
+    if (!file) {
+        file = createSupportedFile<TagLib::MP4::File>(
+                stream, readAudioProperties, audioPropertiesStyle);
+    }
+    if (!file) {
+        file = createSupportedFile<TagLib::RIFF::WAV::File>(
+                stream, readAudioProperties, audioPropertiesStyle);
+    }
 
     if (!file) {
-        stream->seek(0);
-        file = new TagLib::MPEG::File(stream, readAudioProperties, audioPropertiesStyle);
+        return nullptr;
     }
 
-    if (file) {
-        if (file->isValid()) {
-            return file;
-        }
-        bool hasTags = (file->tag() && !file->tag()->isEmpty()) || !file->properties().isEmpty();
-
-        if (hasTags) {
-            return file;
-        }
-        delete file;
+    if (file->isValid()) {
+        return file;
     }
+    bool hasTags = (file->tag() && !file->tag()->isEmpty()) || !file->properties().isEmpty();
+
+    if (hasTags) {
+        return file;
+    }
+    delete file;
 
     return nullptr;
 }
@@ -65,13 +82,16 @@ Java_com_lonx_audiotag_TagLib_getAudioProperties(
         std::unique_ptr<TagLib::File> file(createFileFromContent(stream.get(), true, style));
 
         if (!file) {
-            return nullptr;
+            return emptyAudioProperties(env);
         }
 
         return getAudioProperties(env, file.get());
     } catch (const std::exception &e) {
         LOGE("Error reading audio properties: %s", e.what());
-        return nullptr;
+        return emptyAudioProperties(env);
+    } catch (...) {
+        LOGE("Unknown error reading audio properties");
+        return emptyAudioProperties(env);
     }
 }
 

@@ -44,6 +44,8 @@ jclass mapEntryClass = nullptr;
 jmethodID getKeyMethod = nullptr;
 jmethodID getValueMethod = nullptr;
 
+inline jobject emptyAudioProperties(JNIEnv *env);
+
 inline TagLib::String JStringToTagString(JNIEnv *env, jstring value) {
     if (!value) {
         return {};
@@ -59,61 +61,76 @@ inline TagLib::String JStringToTagString(JNIEnv *env, jstring value) {
     return result;
 }
 
+inline bool initGlobalClass(JNIEnv *env, const char *className, jclass *target) {
+    jclass localClass = env->FindClass(className);
+    if (!localClass) {
+        LOGE("JNI_OnLoad failed to find class: %s", className);
+        return false;
+    }
+
+    *target = reinterpret_cast<jclass>(env->NewGlobalRef(localClass));
+    env->DeleteLocalRef(localClass);
+    if (!*target) {
+        LOGE("JNI_OnLoad failed to create global ref for class: %s", className);
+        return false;
+    }
+
+    return true;
+}
+
+inline bool initMethod(JNIEnv *env, jclass clazz, const char *name, const char *signature,
+                       jmethodID *target) {
+    *target = env->GetMethodID(clazz, name, signature);
+    if (!*target) {
+        LOGE("JNI_OnLoad failed to find method: %s%s", name, signature);
+        return false;
+    }
+    return true;
+}
+
 extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
     JNIEnv *env;
     if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     }
 
-    jclass _stringClass = env->FindClass("java/lang/String");
-    stringClass = reinterpret_cast<jclass>(env->NewGlobalRef(_stringClass));
-    env->DeleteLocalRef(_stringClass);
-
-    jclass _hashMapClass = env->FindClass("java/util/HashMap");
-    hashMapClass = reinterpret_cast<jclass>(env->NewGlobalRef(_hashMapClass));
-    env->DeleteLocalRef(_hashMapClass);
-    hashMapInit = env->GetMethodID(hashMapClass, "<init>", "(I)V");
-    hashMapPut = env->GetMethodID(hashMapClass, "put",
-                                  "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
-
-    jclass _metadataClass = env->FindClass("com/lonx/audiotag/model/Metadata");
-    metadataClass = reinterpret_cast<jclass>(env->NewGlobalRef(_metadataClass));
-    env->DeleteLocalRef(_metadataClass);
-    metadataConstructor = env->GetMethodID(metadataClass, "<init>",
-                                           "(Ljava/util/HashMap;[Lcom/lonx/audiotag/model/Picture;)V");
-
-    jclass _audioPropertiesClass = env->FindClass("com/lonx/audiotag/model/AudioProperties");
-    audioPropertiesClass = reinterpret_cast<jclass>(env->NewGlobalRef(_audioPropertiesClass));
-    env->DeleteLocalRef(_audioPropertiesClass);
-    audioPropertiesConstructor = env->GetMethodID(audioPropertiesClass, "<init>", "(IIII)V");
-
-    jclass _pictureClass = env->FindClass("com/lonx/audiotag/model/Picture");
-    pictureClass = reinterpret_cast<jclass>(env->NewGlobalRef(_pictureClass));
-    env->DeleteLocalRef(_pictureClass);
-    pictureConstructor = env->GetMethodID(pictureClass, "<init>",
-                                          "([BLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-    pictureGetData = env->GetMethodID(pictureClass, "getData", "()[B");
-    pictureGetDescription = env->GetMethodID(pictureClass, "getDescription", "()Ljava/lang/String;");
-    pictureGetPictureType = env->GetMethodID(pictureClass, "getPictureType", "()Ljava/lang/String;");
-    pictureGetMimeType = env->GetMethodID(pictureClass, "getMimeType", "()Ljava/lang/String;");
-
-    jclass _entrySetClass = env->FindClass("java/util/Set");
-    entrySetClass = reinterpret_cast<jclass>(env->NewGlobalRef(_entrySetClass));
-    env->DeleteLocalRef(_entrySetClass);
-    iteratorMethod = env->GetMethodID(entrySetClass, "iterator", "()Ljava/util/Iterator;");
-    entrySetMethod = env->GetMethodID(hashMapClass, "entrySet", "()Ljava/util/Set;");
-
-    jclass _iteratorClass = env->FindClass("java/util/Iterator");
-    iteratorClass = reinterpret_cast<jclass>(env->NewGlobalRef(_iteratorClass));
-    env->DeleteLocalRef(_iteratorClass);
-    hasNextMethod = env->GetMethodID(iteratorClass, "hasNext", "()Z");
-    nextMethod = env->GetMethodID(iteratorClass, "next", "()Ljava/lang/Object;");
-
-    jclass _mapEntryClass = env->FindClass("java/util/Map$Entry");
-    mapEntryClass = reinterpret_cast<jclass>(env->NewGlobalRef(_mapEntryClass));
-    env->DeleteLocalRef(_mapEntryClass);
-    getKeyMethod = env->GetMethodID(mapEntryClass, "getKey", "()Ljava/lang/Object;");
-    getValueMethod = env->GetMethodID(mapEntryClass, "getValue", "()Ljava/lang/Object;");
+    if (!initGlobalClass(env, "java/lang/String", &stringClass) ||
+        !initGlobalClass(env, "java/util/HashMap", &hashMapClass) ||
+        !initMethod(env, hashMapClass, "<init>", "(I)V", &hashMapInit) ||
+        !initMethod(env, hashMapClass, "put",
+                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", &hashMapPut) ||
+        !initGlobalClass(env, "com/lonx/audiotag/model/Metadata", &metadataClass) ||
+        !initMethod(env, metadataClass, "<init>",
+                    "(Ljava/util/HashMap;[Lcom/lonx/audiotag/model/Picture;)V",
+                    &metadataConstructor) ||
+        !initGlobalClass(env, "com/lonx/audiotag/model/AudioProperties",
+                         &audioPropertiesClass) ||
+        !initMethod(env, audioPropertiesClass, "<init>", "(IIII)V",
+                    &audioPropertiesConstructor) ||
+        !initGlobalClass(env, "com/lonx/audiotag/model/Picture", &pictureClass) ||
+        !initMethod(env, pictureClass, "<init>",
+                    "([BLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
+                    &pictureConstructor) ||
+        !initMethod(env, pictureClass, "getData", "()[B", &pictureGetData) ||
+        !initMethod(env, pictureClass, "getDescription", "()Ljava/lang/String;",
+                    &pictureGetDescription) ||
+        !initMethod(env, pictureClass, "getPictureType", "()Ljava/lang/String;",
+                    &pictureGetPictureType) ||
+        !initMethod(env, pictureClass, "getMimeType", "()Ljava/lang/String;",
+                    &pictureGetMimeType) ||
+        !initGlobalClass(env, "java/util/Set", &entrySetClass) ||
+        !initMethod(env, entrySetClass, "iterator", "()Ljava/util/Iterator;",
+                    &iteratorMethod) ||
+        !initMethod(env, hashMapClass, "entrySet", "()Ljava/util/Set;",
+                    &entrySetMethod) ||
+        !initGlobalClass(env, "java/util/Iterator", &iteratorClass) ||
+        !initMethod(env, iteratorClass, "hasNext", "()Z", &hasNextMethod) ||
+        !initMethod(env, iteratorClass, "next", "()Ljava/lang/Object;", &nextMethod) ||
+        !initGlobalClass(env, "java/util/Map$Entry", &mapEntryClass) ||
+        !initMethod(env, mapEntryClass, "getKey", "()Ljava/lang/Object;", &getKeyMethod) ||
+        !initMethod(env, mapEntryClass, "getValue", "()Ljava/lang/Object;", &getValueMethod)) {
+        return JNI_ERR;
+    }
 
     return JNI_VERSION_1_6;
 }
@@ -313,6 +330,15 @@ JniPictureArrayToPictureList(JNIEnv *env, jobjectArray pictures) {
 }
 
 inline jobject getAudioProperties(JNIEnv *env, TagLib::File *f) {
+    if (!f) {
+        return emptyAudioProperties(env);
+    }
+
+    if (!audioPropertiesClass || !audioPropertiesConstructor) {
+        LOGE("AudioProperties JNI class or constructor is not initialized");
+        return nullptr;
+    }
+
     const TagLib::AudioProperties *audioProperties = f->audioProperties();
     if (audioProperties) {
         const jint duration = static_cast<jint>(audioProperties->lengthInMilliseconds());
@@ -322,6 +348,14 @@ inline jobject getAudioProperties(JNIEnv *env, TagLib::File *f) {
         return env->NewObject(
                 audioPropertiesClass, audioPropertiesConstructor,
                 duration, bitrate, sampleRate, channels);
+    }
+    return emptyAudioProperties(env);
+}
+
+inline jobject emptyAudioProperties(JNIEnv *env) {
+    if (!audioPropertiesClass || !audioPropertiesConstructor) {
+        LOGE("AudioProperties JNI class or constructor is not initialized");
+        return nullptr;
     }
     return env->NewObject(audioPropertiesClass, audioPropertiesConstructor, 0, 0, 0, 0);
 }

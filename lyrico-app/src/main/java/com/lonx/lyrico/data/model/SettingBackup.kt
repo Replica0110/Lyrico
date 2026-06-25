@@ -20,6 +20,7 @@ data class SettingsBackup(
     @SerialName("album_grid_columns") val albumGridColumns: Int? = null,
     @SerialName("separator") val separator: String? = null,
     @SerialName("roma_enabled") val romaEnabled: Boolean? = null,
+    @SerialName("lyric_line_order") val lyricLineOrder: List<String>? = null,
     @SerialName("check_update_enabled") val checkUpdateEnabled: Boolean? = null,
     @SerialName("translation_enabled") val translationEnabled: Boolean? = null,
     @SerialName("ignore_short_audio") val ignoreShortAudio: Boolean? = null,

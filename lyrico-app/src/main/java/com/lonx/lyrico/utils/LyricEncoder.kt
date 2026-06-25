@@ -3,8 +3,10 @@ package com.lonx.lyrico.utils
 import android.annotation.SuppressLint
 import com.github.houbb.opencc4j.util.ZhConverterUtil
 import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricFormat.*
+import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
@@ -167,28 +169,16 @@ object LyricEncoder {
             } else null
     
             val skipOriginal = config.onlyTranslationIfAvailable && matchedTranslation != null
-    
-            // 添加原文
-            if (!skipOriginal) {
-                val originalText = line.words.joinToString("") { it.text }
-                if (originalText.isNotBlank()) {
-                    builder.append(originalText)
-                    builder.append("\n")
-                }
-            }
-    
-            // 添加音译
-            if (matchedRoman != null && !skipOriginal) {
-                val romanText = matchedRoman.words.joinToString(" ") { it.text }
-                if (romanText.isNotBlank()) {
-                    builder.append(romanText)
-                    builder.append("\n")
-                }
-            }
-    
-            // 添加翻译
-            if (matchedTranslation != null) {
-                val transText = matchedTranslation.words.joinToString("") { it.text }
+
+            config.normalizedLineOrder.forEach { track ->
+                val trackLine = when (track) {
+                    LyricLineTrack.ORIGINAL -> line.takeUnless { skipOriginal }
+                    LyricLineTrack.ROMANIZATION -> matchedRoman.takeUnless { skipOriginal }
+                    LyricLineTrack.TRANSLATION -> matchedTranslation
+                } ?: return@forEach
+
+                val separator = if (track == LyricLineTrack.ROMANIZATION) " " else ""
+                val transText = trackLine.words.joinToString(separator) { it.text }
                 if (transText.isNotBlank()) {
                     builder.append(transText)
                     builder.append("\n")
@@ -297,29 +287,29 @@ object LyricEncoder {
 
             val skipOriginal = config.onlyTranslationIfAvailable && matchedTranslation != null
 
-            if (!skipOriginal) {
-                when (config.format) {
-                    PLAIN_LRC -> appendLineByLine(builder, line, offset)
-                    ENHANCED_LRC -> {
-                        if (isWordLevel) appendEnhancedLine(builder, line, offset)
-                        else appendLineByLine(builder, line, offset) //  LRC 降级
+            config.normalizedLineOrder.forEach { track ->
+                val trackLine = when (track) {
+                    LyricLineTrack.ORIGINAL -> line.takeUnless { skipOriginal }
+                    LyricLineTrack.ROMANIZATION -> matchedRoman.takeUnless { skipOriginal }
+                    LyricLineTrack.TRANSLATION -> matchedTranslation
+                } ?: return@forEach
+
+                if (track == LyricLineTrack.ORIGINAL) {
+                    when (config.format) {
+                        PLAIN_LRC -> appendLineByLine(builder, trackLine, offset)
+                        ENHANCED_LRC -> {
+                            if (isWordLevel) appendEnhancedLine(builder, trackLine, offset)
+                            else appendLineByLine(builder, trackLine, offset) //  LRC 降级
+                        }
+                        VERBATIM_LRC -> {
+                            if (isWordLevel) appendWordByWord(builder, trackLine, offset)
+                            else appendLineByLine(builder, trackLine, offset) // LRC 降级
+                        }
+                        TTML -> Unit
                     }
-                    VERBATIM_LRC -> {
-                        if (isWordLevel) appendWordByWord(builder, line, offset)
-                        else appendLineByLine(builder, line, offset) // LRC 降级
-                    }
+                } else {
+                    appendLineByLine(builder, trackLine, offset)
                 }
-                builder.append("\n")
-            }
-
-            // 处理音译的非 TTML 输出
-            if (matchedRoman != null && !skipOriginal) {
-                appendLineByLine(builder, matchedRoman, offset)
-                builder.append("\n")
-            }
-
-            if (matchedTranslation != null) {
-                appendLineByLine(builder, matchedTranslation, offset)
                 builder.append("\n")
             }
         }
@@ -343,6 +333,7 @@ object LyricEncoder {
             !config.showTranslation ||
                     !config.showRomanization ||
                     config.onlyTranslationIfAvailable ||
+                    lineOrderAffectsLineOutput(config) ||
                     config.removeEmptyLines
 
         if (!shouldApplyTrackVisibility) return null
@@ -356,6 +347,7 @@ object LyricEncoder {
             showTranslation = config.showTranslation,
             showRomanization = config.showRomanization,
             onlyTranslationIfAvailable = config.onlyTranslationIfAvailable,
+            lineOrder = config.normalizedLineOrder,
             removeEmptyLines = config.removeEmptyLines,
             offset = offset
         )
@@ -417,6 +409,7 @@ object LyricEncoder {
                     showTranslation = config.showTranslation,
                     showRomanization = config.showRomanization,
                     onlyTranslationIfAvailable = config.onlyTranslationIfAvailable,
+                    lineOrder = config.normalizedLineOrder,
                     removeEmptyLines = config.removeEmptyLines,
                     offset = offset
                 )?.let { return it }
@@ -436,8 +429,14 @@ object LyricEncoder {
                 !config.showTranslation ||
                 !config.showRomanization ||
                 config.onlyTranslationIfAvailable ||
+                lineOrderAffectsLineOutput(config) ||
                 config.removeEmptyLines ||
                 selectRawLyrics(result, config).isNullOrBlank()
+    }
+
+    private fun lineOrderAffectsLineOutput(config: LyricRenderConfig): Boolean {
+        return config.format != TTML &&
+                config.normalizedLineOrder != DefaultLyricLineOrder
     }
 
 

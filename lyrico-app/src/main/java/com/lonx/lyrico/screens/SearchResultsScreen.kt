@@ -70,6 +70,7 @@ import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
+import com.lonx.lyrico.data.model.lyrics.visibleLyricLineTracks
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.StandardPluginField
 import com.lonx.lyrico.data.model.search.LyricsSearchResult
@@ -80,6 +81,7 @@ import com.lonx.lyrico.ui.components.base.PillButtonColors
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
 import com.lonx.lyrico.ui.components.plugin.PluginIcon
+import com.lonx.lyrico.ui.components.lyrics.LyricLineOrderBottomSheetContent
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
@@ -469,6 +471,17 @@ fun SearchResultsScreen(
                         }
                     )
                 }
+            }
+            lyricConfig?.let { config ->
+                LyricLineOrderBottomSheetContent(
+                    lineOrder = config.normalizedLineOrder,
+                    visibleTracks = visibleLyricLineTracks(
+                        showRomanization = config.showRomanization,
+                        showTranslation = config.showTranslation,
+                        onlyTranslationIfAvailable = config.onlyTranslationIfAvailable
+                    ),
+                    onLineOrderChange = viewModel::setLyricLineOrder
+                )
             }
         }
     }

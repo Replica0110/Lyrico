@@ -15,9 +15,12 @@ import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
 import com.lonx.lyrico.data.model.CharacterMappingConfig
 import com.lonx.lyrico.data.model.CharacterMappingDefaults
 import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
+import com.lonx.lyrico.data.model.lyrics.normalizedLyricLineOrder
 import com.lonx.lyrico.data.model.log.LogRetentionOption
 import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.SearchConfig
@@ -70,6 +73,7 @@ object SettingsDefaults {
     const val ALBUM_GRID_COLUMNS = 2
     const val SEPARATOR = "/"
     const val ROMA_ENABLED = true
+    val LYRIC_LINE_ORDER = DefaultLyricLineOrder
     const val TRANSLATION_ENABLED = true
     const val CHECK_UPDATE_ENABLED = true
     const val IGNORE_SHORT_AUDIO = true
@@ -110,6 +114,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val ALBUM_GRID_COLUMNS = intPreferencesKey("album_grid_columns")
         val SEPARATOR = stringPreferencesKey("separator")
         val ROMA_ENABLED = booleanPreferencesKey("roma_enabled")
+        val LYRIC_LINE_ORDER = stringPreferencesKey("lyric_line_order")
         val CHECK_UPDATE_ENABLED = booleanPreferencesKey("check_update_enabled")
         val TRANSLATION_ENABLED = booleanPreferencesKey("translation_enabled")
         val IGNORE_SHORT_AUDIO = booleanPreferencesKey("ignore_short_audio")
@@ -216,6 +221,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override val romaEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.ROMA_ENABLED] ?: SettingsDefaults.ROMA_ENABLED
+        }
+
+    override val lyricLineOrder: Flow<List<LyricLineTrack>>
+        get() = context.settingsDataStore.data.map { preferences ->
+            decodeLyricLineOrder(preferences[PreferencesKeys.LYRIC_LINE_ORDER])
         }
 
     override val translationEnabled: Flow<Boolean>
@@ -348,9 +358,15 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         combine(
             lyricFormat,
             romaEnabled,
-            translationEnabled
-        ) { format, roma, translation ->
-            Triple(format, roma, translation)
+            translationEnabled,
+            lyricLineOrder
+        ) { format, roma, translation, lineOrder ->
+            LyricRenderConfig(
+                format = format,
+                showRomanization = roma,
+                showTranslation = translation,
+                lineOrder = lineOrder
+            )
         }
 
     private val extraConfigFlow =
@@ -364,10 +380,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val lyricRenderConfigFlow =
         combine(baseConfigFlow, extraConfigFlow) { base, extra ->
-            LyricRenderConfig(
-                format = base.first,
-                showRomanization = base.second,
-                showTranslation = base.third,
+            base.copy(
                 onlyTranslationIfAvailable = extra.first,
                 removeEmptyLines = extra.second,
                 conversionMode = extra.third
@@ -456,6 +469,13 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun saveRomaEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.ROMA_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun saveLyricLineOrder(order: List<LyricLineTrack>) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.LYRIC_LINE_ORDER] =
+                order.normalizedLyricLineOrder().joinToString(",") { it.name }
         }
     }
 
@@ -572,6 +592,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val roma = prefs[PreferencesKeys.ROMA_ENABLED] ?: SettingsDefaults.ROMA_ENABLED
 
         val showTranslation = prefs[PreferencesKeys.TRANSLATION_ENABLED] ?: SettingsDefaults.TRANSLATION_ENABLED
+        val lineOrder = decodeLyricLineOrder(prefs[PreferencesKeys.LYRIC_LINE_ORDER])
 
         val removeEmptyLines = prefs[PreferencesKeys.REMOVE_EMPTY_LINES] ?: SettingsDefaults.REMOVE_EMPTY_LINES
         val onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE
@@ -585,6 +606,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             removeEmptyLines = removeEmptyLines,
             showTranslation = showTranslation,
             onlyTranslationIfAvailable = onlyTranslationIfAvailable,
+            lineOrder = lineOrder,
             conversionMode = conversionMode
         )
     }
@@ -630,6 +652,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
             romaEnabled = prefs[PreferencesKeys.ROMA_ENABLED]
                 ?: SettingsDefaults.ROMA_ENABLED,
+
+            lyricLineOrder = decodeLyricLineOrder(
+                prefs[PreferencesKeys.LYRIC_LINE_ORDER]
+            ).map { it.name },
 
             checkUpdateEnabled = prefs[PreferencesKeys.CHECK_UPDATE_ENABLED]
                 ?: SettingsDefaults.CHECK_UPDATE_ENABLED,
@@ -706,6 +732,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
                 backup.separator?.let { prefs[PreferencesKeys.SEPARATOR] = it }
                 backup.romaEnabled?.let { prefs[PreferencesKeys.ROMA_ENABLED] = it }
+                backup.lyricLineOrder?.let { names ->
+                    prefs[PreferencesKeys.LYRIC_LINE_ORDER] =
+                        decodeLyricLineOrder(names.joinToString(","))
+                            .joinToString(",") { it.name }
+                }
                 backup.checkUpdateEnabled?.let { prefs[PreferencesKeys.CHECK_UPDATE_ENABLED] = it }
                 backup.translationEnabled?.let { prefs[PreferencesKeys.TRANSLATION_ENABLED] = it }
                 backup.ignoreShortAudio?.let { prefs[PreferencesKeys.IGNORE_SHORT_AUDIO] = it }
@@ -1049,6 +1080,16 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
+    }
+
+    private fun decodeLyricLineOrder(raw: String?): List<LyricLineTrack> {
+        if (raw.isNullOrBlank()) return SettingsDefaults.LYRIC_LINE_ORDER
+        return raw
+            .split(',', '\n', ';')
+            .mapNotNull { name ->
+                runCatching { LyricLineTrack.valueOf(name.trim()) }.getOrNull()
+            }
+            .normalizedLyricLineOrder()
     }
 
     private fun String.toStableSourceId(): String {

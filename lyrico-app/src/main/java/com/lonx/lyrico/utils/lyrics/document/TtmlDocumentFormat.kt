@@ -1,6 +1,7 @@
 package com.lonx.lyrico.utils.lyrics.document
 
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.document.ExtensionMap
 import com.lonx.lyrico.data.model.lyrics.document.LyricsAgent
 import com.lonx.lyrico.data.model.lyrics.document.LyricsAgentType
@@ -324,7 +325,7 @@ object TtmlParser : LyricsFormatParser {
 object TtmlWriter : LyricsFormatWriter {
     override val format: LyricFormat = LyricFormat.TTML
 
-    override fun write(document: LyricsDocument): String {
+    override fun write(document: LyricsDocument, lineOrder: List<LyricLineTrack>): String {
         val builder = StringBuilder()
         builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
         builder.append("<tt xmlns=\"").append(NS_TTML).append("\"")

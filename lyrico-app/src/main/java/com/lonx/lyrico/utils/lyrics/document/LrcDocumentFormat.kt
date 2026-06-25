@@ -1,12 +1,14 @@
 package com.lonx.lyrico.utils.lyrics.document
 
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.document.LyricsDocument
 import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentLine
 import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentWord
 import com.lonx.lyrico.data.model.lyrics.document.LyricsMetadata
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrack
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
+import com.lonx.lyrico.data.model.lyrics.normalizedLyricLineOrder
 import com.lonx.lyrico.utils.LyricFormatter
 
 object PlainLrcParser : LyricsFormatParser {
@@ -30,21 +32,19 @@ object EnhancedLrcParser : LyricsFormatParser {
 object PlainLrcWriter : LyricsFormatWriter {
     override val format: LyricFormat = LyricFormat.PLAIN_LRC
 
-    override fun write(document: LyricsDocument): String {
+    override fun write(document: LyricsDocument, lineOrder: List<LyricLineTrack>): String {
         val builder = StringBuilder()
         appendTags(builder, document.metadata)
         val original = document.tracks.firstOrNull { it.type == LyricsTrackType.Original } ?: return builder.toString().trim()
-        val romanizationByKey = document.romanizationLinesByKey()
-        val romanizationByStart = document.romanizationLinesByStart()
-        val translationsByKey = document.translationLinesByKey()
-        val translationsByStart = document.translationLinesByStart()
 
-        original.lines.forEach { line ->
-            appendLine(builder, line)
-            val romanization = line.linkKey?.let { romanizationByKey[it] } ?: line.startMs?.let { romanizationByStart[it] }
-            if (romanization != null) appendLine(builder, romanization, line.startMs)
-            val translation = line.linkKey?.let { translationsByKey[it] } ?: line.startMs?.let { translationsByStart[it] }
-            if (translation != null) appendLine(builder, translation, line.startMs)
+        original.lines.groupBy { it.startMs }.values.forEach { lines ->
+            appendOrderedLineGroup(
+                builder = builder,
+                document = document,
+                originalLines = lines,
+                lineOrder = lineOrder,
+                appendOriginal = { appendLine(builder, it) }
+            )
         }
         return builder.toString().trim()
     }
@@ -53,46 +53,19 @@ object PlainLrcWriter : LyricsFormatWriter {
 object EnhancedLrcWriter : LyricsFormatWriter {
     override val format: LyricFormat = LyricFormat.ENHANCED_LRC
 
-    override fun write(document: LyricsDocument): String {
+    override fun write(document: LyricsDocument, lineOrder: List<LyricLineTrack>): String {
         val builder = StringBuilder()
         appendTags(builder, document.metadata)
         val original = document.tracks.firstOrNull { it.type == LyricsTrackType.Original } ?: return builder.toString().trim()
-        val romanizationByKey = document.romanizationLinesByKey()
-        val romanizationByStart = document.romanizationLinesByStart()
-        val translationsByKey = document.translationLinesByKey()
-        val translationsByStart = document.translationLinesByStart()
 
-        original.lines.forEach { line ->
-            val start = line.startMs ?: return@forEach
-            var needsLineBreak = false
-            if (line.words.size <= 1) {
-                appendLine(builder, line)
-            } else {
-                builder.append("[")
-                    .append(LyricFormatter.formatTimestamp(start))
-                    .append("]")
-                line.words.forEach { word ->
-                    val wordStart = word.startMs
-                    if (wordStart != null) {
-                        builder.append("<")
-                            .append(LyricFormatter.formatTimestamp(wordStart))
-                            .append(">")
-                    }
-                    builder.append(word.text)
-                }
-                val lineEnd = line.words.asReversed().firstOrNull { it.endMs != null }?.endMs ?: line.endMs
-                if (lineEnd != null) {
-                    builder.append("<")
-                        .append(LyricFormatter.formatTimestamp(lineEnd))
-                        .append(">")
-                }
-                needsLineBreak = true
-            }
-            if (needsLineBreak) builder.append("\n")
-            val romanization = line.linkKey?.let { romanizationByKey[it] } ?: romanizationByStart[start]
-            if (romanization != null) appendLine(builder, romanization, line.startMs)
-            val translation = line.linkKey?.let { translationsByKey[it] } ?: translationsByStart[start]
-            if (translation != null) appendLine(builder, translation, line.startMs)
+        original.lines.groupBy { it.startMs }.values.forEach { lines ->
+            appendOrderedLineGroup(
+                builder = builder,
+                document = document,
+                originalLines = lines,
+                lineOrder = lineOrder,
+                appendOriginal = { appendEnhancedOriginalLine(builder, it) }
+            )
         }
         return builder.toString().trim()
     }
@@ -101,43 +74,20 @@ object EnhancedLrcWriter : LyricsFormatWriter {
 object VerbatimLrcWriter : LyricsFormatWriter {
     override val format: LyricFormat = LyricFormat.VERBATIM_LRC
 
-    override fun write(document: LyricsDocument): String {
+    override fun write(document: LyricsDocument, lineOrder: List<LyricLineTrack>): String {
         val builder = StringBuilder()
         appendTags(builder, document.metadata)
         val original = document.tracks.firstOrNull { it.type == LyricsTrackType.Original } ?: return builder.toString().trim()
         val isWordLevel = original.lines.any { it.words.size > 1 }
-        val romanizationByKey = document.romanizationLinesByKey()
-        val romanizationByStart = document.romanizationLinesByStart()
-        val translationsByKey = document.translationLinesByKey()
-        val translationsByStart = document.translationLinesByStart()
 
-        original.lines.forEach { line ->
-            var needsLineBreak = false
-            if (isWordLevel && line.words.isNotEmpty()) {
-                line.words.forEach { word ->
-                    val wordStart = word.startMs
-                    if (wordStart != null) {
-                        builder.append("[")
-                            .append(LyricFormatter.formatTimestamp(wordStart))
-                            .append("]")
-                    }
-                    builder.append(word.text)
-                }
-                val lineEnd = line.words.asReversed().firstOrNull { it.endMs != null }?.endMs ?: line.endMs
-                if (lineEnd != null) {
-                    builder.append("[")
-                        .append(LyricFormatter.formatTimestamp(lineEnd))
-                        .append("]")
-                }
-                needsLineBreak = true
-            } else {
-                appendLine(builder, line)
-            }
-            if (needsLineBreak) builder.append("\n")
-            val romanization = line.linkKey?.let { romanizationByKey[it] } ?: line.startMs?.let { romanizationByStart[it] }
-            if (romanization != null) appendLine(builder, romanization, line.startMs)
-            val translation = line.linkKey?.let { translationsByKey[it] } ?: line.startMs?.let { translationsByStart[it] }
-            if (translation != null) appendLine(builder, translation, line.startMs)
+        original.lines.groupBy { it.startMs }.values.forEach { lines ->
+            appendOrderedLineGroup(
+                builder = builder,
+                document = document,
+                originalLines = lines,
+                lineOrder = lineOrder,
+                appendOriginal = { appendVerbatimOriginalLine(builder, it, isWordLevel) }
+            )
         }
         return builder.toString().trim()
     }
@@ -195,7 +145,7 @@ private fun parseLrc(raw: String, sourceFormat: LyricFormat): LyricsDocument {
         }
     }
 
-    val tracks = separateLrcTracks(lines)
+    val tracks = separateLrcTracks(lines, sourceFormat)
     return LyricsDocument(
         metadata = metadata.toLyricsMetadata(),
         tracks = tracks,
@@ -203,7 +153,10 @@ private fun parseLrc(raw: String, sourceFormat: LyricFormat): LyricsDocument {
     )
 }
 
-private fun separateLrcTracks(lines: List<LyricsDocumentLine>): List<LyricsTrack> {
+private fun separateLrcTracks(
+    lines: List<LyricsDocumentLine>,
+    sourceFormat: LyricFormat
+): List<LyricsTrack> {
     val grouped = lines.groupBy { it.startMs }.toSortedMap(compareBy(nullsLast()) { it })
     if (grouped.values.none { it.size > 1 }) {
         return listOf(LyricsTrack(type = LyricsTrackType.Original, lines = lines))
@@ -213,12 +166,20 @@ private fun separateLrcTracks(lines: List<LyricsDocumentLine>): List<LyricsTrack
     val translation = mutableListOf<LyricsDocumentLine>()
     val romanization = mutableListOf<LyricsDocumentLine>()
     grouped.values.forEach { group ->
-        original.add(group[0])
-        if (group.size >= 3) {
-            romanization.add(group[1])
-            translation.addAll(group.drop(2))
-        } else if (group.size == 2) {
-            translation.add(group[1])
+        val wordLevelOriginals = if (sourceFormat != LyricFormat.PLAIN_LRC) {
+            group.filter { it.words.size > 1 }
+        } else {
+            emptyList()
+        }
+        val originalLines = wordLevelOriginals.ifEmpty { listOf(group[0]) }
+        val subLines = group.filterNot { it in originalLines }
+
+        original.addAll(originalLines)
+        if (subLines.size >= 2) {
+            romanization.add(subLines[0])
+            translation.addAll(subLines.drop(1))
+        } else if (subLines.size == 1) {
+            translation.add(subLines[0])
         }
     }
 
@@ -237,6 +198,86 @@ private fun appendTags(builder: StringBuilder, metadata: LyricsMetadata) {
     metadata.extra.forEach { (key, value) -> builder.append("[").append(key).append(":").append(value).append("]\n") }
 }
 
+private fun appendOrderedLineGroup(
+    builder: StringBuilder,
+    document: LyricsDocument,
+    originalLines: List<LyricsDocumentLine>,
+    lineOrder: List<LyricLineTrack>,
+    appendOriginal: (LyricsDocumentLine) -> Unit
+) {
+    val originalLine = originalLines.firstOrNull() ?: return
+    val romanization = document.findLinkedLine(originalLine, LyricsTrackType.Romanization)
+    val translation = document.findLinkedLine(originalLine, LyricsTrackType.Translation)
+
+    lineOrder.normalizedLyricLineOrder().forEach { track ->
+        when (track) {
+            LyricLineTrack.ORIGINAL -> originalLines.forEach(appendOriginal)
+            LyricLineTrack.ROMANIZATION -> {
+                if (romanization != null) appendLine(builder, romanization, originalLine.startMs)
+            }
+            LyricLineTrack.TRANSLATION -> {
+                if (translation != null) appendLine(builder, translation, originalLine.startMs)
+            }
+        }
+    }
+}
+
+private fun appendEnhancedOriginalLine(builder: StringBuilder, line: LyricsDocumentLine) {
+    val start = line.startMs ?: return
+    if (line.words.size <= 1) {
+        appendLine(builder, line)
+        return
+    }
+
+    builder.append("[")
+        .append(LyricFormatter.formatTimestamp(start))
+        .append("]")
+    line.words.forEach { word ->
+        val wordStart = word.startMs
+        if (wordStart != null) {
+            builder.append("<")
+                .append(LyricFormatter.formatTimestamp(wordStart))
+                .append(">")
+        }
+        builder.append(word.text)
+    }
+    val lineEnd = line.words.asReversed().firstOrNull { it.endMs != null }?.endMs ?: line.endMs
+    if (lineEnd != null) {
+        builder.append("<")
+            .append(LyricFormatter.formatTimestamp(lineEnd))
+            .append(">")
+    }
+    builder.append("\n")
+}
+
+private fun appendVerbatimOriginalLine(
+    builder: StringBuilder,
+    line: LyricsDocumentLine,
+    isWordLevel: Boolean
+) {
+    if (!isWordLevel || line.words.isEmpty()) {
+        appendLine(builder, line)
+        return
+    }
+
+    line.words.forEach { word ->
+        val wordStart = word.startMs
+        if (wordStart != null) {
+            builder.append("[")
+                .append(LyricFormatter.formatTimestamp(wordStart))
+                .append("]")
+        }
+        builder.append(word.text)
+    }
+    val lineEnd = line.words.asReversed().firstOrNull { it.endMs != null }?.endMs ?: line.endMs
+    if (lineEnd != null) {
+        builder.append("[")
+            .append(LyricFormatter.formatTimestamp(lineEnd))
+            .append("]")
+    }
+    builder.append("\n")
+}
+
 private fun appendLine(builder: StringBuilder, line: LyricsDocumentLine) {
     val start = line.startMs ?: return
     builder.append("[")
@@ -246,20 +287,12 @@ private fun appendLine(builder: StringBuilder, line: LyricsDocumentLine) {
         .append("\n")
 }
 
-private fun LyricsDocument.translationLinesByKey(): Map<String, LyricsDocumentLine> {
-    return linesByKey(LyricsTrackType.Translation)
-}
-
-private fun LyricsDocument.translationLinesByStart(): Map<Long, LyricsDocumentLine> {
-    return linesByStart(LyricsTrackType.Translation)
-}
-
-private fun LyricsDocument.romanizationLinesByKey(): Map<String, LyricsDocumentLine> {
-    return linesByKey(LyricsTrackType.Romanization)
-}
-
-private fun LyricsDocument.romanizationLinesByStart(): Map<Long, LyricsDocumentLine> {
-    return linesByStart(LyricsTrackType.Romanization)
+private fun LyricsDocument.findLinkedLine(
+    originalLine: LyricsDocumentLine,
+    type: LyricsTrackType
+): LyricsDocumentLine? {
+    return originalLine.linkKey?.let { linesByKey(type)[it] }
+        ?: originalLine.startMs?.let { linesByStart(type)[it] }
 }
 
 private fun LyricsDocument.linesByKey(type: LyricsTrackType): Map<String, LyricsDocumentLine> {

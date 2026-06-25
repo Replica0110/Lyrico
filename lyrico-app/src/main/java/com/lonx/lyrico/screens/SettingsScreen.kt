@@ -40,7 +40,9 @@ import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.lyrics.visibleLyricLineTracks
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.ui.components.lyrics.LyricLineOrderBottomSheetContent
 import com.lonx.lyrico.ui.components.RoundedRectanglePainter
 import com.lonx.lyrico.ui.components.getSystemWallpaperColor
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
@@ -89,6 +91,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.window.WindowDialog
+import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import kotlin.math.roundToInt
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -105,6 +108,7 @@ fun SettingsScreen(
     val lyricFormat = settingsUiState.lyricFormat
     val artistSeparator = settingsUiState.separator
     val romaEnabled = settingsUiState.romaEnabled
+    val lyricLineOrder = settingsUiState.lyricLineOrder
     val themeMode = settingsUiState.themeMode
     val monetEnable = settingsUiState.monetEnable
     val currentKeyColor = settingsUiState.keyColor
@@ -127,6 +131,7 @@ fun SettingsScreen(
         mutableIntStateOf(searchPageSize)
     }
     val showClearCacheDialog = remember { mutableStateOf(false) }
+    val showLyricLineOrderSheet = remember { mutableStateOf(false) }
 
     val themeModeItems = ThemeMode.entries.map { stringResource(it.labelRes) }
     val selectedThemeModeIndex =
@@ -142,6 +147,8 @@ fun SettingsScreen(
     val selectedSearchSourceTabStyleIndex =
         SearchSourceTabStyle.entries.indexOf(searchSourceTabStyle).coerceAtLeast(0)
 
+    val context = LocalContext.current
+
     val artistSeparators = remember {
         listOf(
             ArtistSeparator.ENUMERATION_COMMA,
@@ -152,9 +159,16 @@ fun SettingsScreen(
     }
     val artistSeparatorItems = artistSeparators.map { it.toText() }
     val selectedArtistSeparatorIndex = artistSeparators.indexOf(artistSeparator).coerceAtLeast(0)
+    val visibleLyricLineTracks = visibleLyricLineTracks(
+        showRomanization = romaEnabled,
+        showTranslation = translationEnabled,
+        onlyTranslationIfAvailable = onlyTranslationIfAvailable
+    )
+    val lyricLineOrderSummary = lyricLineOrder
+        .filter { it in visibleLyricLineTracks }
+        .joinToString(separator = " / ") { context.getString(it.labelRes) }
 
 
-    val context = LocalContext.current
     LaunchedEffect(Unit) {
         settingsViewModel.refreshCache(context)
     }
@@ -272,6 +286,19 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+        WindowBottomSheet(
+            show = showLyricLineOrderSheet.value,
+            title = stringResource(R.string.lyric_line_order),
+            onDismissRequest = {
+                showLyricLineOrderSheet.value = false
+            }
+        ) {
+            LyricLineOrderBottomSheetContent(
+                lineOrder = lyricLineOrder,
+                visibleTracks = visibleLyricLineTracks,
+                onLineOrderChange = settingsViewModel::setLyricLineOrder
+            )
         }
         LazyColumn(
             modifier = Modifier
@@ -431,6 +458,11 @@ fun SettingsScreen(
                             onCheckedChange = { settingsViewModel.setOnlyTranslationIfAvailable(it) }
                         )
                     }
+                    ArrowPreference(
+                        title = stringResource(R.string.lyric_line_order),
+                        summary = lyricLineOrderSummary,
+                        onClick = { showLyricLineOrderSheet.value = true }
+                    )
                 }
             }
 

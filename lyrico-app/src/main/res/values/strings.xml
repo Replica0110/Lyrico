@@ -70,6 +70,12 @@
 </string>
     <!-- Lyrics -->
     <string name="lyric_mode">Lyric Mode</string>
+    <string name="lyric_line_order">Lyric Line Order</string>
+    <string name="lyric_line_order_hint">Drag enabled lyric parts to adjust their output order for line-based formats.</string>
+    <string name="lyric_line_order_drag_handle">Drag to reorder</string>
+    <string name="lyric_line_original">Original</string>
+    <string name="lyric_line_romanization">Romanization</string>
+    <string name="lyric_line_translation">Translation</string>
     <string name="roma">Romaji</string>
     <string name="roma_hint">Include romaji in lyric</string>
     <string name="translation">Translation</string>

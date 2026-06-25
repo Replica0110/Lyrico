@@ -12,6 +12,7 @@ import com.lonx.lyrico.data.model.ArtistSeparator
 import com.lonx.lyrico.data.model.cache.CacheCategory
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.ThemeMode
@@ -39,6 +40,7 @@ data class SettingsUiState(
     val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
+    val lyricLineOrder: List<LyricLineTrack> = emptyList(),
     val translationEnabled: Boolean = false,
     val ignoreShortAudio: Boolean = false,
     val searchSourceOrder: List<String> = emptyList(),
@@ -106,6 +108,7 @@ class SettingsViewModel(
         SettingsUiState(
             lyricFormat = base.lyric.format,
             romaEnabled = base.lyric.showRomanization,
+            lyricLineOrder = base.lyric.normalizedLineOrder,
             translationEnabled = base.lyric.showTranslation,
             separator = base.search.separator.toArtistSeparator(),
             searchSourceOrder = base.search.searchSourceOrder,
@@ -155,6 +158,11 @@ class SettingsViewModel(
     fun setRomaEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveRomaEnabled(enabled)
+        }
+    }
+    fun setLyricLineOrder(order: List<LyricLineTrack>) {
+        viewModelScope.launch {
+            settingsRepository.saveLyricLineOrder(order)
         }
     }
     suspend fun clearSongs(): Boolean = withContext(Dispatchers.IO) {

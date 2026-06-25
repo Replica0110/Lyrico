@@ -3,6 +3,7 @@ package com.lonx.lyrico.utils.lyrics.document
 import com.github.houbb.opencc4j.util.ZhConverterUtil
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
@@ -51,6 +52,7 @@ object LyricsDocumentPipeline {
             showTranslation = config.showTranslation,
             showRomanization = config.showRomanization,
             onlyTranslationIfAvailable = config.onlyTranslationIfAvailable,
+            lineOrder = config.normalizedLineOrder,
             removeEmptyLines = config.removeEmptyLines,
             offset = offset
         )
@@ -89,6 +91,7 @@ object LyricsDocumentPipeline {
         showTranslation: Boolean = true,
         showRomanization: Boolean = true,
         onlyTranslationIfAvailable: Boolean = false,
+        lineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder,
         normalizeWhitespace: Boolean = false,
         removeEmptyLines: Boolean = false,
         removeTagLineKeywords: List<String> = emptyList(),
@@ -121,7 +124,7 @@ object LyricsDocumentPipeline {
         processors.forEach { processor ->
             document = processor.process(document)
         }
-        return writer.write(document).takeIf { it.isNotBlank() }
+        return writer.write(document, lineOrder).takeIf { it.isNotBlank() }
     }
 
     fun LyricsResult.toLyricsDocument(): LyricsDocument {
@@ -335,7 +338,10 @@ interface LyricsFormatParser {
 
 interface LyricsFormatWriter {
     val format: LyricFormat
-    fun write(document: LyricsDocument): String
+    fun write(
+        document: LyricsDocument,
+        lineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder
+    ): String
 }
 
 interface LyricsPostProcessor {

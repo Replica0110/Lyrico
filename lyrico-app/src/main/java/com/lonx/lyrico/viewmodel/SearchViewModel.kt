@@ -8,6 +8,7 @@ import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
+import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
 import com.lonx.lyrico.data.repository.AppLogRepository
@@ -607,6 +608,12 @@ class SearchViewModel(
     fun setRomaEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveRomaEnabled(enabled)
+        }
+    }
+
+    fun setLyricLineOrder(order: List<LyricLineTrack>) {
+        viewModelScope.launch {
+            settingsRepository.saveLyricLineOrder(order)
         }
     }
 

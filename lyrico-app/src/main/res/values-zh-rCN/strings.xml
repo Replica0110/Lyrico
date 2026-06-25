@@ -70,6 +70,12 @@
     <string name="batch_match_prefer_filename_summary">匹配时忽略内置标签，优先依靠文件名进行搜索以提高准确度，启用此功能时建议将标题和艺术家设置为覆盖模式</string>
     <!-- 歌词 -->
     <string name="lyric_mode">歌词模式</string>
+    <string name="lyric_line_order">歌词内容顺序</string>
+    <string name="lyric_line_order_hint">拖动已启用的歌词内容，调整行式歌词的输出顺序。</string>
+    <string name="lyric_line_order_drag_handle">拖动排序</string>
+    <string name="lyric_line_original">原词</string>
+    <string name="lyric_line_romanization">音译</string>
+    <string name="lyric_line_translation">翻译</string>
     <string name="roma">罗马音</string>
     <string name="roma_hint">搜索歌词中包含罗马音</string>
     <string name="translation">翻译</string>

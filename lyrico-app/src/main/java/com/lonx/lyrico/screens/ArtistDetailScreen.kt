@@ -40,7 +40,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.AlbumEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
@@ -48,6 +50,7 @@ import com.lonx.lyrico.ui.components.album.AlbumListItem
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.CoverCandidate
 import com.lonx.lyrico.ui.components.cover.CoverImage
 import com.lonx.lyrico.ui.components.library.AlbumActionBottomSheet
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
@@ -205,7 +208,14 @@ fun ArtistDetailScreen(
                         artist = artistName,
                         songCount = songs.size,
                         albums = albums,
-                        coverSong = songs.firstOrNull()
+                        coverUri = artist?.coverSongUri,
+                        coverLastModified = artist?.coverSongLastModified ?: 0L,
+                        coverCandidates = songs.map { song ->
+                            CoverCandidate(
+                                uri = song.uri.toUri(),
+                                lastUpdate = song.fileLastModified
+                            )
+                        }
                     )
 
                     Card(
@@ -457,7 +467,9 @@ private fun ArtistDetailHeader(
     artist: String,
     songCount: Int,
     albums: List<AlbumEntity>,
-    coverSong: SongEntity?
+    coverUri: String?,
+    coverLastModified: Long,
+    coverCandidates: List<CoverCandidate>
 ) {
     Row(
         modifier = Modifier
@@ -466,10 +478,17 @@ private fun ArtistDetailHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         CoverImage(
-            uri = coverSong?.uri,
-            lastModified = coverSong?.fileLastModified ?: 0L,
+            uri = coverUri,
+            lastModified = coverLastModified,
             modifier = Modifier.size(80.dp),
-            shape = CircleShape
+            shape = CircleShape,
+            pictureType = AudioPictureType.Artist,
+            fallbackPictureTypes = listOf(
+                AudioPictureType.LeadArtist,
+                AudioPictureType.Band
+            ),
+            fallbackToAny = true,
+            candidates = coverCandidates
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {

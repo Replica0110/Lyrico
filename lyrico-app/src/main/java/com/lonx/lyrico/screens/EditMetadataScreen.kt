@@ -40,6 +40,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -80,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
+import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.R
@@ -185,6 +188,7 @@ fun EditMetadataScreen(
     // BottomSheet 状态
     var showOffsetSheet by remember { mutableStateOf(false) }
     var showCoverOptionsSheet by remember { mutableStateOf(false) }
+    var showArtistImageOptionsSheet by remember { mutableStateOf(false) }
     var showLyricsActionBottomSheet by remember { mutableStateOf(false) }
     var showPlainLyricsSheet by remember { mutableStateOf(false) }
     var showCropSheet by remember { mutableStateOf(false) }
@@ -193,6 +197,7 @@ fun EditMetadataScreen(
     var showPlayerPicker by remember { mutableStateOf(false) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var isFabMenuExpanded by remember { mutableStateOf(false) }
+    var photoPickerTarget by remember { mutableStateOf(AudioPictureType.FrontCover) }
     val currentShiftOffset by viewModel.currentShiftOffset.collectAsState()
 
     val clipboardManager = LocalClipboard.current
@@ -228,7 +233,14 @@ fun EditMetadataScreen(
     // 各种 Launcher
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri -> uri?.let { viewModel.updateCover(it) } }
+    ) { uri ->
+        uri?.let {
+            when (photoPickerTarget) {
+                AudioPictureType.Artist -> viewModel.updateArtistImage(context, it)
+                else -> viewModel.updateCover(context, it)
+            }
+        }
+    }
 
     val intentSenderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -507,36 +519,54 @@ fun EditMetadataScreen(
 
                 if (visibleGroupCodes.contains(EditFieldRegistry.GROUP_COVER)) {
                     item(key = "cover") {
-                        CoverSection(
-                            coverUri = uiState.coverUri,
-                            title = editingTagData?.title
-                                ?: uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".")
-                                ?: "",
-                            artist = editingTagData?.artist ?: "",
-                            rating = editingTagData?.rating ?: 0,
-                            showCover = visibleFieldCodes.contains("cover.picture"),
-                            showRating = visibleFieldCodes.contains("cover.rating"),
-                            isModified = uiState.coverUri != uiState.originalCover,
-                            onCoverClick = { showCoverOptionsSheet = true },
-                            onRevertCoverClick = {
-                                val previousCoverUri = uiState.coverUri
-                                val previousPicture = uiState.picture
-                                val previousPictures = editingTagData?.pictures.orEmpty()
-                                val previousPicUrl = editingTagData?.picUrl
-                                viewModel.revertCover()
-                                showCancelUndoSnackbar(context.getString(R.string.label_cover)) {
-                                    viewModel.restoreCoverSnapshot(
-                                        coverUri = previousCoverUri,
-                                        picture = previousPicture,
-                                        pictures = previousPictures,
-                                        picUrl = previousPicUrl
-                                    )
+                        Column {
+                            CoverSection(
+                                coverUri = uiState.coverUri,
+                                artistImageUri = uiState.artistImageUri,
+                                title = editingTagData?.title
+                                    ?: uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".")
+                                    ?: "",
+                                artist = editingTagData?.artist ?: "",
+                                rating = editingTagData?.rating ?: 0,
+                                showCover = visibleFieldCodes.contains("cover.picture"),
+                                showRating = visibleFieldCodes.contains("cover.rating"),
+                                isCoverModified = uiState.coverUri != uiState.originalCover,
+                                isArtistImageModified = uiState.artistImageUri != uiState.originalArtistImage,
+                                onCoverClick = { showCoverOptionsSheet = true },
+                                onArtistImageClick = { showArtistImageOptionsSheet = true },
+                                onRevertCoverClick = {
+                                    val previousCoverUri = uiState.coverUri
+                                    val previousPicture = uiState.picture
+                                    val previousPictures = editingTagData?.pictures.orEmpty()
+                                    val previousPicUrl = editingTagData?.picUrl
+                                    viewModel.revertCover()
+                                    showCancelUndoSnackbar(context.getString(R.string.label_cover)) {
+                                        viewModel.restoreCoverSnapshot(
+                                            coverUri = previousCoverUri,
+                                            picture = previousPicture,
+                                            pictures = previousPictures,
+                                            picUrl = previousPicUrl
+                                        )
+                                    }
+                                },
+                                onRevertArtistImageClick = {
+                                    val previousArtistImageUri = uiState.artistImageUri
+                                    val previousArtistPicture = uiState.artistPicture
+                                    val previousPictures = editingTagData?.pictures.orEmpty()
+                                    viewModel.revertArtistImage()
+                                    showCancelUndoSnackbar(context.getString(R.string.label_artist_image)) {
+                                        viewModel.restoreArtistImageSnapshot(
+                                            artistImageUri = previousArtistImageUri,
+                                            artistPicture = previousArtistPicture,
+                                            pictures = previousPictures
+                                        )
+                                    }
+                                },
+                                onRatingChange = { newRating ->
+                                    viewModel.updateTag { copy(rating = newRating) }
                                 }
-                            },
-                            onRatingChange = { newRating ->
-                                viewModel.updateTag { copy(rating = newRating) }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
 
@@ -1053,7 +1083,7 @@ fun EditMetadataScreen(
         }
         val fabMenuItemCount = remember(
             editingTagData?.lyrics,
-            uiState.coverUri
+            editingTagData
         ) {
             var count = 3 // 固定项：添加自定义标签、播放、字段显示设置
 
@@ -1061,8 +1091,8 @@ fun EditMetadataScreen(
                 count++
             }
 
-            if (uiState.coverUri != null) {
-                count++
+            if (editingTagData != null) {
+                count += 2
             }
 
             count
@@ -1096,13 +1126,21 @@ fun EditMetadataScreen(
                 )
             }
 
-            if (uiState.coverUri != null) {
+            if (editingTagData != null) {
                 FabMenuItem(
                     label = stringResource(R.string.label_cover_options),
                     icon = MiuixIcons.Image,
                     onClick = {
                         isFabMenuExpanded = false
                         showCoverOptionsSheet = true
+                    }
+                )
+                FabMenuItem(
+                    label = stringResource(R.string.label_artist_image),
+                    icon = MiuixIcons.Image,
+                    onClick = {
+                        isFabMenuExpanded = false
+                        showArtistImageOptionsSheet = true
                     }
                 )
             }
@@ -1316,6 +1354,7 @@ fun EditMetadataScreen(
                     title = stringResource(R.string.label_change_cover),
                     onClick = {
                         showCoverOptionsSheet = false
+                        photoPickerTarget = AudioPictureType.FrontCover
                         photoPickerLauncher.launch(
                             PickVisualMediaRequest(
                                 ActivityResultContracts.PickVisualMedia.ImageOnly
@@ -1382,6 +1421,56 @@ fun EditMetadataScreen(
                 }
             }
 
+        }
+    }
+
+    WindowBottomSheet(
+        show = showArtistImageOptionsSheet,
+        enableNestedScroll = false,
+        title = stringResource(R.string.label_artist_image),
+        onDismissRequest = { showArtistImageOptionsSheet = false }
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(bottom = 32.dp)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Card(
+                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)
+            ) {
+                ArrowPreference(
+                    title = stringResource(R.string.label_change_artist_image),
+                    onClick = {
+                        showArtistImageOptionsSheet = false
+                        photoPickerTarget = AudioPictureType.Artist
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                    }
+                )
+                if (uiState.artistImageUri != null || uiState.originalArtistImage != null) {
+                    ArrowPreference(
+                        title = stringResource(R.string.label_remove_artist_image),
+                        onClick = {
+                            val previousArtistImageUri = uiState.artistImageUri
+                            val previousArtistPicture = uiState.artistPicture
+                            val previousPictures = editingTagData?.pictures.orEmpty()
+                            showArtistImageOptionsSheet = false
+                            viewModel.removeArtistImage()
+                            showCancelUndoSnackbar(context.getString(R.string.label_artist_image)) {
+                                viewModel.restoreArtistImageSnapshot(
+                                    artistImageUri = previousArtistImageUri,
+                                    artistPicture = previousArtistPicture,
+                                    pictures = previousPictures
+                                )
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
     // 裁剪界面
@@ -1679,45 +1768,79 @@ private fun PlainLyricsToggleChip(
     }
 }
 
+private data class PicturePagerItem(
+    val label: String,
+    val editLabel: String,
+    val source: Any?,
+    val isModified: Boolean,
+    val onClick: () -> Unit,
+    val onRevertClick: () -> Unit
+)
+
 @Composable
 private fun CoverSection(
     coverUri: Any?,
+    artistImageUri: Any?,
     title: String,
     artist: String,
     rating: Int?,
     showCover: Boolean,
     showRating: Boolean,
-    isModified: Boolean,
+    isCoverModified: Boolean,
+    isArtistImageModified: Boolean,
     onCoverClick: () -> Unit,
+    onArtistImageClick: () -> Unit,
     onRevertCoverClick: () -> Unit,
+    onRevertArtistImageClick: () -> Unit,
     onRatingChange: (Int) -> Unit
 ) {
     val surfaceVariant = MiuixTheme.colorScheme.surfaceVariant
     val onSurface = MiuixTheme.colorScheme.onSurface
     val onSurfaceDim = MiuixTheme.colorScheme.onSurfaceVariantSummary
     val context = LocalContext.current
-    var imageSize by remember(coverUri) { mutableStateOf<Pair<Int, Int>?>(null) }
+    val picturePages = listOf(
+        PicturePagerItem(
+            label = stringResource(R.string.label_cover),
+            editLabel = stringResource(R.string.edit_cover),
+            source = coverUri,
+            isModified = isCoverModified,
+            onClick = onCoverClick,
+            onRevertClick = onRevertCoverClick
+        ),
+        PicturePagerItem(
+            label = stringResource(R.string.label_artist_image),
+            editLabel = stringResource(R.string.edit_artist_image),
+            source = artistImageUri,
+            isModified = isArtistImageModified,
+            onClick = onArtistImageClick,
+            onRevertClick = onRevertArtistImageClick
+        )
+    )
+    val pagerState = rememberPagerState(pageCount = { picturePages.size })
+    val currentPage = pagerState.currentPage.coerceIn(0, picturePages.lastIndex)
+    val currentImageSource = picturePages[currentPage].source
+    var imageSize by remember(currentImageSource) { mutableStateOf<Pair<Int, Int>?>(null) }
 
     // 加载图片尺寸
-    LaunchedEffect(coverUri, showCover) {
-        if (showCover && coverUri != null) {
+    LaunchedEffect(currentImageSource, showCover) {
+        if (showCover && currentImageSource != null) {
             imageSize = withContext(Dispatchers.IO) {
                 try {
                     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
 
-                    when (getCoverSourceType(coverUri)) {
+                    when (getCoverSourceType(currentImageSource)) {
                         CoverSourceType.BYTE_ARRAY -> {
-                            val bytes = coverUri as ByteArray
+                            val bytes = currentImageSource as ByteArray
                             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
                         }
 
                         CoverSourceType.BITMAP -> {
-                            val bitmap = coverUri as Bitmap
+                            val bitmap = currentImageSource as Bitmap
                             return@withContext bitmap.width to bitmap.height
                         }
 
                         CoverSourceType.NETWORK_URL -> {
-                            val source = coverUri.toString().trim()
+                            val source = currentImageSource.toString().trim()
                             URL(source).openStream().use { stream ->
                                 BitmapFactory.decodeStream(stream, null, options)
                             }
@@ -1725,9 +1848,9 @@ private fun CoverSection(
 
                         CoverSourceType.CONTENT_OR_FILE_URI,
                         CoverSourceType.URI -> {
-                            val uri = when (coverUri) {
-                                is Uri -> coverUri
-                                is String -> coverUri.trim().toUri()
+                            val uri = when (currentImageSource) {
+                                is Uri -> currentImageSource
+                                is String -> currentImageSource.trim().toUri()
                                 else -> null
                             }
                             uri?.let {
@@ -1738,7 +1861,7 @@ private fun CoverSection(
                         }
 
                         CoverSourceType.FILE_PATH -> {
-                            BitmapFactory.decodeFile(coverUri.toString().trim(), options)
+                            BitmapFactory.decodeFile(currentImageSource.toString().trim(), options)
                         }
 
                         CoverSourceType.UNSUPPORTED -> null
@@ -1775,7 +1898,7 @@ private fun CoverSection(
 
                 if (showCover) {
                     AsyncImage(
-                        model = coverUri,
+                        model = currentImageSource ?: coverUri,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -1805,45 +1928,34 @@ private fun CoverSection(
                 ) {
 
                     if (showCover) {
-                        Box(
+                        HorizontalPager(
+                            state = pagerState,
                             modifier = Modifier
                                 .size(160.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(MiuixTheme.colorScheme.onSurfaceContainerVariant)
-                                .clickable { onCoverClick() }
-                        ) {
-                            AsyncImage(
-                                model = coverUri,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.matchParentSize(),
-                                placeholder = rememberTintedPainter(
-                                    painter = painterResource(id = R.drawable.ic_album_24dp),
-                                    tint = LyricoColors.coverPlaceholderIcon
-                                ),
-                                error = rememberTintedPainter(
-                                    painter = painterResource(id = R.drawable.ic_album_24dp),
-                                    tint = LyricoColors.coverPlaceholderIcon
-                                )
-                            )
-
-                            // 编辑提示
+                        ) { page ->
+                            val item = picturePages[page]
                             Box(
                                 modifier = Modifier
-                                    .matchParentSize(),
-                                contentAlignment = Alignment.BottomCenter
+                                    .fillMaxSize()
+                                    .clickable { item.onClick() }
                             ) {
-                                Text(
-                                    text = stringResource(R.string.edit_cover),
-                                    style = MiuixTheme.textStyles.footnote1,
-                                    color = Color.White.copy(alpha = 0.9f),
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                                AsyncImage(
+                                    model = item.source,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.matchParentSize(),
+                                    placeholder = rememberTintedPainter(
+                                        painter = painterResource(id = R.drawable.ic_album_24dp),
+                                        tint = LyricoColors.coverPlaceholderIcon
+                                    ),
+                                    error = rememberTintedPainter(
+                                        painter = painterResource(id = R.drawable.ic_album_24dp),
+                                        tint = LyricoColors.coverPlaceholderIcon
+                                    )
                                 )
-                            }
 
-                            // 尺寸标签
-                            imageSize?.let {
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.TopStart)
@@ -1855,37 +1967,73 @@ private fun CoverSection(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "${it.first}×${it.second}",
+                                        text = item.label,
                                         color = Color.White,
-                                        fontSize = 9.sp,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                            }
 
-                            androidx.compose.animation.AnimatedVisibility(
-                                visible = isModified,
-                                enter = scaleIn() + fadeIn(),
-                                exit = scaleOut() + fadeOut(),
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(8.dp)
-                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(
-                                            LyricoColors.modifiedBadgeBackground.copy(alpha = 0.95f)
-                                        )
-                                        .clickable { onRevertCoverClick() }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .matchParentSize(),
+                                    contentAlignment = Alignment.BottomCenter
                                 ) {
                                     Text(
-                                        text = stringResource(R.string.action_undo_changes),
-                                        fontSize = 10.sp,
-                                        color = LyricoColors.modifiedText,
-                                        fontWeight = FontWeight.Bold
+                                        text = item.editLabel,
+                                        style = MiuixTheme.textStyles.footnote1,
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.padding(bottom = 8.dp)
                                     )
+                                }
+
+                                if (page == currentPage) {
+                                    imageSize?.let {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(8.dp)
+                                                .background(
+                                                    color = Color.Black.copy(alpha = 0.6f),
+                                                    shape = RoundedCornerShape(4.dp)
+                                                )
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "${it.first}×${it.second}",
+                                                color = Color.White,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = item.isModified,
+                                    enter = scaleIn() + fadeIn(),
+                                    exit = scaleOut() + fadeOut(),
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .background(
+                                                LyricoColors.modifiedBadgeBackground.copy(alpha = 0.95f)
+                                            )
+                                            .clickable { item.onRevertClick() }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.action_undo_changes),
+                                            fontSize = 10.sp,
+                                            color = LyricoColors.modifiedText,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }

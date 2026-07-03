@@ -3,11 +3,13 @@ package com.lonx.lyrico.data.repository
 import com.lonx.lyrico.data.model.entity.AlbumEntity
 import com.lonx.lyrico.data.model.entity.ArtistEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.dao.ArtistCoverCandidateRow
 import kotlinx.coroutines.flow.Flow
 
 interface LibraryIndexRepository {
     fun observeArtists(): Flow<List<ArtistEntity>>
     fun observeArtistById(artistId: Long): Flow<ArtistEntity?>
+    fun observeArtistCoverCandidates(): Flow<List<ArtistCoverCandidateRow>>
     fun observeSongsByArtistId(artistId: Long): Flow<List<SongEntity>>
     fun observeAlbumsByArtistId(artistId: Long): Flow<List<AlbumEntity>>
     fun observeAlbums(): Flow<List<AlbumEntity>>

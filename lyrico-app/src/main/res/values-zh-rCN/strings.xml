@@ -463,6 +463,10 @@
     <string name="label_change_cover">更换封面</string>
     <string name="label_remove_cover">移除封面</string>
     <string name="label_save_cover">保存封面</string>
+    <string name="label_artist_image">艺术家图片</string>
+    <string name="label_change_artist_image">更换艺术家图片</string>
+    <string name="label_remove_artist_image">移除艺术家图片</string>
+    <string name="edit_artist_image">点击编辑艺术家图片</string>
     <string name="msg_cover_saved_to_gallery">封面已保存到相册</string>
     <string name="msg_cover_save_failed">封面保存失败</string>
     <string name="chinese_conversion_mode_none">不转换</string>

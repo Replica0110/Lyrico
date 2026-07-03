@@ -18,25 +18,54 @@ class PictureMutationResolver(
             PictureUpdate.RemoveFrontCover -> PictureWriteCommand.ReplaceAll(
                 currentPictures.removePictureType(AudioPictureType.FrontCover)
             )
+            is PictureUpdate.RemovePicture -> PictureWriteCommand.ReplaceAll(
+                update.basePictures.orCurrent(currentPictures).removePictureType(update.type)
+            )
             PictureUpdate.RemoveAllPictures -> PictureWriteCommand.ReplaceAll(emptyList())
             is PictureUpdate.ReplaceFrontCover -> {
-                val bytes = imageBytesFetcher.fetch(update.source)
-                    ?: throw IllegalStateException("Unable to read cover image source: ${update.source}")
-                val picture = AudioPicture(
-                    data = bytes,
-                    mimeType = (update.source as? PictureSource.Bytes)?.mimeType
-                        ?: mimeTypeDetector.detect(bytes),
-                    description = "",
-                    pictureType = AudioPictureType.FrontCover.tagLibName
+                replacePicture(
+                    currentPictures = currentPictures,
+                    type = AudioPictureType.FrontCover,
+                    source = update.source,
+                    basePictures = null
                 )
-                PictureWriteCommand.ReplaceAll(
-                    currentPictures.replacePicture(
-                        picture = picture,
-                        type = AudioPictureType.FrontCover
-                    )
+            }
+            is PictureUpdate.ReplacePicture -> {
+                replacePicture(
+                    currentPictures = currentPictures,
+                    type = update.type,
+                    source = update.source,
+                    basePictures = update.basePictures
                 )
             }
             is PictureUpdate.ReplaceAll -> PictureWriteCommand.ReplaceAll(update.pictures)
         }
+    }
+
+    private suspend fun replacePicture(
+        currentPictures: List<AudioPicture>,
+        type: AudioPictureType,
+        source: PictureSource,
+        basePictures: List<AudioPicture>?
+    ): PictureWriteCommand {
+        val bytes = imageBytesFetcher.fetch(source)
+            ?: throw IllegalStateException("Unable to read image source: $source")
+        val picture = AudioPicture(
+            data = bytes,
+            mimeType = (source as? PictureSource.Bytes)?.mimeType
+                ?: mimeTypeDetector.detect(bytes),
+            description = "",
+            pictureType = type.tagLibName
+        )
+        return PictureWriteCommand.ReplaceAll(
+            basePictures.orCurrent(currentPictures).replacePicture(
+                picture = picture,
+                type = type
+            )
+        )
+    }
+
+    private fun List<AudioPicture>?.orCurrent(currentPictures: List<AudioPicture>): List<AudioPicture> {
+        return this ?: currentPictures
     }
 }

@@ -2,6 +2,7 @@ package com.lonx.lyrico.data.song.tag
 
 import android.net.Uri
 import com.lonx.audiotag.model.AudioPicture
+import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.model.CustomTagField
 
 data class AudioTagMutation(
@@ -57,8 +58,19 @@ sealed interface PictureUpdate {
     data object RemoveFrontCover : PictureUpdate
     data object RemoveAllPictures : PictureUpdate
 
+    data class RemovePicture(
+        val type: AudioPictureType,
+        val basePictures: List<AudioPicture>? = null
+    ) : PictureUpdate
+
     data class ReplaceFrontCover(
         val source: PictureSource
+    ) : PictureUpdate
+
+    data class ReplacePicture(
+        val type: AudioPictureType,
+        val source: PictureSource,
+        val basePictures: List<AudioPicture>? = null
     ) : PictureUpdate
 
     data class ReplaceAll(

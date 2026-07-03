@@ -14,6 +14,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
+import com.lonx.audiotag.model.AudioPictureType
+import com.lonx.lyrico.ui.components.CoverCandidate
 import com.lonx.lyrico.ui.components.CoverRequest
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Image
@@ -25,7 +27,11 @@ fun CoverImage(
     lastModified: Long,
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(8.dp),
-    contentDescription: String? = null
+    contentDescription: String? = null,
+    pictureType: AudioPictureType = AudioPictureType.FrontCover,
+    fallbackPictureTypes: List<AudioPictureType> = emptyList(),
+    fallbackToAny: Boolean = pictureType == AudioPictureType.FrontCover,
+    candidates: List<CoverCandidate> = emptyList()
 ) {
     Box(
         modifier = modifier
@@ -37,7 +43,11 @@ fun CoverImage(
             AsyncImage(
                 model = CoverRequest(
                     uri = uri.toUri(),
-                    lastUpdate = lastModified
+                    lastUpdate = lastModified,
+                    pictureType = pictureType,
+                    fallbackPictureTypes = fallbackPictureTypes,
+                    fallbackToAny = fallbackToAny,
+                    candidates = candidates
                 ),
                 contentDescription = contentDescription,
                 modifier = Modifier.matchParentSize(),

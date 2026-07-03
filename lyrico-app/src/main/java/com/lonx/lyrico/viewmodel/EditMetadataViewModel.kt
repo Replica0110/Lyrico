@@ -17,7 +17,9 @@ import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.CustomTagField
+import com.lonx.audiotag.model.artistPictureOrFallback
 import com.lonx.audiotag.model.frontCoverOrFallback
+import com.lonx.audiotag.model.pictureOfType
 import com.lonx.audiotag.model.removePictureType
 import com.lonx.audiotag.model.replacePicture
 import com.lonx.lyrico.R
@@ -94,6 +96,9 @@ data class EditMetadataUiState(
     val saveSuccess: Boolean? = null,
     val originalCover: Any? = null,
     val picture: AudioPicture? = null,
+    val artistImageUri: Any? = null,
+    val originalArtistImage: Any? = null,
+    val artistPicture: AudioPicture? = null,
     val permissionIntentSender: IntentSender? = null,
     val isReplayGainCalculating: Boolean = false,
     val replayGainScanMessage: UiMessage? = null,
@@ -189,6 +194,8 @@ class EditMetadataViewModel(
                 val displayFileName = song?.fileName ?: audioTagData.fileName
                 val displayPicture = audioTagData.pictures.frontCoverOrFallback()
                 val displayCover = displayPicture?.data
+                val displayArtistPicture = audioTagData.pictures.artistPictureOrFallback()
+                val displayArtistImage = displayArtistPicture?.data
 
                 _uiState.update { state ->
                     state.copy(
@@ -205,7 +212,18 @@ class EditMetadataViewModel(
                         editingTagData = if (state.isEditing) state.editingTagData else audioTagData,
                         picture = displayPicture,
                         originalCover = if (state.isEditing) state.originalCover else displayCover,
-                        coverUri = if (state.isEditing) state.coverUri else displayCover
+                        coverUri = if (state.isEditing) state.coverUri else displayCover,
+                        artistPicture = displayArtistPicture,
+                        originalArtistImage = if (state.isEditing) {
+                            state.originalArtistImage
+                        } else {
+                            displayArtistImage
+                        },
+                        artistImageUri = if (state.isEditing) {
+                            state.artistImageUri
+                        } else {
+                            displayArtistImage
+                        }
                     )
                 }
             } catch (e: Exception) {
@@ -407,6 +425,15 @@ class EditMetadataViewModel(
             )
         }
     }
+
+    fun updateCover(context: Context, uri: Uri) {
+        updatePictureFromUri(
+            context = context,
+            uri = uri,
+            type = AudioPictureType.FrontCover
+        )
+    }
+
     fun updateCover(picUrl: String) {
         _uiState.update { state ->
             state.copy(
@@ -416,6 +443,63 @@ class EditMetadataViewModel(
             )
         }
     }
+
+    fun updateArtistImage(context: Context, uri: Uri) {
+        updatePictureFromUri(
+            context = context,
+            uri = uri,
+            type = AudioPictureType.Artist
+        )
+    }
+
+    private fun updatePictureFromUri(
+        context: Context,
+        uri: Uri,
+        type: AudioPictureType
+    ) {
+        val appContext = context.applicationContext
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resolver = appContext.contentResolver
+                val bytes = resolver.openInputStream(uri)?.use { inputStream ->
+                    inputStream.readBytes()
+                }
+
+                if (bytes == null) {
+                    recordMetadataFailure(
+                        message = "Failed to read image source",
+                        relatedId = currentSongUri,
+                        detail = "Source URI: $uri"
+                    )
+                    return@launch
+                }
+
+                val audioPicture = AudioPicture(
+                    data = bytes,
+                    mimeType = resolver.getType(uri)?.takeIf { it.startsWith("image/") }
+                        ?: "image/jpeg",
+                    description = "",
+                    pictureType = type.tagLibName
+                )
+
+                _uiState.update { state ->
+                    state.withUpdatedPicture(
+                        type = type,
+                        displaySource = uri,
+                        audioPicture = audioPicture
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "读取图片失败: $uri", e)
+                recordMetadataException(
+                    message = "Failed to read image source",
+                    relatedId = currentSongUri,
+                    throwable = e
+                )
+            }
+        }
+    }
+
     fun updateCover(bitmap: Bitmap) {
         val byteArray = java.io.ByteArrayOutputStream().use { stream ->
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
@@ -430,20 +514,45 @@ class EditMetadataViewModel(
         )
 
         _uiState.update { state ->
-            val current = state.editingTagData ?: AudioTagData()
-            val newPictures = current.pictures.replacePicture(
-                picture = audioPicture,
-                type = AudioPictureType.FrontCover
+            state.withUpdatedPicture(
+                type = AudioPictureType.FrontCover,
+                displaySource = byteArray,
+                audioPicture = audioPicture
             )
+        }
+    }
 
-            state.copy(
-                coverUri = byteArray,
+    private fun EditMetadataUiState.withUpdatedPicture(
+        type: AudioPictureType,
+        displaySource: Any?,
+        audioPicture: AudioPicture
+    ): EditMetadataUiState {
+        val current = editingTagData ?: AudioTagData()
+        val newPictures = current.pictures.replacePicture(
+            picture = audioPicture,
+            type = type
+        )
+        val nextTagData = current.copy(
+            pictures = newPictures,
+            picUrl = if (type == AudioPictureType.FrontCover) null else current.picUrl
+        )
+
+        return when (type) {
+            AudioPictureType.FrontCover -> copy(
+                coverUri = displaySource,
                 picture = audioPicture,
                 isEditing = true,
-                editingTagData = current.copy(
-                    pictures = newPictures,
-                    picUrl = null
-                )
+                editingTagData = nextTagData
+            )
+            AudioPictureType.Artist -> copy(
+                artistImageUri = displaySource,
+                artistPicture = audioPicture,
+                isEditing = true,
+                editingTagData = nextTagData
+            )
+            else -> copy(
+                isEditing = true,
+                editingTagData = nextTagData
             )
         }
     }
@@ -464,6 +573,23 @@ class EditMetadataViewModel(
                 editingTagData = current.copy(
                     pictures = newPictures,
                     picUrl = ""
+                )
+            )
+        }
+    }
+
+    fun removeArtistImage() {
+        _uiState.update { state ->
+            val current = state.editingTagData ?: return@update state
+            val newPictures = current.pictures.removePictureType(AudioPictureType.Artist)
+            val displayPicture = newPictures.artistPictureOrFallback()
+
+            state.copy(
+                artistImageUri = displayPicture?.data,
+                artistPicture = displayPicture,
+                isEditing = true,
+                editingTagData = current.copy(
+                    pictures = newPictures
                 )
             )
         }
@@ -583,15 +709,53 @@ class EditMetadataViewModel(
                 )
             } else {
                 val displayPicture = original.pictures.frontCoverOrFallback()
+                val current = state.editingTagData ?: AudioTagData()
+                val originalFrontCover = original.pictures.pictureOfType(AudioPictureType.FrontCover)
+                val revertedPictures = originalFrontCover?.let { picture ->
+                    current.pictures
+                        .removePictureType(AudioPictureType.FrontCover)
+                        .replacePicture(
+                            picture = picture,
+                            type = AudioPictureType.FrontCover
+                        )
+                } ?: current.pictures.removePictureType(AudioPictureType.FrontCover)
+
                 state.copy(
                     coverUri = state.originalCover,
                     picture = displayPicture,
                     editingTagData = state.editingTagData?.copy(
-                        pictures = original.pictures,
+                        pictures = revertedPictures,
                         picUrl = null
                     )
                 )
             }
+        }
+    }
+
+    fun revertArtistImage() {
+        _uiState.update { state ->
+            val original = state.originalTagData
+            val current = state.editingTagData ?: return@update state
+            val originalArtistPicture = original
+                ?.pictures
+                ?.pictureOfType(AudioPictureType.Artist)
+            val displayPicture = original?.pictures?.artistPictureOrFallback()
+            val revertedPictures = originalArtistPicture?.let { picture ->
+                current.pictures
+                    .removePictureType(AudioPictureType.Artist)
+                    .replacePicture(
+                        picture = picture,
+                        type = AudioPictureType.Artist
+                    )
+            } ?: current.pictures.removePictureType(AudioPictureType.Artist)
+
+            state.copy(
+                artistImageUri = state.originalArtistImage,
+                artistPicture = displayPicture,
+                editingTagData = current.copy(
+                    pictures = revertedPictures
+                )
+            )
         }
     }
 
@@ -610,6 +774,24 @@ class EditMetadataViewModel(
                 editingTagData = current.copy(
                     pictures = pictures,
                     picUrl = picUrl
+                )
+            )
+        }
+    }
+
+    fun restoreArtistImageSnapshot(
+        artistImageUri: Any?,
+        artistPicture: AudioPicture?,
+        pictures: List<AudioPicture>
+    ) {
+        _uiState.update { state ->
+            val current = state.editingTagData ?: return@update state
+            state.copy(
+                artistImageUri = artistImageUri,
+                artistPicture = artistPicture,
+                isEditing = true,
+                editingTagData = current.copy(
+                    pictures = pictures
                 )
             )
         }
@@ -646,6 +828,8 @@ class EditMetadataViewModel(
                         val savedTagData = saveResult.tagData
                         val savedDisplayPicture = savedTagData.pictures.frontCoverOrFallback()
                         val savedDisplayCover = savedDisplayPicture?.data
+                        val savedArtistPicture = savedTagData.pictures.artistPictureOrFallback()
+                        val savedArtistImage = savedArtistPicture?.data
 
                         _uiState.update {
                             it.copy(
@@ -657,6 +841,9 @@ class EditMetadataViewModel(
                                 originalCover = savedDisplayCover,
                                 coverUri = savedDisplayCover,
                                 picture = savedDisplayPicture,
+                                originalArtistImage = savedArtistImage,
+                                artistImageUri = savedArtistImage,
+                                artistPicture = savedArtistPicture,
                             )
                         }
                         currentSong = saveResult.song

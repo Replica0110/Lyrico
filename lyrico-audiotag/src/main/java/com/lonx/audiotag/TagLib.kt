@@ -65,13 +65,33 @@ public object TagLib {
     public external fun getPictures(fd: Int): Array<Picture>
 
     /**
+     * Get picture with the requested type from file descriptor.
+     */
+    @JvmStatic
+    public fun getPicture(
+        fd: Int,
+        pictureType: AudioPictureType,
+        fallbackPictureTypes: List<AudioPictureType> = emptyList(),
+        fallbackToAny: Boolean = false,
+    ): Picture? {
+        val pictures = getPictures(fd)
+        return pictures.find { picture -> picture.pictureType == pictureType.tagLibName }
+            ?: fallbackPictureTypes.firstNotNullOfOrNull { fallbackType ->
+                pictures.find { picture -> picture.pictureType == fallbackType.tagLibName }
+            }
+            ?: if (fallbackToAny) pictures.firstOrNull() else null
+    }
+
+    /**
      * Get front cover from file descriptor.
      */
     @JvmStatic
     public fun getFrontCover(fd: Int): Picture? {
-        val pictures = getPictures(fd)
-        return pictures.find { picture -> picture.pictureType == AudioPictureType.FrontCover.tagLibName }
-            ?: pictures.firstOrNull()
+        return getPicture(
+            fd = fd,
+            pictureType = AudioPictureType.FrontCover,
+            fallbackToAny = true
+        )
     }
 
     /**

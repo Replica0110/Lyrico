@@ -11,6 +11,12 @@ import com.lonx.lyrico.data.model.entity.ArtistSongCrossRef
 import com.lonx.lyrico.data.model.entity.SongEntity
 import kotlinx.coroutines.flow.Flow
 
+data class ArtistCoverCandidateRow(
+    val artistId: Long,
+    val uri: String,
+    val lastModified: Long
+)
+
 @Dao
 interface LibraryIndexDao {
     @Query("DELETE FROM artist_song WHERE songId = :songId")
@@ -182,6 +188,22 @@ interface LibraryIndexDao {
         LIMIT 1
     """)
     fun observeArtistById(artistId: Long): Flow<ArtistEntity?>
+
+    @Query("""
+        SELECT
+            ars.artistId AS artistId,
+            s.uri AS uri,
+            s.fileLastModified AS lastModified
+        FROM artist_song AS ars
+        INNER JOIN songs AS s ON s.id = ars.songId
+        INNER JOIN folders AS f ON f.id = s.folderId
+        WHERE f.isIgnored = 0
+        ORDER BY ars.artistId ASC,
+            s.album ASC, COALESCE(s.discNumber, 0) ASC,
+            CAST(NULLIF(s.trackerNumber, '') AS INTEGER) ASC,
+            s.titleSortKey ASC, s.fileName ASC
+    """)
+    fun observeArtistCoverCandidates(): Flow<List<ArtistCoverCandidateRow>>
 
     @Query("""
         SELECT s.*

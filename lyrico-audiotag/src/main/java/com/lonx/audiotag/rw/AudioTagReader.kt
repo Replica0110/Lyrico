@@ -5,6 +5,7 @@ import android.util.Log
 import com.lonx.audiotag.TagLib
 import com.lonx.audiotag.internal.FdUtils
 import com.lonx.audiotag.model.AudioPicture
+import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.AudioTagKeys
 import com.lonx.audiotag.model.CustomTagField
@@ -223,11 +224,21 @@ object AudioTagReader {
             }
         }
     }
-    suspend fun readPicture(pfd: ParcelFileDescriptor): ByteArray {
+    suspend fun readPicture(
+        pfd: ParcelFileDescriptor,
+        pictureType: AudioPictureType = AudioPictureType.FrontCover,
+        fallbackPictureTypes: List<AudioPictureType> = emptyList(),
+        fallbackToAny: Boolean = pictureType == AudioPictureType.FrontCover
+    ): ByteArray {
         return withContext(Dispatchers.IO) {
             try {
                 val metaFd = FdUtils.getNativeFd(pfd)
-                val metadata = TagLib.getFrontCover(metaFd)
+                val metadata = TagLib.getPicture(
+                    fd = metaFd,
+                    pictureType = pictureType,
+                    fallbackPictureTypes = fallbackPictureTypes,
+                    fallbackToAny = fallbackToAny
+                )
                 val pic = metadata?.data
                 return@withContext pic ?: byteArrayOf()
             } catch (e: Exception) {

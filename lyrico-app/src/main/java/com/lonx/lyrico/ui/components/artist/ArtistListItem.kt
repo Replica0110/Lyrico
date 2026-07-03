@@ -21,8 +21,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.ArtistEntity
+import com.lonx.lyrico.ui.components.CoverCandidate
 import com.lonx.lyrico.ui.components.cover.CoverImage
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -33,6 +35,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun ArtistListItem(
     artist: ArtistEntity,
     modifier: Modifier = Modifier,
+    coverCandidates: List<CoverCandidate> = emptyList(),
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
@@ -59,7 +62,14 @@ fun ArtistListItem(
                 uri = artist.coverSongUri,
                 lastModified = artist.coverSongLastModified,
                 modifier = Modifier.size(48.dp),
-                shape = CircleShape
+                shape = CircleShape,
+                pictureType = AudioPictureType.Artist,
+                fallbackPictureTypes = listOf(
+                    AudioPictureType.LeadArtist,
+                    AudioPictureType.Band
+                ),
+                fallbackToAny = true,
+                candidates = coverCandidates
             )
 
 

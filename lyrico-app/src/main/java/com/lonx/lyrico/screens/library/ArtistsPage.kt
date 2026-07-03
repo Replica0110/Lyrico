@@ -23,9 +23,11 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.core.net.toUri
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ArtistSortBy
 import com.lonx.lyrico.data.model.ArtistSortInfo
+import com.lonx.lyrico.ui.components.CoverCandidate
 import com.lonx.lyrico.ui.components.artist.ArtistListItem
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.rememberAlphabetSideBarScrollController
@@ -75,6 +77,7 @@ fun ArtistsPage(
         mutableIntStateOf(1)
     }
     val artists by viewModel.artists.collectAsStateWithLifecycle()
+    val artistCoverCandidates by viewModel.artistCoverCandidates.collectAsStateWithLifecycle()
     val sortInfo by viewModel.sortInfo.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val gridState = rememberLazyGridState()
@@ -215,6 +218,14 @@ fun ArtistsPage(
                                     ) { artist ->
                                         ArtistListItem(
                                             artist = artist,
+                                            coverCandidates = artistCoverCandidates[artist.id]
+                                                .orEmpty()
+                                                .map { candidate ->
+                                                    CoverCandidate(
+                                                        uri = candidate.uri.toUri(),
+                                                        lastUpdate = candidate.lastModified
+                                                    )
+                                                },
                                             onClick = {
                                                 navigator.navigate(ArtistDetailDestination(artistId = artist.id))
                                             }

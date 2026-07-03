@@ -33,6 +33,8 @@ class LibraryIndexRepositoryImpl(
         return indexDao.observeArtistById(artistId)
     }
 
+    override fun observeArtistCoverCandidates() = indexDao.observeArtistCoverCandidates()
+
     override fun observeSongsByArtistId(artistId: Long): Flow<List<SongEntity>> {
         return indexDao.observeSongsByArtistId(artistId)
     }

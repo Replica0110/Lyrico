@@ -11,6 +11,7 @@ import com.lonx.lyrico.utils.LibraryScanManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -42,6 +43,15 @@ class ArtistLibraryViewModel(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()
+        )
+
+    val artistCoverCandidates = libraryIndexRepository
+        .observeArtistCoverCandidates()
+        .map { candidates -> candidates.groupBy { it.artistId } }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyMap()
         )
 
     fun onSortChange(sortInfo: ArtistSortInfo) {

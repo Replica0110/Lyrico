@@ -1,6 +1,8 @@
 package com.lonx.lyrico.data.song.tag
 
 import android.net.Uri
+import com.lonx.audiotag.model.AudioPicture
+import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.CustomTagField
 
@@ -77,12 +79,24 @@ object AudioTagMutationFactory {
         val picUrl = picUrl
         if (picUrl != null) {
             val normalizedPicUrl = picUrl.trim()
+            val basePictures = pictures.asOverwriteBase(mode)
             return if (normalizedPicUrl.isEmpty()) {
-                PictureUpdate.RemoveFrontCover
+                PictureUpdate.RemovePicture(
+                    type = AudioPictureType.FrontCover,
+                    basePictures = basePictures
+                )
             } else if (normalizedPicUrl.startsWith("http")) {
-                PictureUpdate.ReplaceFrontCover(PictureSource.UrlSource(normalizedPicUrl))
+                PictureUpdate.ReplacePicture(
+                    type = AudioPictureType.FrontCover,
+                    source = PictureSource.UrlSource(normalizedPicUrl),
+                    basePictures = basePictures
+                )
             } else {
-                PictureUpdate.ReplaceFrontCover(PictureSource.UriSource(Uri.parse(normalizedPicUrl)))
+                PictureUpdate.ReplacePicture(
+                    type = AudioPictureType.FrontCover,
+                    source = PictureSource.UriSource(Uri.parse(normalizedPicUrl)),
+                    basePictures = basePictures
+                )
             }
         }
 
@@ -91,5 +105,11 @@ object AudioTagMutationFactory {
         } else {
             PictureUpdate.Unchanged
         }
+    }
+
+    private fun List<AudioPicture>.asOverwriteBase(
+        mode: AudioTagMutationMode
+    ): List<AudioPicture>? {
+        return takeIf { mode == AudioTagMutationMode.Overwrite && it.isNotEmpty() }
     }
 }

@@ -7,6 +7,16 @@ fun List<AudioPicture>.frontCoverOrFallback(): AudioPicture? {
         ?: firstOrNull()
 }
 
+fun List<AudioPicture>.pictureOfType(type: AudioPictureType): AudioPicture? {
+    return firstOrNull { it.type == type }
+}
+
+fun List<AudioPicture>.artistPictureOrFallback(): AudioPicture? {
+    return pictureOfType(AudioPictureType.Artist)
+        ?: pictureOfType(AudioPictureType.LeadArtist)
+        ?: pictureOfType(AudioPictureType.Band)
+}
+
 fun List<AudioPicture>.replacePicture(
     picture: AudioPicture,
     type: AudioPictureType = AudioPictureType.FrontCover

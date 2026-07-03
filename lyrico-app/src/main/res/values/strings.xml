@@ -488,6 +488,10 @@
     <string name="label_change_cover">Change Cover</string>
     <string name="label_remove_cover">Remove Cover</string>
     <string name="label_save_cover">Save Cover</string>
+    <string name="label_artist_image">Artist Image</string>
+    <string name="label_change_artist_image">Change Artist Image</string>
+    <string name="label_remove_artist_image">Remove Artist Image</string>
+    <string name="edit_artist_image">Tap to edit artist image</string>
     <string name="msg_cover_saved_to_gallery">Cover saved to gallery</string>
     <string name="msg_cover_save_failed">Failed to save cover</string>
     <string name="chinese_conversion_mode_none">None</string>

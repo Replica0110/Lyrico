@@ -1983,20 +1983,6 @@ private fun CoverSection(
                                     )
                                 }
 
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize(),
-                                    contentAlignment = Alignment.BottomCenter
-                                ) {
-                                    Text(
-                                        text = item.editLabel,
-                                        style = MiuixTheme.textStyles.footnote1,
-                                        color = Color.White.copy(alpha = 0.9f),
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.padding(bottom = 8.dp)
-                                    )
-                                }
-
                                 if (page == currentPage) {
                                     imageSize?.let {
                                         Box(
@@ -2017,6 +2003,24 @@ private fun CoverSection(
                                             )
                                         }
                                     }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(8.dp)
+                                        .background(
+                                            color = Color.Black.copy(alpha = 0.6f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = item.editLabel,
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
 
                                 androidx.compose.animation.AnimatedVisibility(

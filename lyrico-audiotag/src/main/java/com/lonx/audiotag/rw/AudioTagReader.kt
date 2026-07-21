@@ -91,7 +91,7 @@ object AudioTagReader {
 
                 )
 
-
+                val ttmlLyrics = firstOf("TTML LYRICS")
 
                 val albumArtist = joinedOf(
                     multiValueSeparator,
@@ -198,6 +198,7 @@ object AudioTagReader {
                     lyricist = lyricist,
                     comment = comment,
                     lyrics = lyrics,
+                    ttmlLyrics = ttmlLyrics,
                     copyright = copyright,
                     rating = ratingStar,
                     replayGainTrackGain = joinedOf(multiValueSeparator, "REPLAYGAIN_TRACK_GAIN"),

@@ -22,6 +22,7 @@ data class AudioTagData(
     val lyricist: String? = null,
     val comment: String? = null,
     val lyrics: String? = null,
+    val ttmlLyrics: String? = null,
     val copyright: String? = null,
     val rating: Int? = null,
     val replayGainTrackGain: String? = null,

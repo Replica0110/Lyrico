@@ -14,7 +14,7 @@ object AudioTagKeys {
         "COMPOSER", "TCOM", "©WRT",
         "COMMENT", "COMM", "DESCRIPTION",
         "LYRICIST", "TEXT", "WRITER", "LYRICS BY",
-        "LYRICS", "UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG",
+        "LYRICS", "UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG", "TTML LYRICS",
         "COPYRIGHT", "TCOP", "CPRO", "©CPY",
         "RATING", "POPM", "RATE",
         "REPLAYGAIN_TRACK_GAIN", "REPLAYGAIN_TRACK_PEAK",

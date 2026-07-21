@@ -80,7 +80,7 @@ class PluginFieldPostProcessor(
     private fun inferValueType(key: String, field: PluginMetadataField?): PluginFieldValueType {
         return when (key) {
             "artist", "album_artist", "composer", "lyricist" -> PluginFieldValueType.PERSON_LIST
-            "lyrics", "lyric" -> PluginFieldValueType.LYRICS
+            "lyrics", "lyric", "ttml_lyrics" -> PluginFieldValueType.LYRICS
             "cover_url", "pic_url", "image_url" -> PluginFieldValueType.IMAGE_URL
             "track_number", "disc_number", "duration", "rating" -> PluginFieldValueType.NUMBER
             "date", "year" -> PluginFieldValueType.DATE

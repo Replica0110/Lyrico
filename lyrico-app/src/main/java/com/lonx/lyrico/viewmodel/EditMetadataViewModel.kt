@@ -396,7 +396,10 @@ class EditMetadataViewModel(
                 fields = processedFields,
                 policy = applyPolicy
             )
-            if (!result.lyrics.isNullOrBlank()) {
+            if (
+                !processedFields[StandardPluginField.LYRICS.key].isNullOrBlank() ||
+                !processedFields[StandardPluginField.TTML_LYRICS.key].isNullOrBlank()
+            ) {
                 lyricsFormatConversionSession = null
             }
             val nextCoverUri = if (applyPolicy.modeOf(MetadataFieldTarget.COVER) != MetadataWriteMode.DISABLED) {
@@ -961,6 +964,7 @@ class EditMetadataViewModel(
                 base.replayGainReferenceLoudness
             },
             lyrics = if (visible("lyrics.lyrics")) lyrics else base.lyrics,
+            ttmlLyrics = if (visible("lyrics.ttml_lyrics")) ttmlLyrics else base.ttmlLyrics,
             pictures = if (visible("cover.picture")) pictures else base.pictures,
             picUrl = if (visible("cover.picture")) picUrl else base.picUrl,
             rating = if (visible("cover.rating")) rating else base.rating,

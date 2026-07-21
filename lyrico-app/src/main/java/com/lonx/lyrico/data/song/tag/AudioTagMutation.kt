@@ -31,6 +31,7 @@ enum class AudioTagFieldKey {
     Lyricist,
     Comment,
     Lyrics,
+    TtmlLyrics,
     Copyright,
     Rating,
     ReplayGainTrackGain,

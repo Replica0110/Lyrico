@@ -338,6 +338,7 @@
     <string name="label_lyricist">Lyricist</string>
     <string name="label_comment">Comment</string>
     <string name="label_lyrics">Lyrics</string>
+    <string name="label_ttml_lyrics">TTML Lyrics</string>
     <string name="label_replay_gain">ReplayGain</string>
     <string name="label_replay_gain_summary">Only QQ Music source supports matching this field</string>
     <string name="group_replay_gain">ReplayGain</string>
@@ -418,6 +419,8 @@
     <string name="only_translation_if_available">Download Translated Lyrics Only</string>
     <string name="only_translation_if_available_hint">Downloads only translated lyrics when available. \nRequires translation download to be enabled.</string>
     <string name="remove_empty_lines">Remove Empty Lines</string>
+    <string name="prefer_ttml_lyrics_tag">Separate TTML Tag</string>
+    <string name="prefer_ttml_lyrics_tag_summary">Write TTML to TTML LYRICS tag. Other formats still use LYRICS.</string>
     <string name="remove_empty_lines_hint">Remove blank lines from lyrics and other multiline text fields.</string>
 
     <string name="permission_denied_cannot_save">Permission denied. Unable to save changes.</string>

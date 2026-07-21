@@ -72,6 +72,7 @@ import com.lonx.lyrico.data.model.lyrics.visibleLyricLineTracks
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.StandardPluginField
 import com.lonx.lyrico.data.model.search.LyricsSearchResult
+import com.lonx.lyrico.data.song.tag.LyricsTagRoutingPolicy
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.PillButton
@@ -129,6 +130,7 @@ fun SearchResultsScreen(
 
     val showLyricRenderConfigBottomSheet = remember { mutableStateOf(false) }
     val lyricConfig by viewModel.lyricConfigFlow.collectAsStateWithLifecycle()
+    val preferTtmlLyricsTag by viewModel.preferTtmlLyricsTagFlow.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     var pendingApplySong by remember { mutableStateOf<SongSearchResult?>(null) }
@@ -369,6 +371,7 @@ fun SearchResultsScreen(
         song = pendingApplySong,
         lyricsState = uiState.lyricsState,
         showAllFields = uiState.showAllSearchResultFields,
+        preferTtmlLyricsTag = preferTtmlLyricsTag,
         onLoadLyrics = viewModel::loadLyrics,
         onOpenLyricsConfig = { showLyricRenderConfigBottomSheet.value = true },
         onDismissRequest = { showApplyBottomSheet = false },
@@ -376,21 +379,21 @@ fun SearchResultsScreen(
             pendingApplySong = null
             viewModel.clearLyrics()
         },
-        onApply = { songToApply, lyrics, targets ->
+        onApply = { songToApply, lyricsFields, targets ->
             showApplyBottomSheet = false
             resultNavigator.navigateBack(
                 LyricsSearchResult(
                     title = songToApply.title,
                     artist = songToApply.artist,
                     album = songToApply.album,
-                    lyrics = lyrics,
+                    lyrics = lyricsFields[StandardPluginField.LYRICS.key],
                     date = songToApply.date,
                     trackerNumber = songToApply.trackNumber,
                     picUrl = songToApply.picUrl,
                     pluginId = songToApply.pluginId,
                     pluginName = songToApply.pluginName,
                     applyTargets = targets,
-                    fields = songToApply.fields
+                    fields = songToApply.fields + lyricsFields
                 )
             )
         }
@@ -732,6 +735,11 @@ private fun SearchResultBadge(
     }
 }
 
+private val LYRICS_FIELD_TARGETS = setOf(
+    MetadataFieldTarget.LYRICS,
+    MetadataFieldTarget.TTML_LYRICS
+)
+
 private data class SearchResultApplyOption(
     val target: MetadataFieldTarget,
     val value: String,
@@ -745,11 +753,16 @@ private fun SearchResultApplyBottomSheet(
     song: SongSearchResult?,
     lyricsState: LyricsUiState,
     showAllFields: Boolean,
+    preferTtmlLyricsTag: Boolean,
     onLoadLyrics: (SongSearchResult) -> Unit,
     onOpenLyricsConfig: () -> Unit,
     onDismissRequest: () -> Unit,
     onDismissFinished: () -> Unit,
-    onApply: (song: SongSearchResult, lyrics: String?, targets: Set<MetadataFieldTarget>) -> Unit
+    onApply: (
+        song: SongSearchResult,
+        lyricsFields: Map<String, String>,
+        targets: Set<MetadataFieldTarget>
+    ) -> Unit
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -806,6 +819,14 @@ private fun SearchResultApplyBottomSheet(
 
         else -> lyricsEmptyText
     }
+    val lyricsTarget = LyricsTagRoutingPolicy.preferredTarget(
+        lyrics = lyricsText,
+        preferTtmlLyricsTag = preferTtmlLyricsTag
+    )
+    val lyricsField = when (lyricsTarget) {
+        MetadataFieldTarget.TTML_LYRICS -> StandardPluginField.TTML_LYRICS
+        else -> StandardPluginField.LYRICS
+    }
 
     val options = remember(
         song,
@@ -815,15 +836,15 @@ private fun SearchResultApplyBottomSheet(
         lyricsStatusText,
         imageSize,
         showAllFields,
-        emptyFieldText
+        emptyFieldText,
+        lyricsTarget
     ) {
         val targetSong = song ?: return@remember emptyList()
         val fields = targetSong.normalizedFields().toMutableMap()
-        lyricsText?.let { fields["lyrics"] = it }
 
         val fieldOptions = StandardPluginField.entries
             .asSequence()
-            .filter { it.target != MetadataFieldTarget.LYRICS }
+            .filter { it.target !in LYRICS_FIELD_TARGETS }
             .sortedBy { field -> if (field.target == MetadataFieldTarget.COVER) 0 else 1 }
             .mapNotNull { field ->
                 val value = fields[field.key].orEmpty()
@@ -845,26 +866,10 @@ private fun SearchResultApplyBottomSheet(
             .distinctBy { it.target }
             .toMutableList()
 
-        if (lyricsText != null) {
-            fieldOptions += SearchResultApplyOption(
-                target = MetadataFieldTarget.LYRICS,
-                value = lyricsText
-            )
-        } else if (
-            showAllFields ||
-            lyricsState.isLoading ||
-            lyricsState.error != null ||
-            lyricsState.song != null
-        ) {
-            fieldOptions += SearchResultApplyOption(
-                target = MetadataFieldTarget.LYRICS,
-                value = if (showAllFields && lyricsState.song == null) {
-                    emptyFieldText
-                } else {
-                    lyricsStatusText
-                }
-            )
-        }
+        fieldOptions += SearchResultApplyOption(
+            target = lyricsTarget,
+            value = lyricsText ?: lyricsStatusText
+        )
 
         fieldOptions.sortedBy { if (it.target == MetadataFieldTarget.COVER) 0 else 1 }
     }
@@ -872,17 +877,39 @@ private fun SearchResultApplyBottomSheet(
     LaunchedEffect(options) {
         val targets = options.filter { it.enabled }.map { it.target }.toSet()
         val newTargets = targets - knownTargets
-        selectedTargets = when {
+        val previousLyricsTarget = knownTargets.firstOrNull { it in LYRICS_FIELD_TARGETS }
+        val nextLyricsTarget = targets.firstOrNull { it in LYRICS_FIELD_TARGETS }
+        val previousLyricsSelected = previousLyricsTarget != null &&
+                previousLyricsTarget in selectedTargets
+        var nextSelectedTargets = when {
             knownTargets.isEmpty() -> targets
             else -> (selectedTargets intersect targets) + newTargets
         }
+        if (
+            previousLyricsTarget != null &&
+            nextLyricsTarget != null &&
+            previousLyricsTarget != nextLyricsTarget
+        ) {
+            nextSelectedTargets = if (previousLyricsSelected) {
+                nextSelectedTargets + nextLyricsTarget
+            } else {
+                nextSelectedTargets - nextLyricsTarget
+            }
+        }
+        selectedTargets = nextSelectedTargets
         knownTargets = targets
     }
 
     val enabledTargets = options.filter { it.enabled }.map { it.target }.toSet()
     val allSelected = enabledTargets.isNotEmpty() && selectedTargets.containsAll(enabledTargets)
-    val dataOptions = options.filter { it.target != MetadataFieldTarget.LYRICS }
-    val lyricsOption = options.firstOrNull { it.target == MetadataFieldTarget.LYRICS }
+    val dataOptions = options.filter { it.target !in LYRICS_FIELD_TARGETS }
+    val lyricsOptions = options.filter { it.target in LYRICS_FIELD_TARGETS }
+
+    fun selectedLyricsFields(targets: Set<MetadataFieldTarget>): Map<String, String> {
+        val lyrics = lyricsText?.takeIf { it.isNotBlank() && lyricsTarget in targets }
+            ?: return emptyMap()
+        return mapOf(lyricsField.key to lyrics)
+    }
 
     ActionBottomSheet(
         show = show,
@@ -924,14 +951,14 @@ private fun SearchResultApplyBottomSheet(
                     },
                     onClick = {
                         song?.let {
-                            selectedTargets = setOf(MetadataFieldTarget.LYRICS)
+                            selectedTargets = setOf(lyricsTarget)
                             if (lyricsText.isNullOrBlank()) {
                                 onLoadLyrics(it)
                             } else {
                                 onApply(
                                     it,
-                                    lyricsText,
-                                    setOf(MetadataFieldTarget.LYRICS)
+                                    mapOf(lyricsField.key to lyricsText),
+                                    setOf(lyricsTarget)
                                 )
                             }
                         }
@@ -944,7 +971,7 @@ private fun SearchResultApplyBottomSheet(
                         song?.let {
                             onApply(
                                 it,
-                                lyricsText?.takeIf { MetadataFieldTarget.LYRICS in selectedTargets },
+                                selectedLyricsFields(selectedTargets),
                                 selectedTargets
                             )
                         }
@@ -977,21 +1004,14 @@ private fun SearchResultApplyBottomSheet(
                         )
 
                         1 -> SearchResultApplyLyricsPage(
-                            option = lyricsOption,
-                            selected = MetadataFieldTarget.LYRICS in selectedTargets,
+                            options = lyricsOptions,
+                            activeTarget = lyricsTarget,
+                            selectedTargets = selectedTargets,
                             lyricsText = lyricsText,
                             lyricsState = lyricsState,
                             loadingText = lyricsLoadingText,
                             failedText = lyricsLoadFailedText,
-                            onSelectedChange = { selected ->
-                                if (lyricsOption?.enabled == true) {
-                                    selectedTargets = if (selected) {
-                                        selectedTargets + MetadataFieldTarget.LYRICS
-                                    } else {
-                                        selectedTargets - MetadataFieldTarget.LYRICS
-                                    }
-                                }
-                            },
+                            onSelectedTargetsChange = { selectedTargets = it },
                             onOpenLyricsConfig = onOpenLyricsConfig,
                             onCopyLyrics = {
                                 scope.launch {
@@ -1093,55 +1113,65 @@ private fun SearchResultApplyDataPage(
 
 @Composable
 private fun SearchResultApplyLyricsPage(
-    option: SearchResultApplyOption?,
-    selected: Boolean,
+    options: List<SearchResultApplyOption>,
+    activeTarget: MetadataFieldTarget,
+    selectedTargets: Set<MetadataFieldTarget>,
     lyricsText: String?,
     lyricsState: LyricsUiState,
     loadingText: String,
     failedText: String,
-    onSelectedChange: (Boolean) -> Unit,
+    onSelectedTargetsChange: (Set<MetadataFieldTarget>) -> Unit,
     onOpenLyricsConfig: () -> Unit,
     onCopyLyrics: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.label_lyrics),
-                    style = MiuixTheme.textStyles.main,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MiuixTheme.colorScheme.onSurfaceContainer
-                )
-                Text(
-                    text = option?.value ?: stringResource(R.string.lyrics_empty),
-                    style = MiuixTheme.textStyles.footnote2,
-                    color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            IconButton(onClick = onOpenLyricsConfig) {
-                Icon(
-                    imageVector = MiuixIcons.Settings,
-                    contentDescription = null
-                )
-            }
-            Checkbox(
-                state = if (selected && option?.enabled == true) ToggleableState.On else ToggleableState.Off,
-                onClick = {
-                    if (option?.enabled == true) {
-                        onSelectedChange(!selected)
+        options.forEach { option ->
+            val selected = option.target in selectedTargets
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(option.target.labelRes),
+                        style = MiuixTheme.textStyles.main,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MiuixTheme.colorScheme.onSurfaceContainer
+                    )
+                    Text(
+                        text = option.value,
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (option.target == activeTarget) {
+                    IconButton(onClick = onOpenLyricsConfig) {
+                        Icon(
+                            imageVector = MiuixIcons.Settings,
+                            contentDescription = null
+                        )
                     }
                 }
-            )
+                Checkbox(
+                    state = if (selected) ToggleableState.On else ToggleableState.Off,
+                    onClick = {
+                        onSelectedTargetsChange(
+                            if (selected) {
+                                selectedTargets - option.target
+                            } else {
+                                selectedTargets + option.target
+                            }
+                        )
+                    }
+                )
+            }
         }
 
         Box(
@@ -1298,7 +1328,7 @@ private fun SearchResultApplyOptionItem(
                 text = option.value,
                 style = MiuixTheme.textStyles.footnote2,
                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
-                maxLines = if (option.target == MetadataFieldTarget.LYRICS) 4 else 2,
+                maxLines = if (option.target in LYRICS_FIELD_TARGETS) 4 else 2,
                 overflow = TextOverflow.Ellipsis
             )
         }

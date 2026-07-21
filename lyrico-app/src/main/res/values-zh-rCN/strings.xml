@@ -343,6 +343,7 @@
     <string name="label_lyricist">作词</string>
     <string name="label_comment">注释</string>
     <string name="label_lyrics">歌词</string>
+    <string name="label_ttml_lyrics">TTML 歌词</string>
     <string name="label_replay_gain">回放增益</string>
     <string name="label_replay_gain_summary">仅QQ源支持匹配该字段</string>
     <string name="group_replay_gain">ReplayGain</string>
@@ -390,6 +391,8 @@
     <string name="only_translation_if_available">仅下载翻译歌词</string>
     <string name="only_translation_if_available_hint">若存在翻译，仅下载翻译歌词（需启用翻译下载）</string>
     <string name="remove_empty_lines">移除空行</string>
+    <string name="prefer_ttml_lyrics_tag">TTML 独立标签</string>
+    <string name="prefer_ttml_lyrics_tag_summary">TTML 写入 TTML LYRICS 标签，其他格式仍写入 LYRICS</string>
     <string name="remove_empty_lines_hint">删除歌词和其他多行文本字段中的空行</string>
 
     <string name="permission_denied_cannot_save">权限已拒绝，无法保存更改</string>

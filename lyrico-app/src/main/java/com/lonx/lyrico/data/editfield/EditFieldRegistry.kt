@@ -208,11 +208,19 @@ object EditFieldRegistry {
             scope = EditFieldScope.Both,
         ),
         EditFieldDefinition(
+            code = "lyrics.ttml_lyrics",
+            groupCode = GROUP_LYRICS,
+            titleRes = R.string.label_ttml_lyrics,
+            defaultVisible = true,
+            order = 20,
+            scope = EditFieldScope.SingleEdit,
+        ),
+        EditFieldDefinition(
             code = "lyrics.lyrics_offset",
             groupCode = GROUP_LYRICS,
             titleRes = R.string.label_lyrics_offset,
             defaultVisible = true,
-            order = 20,
+            order = 30,
             scope = EditFieldScope.BatchEdit,
         ),
 

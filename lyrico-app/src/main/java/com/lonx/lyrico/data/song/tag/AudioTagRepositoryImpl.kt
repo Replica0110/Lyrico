@@ -7,10 +7,12 @@ import androidx.core.net.toUri
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
-import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.song.file.AudioFileAccess
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -18,7 +20,8 @@ class AudioTagRepositoryImpl(
     private val context: Context,
     private val fileAccess: AudioFileAccess,
     private val mutationResolver: AudioTagMutationResolver,
-    private val appLogRepository: AppLogRepository
+    private val appLogRepository: AppLogRepository,
+    private val settingsRepository: SettingsRepository
 ) : AudioTagRepository {
 
     override suspend fun read(
@@ -62,7 +65,11 @@ class AudioTagRepositoryImpl(
     private suspend fun write(uri: String, mutation: AudioTagMutation): AudioTagWriteResult {
         return try {
             val current = readStrict(uri)
-            val resolved = mutationResolver.resolve(uri, current, mutation)
+            val routedMutation = LyricsTagRoutingPolicy.route(
+                mutation = mutation,
+                preferTtmlLyricsTag = settingsRepository.preferTtmlLyricsTag.first()
+            )
+            val resolved = mutationResolver.resolve(uri, current, routedMutation)
 
             val writableDescriptor = fileAccess.openWritableDescriptor(uri)
                 ?: return fileAccess.createWritePermissionIntentSender(uri)?.let { intentSender ->

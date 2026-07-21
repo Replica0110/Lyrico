@@ -229,7 +229,7 @@ val appModule = module {
     single { PictureMutationResolver(get(), get()) }
     single { TagMapBuilder() }
     single { AudioTagMutationResolver(get(), get()) }
-    single<AudioTagRepository> { AudioTagRepositoryImpl(androidContext(), get(), get(), get()) }
+    single<AudioTagRepository> { AudioTagRepositoryImpl(androidContext(), get(), get(), get(), get()) }
     single<SongFileRepository> { SongFileRepositoryImpl(androidContext(), get(), get()) }
     single { SortKeyUpdater() }
     single { SongMetadataMapper(get()) }

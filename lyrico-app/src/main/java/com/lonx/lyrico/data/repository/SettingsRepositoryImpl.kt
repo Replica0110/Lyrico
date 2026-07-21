@@ -79,6 +79,7 @@ object SettingsDefaults {
     const val IGNORE_SHORT_AUDIO = true
     const val ONLY_TRANSLATION_IF_AVAILABLE = false
     const val REMOVE_EMPTY_LINES = true
+    const val PREFER_TTML_LYRICS_TAG = false
     val LYRICS_TAG_LINE_KEYWORDS = LyricsProcessingOptions.DefaultTagLineKeywords
     const val LIMIT_LYRICS_INPUT_LINES = false
     val LOG_RETENTION_OPTION = LogRetentionOption.THIRTY_DAYS
@@ -102,6 +103,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     private object PreferencesKeys {
         val RENAME_FORMAT = stringPreferencesKey("rename_format")
         val REMOVE_EMPTY_LINES = booleanPreferencesKey("remove_empty_lines")
+        val PREFER_TTML_LYRICS_TAG = booleanPreferencesKey("prefer_ttml_lyrics_tag")
         val LYRICS_TAG_LINE_KEYWORDS = stringPreferencesKey("lyrics_tag_line_keywords")
         val LIMIT_LYRICS_INPUT_LINES = booleanPreferencesKey("limit_lyrics_input_lines")
         val LYRIC_FORMAT = stringPreferencesKey("lyric_display_mode")
@@ -329,6 +331,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override val removeEmptyLines: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.REMOVE_EMPTY_LINES] ?: SettingsDefaults.REMOVE_EMPTY_LINES
+        }
+
+    override val preferTtmlLyricsTag: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.PREFER_TTML_LYRICS_TAG]
+                ?: SettingsDefaults.PREFER_TTML_LYRICS_TAG
         }
     override val lyricsTagLineKeywords: Flow<List<String>>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -584,6 +592,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
+    override suspend fun savePreferTtmlLyricsTag(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.PREFER_TTML_LYRICS_TAG] = enabled
+        }
+    }
+
     override suspend fun saveLyricsTagLineKeywords(keywords: List<String>) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.LYRICS_TAG_LINE_KEYWORDS] =
@@ -707,7 +721,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
             onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE]
                 ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE,
-
+            preferTtmlLyricsTag = prefs[PreferencesKeys.PREFER_TTML_LYRICS_TAG]
+                ?: SettingsDefaults.PREFER_TTML_LYRICS_TAG,
 
             limitLyricsInputLines = prefs[PreferencesKeys.LIMIT_LYRICS_INPUT_LINES]
                 ?: SettingsDefaults.LIMIT_LYRICS_INPUT_LINES,
@@ -793,6 +808,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.keyThemeColor?.let { prefs[PreferencesKeys.KEY_THEME_COLOR] = it }
                 backup.onlyTranslationIfAvailable?.let {
                     prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] = it
+                }
+                backup.preferTtmlLyricsTag?.let {
+                    prefs[PreferencesKeys.PREFER_TTML_LYRICS_TAG] = it
                 }
                 backup.limitLyricsInputLines?.let {
                     prefs[PreferencesKeys.LIMIT_LYRICS_INPUT_LINES] = it

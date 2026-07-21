@@ -80,6 +80,7 @@ private fun AudioTagData.isTargetBlank(target: MetadataFieldTarget): Boolean {
         MetadataFieldTarget.LYRICIST -> lyricist.isNullOrBlank()
         MetadataFieldTarget.COMMENT -> comment.isNullOrBlank()
         MetadataFieldTarget.LYRICS -> lyrics.isNullOrBlank()
+        MetadataFieldTarget.TTML_LYRICS -> ttmlLyrics.isNullOrBlank()
         MetadataFieldTarget.COVER -> picUrl.isNullOrBlank() && pictures.isEmpty()
         MetadataFieldTarget.LANGUAGE -> language.isNullOrBlank()
         MetadataFieldTarget.COPYRIGHT -> copyright.isNullOrBlank()
@@ -110,6 +111,7 @@ private fun AudioTagData.setTarget(
         MetadataFieldTarget.LYRICIST -> copy(lyricist = value)
         MetadataFieldTarget.COMMENT -> copy(comment = value)
         MetadataFieldTarget.LYRICS -> copy(lyrics = value)
+        MetadataFieldTarget.TTML_LYRICS -> copy(ttmlLyrics = value)
         MetadataFieldTarget.COVER -> copy(picUrl = value)
         MetadataFieldTarget.LANGUAGE -> copy(language = value)
         MetadataFieldTarget.COPYRIGHT -> copy(copyright = value)
@@ -138,6 +140,7 @@ private fun AudioTagData.diffToPatch(applied: AudioTagData): AudioTagData {
         lyricist = applied.lyricist.takeIf { it != lyricist },
         comment = applied.comment.takeIf { it != comment },
         lyrics = applied.lyrics.takeIf { it != lyrics },
+        ttmlLyrics = applied.ttmlLyrics.takeIf { it != ttmlLyrics },
         copyright = applied.copyright.takeIf { it != copyright },
         rating = applied.rating.takeIf { it != rating },
         replayGainTrackGain = applied.replayGainTrackGain.takeIf { it != replayGainTrackGain },

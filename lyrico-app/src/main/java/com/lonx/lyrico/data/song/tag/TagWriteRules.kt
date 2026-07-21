@@ -26,6 +26,7 @@ object AudioTagWriteRules {
             "LYRICS",
             listOf("UNSYNCED LYRICS", "USLT", "LYRIC", "LYRICSENG")
         ),
+        AudioTagFieldKey.TtmlLyrics to TagWriteRule("TTML LYRICS"),
         AudioTagFieldKey.Copyright to TagWriteRule("COPYRIGHT", listOf("TCOP", "CPRO", "©cpy")),
         AudioTagFieldKey.ReplayGainTrackGain to TagWriteRule("REPLAYGAIN_TRACK_GAIN"),
         AudioTagFieldKey.ReplayGainTrackPeak to TagWriteRule("REPLAYGAIN_TRACK_PEAK"),

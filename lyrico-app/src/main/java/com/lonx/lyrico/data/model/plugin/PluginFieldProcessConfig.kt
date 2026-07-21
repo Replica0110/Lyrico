@@ -118,7 +118,8 @@ fun MetadataFieldTarget.valueType(): PluginFieldValueType {
         MetadataFieldTarget.ALBUM_ARTIST,
         MetadataFieldTarget.COMPOSER,
         MetadataFieldTarget.LYRICIST -> PluginFieldValueType.PERSON_LIST
-        MetadataFieldTarget.LYRICS -> PluginFieldValueType.LYRICS
+        MetadataFieldTarget.LYRICS,
+        MetadataFieldTarget.TTML_LYRICS -> PluginFieldValueType.LYRICS
         MetadataFieldTarget.TRACK_NUMBER,
         MetadataFieldTarget.DISC_NUMBER,
         MetadataFieldTarget.RATING,

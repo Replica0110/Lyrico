@@ -458,6 +458,11 @@ fun EditMetadataScreen(
         onValueChange = { viewModel.updateTag { copy(lyrics = it) } }
     )
 
+    val ttmlLyricsState = rememberMetadataTextFieldState(
+        value = editingTagData?.ttmlLyrics.orEmpty(),
+        onValueChange = { viewModel.updateTag { copy(ttmlLyrics = it) } }
+    )
+
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     Box(
         modifier = Modifier.fillMaxSize()
@@ -1092,6 +1097,25 @@ fun EditMetadataScreen(
                                                 )
                                             }
                                         }
+                                    },
+                                    isMultiline = true,
+                                    limitMultilineLines = limitLyricsInputLines
+                                )
+                            }
+
+                            if (visibleFieldCodes.contains("lyrics.ttml_lyrics")) {
+                                MetadataInputField(
+                                    label = stringResource(R.string.label_ttml_lyrics),
+                                    state = ttmlLyricsState,
+                                    isModified = !editingTagData?.ttmlLyrics.isEqualIgnoringBlank(
+                                        originalTagData?.ttmlLyrics
+                                    ),
+                                    onRevert = {
+                                        revertField(
+                                            fieldLabel = context.getString(R.string.label_ttml_lyrics),
+                                            currentValue = editingTagData?.ttmlLyrics ?: "",
+                                            originalValue = originalTagData?.ttmlLyrics ?: ""
+                                        ) { copy(ttmlLyrics = it) }
                                     },
                                     isMultiline = true,
                                     limitMultilineLines = limitLyricsInputLines

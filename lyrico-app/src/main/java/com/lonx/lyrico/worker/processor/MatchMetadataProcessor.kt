@@ -22,6 +22,7 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
+import com.lonx.lyrico.data.song.tag.LyricsTagRoutingPolicy
 import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -77,10 +78,12 @@ class MatchMetadataProcessor(
 
         val separator = config.separator
         val currentTag = audioTagRepository.read(song.uri)
+        val preferTtmlLyricsTag = settingsRepository.preferTtmlLyricsTag.first()
 
         val shouldWriteLyrics = when (plan.targetModes[MetadataFieldTarget.LYRICS]) {
             MetadataWriteMode.OVERWRITE -> true
-            MetadataWriteMode.SUPPLEMENT -> currentTag.lyrics.isNullOrBlank()
+            MetadataWriteMode.SUPPLEMENT -> currentTag.lyrics.isNullOrBlank() ||
+                    (preferTtmlLyricsTag && currentTag.ttmlLyrics.isNullOrBlank())
             MetadataWriteMode.DISABLED,
             null -> false
         }
@@ -321,7 +324,7 @@ class MatchMetadataProcessor(
         onProgress(0.75f)
 
         val sourceId = finalMatch.source?.id.orEmpty()
-        val candidateFields = fieldProcessor.processFields(
+        val processedCandidateFields = fieldProcessor.processFields(
             pluginId = sourceId,
             fields = finalMatch.result.normalizedFields() +
                     newLyrics?.takeIf { it.isNotBlank() }?.let { mapOf("lyrics" to it) }.orEmpty(),
@@ -329,11 +332,30 @@ class MatchMetadataProcessor(
             fieldDefinitions = emptyList(),
             writeRules = emptyList()
         )
+        val candidateLyrics = processedCandidateFields["lyrics"]
+        val lyricsTarget = LyricsTagRoutingPolicy.preferredTarget(
+            lyrics = candidateLyrics,
+            preferTtmlLyricsTag = preferTtmlLyricsTag
+        )
+        val candidateFields = if (
+            lyricsTarget == MetadataFieldTarget.TTML_LYRICS && !candidateLyrics.isNullOrBlank()
+        ) {
+            processedCandidateFields - "lyrics" + ("ttml_lyrics" to candidateLyrics)
+        } else {
+            processedCandidateFields
+        }
+        val effectiveTargetModes = plan.targetModes.toMutableMap().apply {
+            if (lyricsTarget == MetadataFieldTarget.TTML_LYRICS) {
+                remove(MetadataFieldTarget.LYRICS)?.let { mode ->
+                    put(MetadataFieldTarget.TTML_LYRICS, mode)
+                }
+            }
+        }
 
         val tagDataToWrite = SearchResultApplier.buildPatch(
             current = currentTag,
             fields = candidateFields,
-            policy = MetadataApplyPolicy(plan.targetModes)
+            policy = MetadataApplyPolicy(effectiveTargetModes)
         )
 
         if (tagDataToWrite.isEmpty()) {
@@ -424,6 +446,7 @@ class MatchMetadataProcessor(
                 composer == null &&
                 lyricist == null &&
                 lyrics == null &&
+                ttmlLyrics == null &&
                 picUrl == null &&
                 comment == null &&
                 replayGainTrackGain == null &&

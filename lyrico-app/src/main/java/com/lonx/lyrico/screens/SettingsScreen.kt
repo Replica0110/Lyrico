@@ -115,6 +115,7 @@ fun SettingsScreen(
     val translationEnabled = settingsUiState.translationEnabled
     val onlyTranslationIfAvailable = settingsUiState.onlyTranslationIfAvailable
     val removeEmptyLines = settingsUiState.removeEmptyLines
+    val preferTtmlLyricsTag = settingsUiState.preferTtmlLyricsTag
     val ignoreShortAudio = settingsUiState.ignoreShortAudio
     val folders = folderUiState.folders
     val totalFolders = folders.filter { it.addedBySaf }.size
@@ -469,6 +470,12 @@ fun SettingsScreen(
                         title = stringResource(R.string.lyric_line_order),
                         summary = lyricLineOrderSummary,
                         onClick = { showLyricLineOrderSheet.value = true }
+                    )
+                    SwitchPreference(
+                        title = stringResource(R.string.prefer_ttml_lyrics_tag),
+                        summary = stringResource(R.string.prefer_ttml_lyrics_tag_summary),
+                        checked = preferTtmlLyricsTag,
+                        onCheckedChange = settingsViewModel::setPreferTtmlLyricsTag
                     )
                 }
             }

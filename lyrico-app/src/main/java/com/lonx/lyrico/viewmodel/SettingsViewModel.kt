@@ -53,6 +53,7 @@ data class SettingsUiState(
     val keyColor: KeyColor = KeyColors[1],
     val onlyTranslationIfAvailable: Boolean = false,
     val removeEmptyLines: Boolean = true,
+    val preferTtmlLyricsTag: Boolean = false,
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
     val totalCacheSize: Long = 0L,
     val conversionMode: ConversionMode = ConversionMode.NONE,
@@ -82,7 +83,8 @@ class SettingsViewModel(
         val theme: com.lonx.lyrico.data.model.ThemeConfig,
         val ignoreShortAudio: Boolean,
         val lyricsTagLineKeywords: List<String>,
-        val metadataFieldRules: List<PluginMetadataFieldWriteRule>
+        val metadataFieldRules: List<PluginMetadataFieldWriteRule>,
+        val preferTtmlLyricsTag: Boolean
     )
 
     private val settingsTailState = combine(
@@ -97,9 +99,18 @@ class SettingsViewModel(
         settingsRepository.lyricRenderConfigFlow,
         settingsRepository.searchConfigFlow,
         settingsRepository.themeConfigFlow,
-        settingsTailState
-    ) { lyric, search, theme, tail ->
-        SettingsBaseState(lyric, search, theme, tail.first, tail.second, tail.third)
+        settingsTailState,
+        settingsRepository.preferTtmlLyricsTag
+    ) { lyric, search, theme, tail, preferTtmlLyricsTag ->
+        SettingsBaseState(
+            lyric = lyric,
+            search = search,
+            theme = theme,
+            ignoreShortAudio = tail.first,
+            lyricsTagLineKeywords = tail.second,
+            metadataFieldRules = tail.third,
+            preferTtmlLyricsTag = preferTtmlLyricsTag
+        )
     }
 
     private val baseUiState = combine(
@@ -125,6 +136,7 @@ class SettingsViewModel(
             onlyTranslationIfAvailable = base.lyric.onlyTranslationIfAvailable,
             totalCacheSize = cacheMap.values.sum(),
             removeEmptyLines = base.lyric.removeEmptyLines,
+            preferTtmlLyricsTag = base.preferTtmlLyricsTag,
             conversionMode = base.lyric.conversionMode,
             lyricsTagLineKeywords = base.lyricsTagLineKeywords,
             metadataFieldWriteRules = base.metadataFieldRules
@@ -269,6 +281,12 @@ class SettingsViewModel(
     fun setSearchSourceTabStyle(style: SearchSourceTabStyle) {
         viewModelScope.launch {
             settingsRepository.saveSearchSourceTabStyle(style)
+        }
+    }
+
+    fun setPreferTtmlLyricsTag(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.savePreferTtmlLyricsTag(enabled)
         }
     }
 

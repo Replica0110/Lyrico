@@ -99,6 +99,13 @@ class SearchViewModel(
                 SharingStarted.WhileSubscribed(5000),
                 null
             )
+    val preferTtmlLyricsTagFlow =
+        settingsRepository.preferTtmlLyricsTag
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5000),
+                false
+            )
     private val renderedLyricsFlow =
         combine(
             lyricsState,

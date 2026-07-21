@@ -26,6 +26,9 @@ object AudioTagMutationFactory {
             putString(AudioTagFieldKey.Lyricist, data.lyricist, patchMode)
             putString(AudioTagFieldKey.Comment, data.comment, patchMode)
             putString(AudioTagFieldKey.Lyrics, data.lyrics, patchMode)
+            // TTML LYRICS is an independent opt-in field. A missing value must not
+            // clear it during unrelated overwrite operations.
+            putString(AudioTagFieldKey.TtmlLyrics, data.ttmlLyrics, patchMode = true)
             putString(AudioTagFieldKey.Copyright, data.copyright, patchMode)
             putInt(AudioTagFieldKey.Rating, data.rating, patchMode)
             putString(AudioTagFieldKey.ReplayGainTrackGain, data.replayGainTrackGain, patchMode)

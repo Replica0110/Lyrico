@@ -382,7 +382,7 @@ After importing the ZIP into Lyrico, the system validates it as follows:
 
 1. Extract the ZIP to a temporary directory
 2. Find `com.musiclib.source/manifest.json`
-3. Validate `id` format, matching `apiVersion`, and legal `capabilities`
+3. Validate `id` format, API version compatibility, and legal `capabilities`
 4. Validate that `source.js` exists, uses `.js`, and has a valid size
 5. Validate that `lib/` exists
 6. Validate that `icon.png` exists and has a supported format

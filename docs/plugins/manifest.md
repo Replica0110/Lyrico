@@ -72,7 +72,9 @@
 
 `id` 必须是反向域名格式，例如 `com.example.music_source`。
 
-`apiVersion` 用于插件协议兼容检查。插件需要宿主能力时直接调用运行时对象；缺失能力会在运行时返回标准化错误。
+`apiVersion` 用于插件协议兼容检查。宿主 API 向下兼容：当前版本为 3 时，可以加载 `apiVersion` 为 1、2 或 3 的插件，但会拒绝声明更高版本的插件。
+
+`minHostApiVersion` 表示插件实际需要的最低宿主 API 版本。它必须大于等于 1 且不高于当前宿主版本；需要具体宿主能力时，插件仍可通过 `Platform.runtime.getInfo().supportedHostApis` 检查，缺失能力会在运行时返回标准化错误。
 
 `capabilities` 支持：
 

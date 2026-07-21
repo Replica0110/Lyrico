@@ -382,7 +382,7 @@ ZIP 包根层级即插件根目录（`com.musiclib.source/`），不要包含多
 
 1. 解压到临时目录
 2. 找到 `com.musiclib.source/manifest.json`
-3. 验证 `id` 格式、`apiVersion` 匹配和 `capabilities` 合法性
+3. 验证 `id` 格式、API 版本兼容性和 `capabilities` 合法性
 4. 验证 `source.js` 存在、`.js` 扩展名、大小合法
 5. 验证 `lib/` 目录存在
 6. 验证 `icon.png` 存在且格式合法

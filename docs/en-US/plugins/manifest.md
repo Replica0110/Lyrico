@@ -60,7 +60,9 @@ Fields used by older protocols to declare host APIs, returned fields, or write p
 
 `id` must use reverse-domain format, such as `com.example.music_source`.
 
-`apiVersion` is used for plugin protocol compatibility. Plugins call host capabilities at runtime through `Platform`; missing capabilities are returned as runtime errors.
+`apiVersion` is used for plugin protocol compatibility. Host APIs are backward compatible: a host at version 3 can load plugins whose `apiVersion` is 1, 2, or 3, while plugins declaring a newer version are rejected.
+
+`minHostApiVersion` declares the minimum host API version actually required by the plugin. It must be at least 1 and cannot exceed the current host version. Plugins can still inspect `Platform.runtime.getInfo().supportedHostApis` for individual capabilities; missing capabilities are returned as runtime errors.
 
 `capabilities` supports:
 

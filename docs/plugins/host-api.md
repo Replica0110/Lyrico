@@ -99,8 +99,8 @@ var ua = Platform.app.getUserAgent();  // "Lyrico/0.0.0"
 
 ```javascript
 var rt = Platform.runtime.getInfo();
-if (rt.pluginApiVersion !== 3) {
-  throw new Error("Unsupported API version");
+if (rt.hostApiVersion < 3) {
+  throw new Error("Host API 3 or later is required");
 }
 ```
 

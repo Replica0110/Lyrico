@@ -60,7 +60,7 @@ The Lyrico plugin system is a source-plugin framework based on the **QuickJS emb
 | Validation item | Rule |
 |-----------------|------|
 | ID format | Must match `^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$` reverse-domain format |
-| API version | Must exactly match host `PLUGIN_API_VERSION`, currently **3** |
+| API version | `apiVersion` must be in the host-supported range **1..3**; `minHostApiVersion` cannot exceed the current host API **3** |
 | Capabilities | If `capabilities` is declared, it must include `searchSongs` |
 | Entry file | Must exist, use `.js`, stay inside the plugin root, and be ≤ 1 MB |
 | Include directories | Directories in `includeDirs` must exist and stay inside the plugin root |

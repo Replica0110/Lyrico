@@ -51,6 +51,28 @@ class SongLibraryRepositoryImpl(
         }
     }
 
+    override suspend fun getSongsWithoutLyrics(): List<SongEntity> {
+        return withContext(Dispatchers.IO) {
+            songDao.getSongsWithoutLyrics()
+        }
+    }
+
+    override suspend fun getSongsForDedup(): List<SongEntity> {
+        return withContext(Dispatchers.IO) {
+            songDao.getSongsForDedup()
+        }
+    }
+
+    override suspend fun deleteSongsByIds(songIds: List<Long>) {
+        withContext(Dispatchers.IO) {
+            if (songIds.isNotEmpty()) {
+                database.withTransaction {
+                    songDao.deleteByIds(songIds)
+                }
+            }
+        }
+    }
+
     override suspend fun upsertSongs(songs: List<SongEntity>) {
         withContext(Dispatchers.IO) {
             if (songs.isNotEmpty()) {

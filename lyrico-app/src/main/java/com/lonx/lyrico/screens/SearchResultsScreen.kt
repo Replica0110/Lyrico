@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -86,7 +85,6 @@ import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.lonx.lyrico.utils.MusicMatchUtils
-import com.lonx.lyrico.utils.UiMessage
 import com.lonx.lyrico.viewmodel.LyricsUiState
 import com.lonx.lyrico.viewmodel.SearchSourceUiModel
 import com.lonx.lyrico.viewmodel.SearchViewModel
@@ -101,13 +99,11 @@ import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Checkbox
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Search
@@ -281,11 +277,17 @@ fun SearchResultsScreen(
                 modifier = Modifier.padding(bottom = 10.dp)
             )
 
-            val allSourceResults = rememberOptimizedAllSourceResults(
-                keyword = uiState.searchKeyword,
-                sources = uiState.availableSources,
-                searchResultPages = uiState.searchResultPages
-            )
+            val allSourceResults = remember(
+                uiState.searchKeyword,
+                uiState.availableSources,
+                uiState.searchResults
+            ) {
+                optimizedAllSourceResults(
+                    keyword = uiState.searchKeyword,
+                    sources = uiState.availableSources,
+                    searchResults = uiState.searchResults
+                )
+            }
 
             /**
              * Pager
@@ -302,17 +304,6 @@ fun SearchResultsScreen(
                 } else {
                     uiState.searchResults[source?.id].orEmpty()
                 }
-                val pageSourceIds = if (page == 0) {
-                    uiState.availableSources.map { it.id }
-                } else {
-                    listOfNotNull(source?.id)
-                }
-                val loadMoreError = pageSourceIds
-                    .firstNotNullOfOrNull { sourceId ->
-                        uiState.loadMoreErrors[sourceId]?.let { sourceId to it }
-                    }
-                val isLoadingMore = pageSourceIds.any { it in uiState.loadingMoreSourceIds }
-                val canLoadMore = pageSourceIds.any { uiState.hasMoreBySource[it] == true }
 
                 when {
                     uiState.isSearching && (page == 0 || source == uiState.selectedSearchSource) -> {
@@ -350,22 +341,23 @@ fun SearchResultsScreen(
                     }
 
                     else -> {
-                        PaginatedSearchResultList(
-                            results = results,
-                            searchKeyword = uiState.searchKeyword,
-                            canLoadMore = canLoadMore,
-                            isLoadingMore = isLoadingMore,
-                            loadMoreError = loadMoreError?.second,
-                            onLoadMore = {
-                                viewModel.loadNextPage(
-                                    sourceId = loadMoreError?.first ?: source?.id
+                        LazyColumn(
+                            contentPadding = PaddingValues(bottom = 12.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 12.dp)
+                        ) {
+                            items(results, key = { "${it.pluginId}_${it.id}" }) { song ->
+
+                                SearchResultItem(
+                                    song = song,
+                                    onClick = {
+                                        pendingApplySong = song
+                                        showApplyBottomSheet = true
+                                    }
                                 )
-                            },
-                            onSongClick = { song ->
-                                pendingApplySong = song
-                                showApplyBottomSheet = true
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -489,94 +481,6 @@ fun SearchResultsScreen(
                     ),
                     onLineOrderChange = viewModel::setLyricLineOrder
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PaginatedSearchResultList(
-    results: List<SongSearchResult>,
-    searchKeyword: String,
-    canLoadMore: Boolean,
-    isLoadingMore: Boolean,
-    loadMoreError: UiMessage?,
-    onLoadMore: () -> Unit,
-    onSongClick: (SongSearchResult) -> Unit
-) {
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(searchKeyword) {
-        listState.scrollToItem(0)
-    }
-
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(bottom = 12.dp),
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp)
-    ) {
-        items(results, key = { "${it.pluginId.length}:${it.pluginId}${it.id}" }) { song ->
-            SearchResultItem(
-                song = song,
-                onClick = { onSongClick(song) }
-            )
-        }
-
-        when {
-            isLoadingMore -> {
-                item(key = "search_loading_more") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(size = 20.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.search_loading_more),
-                            fontSize = 14.sp,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                        )
-                    }
-                }
-            }
-
-            loadMoreError != null -> {
-                item(key = "search_load_more_error") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        TextButton(
-                            text = stringResource(R.string.search_load_more_failed),
-                            onClick = onLoadMore,
-                            colors = ButtonDefaults.textButtonColorsPrimary()
-                        )
-                    }
-                }
-            }
-
-            canLoadMore -> {
-                item(key = "search_load_more") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        TextButton(
-                            text = stringResource(R.string.search_load_more),
-                            onClick = onLoadMore,
-                            colors = ButtonDefaults.textButtonColorsPrimary()
-                        )
-                    }
-                }
             }
         }
     }
@@ -1416,42 +1320,17 @@ data class SourcePillTab(
     val imageVector: ImageVector? = null
 )
 
-@Composable
-private fun rememberOptimizedAllSourceResults(
+private fun optimizedAllSourceResults(
     keyword: String,
     sources: List<SearchSourceUiModel>,
-    searchResultPages: Map<String, List<List<SongSearchResult>>>
-): List<SongSearchResult> {
-    val sourceIds = sources.map { it.id }
-    val pageCount = sourceIds.maxOfOrNull { searchResultPages[it].orEmpty().size } ?: 0
-
-    return buildList {
-        for (pageIndex in 0 until pageCount) {
-            val sourcePageResults = sourceIds.map { sourceId ->
-                searchResultPages[sourceId]?.getOrNull(pageIndex).orEmpty()
-            }
-            val optimizedPage = androidx.compose.runtime.key(pageIndex) {
-                remember(keyword, sourceIds, sourcePageResults) {
-                    optimizedAllSourcePage(
-                        keyword = keyword,
-                        sourcePageResults = sourcePageResults
-                    )
-                }
-            }
-            addAll(optimizedPage)
-        }
-    }
-}
-
-private fun optimizedAllSourcePage(
-    keyword: String,
-    sourcePageResults: List<List<SongSearchResult>>
+    searchResults: Map<String, List<SongSearchResult>>
 ): List<SongSearchResult> {
     val localSegments = MusicMatchUtils.splitToSegments(keyword)
 
-    return sourcePageResults
-        .flatMap { results ->
-            results
+    return sources
+        .flatMap { source ->
+            searchResults[source.id]
+                .orEmpty()
                 .mapIndexed { index, result ->
                     result to MusicMatchUtils.calculateCoverMatchScore(
                         localSegments = localSegments,

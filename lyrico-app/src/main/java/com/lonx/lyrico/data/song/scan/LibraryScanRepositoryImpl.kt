@@ -251,6 +251,13 @@ class LibraryScanRepositoryImpl(
                 )
             )
 
+            // 去重步骤：基于 title+artist 检测并删除重复歌曲
+            onProgress(LibraryScanProgress(stage = LibraryScanStage.DEDUP))
+            val dedupRemoved = performDedup()
+            if (dedupRemoved > 0) {
+                Log.d(TAG, "Dedup removed $dedupRemoved duplicate songs")
+            }
+
             settingsRepository.saveLastScanTime(System.currentTimeMillis())
             val result = LibraryScanResult(
                 scanned = deviceSongs.size,
@@ -350,6 +357,36 @@ class LibraryScanRepositoryImpl(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to write scan exception log", e)
         }
+    }
+
+    /**
+     * 执行去重：基于 (title, artist) 组合分组，保留每组中 bitrate 最高的歌曲，删除其余。
+     * 仅在非忽略文件夹中执行，title 或 artist 为空的歌曲不参与去重。
+     * @return 被删除的重复歌曲数量
+     */
+    private suspend fun performDedup(): Int {
+        val allSongs = songDao.getSongsForDedup()
+        // 按 (title, artist) 不区分大小写分组
+        val groups = allSongs.groupBy {
+            Pair(
+                it.title?.trim()?.lowercase() ?: "",
+                it.artist?.trim()?.lowercase() ?: ""
+            )
+        }.filter { it.value.size > 1 }
+
+        // 每组已按 bitrate DESC, fileSize DESC 排序，第一条保留，其余删除
+        val toDelete = groups.flatMap { (_, songs) ->
+            songs.drop(1).map { it.id }
+        }
+        if (toDelete.isEmpty()) return 0
+
+        val urisToDelete = allSongs.filter { it.id in toDelete }.map { it.uri }
+        database.withTransaction {
+            songDao.deleteByIds(toDelete)
+            songDao.deleteLyricFtsByUris(urisToDelete)
+            database.songCustomTagKeyDao().deleteForSongs(urisToDelete)
+        }
+        return toDelete.size
     }
 
     private data class ScannedSongMetadata(

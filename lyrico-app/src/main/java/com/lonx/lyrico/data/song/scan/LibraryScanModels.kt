@@ -18,6 +18,7 @@ enum class LibraryScanStage {
     LISTING_FILES,
     READING_METADATA,
     WRITING_DATABASE,
+    DEDUP,
     FINISHED
 }
 

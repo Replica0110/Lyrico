@@ -1,6 +1,8 @@
 package com.lonx.lyrico.screens
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -91,6 +93,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.icon.extended.Add
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Delete
@@ -159,6 +162,21 @@ fun PluginManagerScreen(
                     }
                 },
                 actions = {
+                    val context = LocalContext.current
+                    IconButton(
+                        onClick = {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/Replica0110/Lyrico-Plugins/releases")
+                            )
+                            context.startActivity(intent)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Download,
+                            contentDescription = stringResource(R.string.download_plugins)
+                        )
+                    }
                     IconButton(
                         onClick = {
                             if (!uiState.isBusy) importLauncher.launch(arrayOf("*/*"))

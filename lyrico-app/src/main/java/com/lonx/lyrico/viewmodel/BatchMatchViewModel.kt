@@ -11,6 +11,7 @@ import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig
@@ -29,6 +30,7 @@ import kotlinx.serialization.json.Json
 
 data class BatchMatchUiState(
     val showBatchConfigDialog: Boolean = false,
+    val showNoPluginsDialog: Boolean = false,
     val isRunning: Boolean = false,
     val batchProgress: Pair<Int, Int>? = null,
     val successCount: Int = 0,
@@ -38,6 +40,7 @@ data class BatchMatchUiState(
     val batchTimeMillis: Long = 0,
     val currentTaskId: String? = null,
     val fileProgressMap: Map<String, Float> = emptyMap(),
+    val songsWithoutLyricsCount: Int = 0,
 )
 
 class BatchMatchViewModel(
@@ -45,7 +48,8 @@ class BatchMatchViewModel(
     private val selectionManager: SharedSelectionManager,
     private val batchTaskRepository: BatchTaskRepository,
     private val batchTaskScheduler: BatchTaskScheduler,
-    private val searchSourceProvider: SearchSourceProvider
+    private val searchSourceProvider: SearchSourceProvider,
+    private val songLibraryRepository: SongLibraryRepository
 ) : ViewModel() {
 
     val batchMatchConfig: StateFlow<BatchMatchConfig> = settingsRepository.batchMatchConfig
@@ -68,6 +72,9 @@ class BatchMatchViewModel(
 
     private var observeJob: Job? = null
 
+    /** 一键匹配用的歌曲列表缓存（由 openMatchAllWithoutLyrics 填充，由 batchMatch 消费） */
+    private var pendingMatchAllSongs: List<SongEntity>? = null
+
     init {
         viewModelScope.launch {
             val runningTask = batchTaskRepository.getRunningTaskByType(BatchTaskType.MATCH_METADATA)
@@ -75,6 +82,37 @@ class BatchMatchViewModel(
                 resumeObservingTask(runningTask.taskId)
             }
         }
+    }
+
+    /** 加载无歌词歌曲数量（用于横幅显示） */
+    fun loadSongsWithoutLyricsCount() {
+        viewModelScope.launch {
+            val count = songLibraryRepository.getSongsWithoutLyrics().size
+            _uiState.update { it.copy(songsWithoutLyricsCount = count) }
+        }
+    }
+
+    /** 一键匹配所有无歌词歌曲：查询 → 设置选中 → 打开配置弹窗 */
+    fun openMatchAllWithoutLyrics() {
+        viewModelScope.launch {
+            val songs = songLibraryRepository.getSongsWithoutLyrics()
+            if (songs.isEmpty()) return@launch
+
+            // 检查是否有启用的搜索插件
+            val sources = searchSourceProvider.getAllSources()
+            if (sources.isEmpty()) {
+                _uiState.update { it.copy(showNoPluginsDialog = true) }
+                return@launch
+            }
+
+            pendingMatchAllSongs = songs
+            selectionManager.setUris(songs.map { it.uri }.toSet())
+            _uiState.update { it.copy(showBatchConfigDialog = true) }
+        }
+    }
+
+    fun closeNoPluginsDialog() {
+        _uiState.update { it.copy(showNoPluginsDialog = false) }
     }
 
     private fun resumeObservingTask(taskId: String) {
@@ -149,6 +187,10 @@ class BatchMatchViewModel(
         val selectedIds = selectionManager.selectedUris.value
         if (selectedIds.isEmpty()) return
 
+        // 优先使用一键匹配的缓存歌曲列表，降级为 UI 传入的列表
+        val songsToUse = pendingMatchAllSongs?.takeIf { it.isNotEmpty() } ?: songs
+        pendingMatchAllSongs = null
+
         closeBatchMatchConfig()
 
         _uiState.update {
@@ -164,7 +206,7 @@ class BatchMatchViewModel(
         }
 
         viewModelScope.launch {
-            val songsToMatch = songs.filter { it.uri in selectedIds }
+            val songsToMatch = songsToUse.filter { it.uri in selectedIds }
             if (songsToMatch.isEmpty()) {
                 _uiState.update { it.copy(isRunning = false) }
                 return@launch

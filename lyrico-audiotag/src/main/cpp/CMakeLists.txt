@@ -13,6 +13,9 @@ set(VISIBILITY_HIDDEN ON)
 set(BUILD_BINDINGS OFF)
 set(BUILD_TESTING OFF)
 
+set(utf8cpp_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/taglib/3rdparty/utfcpp/source")
+set(utf8cpp_FOUND TRUE)
+
 add_subdirectory(taglib)
 
 include_directories(

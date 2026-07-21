@@ -25,6 +25,7 @@ fun LibraryScanProgressText(
             progress.total
         )
         LibraryScanStage.WRITING_DATABASE -> stringResource(R.string.scan_progress_writing)
+        LibraryScanStage.DEDUP -> stringResource(R.string.scan_progress_dedup)
         LibraryScanStage.FINISHED -> stringResource(R.string.scan_progress_finished)
     }
 

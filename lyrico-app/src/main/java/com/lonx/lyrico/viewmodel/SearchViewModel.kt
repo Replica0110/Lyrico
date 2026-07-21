@@ -54,15 +54,11 @@ data class LyricsUiState(
 data class SearchUiState(
     val searchKeyword: String = "",
     val searchResults: Map<String, List<SongSearchResult>> = emptyMap(),
-    val searchResultPages: Map<String, List<List<SongSearchResult>>> = emptyMap(),
     val selectedSearchSource: SearchSourceUiModel? = null,
     val availableSources: List<SearchSourceUiModel> = emptyList(),
     val isSearching: Boolean = false,
     val searchError: UiMessage? = null,
     val searchErrors: Map<String, UiMessage> = emptyMap(),
-    val hasMoreBySource: Map<String, Boolean> = emptyMap(),
-    val loadingMoreSourceIds: Set<String> = emptySet(),
-    val loadMoreErrors: Map<String, UiMessage> = emptyMap(),
     val lyricsState: LyricsUiState = LyricsUiState(),
     val searchSourceTabStyle: SearchSourceTabStyle = SearchSourceTabStyle.ICON_AND_TEXT,
     val showAllSearchResultFields: Boolean = false,
@@ -75,25 +71,8 @@ data class SearchUiState(
 private data class SearchSourceState(
     val keyword: String = "",
     val results: Map<String, List<SongSearchResult>> = emptyMap(),
-    val resultPages: Map<String, List<List<SongSearchResult>>> = emptyMap(),
     val isSearching: Boolean = false,
-    val errors: Map<String, UiMessage> = emptyMap(),
-    val nextPageBySource: Map<String, Int> = emptyMap(),
-    val hasMoreBySource: Map<String, Boolean> = emptyMap(),
-    val loadingMoreSourceIds: Set<String> = emptySet(),
-    val loadMoreErrors: Map<String, UiMessage> = emptyMap()
-)
-
-private data class SearchPage(
-    val results: List<SongSearchResult>,
-    val hasMore: Boolean
-)
-
-private data class CachedSearchResults(
-    val results: List<SongSearchResult>,
-    val pages: List<List<SongSearchResult>>,
-    val nextPage: Int,
-    val hasMore: Boolean
+    val errors: Map<String, UiMessage> = emptyMap()
 )
 
 class SearchViewModel(
@@ -177,13 +156,9 @@ class SearchViewModel(
             SearchUiState(
                 searchKeyword = search.keyword,
                 searchResults = search.results,
-                searchResultPages = search.resultPages,
                 isSearching = search.isSearching,
                 searchError = selectedSource?.let { search.errors[it.id] },
                 searchErrors = search.errors,
-                hasMoreBySource = search.hasMoreBySource,
-                loadingMoreSourceIds = search.loadingMoreSourceIds,
-                loadMoreErrors = search.loadMoreErrors,
 
                 availableSources = filteredSources,
                 selectedSearchSource = selectedSource,
@@ -202,13 +177,10 @@ class SearchViewModel(
 
 
     private val searchResultCache =
-        mutableMapOf<String, MutableMap<String, CachedSearchResults>>()
+        mutableMapOf<String, MutableMap<String, List<SongSearchResult>>>()
 
     private var searchJob: Job? = null
-    private val loadMoreJobs = mutableMapOf<String, Job>()
-    private val loadMoreRequestTokens = mutableMapOf<String, Any>()
     private var lyricsJob: Job? = null
-    private var activeSearchKeyword: String = ""
 
 
 
@@ -230,12 +202,8 @@ class SearchViewModel(
         if (cached != null) {
             searchState.update {
                 it.copy(
-                    results = it.results + (source.id to cached.results),
-                    resultPages = it.resultPages + (source.id to cached.pages),
-                    errors = it.errors - source.id,
-                    nextPageBySource = it.nextPageBySource + (source.id to cached.nextPage),
-                    hasMoreBySource = it.hasMoreBySource + (source.id to cached.hasMore),
-                    loadMoreErrors = it.loadMoreErrors - source.id
+                    results = it.results + (source.id to cached),
+                    errors = it.errors - source.id
                 )
             }
         } else {
@@ -260,28 +228,14 @@ class SearchViewModel(
     fun performSearch(keywordOverride: String? = null) {
         val keyword = (keywordOverride ?: searchState.value.keyword).trim()
         if (keyword.isBlank()) return
-
-        val isNewKeyword = keyword != activeSearchKeyword
-        activeSearchKeyword = keyword
-        searchJob?.cancel()
-        loadMoreJobs.values.forEach(Job::cancel)
-        loadMoreJobs.clear()
-        loadMoreRequestTokens.clear()
-
         searchState.update {
             it.copy(
                 keyword = keyword,
-                results = if (isNewKeyword) emptyMap() else it.results,
-                resultPages = if (isNewKeyword) emptyMap() else it.resultPages,
-                isSearching = true,
-                errors = if (isNewKeyword) emptyMap() else it.errors,
-                nextPageBySource = if (isNewKeyword) emptyMap() else it.nextPageBySource,
-                hasMoreBySource = if (isNewKeyword) emptyMap() else it.hasMoreBySource,
-                loadingMoreSourceIds = emptySet(),
-                loadMoreErrors = if (isNewKeyword) emptyMap() else it.loadMoreErrors
+                isSearching = true
             )
         }
 
+        searchJob?.cancel()
         searchJob = viewModelScope.launch {
 
             val searchConfig = searchConfigFlow.filterNotNull().first()
@@ -315,16 +269,10 @@ class SearchViewModel(
         updateKeyword: Boolean
     ) {
         val sourceIds = sourceImpls.map { it.id }
-        removeCachedResults(keyword, sourceIds)
         searchState.update {
             it.copy(
                 isSearching = true,
-                results = it.results - sourceIds.toSet(),
-                resultPages = it.resultPages - sourceIds.toSet(),
-                errors = it.errors - sourceIds.toSet(),
-                nextPageBySource = it.nextPageBySource - sourceIds.toSet(),
-                hasMoreBySource = it.hasMoreBySource - sourceIds.toSet(),
-                loadMoreErrors = it.loadMoreErrors - sourceIds.toSet()
+                errors = it.errors - sourceIds.toSet()
             )
         }
 
@@ -336,28 +284,16 @@ class SearchViewModel(
             sourceImpls.map { source ->
                 async {
                     try {
-                        val sourcePage = searchFromSource(keyword, source.id, page = 1)
-                        val mergedPage = mergeSearchPage(
-                            existing = emptyList(),
-                            incoming = sourcePage.results,
-                            sourceMayHaveMore = sourcePage.hasMore
-                        )
-                        cacheSearchResults(
-                            keyword = keyword,
-                            sourceId = source.id,
-                            results = mergedPage.results,
-                            pages = listOf(mergedPage.results),
-                            nextPage = 2,
-                            hasMore = mergedPage.hasMore
-                        )
+                        val sourceResults = searchFromSource(keyword, source.id)
+                        cacheSearchResults(keyword, source.id, sourceResults)
                         logSearch(
                             level = AppLogLevel.DEBUG,
-                            message = "Search finished: ${mergedPage.results.size} result(s)",
-                            detail = "keyword=$keyword\nsource=${source.id}\npage=1\nresultCount=${mergedPage.results.size}\n" +
-                                    "top=${mergedPage.results.take(5).map { "${it.id}:${it.title}" }}",
+                            message = "Search finished: ${sourceResults.size} result(s)",
+                            detail = "keyword=$keyword\nsource=${source.id}\nresultCount=${sourceResults.size}\n" +
+                                    "top=${sourceResults.take(5).map { "${it.id}:${it.title}" }}",
                             relatedId = source.id
                         )
-                        source.id to Result.success(mergedPage)
+                        source.id to Result.success(sourceResults)
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         logSearchException(
@@ -365,7 +301,7 @@ class SearchViewModel(
                             throwable = e,
                             relatedId = source.id
                         )
-                        source.id to Result.failure<SearchPageMergeResult>(e)
+                        source.id to Result.failure<List<SongSearchResult>>(e)
                     }
                 }
             }.awaitAll()
@@ -373,19 +309,8 @@ class SearchViewModel(
 
         val nextResults = results
             .mapNotNull { (sourceId, result) ->
-                result.getOrNull()?.let { sourceId to it.results }
+                result.getOrNull()?.let { sourceId to it }
             }
-            .toMap()
-        val nextPages = results
-            .mapNotNull { (sourceId, result) -> result.getOrNull()?.let { sourceId to 2 } }
-            .toMap()
-        val nextResultPages = results
-            .mapNotNull { (sourceId, result) ->
-                result.getOrNull()?.let { sourceId to listOf(it.results) }
-            }
-            .toMap()
-        val hasMore = results
-            .mapNotNull { (sourceId, result) -> result.getOrNull()?.let { sourceId to it.hasMore } }
             .toMap()
         val nextErrors = results
             .mapNotNull { (sourceId, result) ->
@@ -396,10 +321,7 @@ class SearchViewModel(
         searchState.update {
             it.copy(
                 results = it.results + nextResults,
-                resultPages = it.resultPages + nextResultPages,
                 errors = it.errors + nextErrors,
-                nextPageBySource = it.nextPageBySource + nextPages,
-                hasMoreBySource = it.hasMoreBySource + hasMore,
                 isSearching = false
             )
         }
@@ -413,53 +335,27 @@ class SearchViewModel(
         sourceId: String,
         updateKeyword: Boolean
     ) {
-        removeCachedResults(keyword, listOf(sourceId))
-        searchState.update {
-            it.copy(
-                results = it.results - sourceId,
-                resultPages = it.resultPages - sourceId,
-                isSearching = true,
-                errors = it.errors - sourceId,
-                nextPageBySource = it.nextPageBySource - sourceId,
-                hasMoreBySource = it.hasMoreBySource - sourceId,
-                loadMoreErrors = it.loadMoreErrors - sourceId
-            )
-        }
+        searchState.update { it.copy(isSearching = true, errors = it.errors - sourceId) }
 
         try {
             if (updateKeyword) {
                 searchState.update { it.copy(keyword = keyword) }
             }
 
-            val sourcePage = searchFromSource(keyword, sourceId, page = 1)
-            val mergedPage = mergeSearchPage(
-                existing = emptyList(),
-                incoming = sourcePage.results,
-                sourceMayHaveMore = sourcePage.hasMore
-            )
-            cacheSearchResults(
-                keyword = keyword,
-                sourceId = sourceId,
-                results = mergedPage.results,
-                pages = listOf(mergedPage.results),
-                nextPage = 2,
-                hasMore = mergedPage.hasMore
-            )
+            val results = searchFromSource(keyword, sourceId)
+            cacheSearchResults(keyword, sourceId, results)
             logSearch(
                 level = AppLogLevel.DEBUG,
-                message = "Search finished: ${mergedPage.results.size} result(s)",
-                detail = "keyword=$keyword\nsource=$sourceId\npage=1\nresultCount=${mergedPage.results.size}\n" +
-                        "top=${mergedPage.results.take(5).map { "${it.id}:${it.title}" }}"
+                message = "Search finished: ${results.size} result(s)",
+                detail = "keyword=$keyword\nsource=$sourceId\nresultCount=${results.size}\n" +
+                        "top=${results.take(5).map { "${it.id}:${it.title}" }}"
             )
 
             searchState.update {
                 it.copy(
-                    results = it.results + (sourceId to mergedPage.results),
-                    resultPages = it.resultPages + (sourceId to listOf(mergedPage.results)),
+                    results = it.results + (sourceId to results),
                     isSearching = false,
-                    errors = it.errors - sourceId,
-                    nextPageBySource = it.nextPageBySource + (sourceId to 2),
-                    hasMoreBySource = it.hasMoreBySource + (sourceId to mergedPage.hasMore)
+                    errors = it.errors - sourceId
                 )
             }
         } catch (e: Exception) {
@@ -483,9 +379,8 @@ class SearchViewModel(
      */
     private suspend fun searchFromSource(
         keyword: String,
-        sourceId: String,
-        page: Int
-    ): SearchPage {
+        sourceId: String
+    ): List<SongSearchResult> {
         val sourceImpl = findSource(sourceId) ?: run {
             logSearch(
                 level = AppLogLevel.WARNING,
@@ -493,7 +388,7 @@ class SearchViewModel(
                 detail = "keyword=$keyword\nsource=$sourceId\navailableSources=${allSourcesFlow.value.map { it.id }}",
                 relatedId = sourceId
             )
-            return SearchPage(results = emptyList(), hasMore = false)
+            return emptyList()
         }
 
         val separator = settingsRepository.separator.first()
@@ -501,14 +396,14 @@ class SearchViewModel(
 
         val rawResults = sourceImpl.searchSongs(
             keyword = keyword,
-            page = page,
+            page = 1,
             separator = separator,
             pageSize = pageSize
         )
 
         val renderConfig = settingsRepository.getLyricRenderConfig()
         val processor = PluginFieldPostProcessor(renderConfig.toGlobalFieldProcessSettings())
-        val processedResults = rawResults.map { result ->
+        return rawResults.map { result ->
             val processedFields = processor.processFields(
                 pluginId = result.pluginId,
                 fields = result.normalizedFields(),
@@ -522,111 +417,6 @@ class SearchViewModel(
                 album = processedFields["album"] ?: result.album,
                 fields = processedFields
             )
-        }
-        return SearchPage(
-            results = processedResults,
-            // 搜索源契约没有总数或 hasNext；部分服务还会自行限制单页数量。
-            // 只要本页非空就继续探测下一页，空页或重复页会终止分页。
-            hasMore = rawResults.isNotEmpty()
-        )
-    }
-
-    fun loadNextPage(sourceId: String? = null) {
-        val keyword = activeSearchKeyword
-        if (keyword.isBlank()) return
-
-        val state = searchState.value
-        val targetSourceIds = if (sourceId != null) {
-            listOf(sourceId)
-        } else {
-            allSourcesFlow.value.map { it.id }
-        }.filter { id ->
-            state.hasMoreBySource[id] == true &&
-                    id !in state.loadingMoreSourceIds &&
-                    loadMoreJobs[id]?.isActive != true
-        }
-
-        targetSourceIds.forEach { id -> loadNextPageForSource(keyword, id) }
-    }
-
-    private fun loadNextPageForSource(keyword: String, sourceId: String) {
-        val state = searchState.value
-        val nextPage = state.nextPageBySource[sourceId] ?: return
-        if (state.hasMoreBySource[sourceId] != true) return
-
-        searchState.update {
-            it.copy(
-                loadingMoreSourceIds = it.loadingMoreSourceIds + sourceId,
-                loadMoreErrors = it.loadMoreErrors - sourceId
-            )
-        }
-
-        val requestToken = Any()
-        loadMoreRequestTokens[sourceId] = requestToken
-        loadMoreJobs[sourceId] = viewModelScope.launch {
-            try {
-                val sourcePage = searchFromSource(keyword, sourceId, page = nextPage)
-                if (activeSearchKeyword != keyword) return@launch
-
-                val currentResults = searchState.value.results[sourceId].orEmpty()
-                val mergedPage = mergeSearchPage(
-                    existing = currentResults,
-                    incoming = sourcePage.results,
-                    sourceMayHaveMore = sourcePage.hasMore
-                )
-                val newPageResults = mergedPage.results.drop(currentResults.size)
-                val currentResultPages = searchState.value.resultPages[sourceId].orEmpty()
-                val updatedResultPages = if (newPageResults.isEmpty()) {
-                    currentResultPages
-                } else {
-                    currentResultPages + listOf(newPageResults)
-                }
-                cacheSearchResults(
-                    keyword = keyword,
-                    sourceId = sourceId,
-                    results = mergedPage.results,
-                    pages = updatedResultPages,
-                    nextPage = nextPage + 1,
-                    hasMore = mergedPage.hasMore
-                )
-                logSearch(
-                    level = AppLogLevel.DEBUG,
-                    message = "Search page finished: ${mergedPage.addedCount} new result(s)",
-                    detail = "keyword=$keyword\nsource=$sourceId\npage=$nextPage\n" +
-                            "receivedCount=${sourcePage.results.size}\n" +
-                            "totalCount=${mergedPage.results.size}\nhasMore=${mergedPage.hasMore}",
-                    relatedId = sourceId
-                )
-                searchState.update {
-                    it.copy(
-                        results = it.results + (sourceId to mergedPage.results),
-                        resultPages = it.resultPages + (sourceId to updatedResultPages),
-                        nextPageBySource = it.nextPageBySource + (sourceId to nextPage + 1),
-                        hasMoreBySource = it.hasMoreBySource + (sourceId to mergedPage.hasMore),
-                        loadMoreErrors = it.loadMoreErrors - sourceId
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                logSearchException(
-                    message = "Search page failed\nkeyword=$keyword\nsource=$sourceId\npage=$nextPage",
-                    throwable = e,
-                    relatedId = sourceId
-                )
-                if (activeSearchKeyword == keyword) {
-                    searchState.update {
-                        it.copy(loadMoreErrors = it.loadMoreErrors + (sourceId to e.toUiMessage()))
-                    }
-                }
-            } finally {
-                if (loadMoreRequestTokens[sourceId] === requestToken) {
-                    loadMoreRequestTokens.remove(sourceId)
-                    loadMoreJobs.remove(sourceId)
-                    searchState.update {
-                        it.copy(loadingMoreSourceIds = it.loadingMoreSourceIds - sourceId)
-                    }
-                }
-            }
         }
     }
 
@@ -785,18 +575,10 @@ class SearchViewModel(
     private fun cacheSearchResults(
         keyword: String,
         sourceId: String,
-        results: List<SongSearchResult>,
-        pages: List<List<SongSearchResult>>,
-        nextPage: Int,
-        hasMore: Boolean
+        results: List<SongSearchResult>
     ) {
         val keywordCache = searchResultCache.getOrPut(keyword) { mutableMapOf() }
-        keywordCache[sourceId] = CachedSearchResults(
-            results = results,
-            pages = pages,
-            nextPage = nextPage,
-            hasMore = hasMore
-        )
+        keywordCache[sourceId] = results
     }
 
     /**
@@ -805,14 +587,8 @@ class SearchViewModel(
     private fun getCachedResults(
         keyword: String,
         sourceId: String
-    ): CachedSearchResults? {
+    ): List<SongSearchResult>? {
         return searchResultCache[keyword]?.get(sourceId)
-    }
-
-    private fun removeCachedResults(keyword: String, sourceIds: Collection<String>) {
-        val keywordCache = searchResultCache[keyword] ?: return
-        sourceIds.forEach(keywordCache::remove)
-        if (keywordCache.isEmpty()) searchResultCache.remove(keyword)
     }
 
     private fun getSearchSources(

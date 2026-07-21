@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class FolderManagerUiState(
@@ -48,6 +49,9 @@ class FolderManagerViewModel(
 
     private val _sortInfo = MutableStateFlow(SortInfo())
     val sortInfo: StateFlow<SortInfo> = _sortInfo.asStateFlow()
+
+    private val _dedupResult = MutableStateFlow<String?>(null)
+    val dedupResult: StateFlow<String?> = _dedupResult.asStateFlow()
 
     private val _currentFolderId = MutableStateFlow<Long?>(null)
 
@@ -119,5 +123,34 @@ class FolderManagerViewModel(
             folderDao.setIgnoredRecursively(folder.id, ignored)
             libraryIndexRepository.refreshAndPruneIndexes()
         }
+    }
+
+    /** 手动执行去重：基于 title+artist 检测并删除重复歌曲 */
+    fun runDedup() {
+        appScope.launch {
+            val songs = songLibraryRepository.getSongsForDedup()
+            val groups = songs.groupBy {
+                Pair(
+                    it.title?.trim()?.lowercase() ?: "",
+                    it.artist?.trim()?.lowercase() ?: ""
+                )
+            }.filter { it.value.size > 1 }
+
+            val toDelete = groups.flatMap { (_, list) -> list.drop(1).map { it.id } }
+            if (toDelete.isNotEmpty()) {
+                songLibraryRepository.deleteSongsByIds(toDelete)
+                libraryIndexRepository.refreshAndPruneIndexes()
+                Log.d(TAG, "Dedup: removed ${toDelete.size} duplicate songs")
+            }
+            _dedupResult.value = if (toDelete.isEmpty()) {
+                "未发现重复歌曲"
+            } else {
+                "已移除 ${toDelete.size} 首重复歌曲"
+            }
+        }
+    }
+
+    fun clearDedupResult() {
+        _dedupResult.value = null
     }
 }

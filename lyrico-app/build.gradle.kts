@@ -4,15 +4,14 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
     id("kotlin-parcelize")
+    id("kotlin-android")
     alias(libs.plugins.aboutLibraries)
 }
 
 android {
     namespace = "com.lonx.lyrico"
     ndkVersion = "29.0.14206865"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     splits {
         abi {

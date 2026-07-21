@@ -1,6 +1,7 @@
 package com.lonx.lyrico.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -119,6 +120,16 @@ fun FolderManagerScreen(
     val uiState by viewModel.uiState.collectAsState()
     val sortInfo by viewModel.sortInfo.collectAsState()
     val currentFolderSongs by viewModel.currentFolderSongs.collectAsState()
+    val dedupResult by viewModel.dedupResult.collectAsState()
+
+    val context = LocalContext.current
+    LaunchedEffect(dedupResult) {
+        dedupResult?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            viewModel.clearDedupResult()
+        }
+    }
+
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState()
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsState()
     val swipeAnchorUri by selectionViewModel.swipeAnchorUri.collectAsState()
@@ -141,8 +152,6 @@ fun FolderManagerScreen(
     val folderTree = remember(folders) {
         buildFolderTree(folders)
     }
-    val context = LocalContext.current
-
     var currentFolderId by rememberSaveable { mutableLongStateOf(ROOT_FOLDER_ID) }
     var selectedFolderId by rememberSaveable { mutableLongStateOf(ROOT_FOLDER_ID) }
     var folderContentTransition by remember { mutableStateOf<FolderContentTransition?>(null) }
@@ -324,6 +333,16 @@ fun FolderManagerScreen(
                                             contentDescription = null
                                         )
                                     }
+                                }
+
+                                if (pagerState.currentPage == 1 && currentSongs.isNotEmpty()) {
+                                    TextButton(
+                                        text = stringResource(R.string.action_dedup),
+                                        onClick = {
+                                            viewModel.runDedup()
+                                        },
+                                        colors = ButtonDefaults.textButtonColorsPrimary()
+                                    )
                                 }
 
                                 if (

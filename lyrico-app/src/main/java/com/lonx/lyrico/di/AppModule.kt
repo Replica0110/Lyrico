@@ -295,7 +295,7 @@ val appModule = module {
     viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditFieldVisibilitySettingsViewModel(get()) }
     viewModel { CustomTagManagementViewModel(get(), get()) }
-    viewModel { BatchMatchViewModel(get(), get(), get(), get(), get()) }
+    viewModel { BatchMatchViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { AppLogViewModel(get(),get()) }
     viewModel { PluginViewModel(get(), get(), get(), get(), get()) }
 

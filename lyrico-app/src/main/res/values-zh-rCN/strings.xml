@@ -59,11 +59,8 @@
     <string name="ignore_short_audio">不扫描 60 秒以下音频</string>
 
     <!-- 搜索 -->
-    <string name="search_limit">单次加载数量</string>
-    <string name="search_limit_tip">每个搜索源每次加载的结果数量，设置更大的值会消耗更多流量，同时产生更多图片缓存</string>
-    <string name="search_loading_more">正在加载更多…</string>
-    <string name="search_load_more">加载更多</string>
-    <string name="search_load_more_failed">加载失败，点击重试</string>
+    <string name="search_limit">搜索限制数</string>
+    <string name="search_limit_tip">限制每个源的搜索结果数量，设置更大的值会消耗更多流量，同时产生更多图片缓存</string>
     <string name="show_all_search_result_fields">显示全部字段</string>
     <string name="show_all_search_result_fields_summary">在搜索结果详情中显示字段值为空的字段</string>
     <string name="search_result_empty_value">（空）</string>
@@ -200,6 +197,7 @@
     <string name="scan_progress_listing">正在扫描文件夹…</string>
     <string name="scan_progress_reading">正在读取标签 %1$d / %2$d</string>
     <string name="scan_progress_writing">正在更新音乐库…</string>
+    <string name="scan_progress_dedup">正在去重…</string>
     <string name="scan_progress_finished">扫描完成</string>
     <string name="cd_settings">设置</string>
     <string name="cd_search">搜索</string>
@@ -248,6 +246,7 @@
     <string name="batch_matching_total_time">用时 %.2f 秒</string>
     <string name="action_abort">中止</string>
     <string name="action_close">关闭</string>
+    <string name="action_dismiss">忽略</string>
 
     <!-- 歌曲详情 -->
     <string name="label_title">标题</string>
@@ -839,4 +838,14 @@
     <string name="field_group_extra_info">扩展信息</string>
     <string name="field_group_replay_gain">ReplayGain</string>
     <string name="lyric_preview_text">歌词: %s</string>
+    <string name="action_dedup">去重</string>
+
+    <!-- Batch Match All -->
+    <string name="batch_match_no_lyrics_title">缺少歌词的歌曲</string>
+    <string name="batch_match_no_lyrics_summary">有 %d 首歌曲缺少歌词，是否一键匹配？</string>
+    <string name="batch_match_no_lyrics_action">一键匹配</string>
+    <string name="no_plugins_dialog_title">没有搜索插件</string>
+    <string name="no_plugins_dialog_message">当前没有安装搜索插件，无法进行匹配。是否前往插件页面下载？</string>
+    <string name="no_plugins_dialog_action">前往插件页面</string>
+    <string name="download_plugins">下载插件</string>
 </resources>

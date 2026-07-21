@@ -492,13 +492,8 @@ class SourcePluginInstaller(
         }
         require(manifest.name.isNotBlank()) { "Plugin name is required" }
         require(manifest.versionCode >= 1) { "Plugin versionCode must be >= 1" }
-        require(HostApiRegistry.supportsPluginApiVersion(manifest.apiVersion)) {
-            "Unsupported plugin apiVersion: ${manifest.apiVersion} " +
-                "(supported: ${HostApiRegistry.MIN_PLUGIN_API_VERSION}..${HostApiRegistry.PLUGIN_API_VERSION})"
-        }
-        require(HostApiRegistry.supportsHostApiVersion(manifest.minHostApiVersion)) {
-            "Unsupported minHostApiVersion: ${manifest.minHostApiVersion} " +
-                "(host: ${HostApiRegistry.HOST_API_VERSION})"
+        require(manifest.apiVersion in 1..HostApiRegistry.PLUGIN_API_VERSION) {
+            "Unsupported plugin apiVersion: ${manifest.apiVersion}"
         }
         require(manifest.capabilities.isEmpty() || PluginCapability.SEARCH_SONGS in manifest.capabilities) {
             "A source plugin must support SEARCH_SONGS"

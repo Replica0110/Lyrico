@@ -12,12 +12,18 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -40,6 +46,7 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.screens.SECTIONS_ASC
 import com.lonx.lyrico.screens.SECTIONS_DESC
 import com.lonx.lyrico.screens.TopBarState
+import com.lonx.lyrico.ui.components.batch.BatchMatchAllBanner
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.bar.rememberAlphabetSideBarScrollController
@@ -52,6 +59,7 @@ import com.lonx.lyrico.ui.components.song.SongListEmptyState
 import com.lonx.lyrico.ui.components.song.SongListItem
 import com.lonx.lyrico.ui.components.song.SongListItemActions
 import com.lonx.lyrico.utils.UriUtils
+import com.lonx.lyrico.viewmodel.BatchMatchViewModel
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
 import com.lonx.lyrico.viewmodel.SortBy
@@ -59,6 +67,7 @@ import com.lonx.lyrico.viewmodel.SortInfo
 import com.lonx.lyrico.viewmodel.SortOrder
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
+import com.ramcosta.composedestinations.generated.destinations.PluginManagerDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import my.nanihadesuka.compose.LazyColumnScrollbar
@@ -74,8 +83,10 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
+import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Settings
@@ -92,6 +103,7 @@ fun SongsPage(
 ) {
     val viewModel: SongListViewModel = koinActivityViewModel()
     val selectionViewModel: SongSelectionViewModel = koinViewModel()
+    val batchMatchViewModel: BatchMatchViewModel = koinViewModel()
     val scanState by viewModel.scanState.collectAsStateWithLifecycle()
 
     val sortInfo by viewModel.sortInfo.collectAsState()
@@ -99,6 +111,7 @@ fun SongsPage(
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState(initial = false)
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsState()
     val swipeAnchorUri by selectionViewModel.swipeAnchorUri.collectAsState(initial = null)
+    val batchMatchUiState by batchMatchViewModel.uiState.collectAsStateWithLifecycle()
     val swipeSelectionLabel = stringResource(
         if (!isSelectionMode) {
             R.string.swipe_selection_enter_selection
@@ -124,6 +137,19 @@ fun SongsPage(
 
     LaunchedEffect(Unit) {
         viewModel.clearSearch()
+    }
+
+    LaunchedEffect(Unit) {
+        batchMatchViewModel.loadSongsWithoutLyricsCount()
+    }
+
+    // 匹配完成后刷新无歌词歌曲数量
+    val wasRunning = remember { mutableStateOf(false) }
+    LaunchedEffect(batchMatchUiState.isRunning) {
+        if (wasRunning.value && !batchMatchUiState.isRunning) {
+            batchMatchViewModel.loadSongsWithoutLyricsCount()
+        }
+        wasRunning.value = batchMatchUiState.isRunning
     }
 
     val context = LocalContext.current
@@ -363,6 +389,14 @@ fun SongsPage(
                             overscrollEffect = null,
                             contentPadding = PaddingValues()
                         ) {
+                            item {
+                                BatchMatchAllBanner(
+                                    songsWithoutLyricsCount = batchMatchUiState.songsWithoutLyricsCount,
+                                    onMatchAll = {
+                                        batchMatchViewModel.openMatchAllWithoutLyrics()
+                                    }
+                                )
+                            }
                             items(
                                 items = songs,
                                 key = { song ->
@@ -447,6 +481,41 @@ fun SongsPage(
                     selectionViewModel.renameSong(song, newFileName)
                 }
             )
+        }
+
+        if (batchMatchUiState.showNoPluginsDialog) {
+            WindowDialog(
+                title = stringResource(R.string.no_plugins_dialog_title),
+                show = batchMatchUiState.showNoPluginsDialog,
+                onDismissRequest = { batchMatchViewModel.closeNoPluginsDialog() }
+            ) {
+                Column {
+                    Text(
+                        text = stringResource(R.string.no_plugins_dialog_message),
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(
+                            text = stringResource(R.string.cancel),
+                            onClick = { batchMatchViewModel.closeNoPluginsDialog() }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(
+                            text = stringResource(R.string.no_plugins_dialog_action),
+                            onClick = {
+                                batchMatchViewModel.closeNoPluginsDialog()
+                                navigator.navigate(PluginManagerDestination)
+                            },
+                            colors = MiuixButtonDefaults.textButtonColorsPrimary()
+                        )
+                    }
+                }
+            }
         }
     }
 }

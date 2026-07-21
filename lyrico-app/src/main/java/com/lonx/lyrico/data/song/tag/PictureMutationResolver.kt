@@ -49,7 +49,7 @@ class PictureMutationResolver(
         basePictures: List<AudioPicture>?
     ): PictureWriteCommand {
         val bytes = imageBytesFetcher.fetch(source)
-            ?: throw IllegalStateException("Unable to read image source: $source")
+            ?: return PictureWriteCommand.Unchanged
         val picture = AudioPicture(
             data = bytes,
             mimeType = (source as? PictureSource.Bytes)?.mimeType

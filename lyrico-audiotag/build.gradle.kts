@@ -2,14 +2,13 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
     id("kotlin-parcelize")
+    id("kotlin-android")
 }
 
 android {
     namespace = "com.lonx.audiotag"
     ndkVersion = "29.0.14206865"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 28
@@ -46,11 +45,11 @@ android {
             version = "4.1.2"
         }
     }
+}
 
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 

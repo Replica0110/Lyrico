@@ -23,11 +23,8 @@
     <string name="apply_lyrics_only_action">Lyrics Only</string>
     <string name="preview_action">Preview</string>
     <string name="cd_no_results">No Result</string>
-    <string name="search_limit">Results per load</string>
-    <string name="search_limit_tip">Results loaded from each source at a time. Higher values use more data and cache more images.</string>
-    <string name="search_loading_more">Loading more…</string>
-    <string name="search_load_more">Load more</string>
-    <string name="search_load_more_failed">Load failed. Tap to retry</string>
+    <string name="search_limit">Search limit</string>
+    <string name="search_limit_tip">Limits results per source. Higher values use more data and cache more images.</string>
     <string name="show_all_search_result_fields">Show All Fields</string>
     <string name="show_all_search_result_fields_summary">Show empty fields in search result details.</string>
     <string name="search_result_empty_value">(empty)</string>
@@ -196,6 +193,7 @@
     <string name="scan_progress_listing">Scanning folders…</string>
     <string name="scan_progress_reading">Reading metadata %1$d / %2$d</string>
     <string name="scan_progress_writing">Updating library…</string>
+    <string name="scan_progress_dedup">Removing duplicates…</string>
     <string name="scan_progress_finished">Scan complete</string>
     <string name="cd_settings">Settings</string>
     <string name="cd_search">Search</string>
@@ -243,7 +241,18 @@
     <string name="batch_matching_failure">Failure: %d</string>
     <string name="batch_matching_total_time">Total time: %.2f s</string>
     <string name="action_abort">Abort</string>
+    <string name="action_dedup">Dedup</string>
     <string name="action_close">Close</string>
+    <string name="action_dismiss">Dismiss</string>
+
+    <!-- Batch Match All -->
+    <string name="batch_match_no_lyrics_title">Songs without lyrics</string>
+    <string name="batch_match_no_lyrics_summary">%d songs have no lyrics. Match all at once?</string>
+    <string name="batch_match_no_lyrics_action">Match All</string>
+    <string name="no_plugins_dialog_title">No plugins found</string>
+    <string name="no_plugins_dialog_message">No search plugins are installed. Plugins are required for matching. Go to the plugin page to download?</string>
+    <string name="no_plugins_dialog_action">Go to plugins</string>
+    <string name="download_plugins">Download plugins</string>
 
     <!-- Song Details -->
     <string name="label_title">Title</string>

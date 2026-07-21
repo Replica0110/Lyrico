@@ -180,6 +180,12 @@ interface SongDao {
     @Query("DELETE FROM songs WHERE uri = :uri")
     suspend fun deleteByUri(uri: String)
 
+    /**
+     * 批量删除指定 ID 的歌曲 (用于去重)
+     */
+    @Query("DELETE FROM songs WHERE id IN (:songIds)")
+    suspend fun deleteByIds(songIds: List<Long>)
+
     @Query("DELETE FROM songs")
     suspend fun clear()
 
@@ -193,6 +199,20 @@ interface SongDao {
 
     @Query("SELECT * FROM songs WHERE uri IN (:uris)")
     suspend fun getSongsByUris(uris: List<String>): List<SongEntity>
+
+    /**
+     * 获取所有歌曲用于去重检测（按 bitrate 和 fileSize 降序排序，每组第一条为最佳保留项）
+     */
+    @SkipQueryVerification
+    @Query("""
+        SELECT s.* FROM songs AS s
+        INNER JOIN folders AS f ON s.folderId = f.id
+        WHERE f.isIgnored = 0
+          AND s.title IS NOT NULL AND TRIM(s.title) != ''
+          AND s.artist IS NOT NULL AND TRIM(s.artist) != ''
+        ORDER BY s.title, s.artist, s.bitrate DESC, s.fileSize DESC
+    """)
+    suspend fun getSongsForDedup(): List<SongEntity>
 
     // ================= 查询操作 (同步与元数据) =================
     /**
@@ -286,6 +306,19 @@ interface SongDao {
     """)
     suspend fun getSongsNeedingLyricSearchTextIndex(): List<SongEntity>
 
+    @SkipQueryVerification
+    @Query("""
+        SELECT s.* FROM songs AS s
+        INNER JOIN folders AS f ON s.folderId = f.id
+        WHERE f.isIgnored = 0
+          AND (s.lyrics IS NULL OR TRIM(s.lyrics) = '' OR s.lyricSearchText IS NULL)
+          AND s.title IS NOT NULL
+          AND TRIM(s.title) != ''
+        ORDER BY s.title ASC
+    """)
+    suspend fun getSongsWithoutLyrics(): List<SongEntity>
+
+    @SkipQueryVerification
     @Query("UPDATE songs SET lyricSearchText = :lyricSearchText WHERE uri = :uri")
     suspend fun updateLyricSearchText(
         uri: String,

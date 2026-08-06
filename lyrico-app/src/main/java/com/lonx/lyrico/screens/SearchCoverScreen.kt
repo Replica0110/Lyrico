@@ -8,21 +8,26 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextButton as MaterialTextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,12 +62,15 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.result.ResultBackNavigator
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -88,6 +97,31 @@ fun SearchCoverScreen(
     LaunchedEffect(keyword) {
         keyword?.let { viewModel.performCoverSearch(it) }
     }
+
+    LaunchedEffect(uiState.selectedSource?.id, uiState.availableSources) {
+        val selectedSource = uiState.selectedSource
+        val targetPage = if (selectedSource == null) {
+            0
+        } else {
+            uiState.availableSources.indexOfFirst { it.id == selectedSource.id } + 1
+        }
+        if (targetPage >= 0 && pagerState.currentPage != targetPage) {
+            pagerState.animateScrollToPage(targetPage)
+        }
+    }
+
+    LaunchedEffect(pagerState, uiState.availableSources.map { it.id }) {
+        snapshotFlow { pagerState.currentPage }
+            .collectLatest { page ->
+                if (page == 0) {
+                    viewModel.onAllSourcesSelected()
+                } else {
+                    uiState.availableSources.getOrNull(page - 1)?.let {
+                        viewModel.onSourceSelected(it)
+                    }
+                }
+            }
+    }
     val localSegments = remember(uiState.searchKeyword) {
         MusicMatchUtils.splitToSegments(uiState.searchKeyword)
             .ifEmpty { listOf(uiState.searchKeyword.trim()) }
@@ -112,7 +146,7 @@ fun SearchCoverScreen(
                         viewModel.performCoverSearch()
                     },
                     actions = {
-                        TextButton(
+                        MaterialTextButton(
                             onClick = {
                                 keyboardController?.hide()
                                 viewModel.onCoverKeywordChanged(coverSearchState.text.toString())
@@ -207,18 +241,33 @@ fun SearchCoverScreen(
                 } else {
                     uiState.coverResults.filter { it.source == source }
                 }
+                val sourceIds = if (source == null) {
+                    uiState.availableSources.map { it.id }
+                } else {
+                    listOf(source.id)
+                }
+                val loadMoreError = sourceIds.firstNotNullOfOrNull { sourceId ->
+                    uiState.loadMoreErrors[sourceId]?.let { sourceId to it }
+                }
+                val isLoadingMore = sourceIds.any { it in uiState.loadingMoreSourceIds }
+                val canLoadMore = sourceIds.any { uiState.hasMoreBySource[it] == true }
+                val searchError = if (source == null) {
+                    uiState.searchErrors.values.firstOrNull()
+                } else {
+                    uiState.searchErrors[source.id]
+                }
 
                 when {
-                    uiState.isSearching -> {
+                    uiState.isSearching && (page == 0 || source == uiState.selectedSource) -> {
                         Box(Modifier.fillMaxSize(), Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }
 
-                    page == 0 && uiState.searchError != null -> {
+                    searchError != null && results.isEmpty() -> {
                         Box(Modifier.fillMaxSize(), Alignment.Center) {
                             Text(
-                                text = uiState.searchError?.asString().orEmpty(),
+                                text = searchError.asString().orEmpty(),
                                 fontSize = 14.sp,
                                 color = MiuixTheme.colorScheme.error
                             )
@@ -232,14 +281,22 @@ fun SearchCoverScreen(
                     }
 
                     else -> {
+                        val gridState = rememberLazyGridState()
+                        LaunchedEffect(uiState.searchKeyword) {
+                            gridState.scrollToItem(0)
+                        }
                         LazyVerticalGrid(
+                            state = gridState,
                             columns = GridCells.Adaptive(minSize = 150.dp),
                             contentPadding = PaddingValues(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(results, key = { it.id + it.url }) { cover ->
+                            items(
+                                results,
+                                key = { "${it.source.id}\u0000${it.id}\u0000${it.url}" }
+                            ) { cover ->
                                 CoverGridItem(
                                     cover = cover,
                                     onClick = {
@@ -249,6 +306,77 @@ fun SearchCoverScreen(
                                         imageSizeCache.value = imageSizeCache.value + (url to size)
                                     }
                                 )
+                            }
+
+                            when {
+                                isLoadingMore -> {
+                                    item(
+                                        key = "cover_search_loading_more",
+                                        span = { GridItemSpan(maxLineSpan) }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 16.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            CircularProgressIndicator(size = 20.dp)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = stringResource(R.string.search_loading_more),
+                                                fontSize = 14.sp,
+                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                                            )
+                                        }
+                                    }
+                                }
+
+                                loadMoreError != null -> {
+                                    item(
+                                        key = "cover_search_load_more_error",
+                                        span = { GridItemSpan(maxLineSpan) }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            TextButton(
+                                                text = stringResource(R.string.search_load_more_failed),
+                                                onClick = {
+                                                    viewModel.loadNextPage(
+                                                        loadMoreError.first
+                                                    )
+                                                },
+                                                colors = ButtonDefaults.textButtonColorsPrimary()
+                                            )
+                                        }
+                                    }
+                                }
+
+                                canLoadMore -> {
+                                    item(
+                                        key = "cover_search_load_more",
+                                        span = { GridItemSpan(maxLineSpan) }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            TextButton(
+                                                text = stringResource(R.string.search_load_more),
+                                                onClick = {
+                                                    viewModel.loadNextPage(source?.id)
+                                                },
+                                                colors = ButtonDefaults.textButtonColorsPrimary()
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -372,7 +500,7 @@ fun CoverGridItem(
             ) {
                 // 标题
                 Text(
-                    text = cover.title.ifBlank { "未知标题" },
+                    text = cover.title.ifBlank { stringResource(R.string.unknown_title) },
                     style = MiuixTheme.textStyles.body2,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -380,7 +508,7 @@ fun CoverGridItem(
                 )
                 // 歌手
                 Text(
-                    text = cover.artist.ifBlank { "未知歌手" },
+                    text = cover.artist.ifBlank { stringResource(R.string.unknown_artist) },
                     style = MiuixTheme.textStyles.footnote2,
                     color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                     maxLines = 1,
@@ -388,7 +516,14 @@ fun CoverGridItem(
                 )
                 // 专辑
                 Text(
-                    text = cover.album.ifBlank { "未知专辑" },
+                    text = cover.album.ifBlank { stringResource(R.string.unknown_album) },
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Text(
+                    text = cover.date.ifBlank { stringResource(R.string.unknown_year) },
                     style = MiuixTheme.textStyles.footnote2,
                     color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                     maxLines = 1,

@@ -81,7 +81,7 @@ Returns JS runtime environment information.
 
 ```json
 {
-  "pluginApiVersion": 3,
+  "pluginApiVersion": 4,
   "hostApiVersion": 3,
   "engine": "quickjs",
   "engineVersion": null,
@@ -199,8 +199,6 @@ Decrypts Base64 ciphertext with AES-ECB-PKCS5Padding.
 ```javascript
 var plain = Platform.crypto.aesEcbPkcs5DecryptBase64ToText(encryptedBase64, "mysecretkey12345");
 ```
-
----
 
 ## Platform.base64 — Base64
 

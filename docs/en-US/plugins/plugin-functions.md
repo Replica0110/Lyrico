@@ -2,15 +2,15 @@
 
 This page describes the function interfaces that plugins expose to Lyrico. Use it when implementing song search, lyrics retrieval, and cover search.
 
-The plugin entry script must define global functions for the host to call. These functions receive JSON string arguments and return JSON string results.
+The plugin entry script must define global functions for the host to call. The host parses each request into a JavaScript object and serializes the returned value to JSON. Return an object, array, string, or `null` directly. Do not call `JSON.stringify()`, because that double-serializes the result and fails on the Android host.
 
 ## Function Overview
 
 | Function | Trigger | Return type | Capability |
 |----------|---------|-------------|------------|
-| `searchSongs(request)` | User searches songs | JSON array string | `searchSongs` |
-| `getLyrics(request)` | Lyrics are requested for one song | JSON object string or `null` | `getLyrics` |
-| `searchCovers(request)` | Cover images are searched | JSON array string | `searchCovers` |
+| `searchSongs(request)` | User searches songs | JavaScript array | `searchSongs` |
+| `getLyrics(request)` | Search lyrics candidates | JavaScript candidate array in API 4; lyrics object, string, or `null` in API 1–3 | `getLyrics` |
+| `searchCovers(request)` | Cover images are searched | JavaScript array | `searchCovers` |
 
 Functions are exposed through the QuickJS global scope. You do not need, and cannot use, `export`:
 
@@ -52,13 +52,13 @@ The host passes this JSON object before serialization:
 
 ### Return Value
 
-Return the result after `JSON.stringify()`. Two top-level formats are supported.
+Return a JavaScript array or an object containing the result array. Two top-level formats are supported.
 
 **Format 1: return an array directly, recommended**
 
 ```javascript
 function searchSongs(request) {
-  return JSON.stringify([
+  return [
     {
       id: "12345",
       title: "Example Song",
@@ -75,7 +75,7 @@ function searchSongs(request) {
         date: "2024-01-01"
       }
     }
-  ]);
+  ];
 }
 ```
 
@@ -83,9 +83,9 @@ function searchSongs(request) {
 
 ```javascript
 function searchSongs(request) {
-  return JSON.stringify({
+  return {
     items: [...]    // "results", "songs", or "data" are also accepted
-  });
+  };
 }
 ```
 
@@ -148,7 +148,13 @@ Current standard fields are: `title`, `artist`, `album`, `album_artist`, `genre`
 
 ## `getLyrics(request)`
 
-Retrieves lyrics for one song.
+Independent lyrics search passes the current title, artist, album, and year in `song`.
+`getLyrics` may search directly using those ordinary fields: the plugin does not need to
+implement `searchSongs`, and the user does not need to provide a platform song ID. Whenever a
+plugin also declares `searchSongs`, regardless of its API version, the host first offers that
+plugin's own song candidates, then passes the selected `id`, `fields`, and `internal` unchanged to
+the same plugin's `getLyrics`. The single-song search screen does not call independent lyrics
+sources.
 
 ### Request
 
@@ -169,13 +175,15 @@ Retrieves lyrics for one song.
       "lyrics_id": "abc"
     }
   },
+  "page": 1,
+  "pageSize": 20,
   "config": {}
 }
 ```
 
 | Field | Type | Description |
 |------|------|-------------|
-| `song.id` | `string` | Song ID on the source platform |
+| `song.id` | `string` | Song ID; independent lyrics search does not guarantee a source-platform ID |
 | `song.title` | `string` | Song title |
 | `song.artist` | `string` | Artist |
 | `song.album` | `string` | Album title |
@@ -184,17 +192,45 @@ Retrieves lyrics for one song.
 | `song.pluginId` | `string` | Plugin ID |
 | `song.fields` | `object` | Standard fields returned by search |
 | `song.internal` | `object` | Plugin-private context returned by search |
+| `page` | `int` | Candidate page number starting at `1`; non-paginated plugins may ignore it |
+| `pageSize` | `int` | Requested candidate count for this page |
 | `config` | `object` | User config values |
 
 ### Return Value
 
-Return structured lyrics data, full raw lyrics text, or `null` when no lyrics are found. The host first reads `type` to determine payload type. For `type: "structured"`, it parses `original` / `translated` / `romanization` lists. For raw types, it directly uses the matching raw field.
+API 4 should return an array of lyrics objects. A wrapper using `items`, `results`, or
+`candidates` is also accepted. Every object must provide `ti` (title), `ar` (artist), `al`
+(album), and `date` (year) in `tags`. The host builds the candidate list from these existing
+lyrics tags instead of requiring a duplicate set of top-level song fields:
+
+```javascript
+function getLyrics(request) {
+  return [{
+    type: "rawPlainLrc",
+    tags: {
+      ti: "Example Song",
+      ar: "Example Artist",
+      al: "Example Album",
+      date: "2024"
+    },
+    rawPlainLrc: "[00:00.00]First line lyrics"
+  }];
+}
+```
+
+API 1–3 signatures and existing return values are unchanged: they may return one structured
+lyrics object, full raw lyrics text, or `null`. The host wraps a legacy result as one candidate
+and uses the requested song metadata for display. The formats below are both API 1–3 top-level
+responses and valid candidate objects inside the API 4 array.
+
+The host first reads `type` to determine payload type. For `type: "structured"`, it parses
+`original` / `translated` / `romanization` lists. For raw types, it uses the matching raw field.
 
 **Format 1: structured word-level lyrics, recommended**
 
 ```javascript
 function getLyrics(request) {
-  return JSON.stringify({
+  return {
     type: "structured",
     tags: {
       ti: "Song Title",
@@ -210,7 +246,7 @@ function getLyrics(request) {
       [2000, 4000, "Second line lyrics"]
     ],
     romanization: null
-  });
+  };
 }
 ```
 
@@ -230,7 +266,7 @@ function getLyrics(request) {
 
 ```javascript
 function getLyrics(request) {
-  return JSON.stringify({
+  return {
     type: "rawPlainLrc",
     tags: {
       ti: "Song Title",
@@ -238,7 +274,7 @@ function getLyrics(request) {
       al: "Album Title"
     },
     rawPlainLrc: "[00:00.00]First line lyrics\n[00:05.00]Second line lyrics"
-  });
+  };
 }
 ```
 
@@ -261,7 +297,7 @@ function getLyrics(request) {
   if (noLyricsFound) {
     return null;
     // Or:
-    return JSON.stringify({ notFound: true });
+    return { notFound: true };
   }
 }
 ```
@@ -285,13 +321,15 @@ function getLyrics(request) {
 
 ## `searchCovers(request)`
 
-Searches cover images. This usually delegates to `searchSongs` and filters results that have covers.
+Searches cover images. The host calls `searchCovers` directly with the user's keyword. The plugin
+does not need to implement `searchSongs`, and there is no preceding song-candidate selection.
 
 ### Request
 
 ```json
 {
   "keyword": "Example Song",
+  "page": 1,
   "pageSize": 5,
   "config": {}
 }
@@ -300,24 +338,26 @@ Searches cover images. This usually delegates to `searchSongs` and filters resul
 | Field | Type | Default | Description |
 |------|------|---------|-------------|
 | `keyword` | `string` | - | Search keyword |
+| `page` | `int` | `1` | Page number, starting from 1 |
 | `pageSize` | `int` | `5` | Result count |
 | `config` | `object` | `{}` | User config values |
 
 ### Return Value
 
-The format is identical to `searchSongs`. The host filters results that have `picUrl`.
+The top-level format matches `searchSongs`, but cover candidates do not require a platform song
+ID. In API 4, every result must include title, artist, album, year, and a cover URL so the user can
+judge the match. A date may use `year`, `date`, or `releaseDate`; the cover may use `picUrl`,
+`coverUrl`, and other compatible aliases. Existing API 1–3 return formats remain compatible.
 
 ```javascript
 function searchCovers(request) {
-  return searchSongs({
-    keyword: request.keyword,
-    page: 1,
-    pageSize: request.pageSize || 5,
-    separator: "/",
-    config: request.config || {}
-  }).filter(function (song) {
-    return song.picUrl;
-  });
+  return [{
+    title: "Example Song",
+    artist: "Example Artist",
+    album: "Example Album",
+    year: "2024",
+    picUrl: "https://cdn.example.com/cover.jpg"
+  }];
 }
 ```
 

@@ -86,6 +86,7 @@ const zhSidebar = {
     {
       text: '参考手册',
       items: [
+        { text: 'API 版本沿革', link: '/plugins/api-versions' },
         { text: 'Manifest 参考', link: '/plugins/manifest' },
         { text: '宿主 API 参考', link: '/plugins/host-api' },
       ],
@@ -153,6 +154,7 @@ const enSidebar = {
     {
       text: 'Reference',
       items: [
+        { text: 'API Version History', link: '/en-US/plugins/api-versions' },
         { text: 'Manifest Reference', link: '/en-US/plugins/manifest' },
         { text: 'Host API Reference', link: '/en-US/plugins/host-api' },
       ],

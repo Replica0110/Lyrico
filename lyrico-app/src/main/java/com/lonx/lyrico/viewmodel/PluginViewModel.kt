@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
@@ -54,6 +55,11 @@ class PluginViewModel(
     val uiState: StateFlow<PluginUiState> = _uiState.asStateFlow()
     private val actionMutex = Mutex()
 
+    init {
+        viewModelScope.launch {
+            installer.synchronizeInstalledPluginManifestMetadata()
+        }
+    }
 
     fun importPlugin(context: Context, uri: Uri) {
         runBusy("Plugin package scanned") {
@@ -121,10 +127,6 @@ class PluginViewModel(
                 allowDowngrade = allowDowngrade
             )
 
-            result.installed.forEach { plugin ->
-                pluginManager.invalidate(plugin.id)
-            }
-
             if (result.installed.isEmpty()) {
                 val failureReason = result.failed.firstOrNull()?.reason ?: "No installable plugin found"
                 logPluginError(
@@ -153,26 +155,27 @@ class PluginViewModel(
         clearPendingImport()
     }
 
-    fun setEnabled(id: String, enabled: Boolean) {
+    fun setEnabled(id: String, sourceType: PluginSourceType, enabled: Boolean) {
         viewModelScope.launch {
-            repository.setEnabled(id, enabled)
-            pluginManager.invalidate(id)
+            repository.setEnabled(id, sourceType, enabled)
         }
     }
 
-    fun setPluginOrder(plugins: List<SourcePluginEntity>) {
+    fun setPluginOrder(
+        plugins: List<SourcePluginEntity>,
+        sourceType: PluginSourceType
+    ) {
         viewModelScope.launch {
-            plugins.forEachIndexed { index, plugin ->
-                repository.updateSortOrder(plugin.id, index)
-                pluginManager.invalidate(plugin.id)
-            }
+            repository.updateSortOrders(
+                ids = plugins.map { it.id },
+                sourceType = sourceType
+            )
         }
     }
 
     fun setCustomName(id: String, name: String) {
         viewModelScope.launch {
             repository.updateCustomName(id, name)
-            pluginManager.invalidate(id)
             publishMessage("Plugin name saved")
         }
     }

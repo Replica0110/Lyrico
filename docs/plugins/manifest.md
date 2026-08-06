@@ -34,7 +34,7 @@
   "versionName": "1.0.0",
   "author": "Plugin Author",
   "description": "Example source plugin",
-  "apiVersion": 3,
+  "apiVersion": 4,
   "minHostApiVersion": 1,
   "entry": "source.js",
   "includeDirs": [
@@ -72,7 +72,7 @@
 
 `id` 必须是反向域名格式，例如 `com.example.music_source`。
 
-`apiVersion` 用于插件协议兼容检查。宿主 API 向下兼容：当前版本为 3 时，可以加载 `apiVersion` 为 1、2 或 3 的插件，但会拒绝声明更高版本的插件。
+`apiVersion` 用于插件协议兼容检查。当前插件协议版本为 4，可以加载 `apiVersion` 为 1、2、3 或 4 的插件，但会拒绝声明更高版本的插件。`apiVersion` 与 `Platform` 宿主 API 版本相互独立；当前宿主 API 版本为 3。各版本的具体变化见 [API 版本沿革](./api-versions.md)。
 
 `minHostApiVersion` 表示插件实际需要的最低宿主 API 版本。它必须大于等于 1 且不高于当前宿主版本；需要具体宿主能力时，插件仍可通过 `Platform.runtime.getInfo().supportedHostApis` 检查，缺失能力会在运行时返回标准化错误。
 
@@ -84,7 +84,23 @@
 | `getLyrics` | `getLyrics(request)` |
 | `searchCovers` | `searchCovers(request)` |
 
-如果声明了 `capabilities`，搜索源插件必须包含 `searchSongs`。
+插件只会出现在与其能力匹配的调用场景中，三项能力可以独立声明，`getLyrics` 和
+`searchCovers` 不依赖 `searchSongs`。未声明或声明为空数组的旧插件按仅支持
+`searchSongs` 处理。
+
+宿主会根据能力组合显示插件类型：
+
+| 插件类型 | 能力组合 |
+|----------|----------|
+| 聚合源 | 同时支持 `searchSongs`、`getLyrics`、`searchCovers` |
+| 元数据源 | 支持 `searchSongs` |
+| 歌词源 | 支持 `getLyrics` |
+| 封面源 | 支持 `searchCovers` |
+
+类型 Tab 不是互斥分类：同时具备三项能力的插件在类型标签中只显示“聚合源”，但也会
+出现在元数据源、歌词源和封面源 Tab 中；其他混合能力插件会出现在每个匹配的功能
+Tab 中。安装预览、插件管理和插件配置页面都会显示类型信息。能力组合在安装时写入宿主数据库，
+插件升级时会随新的 manifest 一并更新。
 
 `includeDirs` 只能引用插件包内的相对目录。不能使用绝对路径、`..`、网络 URL 或跨插件文件。
 

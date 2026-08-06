@@ -60,8 +60,8 @@ The Lyrico plugin system is a source-plugin framework based on the **QuickJS emb
 | Validation item | Rule |
 |-----------------|------|
 | ID format | Must match `^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$` reverse-domain format |
-| API version | `apiVersion` must be in the host-supported range **1..3**; `minHostApiVersion` cannot exceed the current host API **3** |
-| Capabilities | If `capabilities` is declared, it must include `searchSongs` |
+| API version | Plugin protocol `apiVersion` must be in the supported range **1..4**; `minHostApiVersion` cannot exceed the current host API **3** |
+| Capabilities | Only known capabilities are accepted; all three may be declared independently; a missing or empty list keeps legacy `searchSongs` behavior |
 | Entry file | Must exist, use `.js`, stay inside the plugin root, and be ≤ 1 MB |
 | Include directories | Directories in `includeDirs` must exist and stay inside the plugin root |
 | Icon | If specified, it must exist and use `png`/`jpg`/`jpeg`/`webp` |
@@ -100,14 +100,21 @@ After installation, plugin metadata is written to the Room `source_plugins` tabl
 | `pluginDir` | Absolute install directory |
 | `entryFile` | Entry filename |
 | `includeDirsJson` | JSON serialization of include directories |
+| `capabilitiesJson` | JSON serialization of the capability combination |
 | `iconPath` | Absolute icon path, optional |
-| `enabled` | Enabled state, default `false` on first install |
-| `sortOrder` | Ordering value |
+| `enabled` | Aggregated-source enabled state |
+| `metadataEnabled` | Metadata-source enabled state |
+| `lyricsEnabled` | Lyrics-source enabled state |
+| `coverEnabled` | Cover-source enabled state |
+| `sortOrder` | Aggregated-source priority |
+| `metadataSortOrder` | Metadata-source priority |
+| `lyricsSortOrder` | Lyrics-source priority |
+| `coverSortOrder` | Cover-source priority |
 | `installedAt` / `updatedAt` | Timestamps |
 
 ### Stage 4: Load And Activate
 
-1. `PluginSearchSourceManager.buildSourcesLocked()` iterates over all plugins with `enabled = true`
+1. `PluginSearchSourceManager.buildSourcesLocked()` loads installed plugins; each call path then filters by its own capability and enabled state
 2. For each plugin, it calls `ScriptSearchSourceFactory.create()`:
    - Read `manifest.json`
    - Concatenate JS scripts in order: first every `.js` file in `includeDirs` sorted by path, then the entry file
@@ -117,17 +124,20 @@ After installation, plugin metadata is written to the Room `source_plugins` tabl
 
 ### Stage 5: Runtime Calls
 
-1. The user enters a keyword in the search UI
-2. `SearchSourceProvider` obtains all enabled search sources from `PluginSearchSourceManager`
-3. Each source receives `searchSongs(keyword, page, separator, pageSize)`
-4. `ScriptSearchSource` serializes the request as JSON and invokes the plugin global function `searchSongs(requestJson)` through JNI
-5. The plugin returns a JSON string, and `PluginJsonParser` parses it into `SongSearchResult` values
+1. Single-song search loads only aggregated sources that declare all three capabilities and calls their `searchSongs`
+2. The independent lyrics search in the edit screen loads sources with `getLyrics`. Any source that also provides `searchSongs` first shows its own song candidates and calls that same source's `getLyrics` after selection; an API 4 source without `searchSongs` returns lyrics candidates directly and identifies them through `tags.ti/ar/al/date`
+3. Independent cover search loads only `searchCovers` sources and requests cover candidates directly by keyword
+4. `ScriptSearchSource` serializes the request and invokes the matching plugin global function through JNI
+5. The plugin returns a JavaScript value directly; JNI serializes it once, then `PluginJsonParser` converts it into host result models
+
+Each of the four call paths reads its own enabled state and priority. An aggregated source may
+be enabled independently and have a different position in every type tab.
 
 ### Stage 6: Enable / Disable
 
-- `PluginViewModel.setEnabled(id, enabled)` updates the `enabled` column in the database
+- `PluginViewModel.setEnabled(id, sourceType, enabled)` updates only the enabled field for the current type
 - `PluginSearchSourceManager.invalidate(pluginId)` removes the cached source and closes its runtime
-- Only plugins with `enabled = true` appear in the `observeEnabledSources()` Flow
+- `SearchSourceProvider` checks both capability support and the enabled state for the requested `sourceType`
 
 ### Stage 7: Uninstall
 
@@ -205,6 +215,7 @@ interface SearchSource {
 
     suspend fun searchSongs(keyword, page, separator, pageSize): List<SongSearchResult>
     suspend fun getLyrics(song): LyricsResult?
-    suspend fun searchCovers(keyword, pageSize): List<SongSearchResult>
+    suspend fun getLyricsCandidates(song, page, pageSize): List<LyricsCandidateResult>
+    suspend fun searchCovers(keyword, page, pageSize): List<SongSearchResult>
 }
 ```

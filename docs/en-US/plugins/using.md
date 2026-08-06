@@ -28,9 +28,9 @@ If a package does not match the required structure, Lyrico rejects it and shows 
 
 ## Enable And Disable
 
-Installed plugins do not necessarily participate in search immediately. A plugin must be enabled before it appears in lyrics, cover, or batch matching flows.
+The Aggregated, Metadata, Lyrics, and Covers tabs keep independent enabled states. A switch affects only the current type; for example, an aggregated plugin can be hidden from single-song search while remaining available for lyrics and cover search.
 
-Disabling a plugin keeps its files and settings but removes it from search. Use uninstall when you want to remove it completely.
+Disabling one type keeps the plugin files and settings and does not affect its other types. Use uninstall when you want to remove it completely.
 
 ## Configure Plugins
 

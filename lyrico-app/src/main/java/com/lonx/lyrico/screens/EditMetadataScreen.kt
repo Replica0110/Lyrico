@@ -108,6 +108,7 @@ import com.lonx.lyrico.viewmodel.isEqualIgnoringBlank
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.SearchCoverDestination
+import com.ramcosta.composedestinations.generated.destinations.SearchLyricsDestination
 import com.ramcosta.composedestinations.generated.destinations.SearchResultsDestination
 import com.ramcosta.composedestinations.generated.destinations.EditFieldVisibilityDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -172,7 +173,8 @@ fun EditMetadataScreen(
     navigator: DestinationsNavigator,
     songFileUri: String,
     onCoverSearchResult: ResultRecipient<SearchCoverDestination, String>,
-    onLyricsResult: ResultRecipient<SearchResultsDestination, LyricsSearchResult>
+    onLyricsResult: ResultRecipient<SearchResultsDestination, LyricsSearchResult>,
+    onLyricsSearchResult: ResultRecipient<SearchLyricsDestination, LyricsSearchResult>
 ) {
     val viewModel: EditMetadataViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
@@ -272,6 +274,7 @@ fun EditMetadataScreen(
 
     // 事件监听
     onLyricsResult.onResult { result -> viewModel.updateMetadataFromSearchResult(result) }
+    onLyricsSearchResult.onResult { result -> viewModel.updateMetadataFromSearchResult(result) }
 
     onCoverSearchResult.onResult { result -> viewModel.updateCover(result) }
     LaunchedEffect(uiState.permissionIntentSender) {
@@ -1210,6 +1213,20 @@ fun EditMetadataScreen(
                     color = MiuixTheme.colorScheme.secondaryContainer,
                 )
             ) {
+                ArrowPreference(
+                    title = stringResource(R.string.action_search_lyrics),
+                    onClick = {
+                        showLyricsActionBottomSheet = false
+                        navigator.navigate(
+                            SearchLyricsDestination(
+                                title = editingTagData?.title.orEmpty(),
+                                artist = editingTagData?.artist.orEmpty(),
+                                album = editingTagData?.album.orEmpty(),
+                                date = editingTagData?.date.orEmpty()
+                            )
+                        )
+                    }
+                )
                 ArrowPreference(
                     title = stringResource(R.string.action_import_lyrics),
                     onClick = {

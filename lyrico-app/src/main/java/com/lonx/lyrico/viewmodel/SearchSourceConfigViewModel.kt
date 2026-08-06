@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
+import com.lonx.lyrico.data.model.plugin.PluginSourceType
+import com.lonx.lyrico.data.model.plugin.displaySourceTypes
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.isSatisfied
@@ -16,6 +18,9 @@ import kotlinx.coroutines.launch
 data class SearchSourceConfigUiState(
     val pluginId: String = "",
     val title: String = "",
+    val apiVersion: Int = 1,
+    val minHostApiVersion: Int = 1,
+    val sourceTypes: Set<PluginSourceType> = emptySet(),
     val configFields: List<PluginConfigField> = emptyList(),
     val values: Map<String, String> = emptyMap(),
     val pluginEnabled: Boolean = true,
@@ -51,6 +56,9 @@ class SearchSourceConfigViewModel(
                 it.copy(
                     pluginId = sourceImpl.id,
                     title = sourceImpl.name,
+                    apiVersion = sourceImpl.apiVersion,
+                    minHostApiVersion = sourceImpl.minHostApiVersion,
+                    sourceTypes = sourceImpl.capabilities.displaySourceTypes(),
                     configFields = fields,
                     values = defaults + saved,
                     pluginEnabled = sourceWithState.enabled,

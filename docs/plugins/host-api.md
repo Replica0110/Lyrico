@@ -81,7 +81,7 @@ var ua = Platform.app.getUserAgent();  // "Lyrico/0.0.0"
 
 ```json
 {
-  "pluginApiVersion": 3,
+  "pluginApiVersion": 4,
   "hostApiVersion": 3,
   "engine": "quickjs",
   "engineVersion": null,
@@ -199,8 +199,6 @@ AES-ECB-PKCS5Padding 解密 Base64 密文。
 ```javascript
 var plain = Platform.crypto.aesEcbPkcs5DecryptBase64ToText(encryptedBase64, "mysecretkey12345");
 ```
-
----
 
 ## Platform.base64 — Base64 编码
 

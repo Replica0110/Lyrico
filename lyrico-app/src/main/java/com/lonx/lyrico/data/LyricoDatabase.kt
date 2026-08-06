@@ -23,6 +23,7 @@ import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.SongCustomTagKeyEntity
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
+import com.lonx.lyrico.data.model.entity.DEFAULT_PLUGIN_CAPABILITIES_SQL
 
 @Database(
     entities = [
@@ -38,7 +39,7 @@ import com.lonx.lyrico.data.model.entity.SourcePluginEntity
         SourcePluginEntity::class,
         SongCustomTagKeyEntity::class
     ],
-    version = 20,
+    version = 21,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3),
@@ -369,6 +370,53 @@ abstract class LyricoDatabase : RoomDatabase() {
                     """
                     CREATE INDEX IF NOT EXISTS index_songs_albumGroupKey_albumSortKey
                     ON songs(albumGroupKey, albumSortKey)
+                    """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE source_plugins " +
+                        "ADD COLUMN capabilitiesJson TEXT NOT NULL " +
+                        "DEFAULT $DEFAULT_PLUGIN_CAPABILITIES_SQL"
+                )
+                db.execSQL(
+                    "ALTER TABLE source_plugins ADD COLUMN minHostApiVersion INTEGER NOT NULL DEFAULT 1"
+                )
+                db.execSQL(
+                    "ALTER TABLE source_plugins ADD COLUMN metadataSortOrder INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE source_plugins ADD COLUMN lyricsSortOrder INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE source_plugins ADD COLUMN coverSortOrder INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    """
+                    UPDATE source_plugins SET
+                        metadataSortOrder = sortOrder,
+                        lyricsSortOrder = sortOrder,
+                        coverSortOrder = sortOrder
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "ALTER TABLE source_plugins ADD COLUMN metadataEnabled INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE source_plugins ADD COLUMN lyricsEnabled INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE source_plugins ADD COLUMN coverEnabled INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    """
+                    UPDATE source_plugins SET
+                        metadataEnabled = enabled,
+                        lyricsEnabled = enabled,
+                        coverEnabled = enabled
                     """.trimIndent()
                 )
             }

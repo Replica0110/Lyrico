@@ -1,6 +1,7 @@
 package com.lonx.lyrico.plugin.source
 
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
+import com.lonx.lyrico.data.model.lyrics.LyricsCandidateResult
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
@@ -25,6 +26,36 @@ class PluginJsonParser(
         pluginId: String,
         pluginName: String
     ): List<SongSearchResult> {
+        return parseSongResultItems(
+            rawJson = rawJson,
+            pluginId = pluginId,
+            pluginName = pluginName,
+            requireId = true
+        )
+    }
+
+    fun parseCoverResults(
+        rawJson: String,
+        pluginId: String,
+        pluginName: String,
+        enforceApi4Contract: Boolean = false
+    ): List<SongSearchResult> {
+        return parseSongResultItems(
+            rawJson = rawJson,
+            pluginId = pluginId,
+            pluginName = pluginName,
+            requireId = false,
+            enforceCoverJudgmentMetadata = enforceApi4Contract
+        )
+    }
+
+    private fun parseSongResultItems(
+        rawJson: String,
+        pluginId: String,
+        pluginName: String,
+        requireId: Boolean,
+        enforceCoverJudgmentMetadata: Boolean = false
+    ): List<SongSearchResult> {
         val root = json.parseToJsonElement(rawJson)
         val items = when (root) {
             is JsonArray -> root
@@ -32,12 +63,27 @@ class PluginJsonParser(
             else -> JsonArray(emptyList())
         }
 
-        return items.mapNotNull { element ->
-            val obj = element as? JsonObject ?: return@mapNotNull null
-            val id = obj.string("id", "songId", "trackId") ?: return@mapNotNull null
+        return items.mapIndexedNotNull { index, element ->
+            val obj = element as? JsonObject ?: return@mapIndexedNotNull null
+            val coverUrl = obj.string("picUrl", "coverUrl", "cover_url", "artworkUrl").orEmpty()
+            val id = obj.string("id", "songId", "trackId")
+                ?: if (requireId) return@mapIndexedNotNull null else coverUrl.ifBlank {
+                    "$pluginId:cover:$index"
+                }
             val title = obj.string("title", "name", "songName").orEmpty()
             val artist = obj.string("artist", "artists", "singer").orEmpty()
             val album = obj.string("album", "albumName").orEmpty()
+            val date = obj.string("year", "date", "releaseDate", "release_date").orEmpty()
+            if (enforceCoverJudgmentMetadata && listOf(
+                    title,
+                    artist,
+                    album,
+                    date,
+                    coverUrl
+                ).any { it.isBlank() }
+            ) {
+                return@mapIndexedNotNull null
+            }
             val duration = obj.long("duration", "durationMs", "duration_ms") ?: 0L
             val fields = obj.stringMap("fields", "metadata").orEmpty().sanitizeStandardFields()
             val internal = obj.stringMap("internal").orEmpty().sanitizePluginInternal()
@@ -50,11 +96,69 @@ class PluginJsonParser(
                 artist = artist,
                 album = album,
                 duration = duration,
-                date = obj.string("date", "releaseDate", "release_date").orEmpty(),
+                date = date,
                 trackNumber = obj.string("trackNumber", "trackerNumber", "track_number").orEmpty(),
-                picUrl = obj.string("picUrl", "coverUrl", "cover_url", "artworkUrl").orEmpty(),
+                picUrl = coverUrl,
                 fields = fields,
                 internal = internal
+            )
+        }
+    }
+
+    fun parseLyricsCandidates(
+        rawJson: String,
+        pluginId: String,
+        pluginName: String,
+        fallbackSong: SongSearchResult,
+        enforceApi4Contract: Boolean = false
+    ): List<LyricsCandidateResult> {
+        val root = json.parseToJsonElement(rawJson)
+        if (root is JsonNull) return emptyList()
+
+        val candidateElements = when (root) {
+            is JsonArray -> root.toList()
+            is JsonObject -> root.array("items", "results", "candidates")?.toList()
+                ?: listOf(root)
+            else -> listOf(root)
+        }
+
+        return candidateElements.mapIndexedNotNull { index, element ->
+            val obj = element as? JsonObject
+            val tags = obj?.stringMap("tags").orEmpty()
+            if (enforceApi4Contract) {
+                val judgmentFields = listOf(
+                    tags["ti"],
+                    tags["ar"],
+                    tags["al"],
+                    tags["date"]
+                )
+                if (judgmentFields.any { it.isNullOrBlank() }) {
+                    return@mapIndexedNotNull null
+                }
+            }
+            val lyrics = parseLyrics(element.toString()) ?: return@mapIndexedNotNull null
+            val candidateId = if (candidateElements.size == 1) {
+                fallbackSong.id
+            } else {
+                "${fallbackSong.id}:lyrics:$index"
+            }
+
+            LyricsCandidateResult(
+                song = SongSearchResult(
+                    id = candidateId,
+                    pluginId = pluginId,
+                    pluginName = pluginName,
+                    title = tags["ti"] ?: fallbackSong.title,
+                    artist = tags["ar"] ?: fallbackSong.artist,
+                    album = tags["al"] ?: fallbackSong.album,
+                    duration = fallbackSong.duration,
+                    date = tags["date"] ?: fallbackSong.date,
+                    trackNumber = fallbackSong.trackNumber,
+                    picUrl = fallbackSong.picUrl,
+                    fields = fallbackSong.fields,
+                    internal = fallbackSong.internal
+                ),
+                lyrics = lyrics
             )
         }
     }

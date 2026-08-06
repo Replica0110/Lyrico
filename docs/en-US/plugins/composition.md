@@ -43,7 +43,7 @@ The entry script must define **global functions**. QuickJS does not support ES M
 ```javascript
 // Correct: global function declaration
 function searchSongs(request) {
-  return JSON.stringify([...]);
+  return [...];
 }
 
 // Wrong: export is not supported

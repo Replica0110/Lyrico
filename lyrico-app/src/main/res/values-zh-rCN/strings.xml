@@ -7,10 +7,21 @@
     <string name="am_source_name">Apple Music</string>
     <string name="search_settings">搜索设置</string>
     <string name="plugin_manager_title">插件管理</string>
-    <string name="search_source_priority_tip">插件顺序会影响搜索和批量匹配时的源调用顺序。拖动插件可调整优先级，关闭插件后不会参与搜索</string>
+    <string name="search_source_priority_tip">每个类型 Tab 独立保存启用状态和源优先级。当前 Tab 的开关和拖动只影响该类型</string>
+    <string name="plugin_type_aggregated">聚合源</string>
+    <string name="plugin_type_metadata">元数据源</string>
+    <string name="plugin_type_lyrics">歌词源</string>
+    <string name="plugin_type_cover">封面源</string>
+    <string name="plugin_type_with_value">插件类型：%1$s</string>
+    <string name="plugin_type_empty">暂未安装%1$s插件</string>
 
     <!-- 搜索 -->
     <string name="search_lyrics_placeholder">搜索歌词…</string>
+    <string name="lyrics_search_title">歌词搜索</string>
+    <string name="action_search_lyrics">搜索歌词</string>
+    <string name="unknown_title">未知标题</string>
+    <string name="unknown_album">未知专辑</string>
+    <string name="unknown_year">未知年份</string>
     <string name="search_cover_placeholder">搜索封面…</string>
     <string name="search_failed">搜索失败: %1$s</string>
     <string name="soda_rate_limited">汽水音乐请求过于频繁，已被临时限制。请稍后再试，或降低批量匹配并发数</string>
@@ -489,6 +500,8 @@
     <string name="refreshing">正在刷新</string>
     <string name="refresh_success">刷新成功</string>
     <string name="lyrics_empty">无歌词</string>
+    <string name="lyrics_source_empty">没有同时支持歌曲搜索和歌词获取的已启用插件</string>
+    <string name="cover_source_empty">没有已启用的封面源</string>
     <string name="label_copyright">版权</string>
     <string name="label_rating">评级</string>
     <string name="group_basic_info">基础信息</string>
@@ -810,6 +823,9 @@
     <string name="plugin_uninstall_confirm_message">确定要卸载"%1$s"吗？此操作无法撤销</string>
     <string name="plugin_update_source_configured">更新源</string>
     <string name="plugin_version_with_value">版本：%1$s</string>
+    <string name="plugin_api_versions_with_value">插件 API %1$d · 最低 Host API %2$d</string>
+    <string name="plugin_switch_to_compact">切换为简洁模式</string>
+    <string name="plugin_switch_to_detailed">切换为详细模式</string>
     <string name="plugin_author_with_value">作者：%1$s</string>
     <string name="plugin_import_found_title">发现插件包</string>
     <string name="plugin_import_install">安装</string>

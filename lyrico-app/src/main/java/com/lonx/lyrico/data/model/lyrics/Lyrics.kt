@@ -41,6 +41,11 @@ data class LyricsResult(
     val rawMultiPersonEnhancedLrc: String = ""
 ) : Parcelable
 
+data class LyricsCandidateResult(
+    val song: SongSearchResult,
+    val lyrics: LyricsResult
+)
+
 enum class LyricsPayloadType {
     STRUCTURED,
     RAW_PLAIN_LRC,

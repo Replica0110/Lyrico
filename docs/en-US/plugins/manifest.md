@@ -34,7 +34,7 @@ Fields used by older protocols to declare host APIs, returned fields, or write p
   "versionName": "1.0.0",
   "author": "Plugin Author",
   "description": "Example source plugin",
-  "apiVersion": 3,
+  "apiVersion": 4,
   "minHostApiVersion": 1,
   "entry": "source.js",
   "includeDirs": ["lib"],
@@ -60,7 +60,7 @@ Fields used by older protocols to declare host APIs, returned fields, or write p
 
 `id` must use reverse-domain format, such as `com.example.music_source`.
 
-`apiVersion` is used for plugin protocol compatibility. Host APIs are backward compatible: a host at version 3 can load plugins whose `apiVersion` is 1, 2, or 3, while plugins declaring a newer version are rejected.
+`apiVersion` is used for plugin protocol compatibility. The current plugin protocol is version 4 and accepts plugins whose `apiVersion` is 1, 2, 3, or 4. Newer versions are rejected. This is independent of the `Platform` host API version, which is currently 3. See [API Version History](./api-versions.md) for the exact differences.
 
 `minHostApiVersion` declares the minimum host API version actually required by the plugin. It must be at least 1 and cannot exceed the current host version. Plugins can still inspect `Platform.runtime.getInfo().supportedHostApis` for individual capabilities; missing capabilities are returned as runtime errors.
 
@@ -72,7 +72,25 @@ Fields used by older protocols to declare host APIs, returned fields, or write p
 | `getLyrics` | `getLyrics(request)` |
 | `searchCovers` | `searchCovers(request)` |
 
-If `capabilities` is declared, source plugins must include `searchSongs`.
+Plugins are only exposed in host flows that match their declared capabilities. The three
+capabilities are independent: neither `getLyrics` nor `searchCovers` requires `searchSongs`.
+Legacy plugins with a missing or empty capability list are treated as supporting `searchSongs`
+only.
+
+The host derives a displayed plugin type from the capability combination:
+
+| Plugin type | Capability combination |
+|-------------|------------------------|
+| Aggregated | Supports `searchSongs`, `getLyrics`, and `searchCovers` |
+| Metadata | Supports `searchSongs` |
+| Lyrics | Supports `getLyrics` |
+| Covers | Supports `searchCovers` |
+
+Type tabs are not mutually exclusive. A plugin with all three capabilities displays only the
+Aggregated type label, but it also appears under the Metadata, Lyrics, and Covers tabs. Other
+mixed-capability plugins appear in every matching feature tab. Type information is shown in the install preview, plugin manager, and
+plugin configuration screen. The capability combination is persisted by the host during
+installation and updated with the manifest whenever the plugin is upgraded.
 
 `includeDirs` can only reference relative directories inside the plugin package. Absolute paths, `..`, network URLs, and cross-plugin files are not allowed.
 

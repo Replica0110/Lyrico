@@ -16,6 +16,7 @@ import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import com.lonx.lyrico.data.model.lyrics.SearchSource
+import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,7 +53,7 @@ class BatchMatchViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, BatchMatchConfigDefaults.DEFAULT_CONFIG)
 
     private val allSources: StateFlow<List<SearchSource>> =
-        searchSourceProvider.observeAllSources()
+        searchSourceProvider.observeSources(PluginSourceType.METADATA)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val sourceSettings: StateFlow<Map<String, SourceRuntimeConfig>> =

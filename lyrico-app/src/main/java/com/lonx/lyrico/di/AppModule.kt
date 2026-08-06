@@ -97,6 +97,7 @@ import com.lonx.lyrico.viewmodel.EditFieldVisibilitySettingsViewModel
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.LocalSearchViewModel
+import com.lonx.lyrico.viewmodel.LyricsSearchViewModel
 import com.lonx.lyrico.viewmodel.PluginViewModel
 import com.lonx.lyrico.viewmodel.SearchViewModel
 import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
@@ -168,11 +169,18 @@ val appModule = module {
             }
         )
     }
-    single { PluginSearchSourceManager(repository = get(), factory = get(), appLogRepository = get()) }
     single { SourcePluginInstaller(repository = get(), json = get(), appLogRepository = get()) }
+    single {
+        PluginSearchSourceManager(
+            repository = get(),
+            factory = get(),
+            installer = get(),
+            appLogRepository = get()
+        )
+    }
     single { SearchSourceProvider(pluginManager = get()) }
 
-    single { SearchSourceConfigApplier(get(), get()) }
+    single { SearchSourceConfigApplier(get()) }
 
     single { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
     single { NetworkLoggingInterceptor(get(), get()) }
@@ -198,7 +206,8 @@ val appModule = module {
                 LyricoDatabase.MIGRATION_16_17,
                 LyricoDatabase.MIGRATION_17_18,
                 LyricoDatabase.MIGRATION_18_19,
-                LyricoDatabase.MIGRATION_19_20
+                LyricoDatabase.MIGRATION_19_20,
+                LyricoDatabase.MIGRATION_20_21
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -290,6 +299,7 @@ val appModule = module {
     viewModel { AlbumLibraryViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
+    viewModel { LyricsSearchViewModel(get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get(), get()) }
     viewModel { SearchSourceConfigViewModel(get(), get()) }
     viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }

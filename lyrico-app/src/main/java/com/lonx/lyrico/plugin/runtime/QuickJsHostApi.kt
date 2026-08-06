@@ -656,8 +656,8 @@ data class HostAppInfo(
 }
 
 data class HostRuntimeInfo(
-    val pluginApiVersion: Int = HostApiRegistry.PLUGIN_API_VERSION,
-    val hostApiVersion: Int = HostApiRegistry.HOST_API_VERSION,
+    val pluginApiVersion: Int = HostApiRegistry.PLUGIN_PROTOCOL_VERSION,
+    val hostApiVersion: Int = HostApiRegistry.PLATFORM_API_VERSION,
     val engine: String = "quickjs",
     val engineVersion: String? = null,
     val supportedHostApis: Set<String> = HostApiRegistry.SUPPORTED_HOST_APIS

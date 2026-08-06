@@ -11,6 +11,8 @@ import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.model.plugin.PluginCapability
+import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
@@ -103,11 +105,6 @@ class SearchViewModel(
     private val appLogRepository: AppLogRepository
 ) : ViewModel() {
 
-    init {
-        searchSourceConfigApplier.observeIn(viewModelScope)
-    }
-
-
     private val searchState = MutableStateFlow(SearchSourceState())
     private val lyricsState = MutableStateFlow(LyricsUiState())
 
@@ -151,12 +148,15 @@ class SearchViewModel(
                 null
             )
     private val allSourcesFlow =
-        searchSourceProvider.observeAllSources()
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5000),
-                emptyList()
-            )
+        searchSourceProvider.observeSources(PluginSourceType.AGGREGATED).stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
+
+    init {
+        searchSourceConfigApplier.observeIn(viewModelScope, allSourcesFlow)
+    }
 
 
     val uiState: StateFlow<SearchUiState> =
@@ -215,11 +215,6 @@ class SearchViewModel(
     fun onKeywordChanged(keyword: String) {
         searchState.update { it.copy(keyword = keyword) }
     }
-    private suspend fun getLyricsResult(song: SongSearchResult): LyricsResult? {
-        val impl = findSource(song.pluginId) ?: return null
-        return impl.getLyrics(song)
-    }
-
     fun onSearchSourceSelected(source: SearchSourceUiModel) {
         selectedSourceId.value = source.id
 
@@ -642,13 +637,13 @@ class SearchViewModel(
         lyricsJob?.cancel()
 
         lyricsJob = viewModelScope.launch {
-            lyricsState.value = LyricsUiState(
-                song = song,
-                isLoading = true
-            )
-
+            lyricsState.value = LyricsUiState(song = song, isLoading = true)
             try {
-                val lyricsResult = getLyricsResult(song)
+                val source = findSource(song.pluginId)
+                val lyricsResult = source
+                    ?.getLyricsCandidates(song)
+                    ?.firstOrNull()
+                    ?.lyrics
                 logSearch(
                     level = if (lyricsResult == null) AppLogLevel.WARNING else AppLogLevel.DEBUG,
                     message = if (lyricsResult == null) {
@@ -656,22 +651,24 @@ class SearchViewModel(
                     } else {
                         "Lyrics load finished"
                     },
-                    detail = "source=${song.pluginId}\nsong=${song.id}:${song.title}\npayloadType=${lyricsResult?.payloadType}",
+                    detail = "source=${song.pluginId}\nsong=${song.id}:${song.title}\n" +
+                        "payloadType=${lyricsResult?.payloadType}",
                     relatedId = song.pluginId
                 )
-
                 lyricsState.update {
                     it.copy(
                         lyricsResult = lyricsResult,
                         isLoading = false,
-                        error = if (lyricsResult == null) UiMessage.StringResource(R.string.lyrics_empty) else null
+                        error = if (lyricsResult == null) {
+                            UiMessage.StringResource(R.string.lyrics_empty)
+                        } else null
                     )
                 }
-
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 logSearchException(
-                    message = "Lyrics load failed\nsource=${song.pluginId}\nsong=${song.id}:${song.title}",
+                    message = "Lyrics load failed\nsource=${song.pluginId}\n" +
+                        "song=${song.id}:${song.title}",
                     throwable = e,
                     relatedId = song.pluginId
                 )
@@ -686,41 +683,12 @@ class SearchViewModel(
     }
 
     /**
-     * 直接获取歌词 (用于列表页"应用"按钮)
-     */
-    suspend fun fetchLyrics(song: SongSearchResult): String? {
-        return loadFormattedLyrics(song)
-    }
-
-    /**
      * 清除当前歌词状态
      * 通常用于关闭歌词页或切换歌曲列表时
      */
     fun clearLyrics() {
         lyricsJob?.cancel()
         lyricsState.value = LyricsUiState()
-    }
-
-    /**
-     * 加载并格式化歌词内容
-     */
-    private suspend fun loadFormattedLyrics(
-        song: SongSearchResult
-    ): String? {
-        val sourceImpl = findSource(song.pluginId) ?: return null
-        val lyricsResult = sourceImpl.getLyrics(song) ?: return null
-
-        val config = settingsRepository.getLyricRenderConfig()
-        val processor = PluginFieldPostProcessor(config.toGlobalFieldProcessSettings())
-        val processed = processor.processLyrics(
-            lyrics = lyricsResult,
-            config = defaultPluginFieldProcessConfig(sourceImpl.id)
-        )
-
-        return LyricEncoder.encode(
-            result = processed,
-            config = config.copy(conversionMode = ConversionMode.NONE)
-        )
     }
 
     private fun LyricRenderConfig.toGlobalFieldProcessSettings(): GlobalFieldProcessSettings {
@@ -821,7 +789,7 @@ class SearchViewModel(
     ): List<SearchSource> {
         if (searchConfig == null) return emptyList()
 
-        // allSources 已经由 SourcePluginDao 按 sortOrder ASC, name ASC 排好序
+        // SearchSourceProvider 已按聚合源优先级排序。
         return allSources
     }
 

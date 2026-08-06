@@ -14,6 +14,7 @@ import com.lonx.lyrico.data.model.lyrics.SearchSource
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import com.lonx.lyrico.data.model.metadata.MetadataApplyPolicy
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.model.metadata.SearchResultApplier
@@ -55,7 +56,7 @@ class MatchMetadataProcessor(
         } ?: throw BatchTaskSkippedException("No config")
 
         val matchConfig = config.matchConfig
-        val sources = searchSourceProvider.getAllSources()
+        val sources = searchSourceProvider.getSources(PluginSourceType.METADATA)
 
         sources.forEach { source ->
             val values = config.sourceSettings[source.id].orEmpty()

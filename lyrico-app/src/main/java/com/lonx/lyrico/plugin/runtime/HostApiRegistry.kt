@@ -1,16 +1,16 @@
 package com.lonx.lyrico.plugin.runtime
 
 object HostApiRegistry {
-    const val MIN_PLUGIN_API_VERSION = 1
-    const val PLUGIN_API_VERSION = 3
-    const val MIN_HOST_API_VERSION = 1
-    const val HOST_API_VERSION = 3
+    const val MIN_PLUGIN_PROTOCOL_VERSION = 1
+    const val PLUGIN_PROTOCOL_VERSION = 4
+    const val MIN_PLATFORM_API_VERSION = 1
+    const val PLATFORM_API_VERSION = 3
 
     fun supportsPluginApiVersion(apiVersion: Int): Boolean =
-        apiVersion in MIN_PLUGIN_API_VERSION..PLUGIN_API_VERSION
+        apiVersion in MIN_PLUGIN_PROTOCOL_VERSION..PLUGIN_PROTOCOL_VERSION
 
     fun supportsHostApiVersion(minHostApiVersion: Int): Boolean =
-        minHostApiVersion in MIN_HOST_API_VERSION..HOST_API_VERSION
+        minHostApiVersion in MIN_PLATFORM_API_VERSION..PLATFORM_API_VERSION
 
     val SUPPORTED_HOST_APIS = setOf(
         "app.info",

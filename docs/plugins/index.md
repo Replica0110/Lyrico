@@ -25,8 +25,9 @@ Lyrico 的在线音乐信息搜索由插件提供。插件可以扩展歌曲搜�
 | 1 | [从零编写插件](./examples.md) | 用一个完整示例了解插件的基本写法和打包方式 |
 | 2 | [插件包结构](./composition.md) | 了解 `manifest.json`、入口脚本、辅助脚本和 ZIP 结构 |
 | 3 | [插件函数](./plugin-functions.md) | 实现 `searchSongs`、`getLyrics`、`searchCovers` |
-| 4 | [Manifest 参考](./manifest.md) | 查询 manifest 字段、可选值和校验规则 |
-| 5 | [宿主 API 参考](./host-api.md) | 使用 HTTP、加密、编码、压缩、XML、日志等宿主能力 |
+| 4 | [API 版本沿革](./api-versions.md) | 确认 API1 到 API4 的函数协议差异和宿主能力版本 |
+| 5 | [Manifest 参考](./manifest.md) | 查询 manifest 字段、可选值和校验规则 |
+| 6 | [宿主 API 参考](./host-api.md) | 使用 HTTP、加密、编码、压缩、XML、日志等宿主能力 |
 
 ## 我想理解运行机制
 
@@ -52,7 +53,7 @@ com.example.source/
   "name": "示例插件",
   "versionCode": 1,
   "versionName": "1.0.0",
-  "apiVersion": 3
+  "apiVersion": 4
 }
 ```
 
@@ -60,13 +61,13 @@ com.example.source/
 
 ```javascript
 function searchSongs(request) {
-  return JSON.stringify([
+  return [
     {
       id: "12345",
       title: "示例歌曲",
       artist: "示例歌手"
     }
-  ]);
+  ];
 }
 ```
 

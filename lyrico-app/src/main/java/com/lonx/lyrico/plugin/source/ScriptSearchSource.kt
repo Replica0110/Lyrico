@@ -9,8 +9,10 @@ import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.LyricsCandidateResult
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 import com.lonx.lyrico.data.model.plugin.PluginCapability
+import com.lonx.lyrico.data.model.plugin.normalizedPluginCapabilities
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -26,26 +28,42 @@ class ScriptSearchSource(
     private val script: String,
     private val displayName: String = manifest.name,
     override val iconPath: String? = null,
+    override val aggregatedEnabled: Boolean = true,
+    override val metadataEnabled: Boolean = true,
+    override val lyricsEnabled: Boolean = true,
+    override val coverEnabled: Boolean = true,
+    override val aggregatedSortOrder: Int = 0,
+    override val metadataSortOrder: Int = 0,
+    override val lyricsSortOrder: Int = 0,
+    override val coverSortOrder: Int = 0,
     private val appLogRepository: AppLogRepository? = null,
     private val json: Json = defaultJson,
     private val runtimeFactory: () -> PluginJsRuntime = { QuickJsRuntime() }
 ) : SearchSource, AutoCloseable {
     override val id: String = manifest.id
     override val name: String = displayName
+    override val apiVersion: Int = manifest.apiVersion
+    override val minHostApiVersion: Int = manifest.minHostApiVersion
     override val capabilities: Set<PluginCapability> =
-        manifest.capabilities.toSet()
-            .ifEmpty { setOf(PluginCapability.SEARCH_SONGS) }
+        manifest.capabilities.normalizedPluginCapabilities()
     override val configFields: List<PluginConfigField> = manifest.configFields
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
-        Thread(
-            null,
-            runnable,
-            "QuickJS-$id",
-            4L * 1024L * 1024L
+    private val executionContextDelegate = lazy {
+        val executor = Executors.newSingleThreadExecutor { runnable ->
+            Thread(
+                null,
+                runnable,
+                "QuickJS-$id",
+                4L * 1024L * 1024L
+            )
+        }
+        RuntimeExecutionContext(
+            executor = executor,
+            dispatcher = executor.asCoroutineDispatcher()
         )
     }
-
-    private val quickJsDispatcher = executor.asCoroutineDispatcher()
+    private val executionContext: RuntimeExecutionContext by executionContextDelegate
+    private val quickJsDispatcher
+        get() = executionContext.dispatcher
     private val parser = PluginJsonParser(json)
     private var config = SourceRuntimeConfig()
     private val runtimeDelegate = lazy {
@@ -116,51 +134,69 @@ class ScriptSearchSource(
                 throwable = throwable,
                 detail = "plugin=$id\nname=$name\nkeyword=$keyword\npage=$page\npageSize=$pageSize"
             )
-            emptyList()
+            throw throwable
         }
     }
 
-    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? = withContext(quickJsDispatcher) {
+    override suspend fun getLyrics(song: SongSearchResult): LyricsResult? =
+        getLyricsCandidates(song).firstOrNull()?.lyrics
+
+    override suspend fun getLyricsCandidates(
+        song: SongSearchResult,
+        page: Int,
+        pageSize: Int
+    ): List<LyricsCandidateResult> = withContext(quickJsDispatcher) {
         try {
             if (PluginCapability.GET_LYRICS !in capabilities) {
-                return@withContext null
+                return@withContext emptyList()
             }
 
             val request = PluginGetLyricsRequest(
                 song = song.toPluginSongRequest(),
+                page = page,
+                pageSize = pageSize,
                 config = config.values
             )
             val raw = runtime.call(FUNCTION_GET_LYRICS, json.encodeToString(request))
-            val lyrics = parser.parseLyrics(raw)
+            val candidates = parser.parseLyricsCandidates(
+                rawJson = raw,
+                pluginId = id,
+                pluginName = name,
+                fallbackSong = song,
+                enforceApi4Contract = apiVersion >= 4
+            )
             logPluginCall(
-                level = if (lyrics == null) AppLogLevel.WARNING else AppLogLevel.DEBUG,
-                message = if (lyrics == null) {
+                level = if (candidates.isEmpty()) AppLogLevel.WARNING else AppLogLevel.DEBUG,
+                message = if (candidates.isEmpty()) {
                     "Plugin lyrics call returned no usable lyrics"
                 } else {
-                    "Plugin lyrics call returned lyrics"
+                    "Plugin lyrics call returned ${candidates.size} candidate(s)"
                 },
                 detail = buildString {
                     appendLine("plugin=$id")
                     appendLine("name=$name")
                     appendLine("song=${song.id}:${song.title}")
-                    appendLine("payloadType=${lyrics?.payloadType}")
+                    appendLine("page=$page")
+                    appendLine("pageSize=$pageSize")
+                    appendLine("candidateCount=${candidates.size}")
+                    appendLine("payloadTypes=${candidates.map { it.lyrics.payloadType }}")
                     appendLine("rawPreview=${raw.preview()}")
                 }
             )
-            lyrics
+            candidates
         } catch (throwable: Exception) {
             if (throwable is CancellationException) throw throwable
             Log.w(TAG, "getLyrics failed for plugin $id (${manifest.name})", throwable)
             logPluginException(
                 message = "Plugin lyrics call failed",
                 throwable = throwable,
-                detail = "plugin=$id\nname=$name\nsong=${song.id}:${song.title}"
+                detail = "plugin=$id\nname=$name\nsong=${song.id}:${song.title}\npage=$page\npageSize=$pageSize"
             )
-            null
+            throw throwable
         }
     }
 
-    override suspend fun searchCovers(keyword: String, pageSize: Int): List<SongSearchResult> =
+    override suspend fun searchCovers(keyword: String, page: Int, pageSize: Int): List<SongSearchResult> =
         withContext(quickJsDispatcher) {
             try {
                 if (PluginCapability.SEARCH_COVERS !in capabilities) {
@@ -169,19 +205,21 @@ class ScriptSearchSource(
 
                 val request = PluginSearchCoversRequest(
                     keyword = keyword,
+                    page = page,
                     pageSize = pageSize,
                     config = config.values
                 )
                 val raw = runtime.call(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
-                val results = parser.parseSongResults(
+                val results = parser.parseCoverResults(
                     rawJson = raw,
                     pluginId = id,
-                    pluginName = name
+                    pluginName = name,
+                    enforceApi4Contract = apiVersion >= 4
                 )
                 logPluginCall(
                     level = AppLogLevel.DEBUG,
                     message = "Plugin cover search returned ${results.size} result(s)",
-                    detail = "plugin=$id\nname=$name\nkeyword=$keyword\npageSize=$pageSize\n" +
+                    detail = "plugin=$id\nname=$name\nkeyword=$keyword\npage=$page\npageSize=$pageSize\n" +
                             "coverCount=${results.count { it.picUrl.isNotBlank() }}\nrawPreview=${raw.preview()}"
                 )
                 results
@@ -191,13 +229,13 @@ class ScriptSearchSource(
                 logPluginException(
                     message = "Plugin cover search failed",
                     throwable = throwable,
-                    detail = "plugin=$id\nname=$name\nkeyword=$keyword\npageSize=$pageSize"
+                    detail = "plugin=$id\nname=$name\nkeyword=$keyword\npage=$page\npageSize=$pageSize"
                 )
-                emptyList()
+                throw throwable
             }
         }
 
-    override suspend fun searchCovers(song: SongSearchResult, pageSize: Int): List<SongSearchResult> =
+    override suspend fun searchCovers(song: SongSearchResult, page: Int, pageSize: Int): List<SongSearchResult> =
         withContext(quickJsDispatcher) {
             try {
                 if (PluginCapability.SEARCH_COVERS !in capabilities) {
@@ -207,19 +245,21 @@ class ScriptSearchSource(
                 val request = PluginSearchCoversRequest(
                     keyword = listOf(song.title, song.artist).filter { it.isNotBlank() }.joinToString(" "),
                     song = song.toPluginSongRequest(),
+                    page = page,
                     pageSize = pageSize,
                     config = config.values
                 )
                 val raw = runtime.call(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
-                val results = parser.parseSongResults(
+                val results = parser.parseCoverResults(
                     rawJson = raw,
                     pluginId = id,
-                    pluginName = name
+                    pluginName = name,
+                    enforceApi4Contract = apiVersion >= 4
                 )
                 logPluginCall(
                     level = AppLogLevel.DEBUG,
                     message = "Plugin cover search returned ${results.size} result(s)",
-                    detail = "plugin=$id\nname=$name\nsong=${song.id}:${song.title}\npageSize=$pageSize\n" +
+                    detail = "plugin=$id\nname=$name\nsong=${song.id}:${song.title}\npage=$page\npageSize=$pageSize\n" +
                             "coverCount=${results.count { it.picUrl.isNotBlank() }}\nrawPreview=${raw.preview()}"
                 )
                 results
@@ -229,22 +269,24 @@ class ScriptSearchSource(
                 logPluginException(
                     message = "Plugin cover search failed",
                     throwable = throwable,
-                    detail = "plugin=$id\nname=$name\nsong=${song.id}:${song.title}\npageSize=$pageSize"
+                    detail = "plugin=$id\nname=$name\nsong=${song.id}:${song.title}\npage=$page\npageSize=$pageSize"
                 )
-                emptyList()
+                throw throwable
             }
         }
 
     override fun close() {
+        if (!executionContextDelegate.isInitialized()) return
+        val executionContext = executionContext
         runCatching {
             if (runtimeDelegate.isInitialized()) {
-                executor.submit {
+                executionContext.executor.submit {
                     runtime.close()
                 }.get(3, TimeUnit.SECONDS)
             }
         }
-        quickJsDispatcher.close()
-        executor.shutdown()
+        executionContext.dispatcher.close()
+        executionContext.executor.shutdown()
     }
 
     private fun SongSearchResult.toPluginSongRequest(): PluginSongRequest {
@@ -253,6 +295,7 @@ class ScriptSearchSource(
             title = title,
             artist = artist,
             album = album,
+            date = date,
             duration = duration,
             sourceId = pluginId,
             pluginId = pluginId,
@@ -300,6 +343,11 @@ class ScriptSearchSource(
 
     private fun String.preview(): String =
         replace('\n', ' ').replace('\r', ' ').take(RAW_PREVIEW_LIMIT)
+
+    private data class RuntimeExecutionContext(
+        val executor: ExecutorService,
+        val dispatcher: kotlinx.coroutines.ExecutorCoroutineDispatcher
+    )
 
     private companion object {
         const val FUNCTION_SEARCH_SONGS = "searchSongs"

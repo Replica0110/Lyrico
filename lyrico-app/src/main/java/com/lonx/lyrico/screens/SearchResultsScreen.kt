@@ -3,7 +3,6 @@ package com.lonx.lyrico.screens
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.graphics.BitmapFactory
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -30,10 +29,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -65,11 +62,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.SearchSourceTabStyle
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
-import com.lonx.lyrico.data.model.lyrics.visibleLyricLineTracks
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.StandardPluginField
 import com.lonx.lyrico.data.model.search.LyricsSearchResult
@@ -80,7 +74,8 @@ import com.lonx.lyrico.ui.components.base.PillButtonColors
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
 import com.lonx.lyrico.ui.components.plugin.PluginIcon
-import com.lonx.lyrico.ui.components.lyrics.LyricLineOrderBottomSheetContent
+import com.lonx.lyrico.ui.components.lyrics.LyricRenderConfigBottomSheet
+import com.lonx.lyrico.ui.components.lyrics.LyricsPreviewPane
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
@@ -109,13 +104,9 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Search
 import top.yukonga.miuix.kmp.icon.extended.Settings
-import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import java.net.URL
 import androidx.compose.material3.CircularProgressIndicator as MaterialCircularProgressIndicator
 import androidx.compose.material3.TextButton as MaterialTextButton
@@ -404,94 +395,18 @@ fun SearchResultsScreen(
         }
     )
 
-    WindowBottomSheet(
+    LyricRenderConfigBottomSheet(
         show = showLyricRenderConfigBottomSheet.value,
-        onDismissRequest = {
-            showLyricRenderConfigBottomSheet.value = false
-        }
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(bottom = 32.dp)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            Card(
-                modifier = Modifier
-                    .padding(bottom = 12.dp)
-                    .fillMaxWidth(),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer,
-                )
-            ) {
-                lyricConfig?.let { config ->
-                    val lyricFormatItems = LyricFormat.entries.map { stringResource(it.labelRes) }
-                    val selectedLyricFormatIndex =
-                        LyricFormat.entries.indexOf(config.format).coerceAtLeast(0)
-
-                    val conversionModeItems =
-                        ConversionMode.entries.map { stringResource(it.labelRes) }
-                    val selectedConversionModeIndex =
-                        ConversionMode.entries.indexOf(config.conversionMode).coerceAtLeast(0)
-
-                    WindowDropdownPreference(
-                        title = stringResource(R.string.lyric_mode),
-                        items = lyricFormatItems,
-                        selectedIndex = selectedLyricFormatIndex,
-                        onSelectedIndexChange = { index ->
-                            viewModel.setLyricFormat(LyricFormat.entries[index])
-                        }
-                    )
-                    SwitchPreference(
-                        title = stringResource(R.string.roma),
-                        summary = stringResource(R.string.roma_hint),
-                        checked = config.showRomanization,
-                        onCheckedChange = { viewModel.setRomaEnabled(it) }
-                    )
-                    SwitchPreference(
-                        title = stringResource(R.string.translation),
-                        summary = stringResource(R.string.translation_hint),
-                        checked = config.showTranslation,
-                        onCheckedChange = { viewModel.setTranslationEnabled(it) }
-                    )
-                    AnimatedVisibility(visible = config.showTranslation) {
-                        SwitchPreference(
-                            title = stringResource(R.string.only_translation_if_available),
-                            summary = stringResource(R.string.only_translation_if_available_hint),
-                            enabled = config.showTranslation,
-                            checked = config.onlyTranslationIfAvailable,
-                            onCheckedChange = { viewModel.setOnlyTranslationIfAvailable(it) }
-                        )
-                    }
-                    SwitchPreference(
-                        title = stringResource(R.string.remove_empty_lines),
-                        summary = stringResource(R.string.remove_empty_lines_hint),
-                        checked = config.removeEmptyLines,
-                        onCheckedChange = { viewModel.setRemoveEmptyLines(it) }
-                    )
-                    WindowDropdownPreference(
-                        title = stringResource(R.string.conversion_mode),
-                        items = conversionModeItems,
-                        selectedIndex = selectedConversionModeIndex,
-                        onSelectedIndexChange = {
-                            viewModel.setConversionMode(ConversionMode.entries[it])
-                        }
-                    )
-                }
-            }
-            lyricConfig?.let { config ->
-                LyricLineOrderBottomSheetContent(
-                    lineOrder = config.normalizedLineOrder,
-                    visibleTracks = visibleLyricLineTracks(
-                        showRomanization = config.showRomanization,
-                        showTranslation = config.showTranslation,
-                        onlyTranslationIfAvailable = config.onlyTranslationIfAvailable
-                    ),
-                    onLineOrderChange = viewModel::setLyricLineOrder
-                )
-            }
-        }
-    }
+        config = lyricConfig,
+        onDismissRequest = { showLyricRenderConfigBottomSheet.value = false },
+        onLyricFormatChange = viewModel::setLyricFormat,
+        onRomaEnabledChange = viewModel::setRomaEnabled,
+        onLineOrderChange = viewModel::setLyricLineOrder,
+        onTranslationEnabledChange = viewModel::setTranslationEnabled,
+        onOnlyTranslationIfAvailableChange = viewModel::setOnlyTranslationIfAvailable,
+        onRemoveEmptyLinesChange = viewModel::setRemoveEmptyLines,
+        onConversionModeChange = viewModel::setConversionMode
+    )
 }
 
 @Composable
@@ -586,13 +501,15 @@ private fun PaginatedSearchResultList(
 @Composable
 fun SearchResultItem(
     song: SongSearchResult,
+    showCover: Boolean = true,
+    showExtendedMetadata: Boolean = true,
     onClick: () -> Unit
 ) {
 
     var imageSize by remember(song.picUrl) { mutableStateOf<Pair<Int, Int>?>(null) }
 
     LaunchedEffect(song.picUrl) {
-        if (song.picUrl.isNotBlank()) {
+        if (showCover && song.picUrl.isNotBlank()) {
             imageSize = withContext(Dispatchers.IO) {
                 try {
                     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -629,58 +546,59 @@ fun SearchResultItem(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
             ) {
-                // 左侧图片
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(LyricoColors.coverPlaceholder)
-                ) {
-                    AsyncImage(
-                        model = song.picUrl,
-                        contentDescription = song.title,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        placeholder = rememberTintedPainter(
-                            painter = painterResource(R.drawable.ic_album_24dp),
-                            tint = LyricoColors.coverPlaceholderIcon
-                        ),
-                        error = rememberTintedPainter(
-                            painter = painterResource(R.drawable.ic_album_24dp),
-                            tint = LyricoColors.coverPlaceholderIcon
-                        )
-                    )
-
-                    val textColor = if (isDarkTheme) Color.Black else Color.White
-
+                if (showCover) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        MiuixTheme.colorScheme.onSecondaryContainer
-                                    ),
-                                )
-                            )
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(LyricoColors.coverPlaceholder)
                     ) {
-                        imageSize?.let {
-                            Text(
-                                text = "${it.first}×${it.second}",
-                                color = textColor,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .padding(bottom = 2.dp)
+                        AsyncImage(
+                            model = song.picUrl,
+                            contentDescription = song.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            placeholder = rememberTintedPainter(
+                                painter = painterResource(R.drawable.ic_album_24dp),
+                                tint = LyricoColors.coverPlaceholderIcon
+                            ),
+                            error = rememberTintedPainter(
+                                painter = painterResource(R.drawable.ic_album_24dp),
+                                tint = LyricoColors.coverPlaceholderIcon
                             )
+                        )
+
+                        val textColor = if (isDarkTheme) Color.Black else Color.White
+
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            MiuixTheme.colorScheme.onSecondaryContainer
+                                        ),
+                                    )
+                                )
+                        ) {
+                            imageSize?.let {
+                                Text(
+                                    text = "${it.first}×${it.second}",
+                                    color = textColor,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .padding(bottom = 2.dp)
+                                )
+                            }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
 
                 Column(
                     modifier = Modifier.weight(1f)
@@ -742,21 +660,21 @@ fun SearchResultItem(
 
                     val extraInfo = buildList {
                         if (song.date.isNotBlank()) add(song.date)
-                        if (trackInfo.isNotBlank()) add(trackInfo)
+                        if (showExtendedMetadata && trackInfo.isNotBlank()) add(trackInfo)
                     }.joinToString(" • ")
 
                     if (extraInfo.isNotEmpty()) {
                         SearchResultMetadataText(text = extraInfo)
                     }
 
-                    if (lyricist.isNotEmpty()) {
+                    if (showExtendedMetadata && lyricist.isNotEmpty()) {
                         SearchResultMetadataText(text = stringResource(R.string.label_lyricist) + ": " + lyricist)
                     }
-                    if (composer.isNotBlank()) {
+                    if (showExtendedMetadata && composer.isNotBlank()) {
                         SearchResultMetadataText(text = stringResource(R.string.label_composer) + ": " + composer)
                     }
 
-                    if (comment.isNotBlank()) {
+                    if (showExtendedMetadata && comment.isNotBlank()) {
                         SearchResultMetadataText(
                             text = stringResource(R.string.label_comment) + ": " + comment,
                             maxLines = 2
@@ -765,7 +683,7 @@ fun SearchResultItem(
                 }
             }
 
-            if (formattedDuration.isNotBlank()) {
+            if (showExtendedMetadata && formattedDuration.isNotBlank()) {
                 SearchResultBadge(
                     text = formattedDuration,
                     modifier = Modifier.align(Alignment.BottomEnd)
@@ -1240,72 +1158,16 @@ private fun SearchResultApplyLyricsPage(
             )
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                when {
-                    lyricsState.isLoading -> item("loading") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                                Text(
-                                    text = loadingText,
-                                    style = MiuixTheme.textStyles.body2,
-                                    color = MiuixTheme.colorScheme.onSurfaceContainerVariant
-                                )
-                            }
-                        }
-                    }
-
-                    lyricsState.error != null -> item("error") {
-                        Text(
-                            modifier = Modifier.padding(12.dp),
-                            text = lyricsState.error.asString() ?: failedText,
-                            style = MiuixTheme.textStyles.body2
-                        )
-                    }
-
-                    else -> item("lyrics") {
-                        Text(
-                            modifier = Modifier.padding(12.dp),
-                            text = lyricsText ?: stringResource(R.string.lyrics_empty),
-                            style = MiuixTheme.textStyles.body2
-                        )
-                    }
-                }
-            }
-
-            if (!lyricsText.isNullOrBlank()) {
-                IconButton(
-                    onClick = onCopyLyrics,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .background(
-                            color = MiuixTheme.colorScheme.surface.copy(alpha = 0.7f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Copy,
-                        contentDescription = null
-                    )
-                }
-            }
-        }
+        LyricsPreviewPane(
+            lyricsText = lyricsText,
+            isLoading = lyricsState.isLoading,
+            error = lyricsState.error,
+            loadingText = loadingText,
+            failedText = failedText,
+            emptyText = stringResource(R.string.lyrics_empty),
+            onCopyLyrics = onCopyLyrics,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

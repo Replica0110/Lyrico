@@ -40,6 +40,38 @@ enum class PluginCapability {
     SEARCH_COVERS
 }
 
+enum class PluginSourceType {
+    AGGREGATED,
+    METADATA,
+    LYRICS,
+    COVER
+}
+
+fun Set<PluginCapability>.normalizedPluginCapabilities(): Set<PluginCapability> =
+    ifEmpty { setOf(PluginCapability.SEARCH_SONGS) }
+
+fun Set<PluginCapability>.displaySourceTypes(): Set<PluginSourceType> {
+    val normalized = normalizedPluginCapabilities()
+    if (normalized.containsAll(PluginCapability.entries)) {
+        return setOf(PluginSourceType.AGGREGATED)
+    }
+    return buildSet {
+        if (PluginCapability.SEARCH_SONGS in normalized) add(PluginSourceType.METADATA)
+        if (PluginCapability.GET_LYRICS in normalized) add(PluginSourceType.LYRICS)
+        if (PluginCapability.SEARCH_COVERS in normalized) add(PluginSourceType.COVER)
+    }
+}
+
+fun Set<PluginCapability>.supportsSourceType(sourceType: PluginSourceType): Boolean {
+    val normalized = normalizedPluginCapabilities()
+    return when (sourceType) {
+        PluginSourceType.AGGREGATED -> normalized.containsAll(PluginCapability.entries)
+        PluginSourceType.METADATA -> PluginCapability.SEARCH_SONGS in normalized
+        PluginSourceType.LYRICS -> PluginCapability.GET_LYRICS in normalized
+        PluginSourceType.COVER -> PluginCapability.SEARCH_COVERS in normalized
+    }
+}
+
 @Serializable
 data class PluginConfigField(
     val key: String,

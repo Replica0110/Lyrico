@@ -43,7 +43,7 @@
 ```javascript
 // ✅ 正确：全局函数声明
 function searchSongs(request) {
-  return JSON.stringify([...]);
+  return [...];
 }
 
 // ❌ 错误：不支持 export

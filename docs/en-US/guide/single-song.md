@@ -76,7 +76,7 @@ Tap the cover area or "Cover Options" in the editor to:
 | Save Cover | Export the current cover to the system pictures directory |
 | Crop Image | Crop the current cover before applying |
 
-Online cover search requires a plugin that supports cover search.
+Online cover search requires a plugin that supports cover search. Tap **Load more** at the bottom of the results; the **All** tab continues every cover source that still has another page.
 
 ## Lyrics Operations
 
@@ -84,6 +84,7 @@ Tap "Lyrics Options" to:
 
 | Action | Description |
 |--------|-------------|
+| Search Lyrics | Search candidates through enabled lyrics sources; use **Load more** at the bottom for the next page |
 | Import | Read lyrics from a text file as UTF-8 |
 | Export | Export current lyrics. TTML exports as `.ttml`, others as `.lrc`; empty lyrics are not exported |
 | Simplify / Traditionalize | Convert lyrics between Simplified and Traditional Chinese |

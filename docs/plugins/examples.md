@@ -37,7 +37,7 @@ com.musiclib.source/
   "versionName": "1.0.0",
   "author": "Your Name",
   "description": "MusicLib 音乐 API 搜索源",
-  "apiVersion": 3,
+  "apiVersion": 4,
   "entry": "source.js",
   "includeDirs": ["lib"],
   "icon": "icon.png",
@@ -297,22 +297,19 @@ function searchSongs(request) {
     }, config);
 
     var items = (response.data && response.data.items) || [];
-    return JSON.stringify(
-      items
-        .map(function (item) { return mapSong(item, request); })
-        .filter(function (song) { return song.id && song.title; })
-    );
+    return items
+      .map(function (item) { return mapSong(item, request); })
+      .filter(function (song) { return song.id && song.title; });
   } catch (e) {
     Platform.log.error(
       "MusicLib",
       "searchSongs failed: " + (e && e.message ? e.message : e)
     );
-    return JSON.stringify([]);
+    return [];
   }
 }
 
-function getLyrics(request) {
-  var song = request.song || {};
+function getLyricsForSong(request, song) {
   var internal = song.internal || {};
   var trackId = internal.musiclib_id || song.id || "";
 
@@ -330,7 +327,7 @@ function getLyrics(request) {
     lyricsResult.tags.ar = lyricsResult.tags.ar || song.artist || "";
     lyricsResult.tags.al = lyricsResult.tags.al || song.album || "";
 
-    return JSON.stringify(lyricsResult);
+    return lyricsResult;
   } catch (e) {
     Platform.log.warn(
       "MusicLib",
@@ -340,20 +337,43 @@ function getLyrics(request) {
   }
 }
 
-function searchCovers(request) {
-  var songs = JSON.parse(
-    searchSongs({
-      keyword: request.keyword,
-      page: 1,
-      pageSize: request.pageSize || 5,
-      separator: "/",
-      config: request.config || {}
-    })
-  );
+function getLyrics(request) {
+  var requestedSong = request.song || {};
+  var songs = requestedSong.id && requestedSong.id !== "local-song"
+    ? [requestedSong]
+    : searchSongs({
+        keyword: [requestedSong.title, requestedSong.artist].filter(Boolean).join(" "),
+        page: request.page || 1,
+        pageSize: request.pageSize || 5,
+        separator: "/",
+        config: request.config || {}
+      });
 
-  return JSON.stringify(
-    songs.filter(function (song) { return song.picUrl; })
-  );
+  return songs.map(function (song) {
+    var lyrics = getLyricsForSong(request, song);
+    var year = song.date || (song.fields || {}).date || "";
+    if (!lyrics || !song.title || !song.artist || !song.album || !year) return null;
+    lyrics.tags = lyrics.tags || {};
+    lyrics.tags.ti = String(song.title);
+    lyrics.tags.ar = String(song.artist);
+    lyrics.tags.al = String(song.album);
+    lyrics.tags.date = String(year);
+    return lyrics;
+  }).filter(Boolean);
+}
+
+function searchCovers(request) {
+  var songs = searchSongs({
+    keyword: request.keyword,
+    page: request.page || 1,
+    pageSize: request.pageSize || 5,
+    separator: "/",
+    config: request.config || {}
+  });
+
+  return songs.filter(function (song) {
+    return song.picUrl && song.title && song.artist && song.album && song.date;
+  });
 }
 ```
 

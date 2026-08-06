@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
+import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.utils.isSatisfied
 import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
@@ -150,6 +151,44 @@ fun PluginConfigScreen(
                     color = MiuixTheme.colorScheme.onSurfaceVariantActions
                 )
                 return@Scaffold
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 8.dp),
+                colors = CardDefaults.defaultColors(
+                    color = MiuixTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    if (uiState.sourceTypes.isNotEmpty()) {
+                        Text(
+                            text = stringResource(
+                                R.string.plugin_type_with_value,
+                                uiState.sourceTypes
+                                    .map { stringResource(it.labelRes()) }
+                                    .joinToString(" / ")
+                            ),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    Text(
+                        text = stringResource(
+                            R.string.plugin_api_versions_with_value,
+                            uiState.apiVersion,
+                            uiState.minHostApiVersion
+                        ),
+                        color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        fontSize = 13.sp
+                    )
+                }
             }
 
             if (!hasConfigContent) {
@@ -417,3 +456,10 @@ private fun PluginConfigFormItem(
 
 
 private const val DEFAULT_CONFIG_GROUP = "__basic__"
+
+private fun PluginSourceType.labelRes(): Int = when (this) {
+    PluginSourceType.AGGREGATED -> R.string.plugin_type_aggregated
+    PluginSourceType.METADATA -> R.string.plugin_type_metadata
+    PluginSourceType.LYRICS -> R.string.plugin_type_lyrics
+    PluginSourceType.COVER -> R.string.plugin_type_cover
+}

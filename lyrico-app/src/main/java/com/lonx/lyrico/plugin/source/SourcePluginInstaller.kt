@@ -4,12 +4,14 @@ import android.util.Log
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.plugin.PluginCapability
 import com.lonx.lyrico.data.model.plugin.PluginManifest
+import com.lonx.lyrico.data.model.plugin.normalizedPluginCapabilities
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.plugin.runtime.HostApiRegistry
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -127,6 +129,8 @@ class SourcePluginInstaller(
     private val appLogRepository: AppLogRepository,
     private val limits: PluginImportLimits = PluginImportLimits()
 ) {
+    private val manifestMetadataSynchronizationMutex = Mutex()
+    private var installedManifestMetadataSynchronized = false
 
     suspend fun prepareImport(
         input: InputStream,
@@ -438,6 +442,7 @@ class SourcePluginInstaller(
         val now = System.currentTimeMillis()
         val existing = repository.getPlugin(manifest.id)
         val iconPath = manifest.icon?.let { File(pluginDir, it).absolutePath }
+        val initialSortOrder = existing?.sortOrder ?: nextSortOrder()
         val entity = SourcePluginEntity(
             id = manifest.id,
             name = manifest.name,
@@ -446,13 +451,23 @@ class SourcePluginInstaller(
             author = manifest.author,
             description = manifest.description,
             apiVersion = manifest.apiVersion,
+            minHostApiVersion = manifest.minHostApiVersion,
             pluginDir = pluginDir.absolutePath,
             entryFile = manifest.entry,
             includeDirsJson = json.encodeToString(manifest.includeDirs),
+            capabilitiesJson = json.encodeToString(
+                manifest.capabilities.normalizedPluginCapabilities()
+            ),
             customName = existing?.customName,
             iconPath = iconPath,
             enabled = existing?.enabled ?: enabled,
-            sortOrder = existing?.sortOrder ?: nextSortOrder(),
+            metadataEnabled = existing?.metadataEnabled ?: enabled,
+            lyricsEnabled = existing?.lyricsEnabled ?: enabled,
+            coverEnabled = existing?.coverEnabled ?: enabled,
+            sortOrder = initialSortOrder,
+            metadataSortOrder = existing?.metadataSortOrder ?: initialSortOrder,
+            lyricsSortOrder = existing?.lyricsSortOrder ?: initialSortOrder,
+            coverSortOrder = existing?.coverSortOrder ?: initialSortOrder,
             installedAt = existing?.installedAt ?: now,
             updatedAt = now
         )
@@ -464,6 +479,7 @@ class SourcePluginInstaller(
                 appendLine("plugin=${entity.id}")
                 appendLine("version=${entity.versionName}(${entity.versionCode})")
                 appendLine("enabled=${entity.enabled}")
+                appendLine("capabilities=${entity.capabilitiesJson}")
                 appendLine("entry=${entity.entryFile}")
                 appendLine("dir=${entity.pluginDir}")
                 appendLine("icon=${entity.iconPath.orEmpty()}")
@@ -471,6 +487,43 @@ class SourcePluginInstaller(
             relatedId = entity.id
         )
         return entity
+    }
+
+    suspend fun synchronizeInstalledPluginManifestMetadata() {
+        manifestMetadataSynchronizationMutex.withLock {
+            if (installedManifestMetadataSynchronized) return
+
+            withContext(Dispatchers.IO) {
+                repository.getPlugins().forEach { plugin ->
+                    runCatching {
+                        val manifestFile = File(plugin.pluginDir, MANIFEST_FILE)
+                        val manifest = json.decodeFromString<PluginManifest>(manifestFile.readText())
+                        require(manifest.id == plugin.id) {
+                            "Installed manifest id does not match database record: ${plugin.id}"
+                        }
+                        val capabilitiesJson = json.encodeToString(
+                            manifest.capabilities.normalizedPluginCapabilities()
+                        )
+                        if (
+                            manifest.apiVersion != plugin.apiVersion ||
+                            manifest.minHostApiVersion != plugin.minHostApiVersion ||
+                            capabilitiesJson != plugin.capabilitiesJson
+                        ) {
+                            repository.updateManifestContract(
+                                id = plugin.id,
+                                apiVersion = manifest.apiVersion,
+                                minHostApiVersion = manifest.minHostApiVersion,
+                                capabilitiesJson = capabilitiesJson
+                            )
+                        }
+                    }.onFailure { throwable ->
+                        Log.w(TAG, "Failed to synchronize manifest metadata for ${plugin.id}", throwable)
+                    }
+                }
+            }
+
+            installedManifestMetadataSynchronized = true
+        }
     }
 
     private fun validatePluginSize(pluginDir: File) {
@@ -494,14 +547,11 @@ class SourcePluginInstaller(
         require(manifest.versionCode >= 1) { "Plugin versionCode must be >= 1" }
         require(HostApiRegistry.supportsPluginApiVersion(manifest.apiVersion)) {
             "Unsupported plugin apiVersion: ${manifest.apiVersion} " +
-                "(supported: ${HostApiRegistry.MIN_PLUGIN_API_VERSION}..${HostApiRegistry.PLUGIN_API_VERSION})"
+                "(supported: ${HostApiRegistry.MIN_PLUGIN_PROTOCOL_VERSION}..${HostApiRegistry.PLUGIN_PROTOCOL_VERSION})"
         }
         require(HostApiRegistry.supportsHostApiVersion(manifest.minHostApiVersion)) {
             "Unsupported minHostApiVersion: ${manifest.minHostApiVersion} " +
-                "(host: ${HostApiRegistry.HOST_API_VERSION})"
-        }
-        require(manifest.capabilities.isEmpty() || PluginCapability.SEARCH_SONGS in manifest.capabilities) {
-            "A source plugin must support SEARCH_SONGS"
+                "(host: ${HostApiRegistry.PLATFORM_API_VERSION})"
         }
     }
 

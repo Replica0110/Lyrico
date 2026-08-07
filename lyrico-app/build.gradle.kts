@@ -1,3 +1,5 @@
+import com.android.build.api.variant.FilterConfiguration
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,6 +8,17 @@ plugins {
     id("kotlin-parcelize")
     alias(libs.plugins.aboutLibraries)
 }
+// 记得在发布版本时更新此处的值
+val baseVersionName = "1.4.0"
+val baseVersionCode = 18
+
+fun gitCommitHash(): Provider<String> = providers.exec {
+    commandLine("git", "rev-parse", "--short", "HEAD")
+    isIgnoreExitValue = true
+}.standardOutput.asText.map { it.trim().ifEmpty { "unknown" } }
+    .orElse("unknown")
+
+
 
 android {
     namespace = "com.lonx.lyrico"
@@ -26,8 +39,8 @@ android {
         applicationId = "com.lonx.lyrico"
         minSdk = 28
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.4.0"
+        versionCode = baseVersionCode
+        versionName = "$baseVersionName-${gitCommitHash().get()}"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -70,6 +83,24 @@ android {
         }
     }
 }
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.forEach { output ->
+            val abi = output.filters
+                .singleOrNull { it.filterType == FilterConfiguration.FilterType.ABI }
+                ?.identifier
+            val abiSuffix = abi?.let { "-$it" }.orEmpty()
+
+            output.outputFileName.set(
+                output.versionName.map { versionName ->
+                    "Lyrico-$versionName$abiSuffix.apk"
+                }
+            )
+        }
+    }
+}
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }

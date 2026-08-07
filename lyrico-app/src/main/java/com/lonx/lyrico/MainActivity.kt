@@ -43,28 +43,47 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.MiuixPopupUtils.Companion.MiuixPopupHost
 
+internal fun requiredStartupPermissions(
+    sdkInt: Int,
+    isPermissionGranted: (String) -> Boolean,
+): List<String> = buildList {
+    if (sdkInt >= Build.VERSION_CODES.TIRAMISU &&
+        !isPermissionGranted(Manifest.permission.POST_NOTIFICATIONS)
+    ) {
+        add(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    val audioPermission = if (sdkInt >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    if (!isPermissionGranted(audioPermission)) {
+        add(audioPermission)
+    }
+}
+
 open class MainActivity : ComponentActivity() {
     private var externalUri by mutableStateOf<Uri?>(null)
     private var pendingExternalUri: Uri? = null
-    private val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (!isGranted) {
+    private val startupPermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            if (results[Manifest.permission.POST_NOTIFICATIONS] == false) {
                 Toast.makeText(
                     this,
                     "通知权限未授予，可能无法接收通知",
                     Toast.LENGTH_SHORT
                 ).show()
             }
-        }
 
-    private val audioPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (!isGranted) {
-                Toast.makeText(
-                    this,
-                    "音频访问权限未授予，将无法扫描和管理本地音频文件",
-                    Toast.LENGTH_LONG
-                ).show()
+            externalAudioReadPermission()?.let { audioPermission ->
+                if (results[audioPermission] == false) {
+                    Toast.makeText(
+                        this,
+                        "音频访问权限未授予，将无法扫描和管理本地音频文件",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
 
@@ -99,8 +118,7 @@ open class MainActivity : ComponentActivity() {
         if (externalUri == null) {
             songListViewModel.checkForUpdate()
         }
-        requestNotificationPermissionIfNeeded()
-        requestAudioPermissionIfNeeded()
+        requestStartupPermissionsIfNeeded()
         lifecycleScope.launch {
             libraryIndexRepository.ensureIndexesCurrent()
         }
@@ -255,27 +273,12 @@ open class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-
-        if (
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_DENIED
-        ) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    private fun requestStartupPermissionsIfNeeded() {
+        val permissions = requiredStartupPermissions(Build.VERSION.SDK_INT) { permission ->
+            ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
         }
-    }
-
-    private fun requestAudioPermissionIfNeeded() {
-        val permission = externalAudioReadPermission() ?: return
-        
-        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-            audioPermissionLauncher.launch(permission)
+        if (permissions.isNotEmpty()) {
+            startupPermissionsLauncher.launch(permissions.toTypedArray())
         }
     }
 

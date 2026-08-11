@@ -2,6 +2,15 @@
 
 ## Basic Usage
 
+### Why are notification and audio permissions requested together on first launch?
+
+On Android 13 and later, Lyrico submits both ungranted permissions as one startup request:
+
+- Audio access is used to scan, read, and manage local music.
+- Notification access is used to show progress for batch jobs and other background processing.
+
+Audio access is required to build and manage the music library. If notification access is denied, you can still browse and edit, but background task notifications may not appear. Android 12 and earlier request only audio read access. If you denied a permission by mistake, restore it from system `Settings` → `Apps` → `Lyrico` → `Permissions`.
+
 ### Why doesn't tapping a song play music?
 
 Lyrico is a tag editor, not a music player. Tapping a song opens the metadata editor by default. To play music, use "Play Music" from the song's more menu.

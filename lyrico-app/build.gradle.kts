@@ -9,8 +9,8 @@ plugins {
     alias(libs.plugins.aboutLibraries)
 }
 // 记得在发布版本时更新此处的值
-val baseVersionName = "1.4.0"
-val baseVersionCode = 18
+val baseVersionName = "1.5.0"
+val baseVersionCode = 19
 
 fun gitCommitHash(): Provider<String> = providers.exec {
     commandLine("git", "rev-parse", "--short", "HEAD")

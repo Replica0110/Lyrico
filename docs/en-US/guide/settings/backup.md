@@ -7,6 +7,7 @@ Export the current app configuration as a JSON file. Includes:
 - Theme and appearance settings
 - Search settings (plugin enabled state, sort order, configuration, search limit, etc.)
 - Lyrics settings (lyric mode, romanization, translation)
+- ReplayGain reference loudness
 - Artist split rules
 - Field visibility settings
 - Batch match configuration

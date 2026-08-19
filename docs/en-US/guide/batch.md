@@ -176,6 +176,8 @@ Non-lyric content filtering rules are managed in `Settings` → `Metadata Proces
 
 Higher concurrency means faster processing but more CPU and memory usage. If the device heats up, lags, or failures increase, lower the concurrency.
 
+The target loudness used for the calculation comes from `Settings` → `Scan Settings` → `ReplayGain reference loudness` (default -18 LUFS).
+
 ---
 
 ## Export Lyrics and Covers

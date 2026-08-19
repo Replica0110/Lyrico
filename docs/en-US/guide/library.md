@@ -46,6 +46,7 @@ Removes the folder and its song records from Lyrico's library. Local audio files
 
 - **Folder Management**: Manage added music folders (same as above).
 - **Skip audio under 60 seconds**: When enabled, Lyrico skips audio files ≤ 60 seconds long.
+- **ReplayGain reference loudness**: The target loudness used when calculating ReplayGain, **-18 LUFS** by default. Choose from three presets — **-23 LUFS (EBU R128)**, **-18 LUFS (Default)**, **-14 LUFS (Streaming)** — or enter a custom value between **-60 and 0 LUFS**. This setting affects single-song, album, and batch ReplayGain calculations. See [Single Song Editing ReplayGain](./single-song.md#replaygain).
 
 ## Folder Permission Issues
 

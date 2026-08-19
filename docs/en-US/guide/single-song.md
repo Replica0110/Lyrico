@@ -111,6 +111,8 @@ ReplayGain normalizes playback volume across different tracks.
 
 You can cancel the calculation at any time. Existing ReplayGain values can be recalculated to override.
 
+The target loudness used for the calculation comes from `Settings` → `Scan Settings` → `ReplayGain reference loudness` (default -18 LUFS). After changing this setting, the gain value and reference loudness fields are updated accordingly when you recalculate.
+
 ## More Menu
 
 The editor's more menu includes:

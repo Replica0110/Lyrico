@@ -7,7 +7,7 @@ Lyrico's settings page is organized into categories. This page provides a quick 
 | Category | Contains | Details |
 |----------|----------|---------|
 | Appearance | Theme mode, Monet colors, seed color | [Appearance](./appearance.md) |
-| Scan Settings | Folder management, skip short audio | [Library & Folders](../library.md) |
+| Scan Settings | Folder management, skip short audio, ReplayGain reference loudness | [Library & Folders](../library.md) |
 | Search Settings | Plugin management, search limit, filename matching | [Search Settings](./search.md) |
 | Lyrics | Lyric mode, romanization, translation | [Lyrics Settings](./lyrics.md) |
 | Metadata Processing | Text conversion, artist splitting, field visibility, custom tags, character mapping | [Metadata Processing](./metadata.md) |
@@ -28,6 +28,7 @@ Lyrico's settings page is organized into categories. This page provides a quick 
 | Strip composer/lyricist lines from lyrics | [Metadata Processing](./metadata.md#non-lyric-content-filtering) |
 | Convert Simplified lyrics to Traditional | [Metadata Processing](./metadata.md#chinese-text-conversion) |
 | Install or configure search plugins | [Search Settings](./search.md#plugin-management) |
+| Adjust the target loudness for ReplayGain calculation | [Library & Folders](../library.md#scan-settings) |
 | Back up plugin and theme settings | [Backup & Restore](./backup.md) |
 | Clear cover search image cache | [Maintenance](./maintenance.md#clear-cache) |
 | Review batch task results | [Maintenance](./maintenance.md#task-history) |

@@ -1,11 +1,21 @@
 package com.lonx.lyrico.utils
 
+import android.util.Log
+
 object LyricsSearchTextExtractor {
+    private const val TAG = "LyricsSearchTextExtractor"
+
     fun extractLines(lyrics: String?): List<String> {
         val raw = lyrics.orEmpty()
         if (raw.isBlank()) return emptyList()
 
-        val decodedLines = LyricDecoder.decode(raw)
+        // 歌词搜索索引是 best-effort 的附加能力：任何解析失败都必须
+        // 回退到纯文本提取，不允许导致整首音频扫描失败。
+        val decodedLines = runCatching { LyricDecoder.decode(raw) }
+            .onFailure { e ->
+                Log.w(TAG, "Decode failed, fallback to plain text extraction: ${e.message}")
+            }
+            .getOrNull()
             ?.let { result ->
                 listOfNotNull(
                     result.original,

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -82,6 +83,7 @@ object SettingsDefaults {
     val LYRICS_TAG_LINE_KEYWORDS = LyricsProcessingOptions.DefaultTagLineKeywords
     const val LIMIT_LYRICS_INPUT_LINES = false
     val LOG_RETENTION_OPTION = LogRetentionOption.THIRTY_DAYS
+    const val REPLAY_GAIN_TARGET_LOUDNESS = -18.0
 
     val SEARCH_SOURCE_ORDER = emptyList<String>()
     val DEFAULT_ENABLED_SEARCH_SOURCES = emptySet<String>()
@@ -136,6 +138,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val LOG_RETENTION_OPTION = stringPreferencesKey("log_retention_option")
         val ARTIST_SPLIT_CONFIG = stringPreferencesKey("artist_split_config")
         val LIBRARY_INDEX_VERSION = intPreferencesKey("library_index_version")
+        val REPLAY_GAIN_TARGET_LOUDNESS = doublePreferencesKey("replay_gain_target_loudness")
     }
 
     override val lyricFormat: Flow<LyricFormat>
@@ -244,6 +247,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override val ignoreShortAudio: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.IGNORE_SHORT_AUDIO] ?: SettingsDefaults.IGNORE_SHORT_AUDIO
+        }
+
+    override val replayGainTargetLoudness: Flow<Double>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS]
+                ?: SettingsDefaults.REPLAY_GAIN_TARGET_LOUDNESS
         }
 
     override val searchSourceOrder: Flow<List<String>>
@@ -513,6 +522,12 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
+    override suspend fun saveReplayGainTargetLoudness(loudness: Double) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS] = loudness
+        }
+    }
+
     override suspend fun saveLastScanTime(time: Long) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.LAST_SCAN_TIME] = time
@@ -688,6 +703,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             ignoreShortAudio = prefs[PreferencesKeys.IGNORE_SHORT_AUDIO]
                 ?: SettingsDefaults.IGNORE_SHORT_AUDIO,
 
+            replayGainTargetLoudness = prefs[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS]
+                ?: SettingsDefaults.REPLAY_GAIN_TARGET_LOUDNESS,
+
             searchSourceOrder = (prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.idsToCsv()).csvToIds(),
 
             enabledSearchSources = (prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.idsToCsv()).csvToIds(),
@@ -764,6 +782,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.checkUpdateEnabled?.let { prefs[PreferencesKeys.CHECK_UPDATE_ENABLED] = it }
                 backup.translationEnabled?.let { prefs[PreferencesKeys.TRANSLATION_ENABLED] = it }
                 backup.ignoreShortAudio?.let { prefs[PreferencesKeys.IGNORE_SHORT_AUDIO] = it }
+                backup.replayGainTargetLoudness?.let {
+                    prefs[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS] = it
+                }
                 backup.searchSourceOrder?.let { list ->
                     prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] = list.idsToCsv()
                 }

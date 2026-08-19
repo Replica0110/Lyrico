@@ -122,6 +122,14 @@
     <string name="album_replay_gain_success">Album ReplayGain written to %1$d songs</string>
     <string name="album_replay_gain_write_permission_required">Permission required to write album ReplayGain</string>
     <string name="album_replay_gain_write_failed">Failed to write album ReplayGain: %1$s</string>
+    <string name="settings_replay_gain_target_loudness">ReplayGain reference loudness</string>
+    <string name="settings_replay_gain_target_loudness_summary">Target loudness used for ReplayGain calculation.</string>
+    <string name="replay_gain_target_preset_ebu">-23 LUFS (EBU R128)</string>
+    <string name="replay_gain_target_preset_default">-18 LUFS (Default)</string>
+    <string name="replay_gain_target_preset_streaming">-14 LUFS (Streaming)</string>
+    <string name="replay_gain_target_preset_custom">Custom</string>
+    <string name="replay_gain_target_custom_hint">Custom (LUFS)</string>
+    <string name="replay_gain_target_invalid">Enter a number between -60 and 0</string>
 
 
     <string name="cache_category_image">Image Cache</string>

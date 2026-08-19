@@ -57,7 +57,8 @@ data class SettingsUiState(
     val totalCacheSize: Long = 0L,
     val conversionMode: ConversionMode = ConversionMode.NONE,
     val lyricsTagLineKeywords: List<String> = emptyList(),
-    val metadataFieldWriteRules: List<PluginMetadataFieldWriteRule> = emptyList()
+    val metadataFieldWriteRules: List<PluginMetadataFieldWriteRule> = emptyList(),
+    val replayGainTargetLoudness: Double = -18.0
 ) {
     /**
      * 返回按优先级排序且启用的搜索源列表
@@ -82,15 +83,24 @@ class SettingsViewModel(
         val theme: com.lonx.lyrico.data.model.ThemeConfig,
         val ignoreShortAudio: Boolean,
         val lyricsTagLineKeywords: List<String>,
-        val metadataFieldRules: List<PluginMetadataFieldWriteRule>
+        val metadataFieldRules: List<PluginMetadataFieldWriteRule>,
+        val replayGainTargetLoudness: Double
+    )
+
+    private data class SettingsTailState(
+        val ignoreShortAudio: Boolean,
+        val lyricsTagLineKeywords: List<String>,
+        val metadataFieldRules: List<PluginMetadataFieldWriteRule>,
+        val replayGainTargetLoudness: Double
     )
 
     private val settingsTailState = combine(
         settingsRepository.ignoreShortAudio,
         settingsRepository.lyricsTagLineKeywords,
-        settingsRepository.metadataFieldWriteRules
-    ) { ignoreShort, lyricsTagLineKeywords, metadataFieldRules ->
-        Triple(ignoreShort, lyricsTagLineKeywords, metadataFieldRules)
+        settingsRepository.metadataFieldWriteRules,
+        settingsRepository.replayGainTargetLoudness
+    ) { ignoreShort, lyricsTagLineKeywords, metadataFieldRules, rgTargetLoudness ->
+        SettingsTailState(ignoreShort, lyricsTagLineKeywords, metadataFieldRules, rgTargetLoudness)
     }
 
     private val settingsBaseState = combine(
@@ -99,7 +109,15 @@ class SettingsViewModel(
         settingsRepository.themeConfigFlow,
         settingsTailState
     ) { lyric, search, theme, tail ->
-        SettingsBaseState(lyric, search, theme, tail.first, tail.second, tail.third)
+        SettingsBaseState(
+            lyric,
+            search,
+            theme,
+            tail.ignoreShortAudio,
+            tail.lyricsTagLineKeywords,
+            tail.metadataFieldRules,
+            tail.replayGainTargetLoudness
+        )
     }
 
     private val baseUiState = combine(
@@ -127,7 +145,8 @@ class SettingsViewModel(
             removeEmptyLines = base.lyric.removeEmptyLines,
             conversionMode = base.lyric.conversionMode,
             lyricsTagLineKeywords = base.lyricsTagLineKeywords,
-            metadataFieldWriteRules = base.metadataFieldRules
+            metadataFieldWriteRules = base.metadataFieldRules,
+            replayGainTargetLoudness = base.replayGainTargetLoudness
         )
     }
 
@@ -247,6 +266,12 @@ class SettingsViewModel(
     fun setIgnoreShortAudio(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveIgnoreShortAudio(enabled)
+        }
+    }
+
+    fun setReplayGainTargetLoudness(loudness: Double) {
+        viewModelScope.launch {
+            settingsRepository.saveReplayGainTargetLoudness(loudness)
         }
     }
     fun setSearchSourceOrder(sources: List<String>) {

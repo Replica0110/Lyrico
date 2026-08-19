@@ -9,6 +9,7 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
 import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -41,7 +43,8 @@ class AlbumActionsViewModel(
     private val libraryIndexRepository: LibraryIndexRepository,
     private val deleteSongsUseCase: DeleteSongsUseCase,
     private val patchSongTagsUseCase: PatchSongTagsUseCase,
-    private val replayGainScanner: ReplayGainScanner
+    private val replayGainScanner: ReplayGainScanner,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AlbumActionsUiState())
@@ -196,12 +199,11 @@ class AlbumActionsViewModel(
         songs: List<SongEntity>,
         state: AlbumReplayGainCalculateState.Success
     ) {
-        val albumGain = replayGainScanner.formatGain(state.analysis.loudnessLufs)
-        val albumPeak = replayGainScanner.formatPeak(state.analysis.peak)
+        val targetLoudness = settingsRepository.replayGainTargetLoudness.first()
         val tagData = AudioTagData(
-            replayGainAlbumGain = replayGainScanner.formatGain(state.analysis.loudnessLufs),
+            replayGainAlbumGain = replayGainScanner.formatGain(state.analysis.loudnessLufs, targetLoudness),
             replayGainAlbumPeak = replayGainScanner.formatPeak(state.analysis.peak),
-            replayGainReferenceLoudness = "-18 LUFS"
+            replayGainReferenceLoudness = replayGainScanner.formatReferenceLoudness(targetLoudness)
         )
 
         var written = 0

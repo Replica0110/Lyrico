@@ -122,6 +122,14 @@
     <string name="album_replay_gain_success">已写入 %1$d 首歌的专辑回放增益</string>
     <string name="album_replay_gain_write_permission_required">需要授权才能写入专辑回放增益</string>
     <string name="album_replay_gain_write_failed">写入专辑回放增益失败: %1$s</string>
+    <string name="settings_replay_gain_target_loudness">回放增益参考响度</string>
+    <string name="settings_replay_gain_target_loudness_summary">计算回放增益时使用的目标响度</string>
+    <string name="replay_gain_target_preset_ebu">-23 LUFS（EBU R128）</string>
+    <string name="replay_gain_target_preset_default">-18 LUFS（默认）</string>
+    <string name="replay_gain_target_preset_streaming">-14 LUFS（流媒体常用）</string>
+    <string name="replay_gain_target_preset_custom">自定义</string>
+    <string name="replay_gain_target_custom_hint">自定义（LUFS）</string>
+    <string name="replay_gain_target_invalid">请输入 -60 到 0 之间的数值</string>
 
 
     <string name="cache_category_image">图片缓存</string>

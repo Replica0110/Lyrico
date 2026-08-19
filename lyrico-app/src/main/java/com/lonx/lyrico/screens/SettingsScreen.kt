@@ -42,6 +42,7 @@ import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.visibleLyricLineTracks
 import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
 import com.lonx.lyrico.ui.components.lyrics.LyricLineOrderBottomSheetContent
 import com.lonx.lyrico.ui.components.RoundedRectanglePainter
 import com.lonx.lyrico.ui.components.getSystemWallpaperColor
@@ -68,6 +69,7 @@ import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -83,6 +85,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import top.yukonga.miuix.kmp.preference.SliderPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
@@ -133,6 +136,7 @@ fun SettingsScreen(
     }
     val showClearCacheDialog = remember { mutableStateOf(false) }
     val showLyricLineOrderSheet = remember { mutableStateOf(false) }
+    val showRgTargetDialog = remember { mutableStateOf(false) }
 
     val themeModeItems = ThemeMode.entries.map { stringResource(it.labelRes) }
     val selectedThemeModeIndex =
@@ -288,6 +292,12 @@ fun SettingsScreen(
                 }
             }
         }
+        ReplayGainTargetLoudnessSheet(
+            show = showRgTargetDialog.value,
+            currentLoudness = settingsUiState.replayGainTargetLoudness,
+            onDismiss = { showRgTargetDialog.value = false },
+            onSave = { settingsViewModel.setReplayGainTargetLoudness(it) }
+        )
         WindowBottomSheet(
             show = showLyricLineOrderSheet.value,
             title = stringResource(R.string.lyric_line_order),
@@ -387,6 +397,19 @@ fun SettingsScreen(
                         title = stringResource(R.string.ignore_short_audio),
                         checked = ignoreShortAudio,
                         onCheckedChange = { settingsViewModel.setIgnoreShortAudio(it) }
+                    )
+                    ArrowPreference(
+                        title = stringResource(R.string.settings_replay_gain_target_loudness),
+                        summary = stringResource(R.string.settings_replay_gain_target_loudness_summary),
+                        endActions = {
+                            Text(
+                                text = formatLoudnessValue(settingsUiState.replayGainTargetLoudness),
+                                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions
+                            )
+                        },
+                        onClick = { showRgTargetDialog.value = true },
+                        holdDownState = showRgTargetDialog.value
                     )
                 }
             }
@@ -601,4 +624,116 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+private fun formatLoudnessNumber(value: Double): String {
+    return if (value % 1.0 == 0.0) {
+        "%.0f".format(java.util.Locale.US, value)
+    } else {
+        "%.2f".format(java.util.Locale.US, value)
+    }
+}
+
+private fun formatLoudnessValue(value: Double): String = "${formatLoudnessNumber(value)} LUFS"
+
+@Composable
+private fun ReplayGainTargetLoudnessSheet(
+    show: Boolean,
+    currentLoudness: Double,
+    onDismiss: () -> Unit,
+    onSave: (Double) -> Unit
+) {
+    val presets = remember { listOf(-23.0, -18.0, -14.0) }
+    val presetLabels = listOf(
+        R.string.replay_gain_target_preset_ebu,
+        R.string.replay_gain_target_preset_default,
+        R.string.replay_gain_target_preset_streaming
+    )
+    var selectedPreset by remember(show, currentLoudness) {
+        mutableStateOf(if (currentLoudness in presets) currentLoudness else presets.first())
+    }
+    var customSelected by remember(show, currentLoudness) {
+        mutableStateOf(currentLoudness !in presets)
+    }
+    var customText by remember(show, currentLoudness) {
+        mutableStateOf(if (currentLoudness in presets) "" else formatLoudnessNumber(currentLoudness))
+    }
+    var invalid by remember(show) { mutableStateOf(false) }
+
+    YesNoBottomSheet(
+        show = show,
+        title = stringResource(R.string.settings_replay_gain_target_loudness),
+        onDismissRequest = onDismiss,
+        onConfirm = {
+            if (customSelected) {
+                val customValue = customText.trim().toDoubleOrNull()
+                if (customValue != null && customValue in -60.0..0.0) {
+                    onSave(customValue)
+                    onDismiss()
+                } else {
+                    invalid = true
+                }
+            } else {
+                onSave(selectedPreset)
+                onDismiss()
+            }
+        },
+        content = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())){
+                Card(
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    presets.forEachIndexed { index, preset ->
+                        RadioButtonPreference(
+                            title = stringResource(presetLabels[index]),
+                            selected = !customSelected && selectedPreset == preset,
+                            onClick = {
+                                selectedPreset = preset
+                                customSelected = false
+                                invalid = false
+                            }
+                        )
+                    }
+                    RadioButtonPreference(
+                        title = stringResource(R.string.replay_gain_target_preset_custom),
+                        selected = customSelected,
+                        onClick = {
+                            customSelected = true
+                            invalid = false
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                AnimatedVisibility(visible = customSelected) {
+                    Card(
+                        colors = CardDefaults.defaultColors(
+                            color = MiuixTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        TextField(
+                            value = customText,
+                            onValueChange = {
+                                customText = it
+                                invalid = false
+                            },
+                            label = stringResource(R.string.replay_gain_target_custom_hint),
+                            maxLines = 1,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (invalid) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(R.string.replay_gain_target_invalid),
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    )
 }

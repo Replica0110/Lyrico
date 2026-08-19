@@ -66,7 +66,7 @@ sealed interface AlbumReplayGainCalculateState {
 
 class ReplayGainScanner(private val context: Context) {
     companion object {
-        private const val TARGET_LOUDNESS_LUFS = -18.0
+        const val DEFAULT_TARGET_LOUDNESS_LUFS = -18.0
         private const val PROGRESS_UPDATE_THRESHOLD = 0.01
     }
 
@@ -316,17 +316,35 @@ class ReplayGainScanner(private val context: Context) {
     /**
      * 将解析出的 LUFS 响度格式化为 Track/Album Gain
      */
-    fun formatGain(loudnessLufs: Double): String {
+    fun formatGain(
+        loudnessLufs: Double,
+        targetLoudnessLufs: Double = DEFAULT_TARGET_LOUDNESS_LUFS
+    ): String {
         // Gain = 目标参考响度 - 实际测量响度
-        val gainDb = TARGET_LOUDNESS_LUFS - loudnessLufs
+        val gainDb = targetLoudnessLufs - loudnessLufs
         return "%.2f dB".format(java.util.Locale.US, gainDb)
     }
 
     /**
      * 将解析出的 LUFS 响度格式化为 Track Gain
      */
-    fun formatGain(analysis: ReplayGainAnalysis): String {
-        return formatGain(analysis.loudnessLufs)
+    fun formatGain(
+        analysis: ReplayGainAnalysis,
+        targetLoudnessLufs: Double = DEFAULT_TARGET_LOUDNESS_LUFS
+    ): String {
+        return formatGain(analysis.loudnessLufs, targetLoudnessLufs)
+    }
+
+    /**
+     * 将目标参考响度格式化为写入标签的文本，例如 "-18 LUFS"
+     */
+    fun formatReferenceLoudness(targetLoudnessLufs: Double): String {
+        val value = if (targetLoudnessLufs % 1.0 == 0.0) {
+            "%.0f".format(java.util.Locale.US, targetLoudnessLufs)
+        } else {
+            "%.2f".format(java.util.Locale.US, targetLoudnessLufs)
+        }
+        return "$value LUFS"
     }
 
     /**

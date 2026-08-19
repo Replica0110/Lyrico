@@ -24,6 +24,7 @@ data class SettingsBackup(
     @SerialName("check_update_enabled") val checkUpdateEnabled: Boolean? = null,
     @SerialName("translation_enabled") val translationEnabled: Boolean? = null,
     @SerialName("ignore_short_audio") val ignoreShortAudio: Boolean? = null,
+    @SerialName("replay_gain_target_loudness") val replayGainTargetLoudness: Double? = null,
     @SerialName("search_source_order") val searchSourceOrder: List<String>? = null,
     @SerialName("enabled_search_sources") val enabledSearchSources: List<String>? = null,
     @SerialName("search_page_size") val searchPageSize: Int? = null,

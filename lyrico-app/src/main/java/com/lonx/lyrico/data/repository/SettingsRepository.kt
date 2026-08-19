@@ -43,6 +43,7 @@ interface SettingsRepository {
     val translationEnabled: Flow<Boolean>
     val checkUpdateEnabled: Flow<Boolean>
     val ignoreShortAudio: Flow<Boolean>
+    val replayGainTargetLoudness: Flow<Double>
     val searchSourceOrder: Flow<List<String>>
     val enabledSearchSources: Flow<Set<String>>
     val searchPageSize: Flow<Int>
@@ -79,6 +80,7 @@ interface SettingsRepository {
     suspend fun saveCheckUpdateEnabled(enabled: Boolean)
     suspend fun saveTranslationEnabled(enabled: Boolean)
     suspend fun saveIgnoreShortAudio(enabled: Boolean)
+    suspend fun saveReplayGainTargetLoudness(loudness: Double)
     suspend fun saveLastScanTime(time: Long)
     suspend fun saveSearchSourceOrder(sources: List<String>)
     suspend fun saveEnabledSearchSources(sources: Set<String>)

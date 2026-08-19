@@ -262,7 +262,7 @@ val appModule = module {
     single<GhContributorRepository> { GhContributorRepositoryImpl(get(), get()) }
     single { BatchTaskScheduler(androidContext(), get()) }
     single { LyricsFormatProcessor(get(), get()) }
-    single { ReplayGainProcessor(get(), get(), get()) }
+    single { ReplayGainProcessor(get(), get(), get(), get()) }
     single { MatchMetadataProcessor(get(), get(), get(), get(), get(), get()) }
     single { RenameFilesProcessor(get(), get()) }
     single { EditTagsProcessor(get(), get()) }
@@ -278,7 +278,7 @@ val appModule = module {
     )) }
     // ViewModels
     viewModel { AboutViewModel(get(),get(), get()) }
-    viewModel { AlbumActionsViewModel(get(), get(), get(), get()) }
+    viewModel { AlbumActionsViewModel(get(), get(), get(), get(), get()) }
     viewModel { SongListViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { SongSelectionViewModel(get(), get(), get(), get()) }
     viewModel { LocalSearchViewModel(get(), get()) }

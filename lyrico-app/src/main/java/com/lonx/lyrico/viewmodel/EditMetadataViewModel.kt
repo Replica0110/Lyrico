@@ -1054,6 +1054,7 @@ class EditMetadataViewModel(
         if (_uiState.value.isReplayGainCalculating) return
 
         scanJob = viewModelScope.launch {
+            val targetLoudness = settingsRepository.replayGainTargetLoudness.first()
             _uiState.update {
                 it.copy(
                     isReplayGainCalculating = true,
@@ -1080,9 +1081,9 @@ class EditMetadataViewModel(
                                     val current = ui.editingTagData ?: AudioTagData(fileName = ui.fileName.orEmpty())
                                     ui.copy(
                                         editingTagData = current.copy(
-                                            replayGainTrackGain = replayGainScanner.formatGain(state.analysis),
+                                            replayGainTrackGain = replayGainScanner.formatGain(state.analysis, targetLoudness),
                                             replayGainTrackPeak = replayGainScanner.formatPeak(state.analysis.peak),
-                                            replayGainReferenceLoudness = "-18 LUFS"
+                                            replayGainReferenceLoudness = replayGainScanner.formatReferenceLoudness(targetLoudness)
                                         ),
                                         isEditing = true,
                                         isReplayGainCalculating = false,

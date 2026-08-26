@@ -147,8 +147,14 @@ class SearchViewModel(
                 SharingStarted.WhileSubscribed(5000),
                 null
             )
+    // 改为：聚合源 + 元数据源（去重，聚合在前）
     private val allSourcesFlow =
-        searchSourceProvider.observeSources(PluginSourceType.AGGREGATED).stateIn(
+        combine(
+            searchSourceProvider.observeSources(PluginSourceType.AGGREGATED),
+            searchSourceProvider.observeSources(PluginSourceType.METADATA)
+        ) { aggregated, metadata ->
+            aggregated + metadata.filter { m -> aggregated.none { it.id == m.id } }
+        }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()

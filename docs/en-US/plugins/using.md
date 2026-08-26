@@ -28,7 +28,7 @@ If a package does not match the required structure, Lyrico rejects it and shows 
 
 ## Enable And Disable
 
-The Aggregated, Metadata, Lyrics, and Covers tabs keep independent enabled states. A switch affects only the current type; for example, an aggregated plugin can be hidden from single-song search while remaining available for lyrics and cover search.
+The plugin manager has only Metadata, Lyrics, and Covers tabs. Metadata enabled state and order control both single-song Main Search and batch metadata matching. Lyrics and Covers are shared by their corresponding single-song and batch entries. Declared source types are shown beneath each plugin name.
 
 Disabling one type keeps the plugin files and settings and does not affect its other types. Use uninstall when you want to remove it completely.
 

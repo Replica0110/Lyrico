@@ -458,7 +458,6 @@ private fun PluginConfigFormItem(
 private const val DEFAULT_CONFIG_GROUP = "__basic__"
 
 private fun PluginSourceType.labelRes(): Int = when (this) {
-    PluginSourceType.AGGREGATED -> R.string.plugin_type_aggregated
     PluginSourceType.METADATA -> R.string.plugin_type_metadata
     PluginSourceType.LYRICS -> R.string.plugin_type_lyrics
     PluginSourceType.COVER -> R.string.plugin_type_cover

@@ -73,6 +73,8 @@ import com.lonx.lyrico.worker.processor.BatchTaskProcessorFactory
 import com.lonx.lyrico.worker.processor.EditTagsProcessor
 import com.lonx.lyrico.worker.processor.LyricsFormatProcessor
 import com.lonx.lyrico.worker.processor.MatchMetadataProcessor
+import com.lonx.lyrico.worker.processor.MatchLyricsProcessor
+import com.lonx.lyrico.worker.processor.MatchCoverProcessor
 import com.lonx.lyrico.worker.processor.ReplayGainProcessor
 import com.lonx.lyrico.viewmodel.AboutViewModel
 import com.lonx.lyrico.viewmodel.AlbumActionsViewModel
@@ -264,6 +266,8 @@ val appModule = module {
     single { LyricsFormatProcessor(get(), get()) }
     single { ReplayGainProcessor(get(), get(), get(), get()) }
     single { MatchMetadataProcessor(get(), get(), get(), get(), get(), get()) }
+    single { MatchLyricsProcessor(get(), get(), get(), get(), get()) }
+    single { MatchCoverProcessor(get(), get(), get(), get()) }
     single { RenameFilesProcessor(get(), get()) }
     single { EditTagsProcessor(get(), get()) }
     single { BatchExportProcessor(androidContext(), get()) }
@@ -271,6 +275,8 @@ val appModule = module {
         BatchTaskType.CONVERT_LYRICS_FORMAT to get<LyricsFormatProcessor>(),
         BatchTaskType.SCAN_REPLAY_GAIN to get<ReplayGainProcessor>(),
         BatchTaskType.MATCH_METADATA to get<MatchMetadataProcessor>(),
+        BatchTaskType.MATCH_LYRICS to get<MatchLyricsProcessor>(),
+        BatchTaskType.MATCH_COVER to get<MatchCoverProcessor>(),
         BatchTaskType.RENAME_FILES to get<RenameFilesProcessor>(),
         BatchTaskType.EDIT_TAGS to get<EditTagsProcessor>(),
         BatchTaskType.EXPORT_LYRICS to get<BatchExportProcessor>(),

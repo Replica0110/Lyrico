@@ -90,7 +90,9 @@ import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
+import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.model.search.LyricsSearchResult
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.ui.components.crop.ImageCropper
 import com.lonx.lyrico.ui.components.getBitmap
 import com.lonx.lyrico.ui.components.crop.rememberImageCropperState
@@ -120,6 +122,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -177,6 +180,16 @@ fun EditMetadataScreen(
     onLyricsSearchResult: ResultRecipient<SearchLyricsDestination, LyricsSearchResult>
 ) {
     val viewModel: EditMetadataViewModel = koinViewModel()
+    val searchSourceProvider: SearchSourceProvider = koinInject()
+    val mainSearchSources by remember(searchSourceProvider) {
+        searchSourceProvider.observeSources(PluginSourceType.METADATA)
+    }.collectAsState(initial = emptyList())
+    val lyricsSearchSources by remember(searchSourceProvider) {
+        searchSourceProvider.observeSources(PluginSourceType.LYRICS)
+    }.collectAsState(initial = emptyList())
+    val coverSearchSources by remember(searchSourceProvider) {
+        searchSourceProvider.observeSources(PluginSourceType.COVER)
+    }.collectAsState(initial = emptyList())
     val uiState by viewModel.uiState.collectAsState()
     val visibleFieldGroups by viewModel.visibleFieldGroups.collectAsState()
     val visibleCustomKeys by viewModel.visibleCustomKeys.collectAsState()
@@ -191,6 +204,7 @@ fun EditMetadataScreen(
     // BottomSheet 状态
     var showOffsetSheet by remember { mutableStateOf(false) }
     var showCoverOptionsSheet by remember { mutableStateOf(false) }
+    var showSearchOptionsSheet by remember { mutableStateOf(false) }
     var showArtistImageOptionsSheet by remember { mutableStateOf(false) }
     var showLyricsActionBottomSheet by remember { mutableStateOf(false) }
     var showPlainLyricsSheet by remember { mutableStateOf(false) }
@@ -484,15 +498,15 @@ fun EditMetadataScreen(
                         ) { Icon(imageVector = MiuixIcons.Back, contentDescription = null) }
                     },
                     actions = {
-                        IconButton(onClick = {
-                            val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
-                                if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
-                                else "${editingTagData.title} ${editingTagData.artist}"
-                            } else {
-                                uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
+                        if (
+                            mainSearchSources.isNotEmpty() ||
+                            lyricsSearchSources.isNotEmpty() ||
+                            coverSearchSources.isNotEmpty()
+                        ) {
+                            IconButton(onClick = { showSearchOptionsSheet = true }) {
+                                Icon(imageVector = MiuixIcons.Search, contentDescription = null)
                             }
-                            navigator.navigate(SearchResultsDestination(keyword))
-                        }) { Icon(imageVector = MiuixIcons.Search, contentDescription = null) }
+                        }
 
                         // 保存按钮
                         IconButton(
@@ -1193,6 +1207,68 @@ fun EditMetadataScreen(
         uri = songFileUri.toUri(),
         onDismissRequest = { showPlayerPicker = false }
     )
+    WindowBottomSheet(
+        show = showSearchOptionsSheet,
+        enableNestedScroll = false,
+        title = stringResource(R.string.search_source_type_title),
+        onDismissRequest = { showSearchOptionsSheet = false }
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp),
+            colors = CardDefaults.defaultColors(
+                color = MiuixTheme.colorScheme.secondaryContainer
+            )
+        ) {
+            if (mainSearchSources.isNotEmpty()) {
+                ArrowPreference(
+                    title = stringResource(R.string.action_main_search),
+                    onClick = {
+                        val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
+                            if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
+                            else "${editingTagData.title} ${editingTagData.artist}"
+                        } else {
+                            uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
+                        }
+                        showSearchOptionsSheet = false
+                        navigator.navigate(SearchResultsDestination(keyword))
+                    }
+                )
+            }
+            if (lyricsSearchSources.isNotEmpty()) {
+                ArrowPreference(
+                    title = stringResource(R.string.action_search_lyrics),
+                    onClick = {
+                        showSearchOptionsSheet = false
+                        navigator.navigate(
+                            SearchLyricsDestination(
+                                title = editingTagData?.title.orEmpty(),
+                                artist = editingTagData?.artist.orEmpty(),
+                                album = editingTagData?.album.orEmpty(),
+                                date = editingTagData?.date.orEmpty()
+                            )
+                        )
+                    }
+                )
+            }
+            if (coverSearchSources.isNotEmpty()) {
+                ArrowPreference(
+                    title = stringResource(R.string.action_search_cover),
+                    onClick = {
+                        val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
+                            if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
+                            else "${editingTagData.title} ${editingTagData.artist}"
+                        } else {
+                            uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
+                        }
+                        showSearchOptionsSheet = false
+                        navigator.navigate(SearchCoverDestination(keyword))
+                    }
+                )
+            }
+        }
+    }
     // 歌词操作
     WindowBottomSheet(
         show = showLyricsActionBottomSheet,
@@ -1213,20 +1289,6 @@ fun EditMetadataScreen(
                     color = MiuixTheme.colorScheme.secondaryContainer,
                 )
             ) {
-                ArrowPreference(
-                    title = stringResource(R.string.action_search_lyrics),
-                    onClick = {
-                        showLyricsActionBottomSheet = false
-                        navigator.navigate(
-                            SearchLyricsDestination(
-                                title = editingTagData?.title.orEmpty(),
-                                artist = editingTagData?.artist.orEmpty(),
-                                album = editingTagData?.album.orEmpty(),
-                                date = editingTagData?.date.orEmpty()
-                            )
-                        )
-                    }
-                )
                 ArrowPreference(
                     title = stringResource(R.string.action_import_lyrics),
                     onClick = {
@@ -1401,19 +1463,6 @@ fun EditMetadataScreen(
                                 ActivityResultContracts.PickVisualMedia.ImageOnly
                             )
                         )
-                    }
-                )
-                ArrowPreference(
-                    title = stringResource(R.string.label_search_cover),
-                    onClick = {
-                        val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
-                            if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
-                            else "${editingTagData.title} ${editingTagData.artist}"
-                        } else {
-                            uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
-                        }
-                        showCoverOptionsSheet = false
-                        navigator.navigate(SearchCoverDestination(keyword))
                     }
                 )
                 ArrowPreference(

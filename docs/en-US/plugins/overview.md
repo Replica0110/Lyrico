@@ -102,12 +102,12 @@ After installation, plugin metadata is written to the Room `source_plugins` tabl
 | `includeDirsJson` | JSON serialization of include directories |
 | `capabilitiesJson` | JSON serialization of the capability combination |
 | `iconPath` | Absolute icon path, optional |
-| `enabled` | Aggregated-source enabled state |
-| `metadataEnabled` | Metadata-source enabled state |
+| `enabled` | Main-search enabled state (legacy database column name) |
+| `metadataEnabled` | Batch-match enabled state |
 | `lyricsEnabled` | Lyrics-source enabled state |
 | `coverEnabled` | Cover-source enabled state |
-| `sortOrder` | Aggregated-source priority |
-| `metadataSortOrder` | Metadata-source priority |
+| `sortOrder` | Main-search priority (legacy database column name) |
+| `metadataSortOrder` | Batch-match priority |
 | `lyricsSortOrder` | Lyrics-source priority |
 | `coverSortOrder` | Cover-source priority |
 | `installedAt` / `updatedAt` | Timestamps |
@@ -124,14 +124,15 @@ After installation, plugin metadata is written to the Room `source_plugins` tabl
 
 ### Stage 5: Runtime Calls
 
-1. Single-song search loads only aggregated sources that declare all three capabilities and calls their `searchSongs`
+1. The single-song editor exposes Main Search, Lyrics, and Covers from one search menu. Main Search loads enabled Metadata sources with `searchSongs`, and shows lyrics tabs and actions only for results from plugins that also declare `getLyrics`
 2. The independent lyrics search in the edit screen loads sources with `getLyrics`. Any source that also provides `searchSongs` first shows its own song candidates and calls that same source's `getLyrics` after selection; an API 4 source without `searchSongs` returns lyrics candidates directly and identifies them through `tags.ti/ar/al/date`
 3. Independent cover search loads only `searchCovers` sources and requests cover candidates directly by keyword
-4. `ScriptSearchSource` serializes the request and invokes the matching plugin global function through JNI
-5. The plugin returns a JavaScript value directly; JNI serializes it once, then `PluginJsonParser` converts it into host result models
+4. Batch matching also has three task entries: metadata calls `searchSongs`, lyrics calls `getLyrics`, and covers call `searchCovers`
+5. `ScriptSearchSource` serializes the request and invokes the matching plugin global function through JNI
+6. The plugin returns a JavaScript value directly; JNI serializes it once, then `PluginJsonParser` converts it into host result models
 
-Each of the four call paths reads its own enabled state and priority. An aggregated source may
-be enabled independently and have a different position in every type tab.
+Single-song Main Search and batch metadata matching share the Metadata source enabled state and order.
+Single-song and batch lyrics share lyrics-source order; single-song and batch covers share cover-source order.
 
 ### Stage 6: Enable / Disable
 

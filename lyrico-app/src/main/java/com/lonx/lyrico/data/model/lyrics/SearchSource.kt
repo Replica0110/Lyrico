@@ -17,16 +17,12 @@ interface SearchSource {
         get() = setOf(PluginCapability.SEARCH_SONGS)
     val configFields: List<PluginConfigField>
         get() = emptyList()
-    val aggregatedEnabled: Boolean
-        get() = true
     val metadataEnabled: Boolean
         get() = true
     val lyricsEnabled: Boolean
         get() = true
     val coverEnabled: Boolean
         get() = true
-    val aggregatedSortOrder: Int
-        get() = 0
     val metadataSortOrder: Int
         get() = 0
     val lyricsSortOrder: Int
@@ -55,7 +51,6 @@ interface SearchSource {
 }
 
 fun SearchSource.isEnabledFor(sourceType: PluginSourceType): Boolean = when (sourceType) {
-    PluginSourceType.AGGREGATED -> aggregatedEnabled
     PluginSourceType.METADATA -> metadataEnabled
     PluginSourceType.LYRICS -> lyricsEnabled
     PluginSourceType.COVER -> coverEnabled

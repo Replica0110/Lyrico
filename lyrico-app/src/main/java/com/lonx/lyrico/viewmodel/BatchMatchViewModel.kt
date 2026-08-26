@@ -9,6 +9,7 @@ import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -17,6 +18,8 @@ import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import com.lonx.lyrico.data.model.lyrics.SearchSource
 import com.lonx.lyrico.data.model.plugin.PluginSourceType
+import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,8 +31,32 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
+enum class BatchMatchType(
+    val sourceType: PluginSourceType,
+    val taskType: BatchTaskType,
+    val targets: Set<MetadataFieldTarget>
+) {
+    METADATA(
+        sourceType = PluginSourceType.METADATA,
+        taskType = BatchTaskType.MATCH_METADATA,
+        targets = MetadataFieldTarget.entries.toSet() -
+            MetadataFieldTarget.LYRICS - MetadataFieldTarget.COVER
+    ),
+    LYRICS(
+        sourceType = PluginSourceType.LYRICS,
+        taskType = BatchTaskType.MATCH_LYRICS,
+        targets = setOf(MetadataFieldTarget.LYRICS)
+    ),
+    COVER(
+        sourceType = PluginSourceType.COVER,
+        taskType = BatchTaskType.MATCH_COVER,
+        targets = setOf(MetadataFieldTarget.COVER)
+    )
+}
+
 data class BatchMatchUiState(
     val showBatchConfigDialog: Boolean = false,
+    val matchType: BatchMatchType = BatchMatchType.METADATA,
     val isRunning: Boolean = false,
     val batchProgress: Pair<Int, Int>? = null,
     val successCount: Int = 0,
@@ -52,9 +79,17 @@ class BatchMatchViewModel(
     val batchMatchConfig: StateFlow<BatchMatchConfig> = settingsRepository.batchMatchConfig
         .stateIn(viewModelScope, SharingStarted.Eagerly, BatchMatchConfigDefaults.DEFAULT_CONFIG)
 
-    private val allSources: StateFlow<List<SearchSource>> =
-        searchSourceProvider.observeSources(PluginSourceType.METADATA)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    private val sourcesByType: StateFlow<Map<BatchMatchType, List<SearchSource>>> = combine(
+        searchSourceProvider.observeSources(PluginSourceType.METADATA),
+        searchSourceProvider.observeSources(PluginSourceType.LYRICS),
+        searchSourceProvider.observeSources(PluginSourceType.COVER)
+    ) { metadata, lyrics, cover ->
+        mapOf(
+            BatchMatchType.METADATA to metadata,
+            BatchMatchType.LYRICS to lyrics,
+            BatchMatchType.COVER to cover
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     private val sourceSettings: StateFlow<Map<String, SourceRuntimeConfig>> =
         settingsRepository.sourceSettingsByIdFlow
@@ -71,7 +106,11 @@ class BatchMatchViewModel(
 
     init {
         viewModelScope.launch {
-            val runningTask = batchTaskRepository.getRunningTaskByType(BatchTaskType.MATCH_METADATA)
+            var runningTask: BatchTaskEntity? = null
+            for (type in BatchMatchType.entries) {
+                runningTask = batchTaskRepository.getRunningTaskByType(type.taskType)
+                if (runningTask != null) break
+            }
             if (runningTask != null) {
                 resumeObservingTask(runningTask.taskId)
             }
@@ -129,10 +168,12 @@ class BatchMatchViewModel(
         }
     }
 
-    fun openBatchMatchConfig() {
+    fun openBatchMatchConfig(matchType: BatchMatchType) {
         val selectedIds = selectionManager.selectedUris.value
         if (selectedIds.isNotEmpty()) {
-            _uiState.update { it.copy(showBatchConfigDialog = true) }
+            _uiState.update {
+                it.copy(showBatchConfigDialog = true, matchType = matchType)
+            }
         }
     }
 
@@ -171,11 +212,17 @@ class BatchMatchViewModel(
                 return@launch
             }
 
-            val currentOrderIds = buildEnabledSourceOrderIds()
+            val matchType = _uiState.value.matchType
+            val effectiveConfig = matchConfig.copy(
+                targetModes = matchConfig.targetModes.mapValues { (target, mode) ->
+                    if (target in matchType.targets) mode else MetadataWriteMode.DISABLED
+                }
+            )
+            val currentOrderIds = buildEnabledSourceOrderIds(matchType)
             val configJson = Json.encodeToString(
                 MatchMetadataTaskConfig.serializer(),
                 MatchMetadataTaskConfig(
-                    matchConfig = matchConfig,
+                    matchConfig = effectiveConfig,
                     separator = separator.value,
                     enabledSourceOrderIds = currentOrderIds,
                     sourceSettings = sourceSettings.value.mapValues { it.value.values },
@@ -184,7 +231,7 @@ class BatchMatchViewModel(
                 )
             )
             val taskId = batchTaskRepository.createTask(
-                type = BatchTaskType.MATCH_METADATA,
+                type = matchType.taskType,
                 songs = songsToMatch,
                 configJson = configJson
             )
@@ -226,7 +273,7 @@ class BatchMatchViewModel(
         }
     }
 
-    private fun buildEnabledSourceOrderIds(): List<String> {
-        return allSources.value.map { it.id }
+    private fun buildEnabledSourceOrderIds(matchType: BatchMatchType): List<String> {
+        return sourcesByType.value[matchType].orEmpty().map { it.id }
     }
 }

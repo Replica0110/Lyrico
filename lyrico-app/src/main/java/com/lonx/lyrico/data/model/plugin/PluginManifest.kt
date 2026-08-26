@@ -41,7 +41,6 @@ enum class PluginCapability {
 }
 
 enum class PluginSourceType {
-    AGGREGATED,
     METADATA,
     LYRICS,
     COVER
@@ -52,9 +51,6 @@ fun Set<PluginCapability>.normalizedPluginCapabilities(): Set<PluginCapability> 
 
 fun Set<PluginCapability>.displaySourceTypes(): Set<PluginSourceType> {
     val normalized = normalizedPluginCapabilities()
-    if (normalized.containsAll(PluginCapability.entries)) {
-        return setOf(PluginSourceType.AGGREGATED)
-    }
     return buildSet {
         if (PluginCapability.SEARCH_SONGS in normalized) add(PluginSourceType.METADATA)
         if (PluginCapability.GET_LYRICS in normalized) add(PluginSourceType.LYRICS)
@@ -65,7 +61,6 @@ fun Set<PluginCapability>.displaySourceTypes(): Set<PluginSourceType> {
 fun Set<PluginCapability>.supportsSourceType(sourceType: PluginSourceType): Boolean {
     val normalized = normalizedPluginCapabilities()
     return when (sourceType) {
-        PluginSourceType.AGGREGATED -> normalized.containsAll(PluginCapability.entries)
         PluginSourceType.METADATA -> PluginCapability.SEARCH_SONGS in normalized
         PluginSourceType.LYRICS -> PluginCapability.GET_LYRICS in normalized
         PluginSourceType.COVER -> PluginCapability.SEARCH_COVERS in normalized

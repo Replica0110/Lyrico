@@ -31,6 +31,7 @@ import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
+import com.lonx.lyrico.viewmodel.BatchMatchType
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -48,13 +49,19 @@ import kotlin.math.roundToInt
 @Composable
 fun BatchMatchConfigBottomSheet(
     show: Boolean,
+    matchType: BatchMatchType,
     initialConfig: BatchMatchConfig,
     onDismissRequest: (BatchMatchConfig) -> Unit,
     onConfirm: (BatchMatchConfig) -> Unit
 ) {
     var config by remember(show, initialConfig) { mutableStateOf(initialConfig) }
 
-    val targetGroups = remember { BatchMatchConfigDefaults.TARGET_GROUPS }
+    val targetGroups = remember(matchType) {
+        BatchMatchConfigDefaults.TARGET_GROUPS.mapNotNull { group ->
+            group.copy(targets = group.targets.filter { it in matchType.targets })
+                .takeIf { it.targets.isNotEmpty() }
+        }
+    }
 
     fun updateTarget(
         target: MetadataFieldTarget,
@@ -73,7 +80,13 @@ fun BatchMatchConfigBottomSheet(
 
     YesNoBottomSheet(
         show = show,
-        title = stringResource(R.string.batch_match_config_title),
+        title = stringResource(
+            when (matchType) {
+                BatchMatchType.METADATA -> R.string.batch_match_metadata_config_title
+                BatchMatchType.LYRICS -> R.string.batch_match_lyrics_config_title
+                BatchMatchType.COVER -> R.string.batch_match_cover_config_title
+            }
+        ),
         enableNestedScroll = false,
         content = {
             Column(

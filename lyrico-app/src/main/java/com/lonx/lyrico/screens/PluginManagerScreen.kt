@@ -117,7 +117,6 @@ private enum class PluginTypeTab(
     val sourceType: PluginSourceType,
     val labelRes: Int
 ) {
-    AGGREGATED(PluginSourceType.AGGREGATED, R.string.plugin_type_aggregated),
     METADATA(PluginSourceType.METADATA, R.string.plugin_type_metadata),
     LYRICS(PluginSourceType.LYRICS, R.string.plugin_type_lyrics),
     COVER(PluginSourceType.COVER, R.string.plugin_type_cover)
@@ -133,7 +132,7 @@ fun PluginManagerScreen(
     val uiState by viewModel.uiState.collectAsState()
     val pendingImport = uiState.pendingImport
     val context: Context = LocalContext.current
-    var selectedTypeTab by rememberSaveable { mutableStateOf(PluginTypeTab.AGGREGATED) }
+    var selectedTypeTab by rememberSaveable { mutableStateOf(PluginTypeTab.METADATA) }
     var compactMode by rememberSaveable {
         mutableStateOf(
             context.getSharedPreferences(
@@ -882,8 +881,6 @@ fun PluginItem(
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    PluginBadge(text = pluginTypeText)
-
                     if (hasUpdateSource) {
                         PluginBadge(
                             text = stringResource(R.string.plugin_update_source_configured)
@@ -891,6 +888,14 @@ fun PluginItem(
                     }
 
                 }
+
+                Text(
+                    text = pluginTypeText,
+                    fontSize = 12.sp,
+                    color = colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
                 Text(
                     text = stringResource(R.string.plugin_version_with_value, pluginVersion),
@@ -1041,8 +1046,15 @@ private fun CompactPluginItem(
                         modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    PluginBadge(text = pluginTypeText)
                 }
+
+                Text(
+                    text = pluginTypeText,
+                    fontSize = 11.sp,
+                    color = colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
                 Text(
                     text = stringResource(R.string.plugin_version_with_value, plugin.versionName),
@@ -1130,7 +1142,6 @@ private fun CompactPluginActionButton(
 }
 
 private fun PluginSourceType.labelRes(): Int = when (this) {
-    PluginSourceType.AGGREGATED -> R.string.plugin_type_aggregated
     PluginSourceType.METADATA -> R.string.plugin_type_metadata
     PluginSourceType.LYRICS -> R.string.plugin_type_lyrics
     PluginSourceType.COVER -> R.string.plugin_type_cover

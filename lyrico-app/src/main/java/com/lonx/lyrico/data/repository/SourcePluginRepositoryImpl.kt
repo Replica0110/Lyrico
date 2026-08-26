@@ -31,7 +31,6 @@ class SourcePluginRepositoryImpl(
     ) {
         val updatedAt = System.currentTimeMillis()
         when (sourceType) {
-            PluginSourceType.AGGREGATED -> dao.setEnabled(id, enabled, updatedAt)
             PluginSourceType.METADATA -> dao.setMetadataEnabled(id, enabled, updatedAt)
             PluginSourceType.LYRICS -> dao.setLyricsEnabled(id, enabled, updatedAt)
             PluginSourceType.COVER -> dao.setCoverEnabled(id, enabled, updatedAt)
@@ -44,7 +43,6 @@ class SourcePluginRepositoryImpl(
     ) {
         val updatedAt = System.currentTimeMillis()
         when (sourceType) {
-            PluginSourceType.AGGREGATED -> dao.updateAggregatedSortOrders(ids, updatedAt)
             PluginSourceType.METADATA -> dao.updateMetadataSortOrders(ids, updatedAt)
             PluginSourceType.LYRICS -> dao.updateLyricsSortOrders(ids, updatedAt)
             PluginSourceType.COVER -> dao.updateCoverSortOrders(ids, updatedAt)

@@ -163,11 +163,14 @@ function searchCovers(request) {
 
 ## 宿主的实际调用链
 
-`capabilities` 决定插件在哪类搜索中可用，用户还可以分别为元数据、歌词和封面搜索设置启用状态与优先级。
+`capabilities` 决定插件在哪类调用中可用。元数据源同时用于单曲主搜索和批量元数据匹配；歌词源和封面源分别用于对应的单曲与批量操作。
 
 | 场景 | 会调用哪些源 | 调用顺序 |
 |---|---|---|
-| 单曲搜索 | 同时具备 `searchSongs`、`getLyrics`、`searchCovers` 的聚合源 | 只调用 `searchSongs`；不会混入独立歌词源或封面源 |
+| 单曲主搜索 | 已启用且具备 `searchSongs` 的元数据源 | 先调用 `searchSongs`；只有结果所属插件同时声明 `getLyrics` 时，才显示歌词入口并调用 `getLyrics` |
+| 批量元数据匹配 | 已启用且具备 `searchSongs` 的元数据源 | 搜索、评分并写入非歌词、非封面字段 |
+| 批量歌词匹配 | 已启用且具备 `getLyrics` 的歌词源 | 有 `searchSongs` 时先选歌，否则直接请求歌词候选 |
+| 批量封面匹配 | 已启用且具备 `searchCovers` 的封面源 | 调用 `searchCovers` 并按本地歌曲信息评分 |
 | 独立歌词搜索，有 `searchSongs` | 具备 `getLyrics` 且当前歌词页已启用的源 | 先调用同一插件的 `searchSongs`；用户选择歌曲后，再把该结果原样传给同一插件的 `getLyrics` |
 | 独立歌词搜索，无 `searchSongs` | 具备 `getLyrics` 且当前歌词页已启用的 API4 源 | 直接以当前本地歌曲信息调用 `getLyrics` |
 | 封面搜索 | 具备 `searchCovers` 且当前封面页已启用的源 | 直接调用各自的 `searchCovers` |
@@ -177,7 +180,7 @@ function searchCovers(request) {
 ## 从 API3 升级到 API4
 
 1. 将 `manifest.json` 的 `apiVersion` 改为 `4`。
-2. 按实际实现填写 `capabilities`；不要为了显示为聚合源而声明未实现的回调。
+2. 按实际实现填写 `capabilities`；不要声明未实现的回调。
 3. 保持 `searchSongs` 的请求和返回值不变。
 4. 把 `getLyrics` 的单个结果改为数组；无结果返回 `[]`，每项补齐 `tags.ti`、`tags.ar`、`tags.al`、`tags.date`。
 5. 为每个 `searchCovers` 结果补齐 `title`、`artist`、`album`、`date` 和封面 URL；`id` 可以省略。
@@ -206,7 +209,7 @@ node tools/plugin-devkit/src/cli.js test ./my-plugin searchCovers --keyword "晴
 | `getLyrics returned no usable lyrics candidates` | `raw`、歌词 `type` 与对应载荷字段 | 返回的数组为空，或歌词对象不能被解析 |
 | `lyrics candidate[n] is missing ...` | `tags.ti/ar/al/date` | API4 歌词候选缺少用户判断信息 |
 | `cover result[n] is missing ...` | `title/artist/album/date` 和封面 URL | API4 封面候选字段不完整 |
-| 单曲搜索中看不到插件 | 三项 `capabilities` 与元数据页启用状态 | 单曲搜索只显示聚合源 |
+| 单曲搜索中看不到插件 | `searchSongs` 能力与元数据源启用状态 | 未声明 `searchSongs`，或未启用为元数据源 |
 | 歌词搜索能搜到歌曲，点选后失败 | `getLyrics --song` 的 `raw/errors/logs` | `searchSongs` 正常不代表解密、歌词接口或结果格式正常 |
 | `InternalError: interrupted` | 单次回调耗时和循环规模 | Android QuickJS 的一次加载或调用有 15 秒执行期限；避免在一次 `getLyrics` 中批量请求并解密多首候选 |
 | `Platform.xxx is not a function` | `Platform.runtime.getInfo().supportedHostApis` | Devkit/宿主过旧，或 `minHostApiVersion` 声明过低 |

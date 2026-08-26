@@ -35,6 +35,7 @@ import com.lonx.lyrico.ui.components.scaffoldTopAppBarInsetsPadding
 import com.lonx.lyrico.viewmodel.BatchExportViewModel
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
 import com.lonx.lyrico.viewmodel.BatchMatchViewModel
+import com.lonx.lyrico.viewmodel.BatchMatchType
 import com.lonx.lyrico.viewmodel.BatchReplayGainViewModel
 import com.ramcosta.composedestinations.generated.destinations.BatchEditDestination
 import com.ramcosta.composedestinations.generated.destinations.BatchRenameDestination
@@ -173,6 +174,7 @@ fun BoxScope.SongBatchSelectionActions(
 
     BatchMatchConfigBottomSheet(
         show = batchMatchUiState.showBatchConfigDialog,
+        matchType = batchMatchUiState.matchType,
         initialConfig = batchMatchConfig,
         onDismissRequest = { config ->
             batchMatchViewModel.saveBatchMatchConfig(config)
@@ -349,12 +351,34 @@ fun BoxScope.SongBatchSelectionActions(
         )
 
         FabMenuItem(
-            label = stringResource(R.string.action_batch_match),
+            label = stringResource(R.string.action_batch_match_cover),
             icon = MiuixIcons.Edit,
             onClick = {
                 onExpandedChange(false)
                 if (onSetSelectionUris()) {
-                    batchMatchViewModel.openBatchMatchConfig()
+                    batchMatchViewModel.openBatchMatchConfig(BatchMatchType.COVER)
+                }
+            }
+        )
+
+        FabMenuItem(
+            label = stringResource(R.string.action_batch_match_lyrics),
+            icon = MiuixIcons.Edit,
+            onClick = {
+                onExpandedChange(false)
+                if (onSetSelectionUris()) {
+                    batchMatchViewModel.openBatchMatchConfig(BatchMatchType.LYRICS)
+                }
+            }
+        )
+
+        FabMenuItem(
+            label = stringResource(R.string.action_batch_match_metadata),
+            icon = MiuixIcons.Edit,
+            onClick = {
+                onExpandedChange(false)
+                if (onSetSelectionUris()) {
+                    batchMatchViewModel.openBatchMatchConfig(BatchMatchType.METADATA)
                 }
             }
         )

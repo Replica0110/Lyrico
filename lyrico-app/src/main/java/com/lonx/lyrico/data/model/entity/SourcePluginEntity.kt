@@ -60,18 +60,16 @@ val SourcePluginEntity.displaySourceTypes: Set<PluginSourceType>
     get() = capabilities.displaySourceTypes()
 
 fun SourcePluginEntity.sortOrderFor(sourceType: PluginSourceType): Int = when (sourceType) {
-    PluginSourceType.AGGREGATED -> sortOrder
     PluginSourceType.METADATA -> metadataSortOrder
     PluginSourceType.LYRICS -> lyricsSortOrder
     PluginSourceType.COVER -> coverSortOrder
 }
 
 fun SourcePluginEntity.isEnabledFor(sourceType: PluginSourceType): Boolean = when (sourceType) {
-    PluginSourceType.AGGREGATED -> enabled
     PluginSourceType.METADATA -> metadataEnabled
     PluginSourceType.LYRICS -> lyricsEnabled
     PluginSourceType.COVER -> coverEnabled
 }
 
 val SourcePluginEntity.isEnabledAnywhere: Boolean
-    get() = enabled || metadataEnabled || lyricsEnabled || coverEnabled
+    get() = metadataEnabled || lyricsEnabled || coverEnabled

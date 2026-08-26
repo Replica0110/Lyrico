@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="kg_source_name">酷狗音乐</string>
-    <string name="qm_source_name">QQ 音乐</string>
-    <string name="ne_source_name">网易云音乐</string>
-    <string name="soda_source_name">汽水音乐</string>
-    <string name="am_source_name">Apple Music</string>
     <string name="search_settings">搜索设置</string>
     <string name="plugin_manager_title">插件管理</string>
-    <string name="search_source_priority_tip">每个类型 Tab 独立保存启用状态和源优先级。当前 Tab 的开关和拖动只影响该类型</string>
-    <string name="plugin_type_aggregated">聚合源</string>
+    <string name="search_source_priority_tip">每个类型 Tab 独立保存启用状态和源优先级；元数据源同时用于单曲主搜索和批量元数据匹配</string>
     <string name="plugin_type_metadata">元数据源</string>
     <string name="plugin_type_lyrics">歌词源</string>
     <string name="plugin_type_cover">封面源</string>
@@ -17,8 +11,12 @@
 
     <!-- 搜索 -->
     <string name="search_lyrics_placeholder">搜索歌词…</string>
-    <string name="lyrics_search_title">歌词搜索</string>
+    <string name="search_main_placeholder">搜索歌曲…</string>
+    <string name="action_main_search">主搜索</string>
+    <string name="action_search_cover">搜索封面</string>
+    <string name="lyrics_search_title">搜索歌词</string>
     <string name="action_search_lyrics">搜索歌词</string>
+    <string name="search_source_type_title">选择搜索类型</string>
     <string name="unknown_title">未知标题</string>
     <string name="unknown_album">未知专辑</string>
     <string name="unknown_year">未知年份</string>
@@ -27,7 +25,7 @@
     <string name="soda_rate_limited">汽水音乐请求过于频繁，已被临时限制。请稍后再试，或降低批量匹配并发数</string>
     <string name="search_no_results">未找到相关结果</string>
     <string name="fetch_lyrics_failed">获取歌词失败，请重试</string>
-    <string name="lyrics_loading">正在加载歌词...</string>
+    <string name="lyrics_loading">正在加载歌词…</string>
     <string name="search_apply_tab_metadata">数据</string>
     <string name="apply_action">应用</string>
     <string name="apply_lyrics_only_action">仅歌词</string>
@@ -237,6 +235,9 @@
     <string name="action_share">分享</string>
     <string name="action_delete">删除</string>
     <string name="action_batch_match">标签匹配</string>
+    <string name="action_batch_match_metadata">批量匹配元数据</string>
+    <string name="action_batch_match_lyrics">批量匹配歌词</string>
+    <string name="action_batch_match_cover">批量匹配封面</string>
 
     <!-- 列表项 -->
     <string name="unknown_artist">未知艺术家</string>
@@ -406,6 +407,9 @@
     <string name="dialog_action_go_update">去更新</string>
     <string name="dialog_title_update_available">发现新版本: %s</string>
     <string name="batch_match_config_title">批量匹配配置</string>
+    <string name="batch_match_metadata_config_title">批量元数据匹配</string>
+    <string name="batch_match_lyrics_config_title">批量歌词匹配</string>
+    <string name="batch_match_cover_config_title">批量封面匹配</string>
     <string name="batch_match_config_concurrency">并发数</string>
     <string name="batch_match_config_rate_limit_tip">并发数越高，匹配速度越快，但可能导致请求失败或被临时限制</string>
 
@@ -579,7 +583,6 @@
     <string name="search_type_artist">艺术家</string>
     <string name="search_type_album">专辑</string>
     <string name="search_type_filename">文件名</string>
-    <string name="label_search_cover">从网络搜索封面</string>
     <string name="action_lyrics_options">歌词选项</string>
     <string name="limit_lyrics_input_lines">限制编辑框行数</string>
     <string name="limit_lyrics_input_lines_hint">将歌词编辑框保持在固定高度，便于选择和编辑歌词</string>
@@ -647,6 +650,8 @@
 
     <!-- Batch Task Types -->
     <string name="batch_task_match_tags">标签匹配</string>
+    <string name="batch_task_match_lyrics">歌词匹配</string>
+    <string name="batch_task_match_cover">封面匹配</string>
     <string name="batch_task_edit_tags">标签编辑</string>
     <string name="batch_task_rename_files">文件重命名</string>
     <string name="batch_task_convert_lyrics_format">歌词格式化</string>

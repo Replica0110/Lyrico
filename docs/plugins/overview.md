@@ -102,12 +102,12 @@ Lyrico 插件系统是一个基于 **QuickJS 嵌入式 JavaScript 引擎** 的�
 | `includeDirsJson` | 包含目录的 JSON 序列化 |
 | `capabilitiesJson` | 能力组合的 JSON 序列化 |
 | `iconPath` | 图标绝对路径（可选） |
-| `enabled` | 聚合源启用状态 |
-| `metadataEnabled` | 元数据源启用状态 |
+| `enabled` | 旧版主搜索启用状态（仅为数据库兼容保留） |
+| `metadataEnabled` | 批量匹配启用状态 |
 | `lyricsEnabled` | 歌词源启用状态 |
 | `coverEnabled` | 封面源启用状态 |
-| `sortOrder` | 聚合源优先级 |
-| `metadataSortOrder` | 元数据源优先级 |
+| `sortOrder` | 旧版主搜索优先级（仅为数据库兼容保留） |
+| `metadataSortOrder` | 批量匹配优先级 |
 | `lyricsSortOrder` | 歌词源优先级 |
 | `coverSortOrder` | 封面源优先级 |
 | `installedAt` / `updatedAt` | 时间戳 |
@@ -124,13 +124,14 @@ Lyrico 插件系统是一个基于 **QuickJS 嵌入式 JavaScript 引擎** 的�
 
 ### 阶段 5：运行时调用
 
-1. 单曲搜索只加载同时声明三项能力的聚合源，并调用其 `searchSongs`
+1. 单曲编辑页右上角统一提供主搜索、歌词和封面三个搜索入口；主搜索加载已启用且声明 `searchSongs` 的元数据源，并仅对同时声明 `getLyrics` 的插件结果显示歌词页签与操作
 2. 编辑页的独立歌词搜索只加载具备 `getLyrics` 的源；任何同时具备 `searchSongs` 的源都会先展示该源的歌曲候选，用户选择后再调用同一源的 `getLyrics`；没有 `searchSongs` 的 API 4 源直接返回歌词候选，并由 `tags.ti/ar/al/date` 提供判断信息
 3. 独立封面搜索只加载 `searchCovers` 源，并直接按关键词请求封面候选
-4. `ScriptSearchSource` 将请求序列化为 JSON，通过 JNI 调用对应的插件全局函数
-5. 插件直接返回 JavaScript 值；JNI 将其序列化一次，`PluginJsonParser` 再转换为宿主结果模型
+4. 批量匹配同样分为三个任务入口：元数据任务调用 `searchSongs`，歌词任务调用 `getLyrics`，封面任务调用 `searchCovers`
+5. `ScriptSearchSource` 将请求序列化为 JSON，通过 JNI 调用对应的插件全局函数
+6. 插件直接返回 JavaScript 值；JNI 将其序列化一次，`PluginJsonParser` 再转换为宿主结果模型
 
-四个调用场景分别读取自己的启用状态和优先级；聚合源可以在四个类型 Tab 中分别启停并拥有不同位置。
+单曲主搜索与批量元数据匹配共用元数据源的开关和顺序；单曲与批量歌词共用歌词源顺序，单曲与批量封面共用封面源顺序。
 
 ### 阶段 6：启用/禁用
 

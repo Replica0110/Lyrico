@@ -293,6 +293,8 @@ class BatchTaskWorker(
     private fun getTaskTitle(type: BatchTaskType): String {
         return when (type) {
             BatchTaskType.MATCH_METADATA -> applicationContext.getString(R.string.batch_task_match_tags)
+            BatchTaskType.MATCH_LYRICS -> applicationContext.getString(R.string.batch_task_match_lyrics)
+            BatchTaskType.MATCH_COVER -> applicationContext.getString(R.string.batch_task_match_cover)
             BatchTaskType.EDIT_TAGS -> applicationContext.getString(R.string.batch_task_edit_tags)
             BatchTaskType.RENAME_FILES -> applicationContext.getString(R.string.batch_task_rename_files)
             BatchTaskType.CONVERT_LYRICS_FORMAT -> applicationContext.getString(R.string.batch_task_convert_lyrics_format)
@@ -363,7 +365,9 @@ class BatchTaskWorker(
         if (configJson.isNullOrBlank()) return "config=(none)"
         return runCatching {
             when (type) {
-                BatchTaskType.MATCH_METADATA -> summarizeMatchConfig(configJson)
+                BatchTaskType.MATCH_METADATA,
+                BatchTaskType.MATCH_LYRICS,
+                BatchTaskType.MATCH_COVER -> summarizeMatchConfig(configJson)
                 BatchTaskType.RENAME_FILES -> summarizeRenameConfig(configJson)
                 BatchTaskType.EDIT_TAGS -> summarizeEditTagsConfig(configJson)
                 BatchTaskType.CONVERT_LYRICS_FORMAT -> summarizeLyricsFormatConfig(configJson)

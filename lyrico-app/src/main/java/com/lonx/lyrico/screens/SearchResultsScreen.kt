@@ -73,9 +73,9 @@ import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonColors
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
-import com.lonx.lyrico.ui.components.plugin.PluginIcon
 import com.lonx.lyrico.ui.components.lyrics.LyricRenderConfigBottomSheet
 import com.lonx.lyrico.ui.components.lyrics.LyricsPreviewPane
+import com.lonx.lyrico.ui.components.plugin.PluginIcon
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
@@ -180,7 +180,7 @@ fun SearchResultsScreen(
                 SearchBar(
                     modifier = Modifier.padding(horizontal = 12.dp),
                     state = songSearchState,
-                    placeholder = stringResource(id = R.string.search_lyrics_placeholder),
+                    placeholder = stringResource(id = R.string.search_main_placeholder),
                     onSearch = { keyword ->
                         keyboardController?.hide()
                         viewModel.onKeywordChanged(keyword)
@@ -201,16 +201,24 @@ fun SearchResultsScreen(
                             )
                         }
 
-                        IconButton(
-                            onClick = {
-                                showLyricRenderConfigBottomSheet.value = true
+                        val selectedSourceSupportsLyrics = if (pagerState.currentPage == 0) {
+                            uiState.availableSources.any { it.supportsLyrics }
+                        } else {
+                            uiState.availableSources.getOrNull(pagerState.currentPage - 1)
+                                ?.supportsLyrics == true
+                        }
+                        if (selectedSourceSupportsLyrics) {
+                            IconButton(
+                                onClick = {
+                                    showLyricRenderConfigBottomSheet.value = true
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.Settings,
+                                    contentDescription = null,
+                                    tint = MiuixTheme.colorScheme.primary
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Settings,
-                                contentDescription = null,
-                                tint = MiuixTheme.colorScheme.primary
-                            )
                         }
                     }
                 )
@@ -366,6 +374,9 @@ fun SearchResultsScreen(
     SearchResultApplyBottomSheet(
         show = showApplyBottomSheet,
         song = pendingApplySong,
+        supportsLyrics = uiState.availableSources.firstOrNull {
+            it.id == pendingApplySong?.pluginId
+        }?.supportsLyrics == true,
         lyricsState = uiState.lyricsState,
         showAllFields = uiState.showAllSearchResultFields,
         onLoadLyrics = viewModel::loadLyrics,
@@ -757,6 +768,7 @@ private data class SearchResultApplyOption(
 private fun SearchResultApplyBottomSheet(
     show: Boolean,
     song: SongSearchResult?,
+    supportsLyrics: Boolean,
     lyricsState: LyricsUiState,
     showAllFields: Boolean,
     onLoadLyrics: (SongSearchResult) -> Unit,
@@ -767,7 +779,7 @@ private fun SearchResultApplyBottomSheet(
 ) {
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val applyPagerState = rememberPagerState { 2 }
+    val applyPagerState = rememberPagerState { if (supportsLyrics) 2 else 1 }
     var imageSize by remember(song?.picUrl) { mutableStateOf<Pair<Int, Int>?>(null) }
     var selectedTargets by remember(song?.id, song?.pluginId) {
         mutableStateOf(emptySet<MetadataFieldTarget>())
@@ -776,10 +788,12 @@ private fun SearchResultApplyBottomSheet(
         mutableStateOf(emptySet<MetadataFieldTarget>())
     }
 
-    LaunchedEffect(song?.id, song?.pluginId) {
+    LaunchedEffect(song?.id, song?.pluginId, supportsLyrics) {
         val targetSong = song ?: return@LaunchedEffect
         applyPagerState.scrollToPage(0)
-        onLoadLyrics(targetSong)
+        if (supportsLyrics) {
+            onLoadLyrics(targetSong)
+        }
     }
 
     LaunchedEffect(song?.picUrl) {
@@ -829,7 +843,8 @@ private fun SearchResultApplyBottomSheet(
         lyricsStatusText,
         imageSize,
         showAllFields,
-        emptyFieldText
+        emptyFieldText,
+        supportsLyrics
     ) {
         val targetSong = song ?: return@remember emptyList()
         val fields = targetSong.normalizedFields().toMutableMap()
@@ -859,17 +874,17 @@ private fun SearchResultApplyBottomSheet(
             .distinctBy { it.target }
             .toMutableList()
 
-        if (lyricsText != null) {
+        if (supportsLyrics && lyricsText != null) {
             fieldOptions += SearchResultApplyOption(
                 target = MetadataFieldTarget.LYRICS,
                 value = lyricsText
             )
-        } else if (
+        } else if (supportsLyrics && (
             showAllFields ||
             lyricsState.isLoading ||
             lyricsState.error != null ||
             lyricsState.song != null
-        ) {
+        )) {
             fieldOptions += SearchResultApplyOption(
                 target = MetadataFieldTarget.LYRICS,
                 value = if (showAllFields && lyricsState.song == null) {
@@ -922,36 +937,38 @@ private fun SearchResultApplyBottomSheet(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                PillButton(
-                    text = stringResource(R.string.apply_lyrics_only_action),
-                    enabled = !lyricsState.isLoading && song != null,
-                    leading = if (lyricsState.isLoading) {
-                        {
-                            MaterialCircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                    onClick = {
-                        song?.let {
-                            selectedTargets = setOf(MetadataFieldTarget.LYRICS)
-                            if (lyricsText.isNullOrBlank()) {
-                                onLoadLyrics(it)
-                            } else {
-                                onApply(
-                                    it,
-                                    lyricsText,
-                                    setOf(MetadataFieldTarget.LYRICS)
+                if (supportsLyrics) {
+                    PillButton(
+                        text = stringResource(R.string.apply_lyrics_only_action),
+                        enabled = !lyricsState.isLoading && song != null,
+                        leading = if (lyricsState.isLoading) {
+                            {
+                                MaterialCircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    strokeWidth = 2.dp
                                 )
                             }
-                        }
-                    },
-                    style = PillButtonDefaults.style(PillButtonSize.Large)
-                )
+                        } else {
+                            null
+                        },
+                        onClick = {
+                            song?.let {
+                                selectedTargets = setOf(MetadataFieldTarget.LYRICS)
+                                if (lyricsText.isNullOrBlank()) {
+                                    onLoadLyrics(it)
+                                } else {
+                                    onApply(
+                                        it,
+                                        lyricsText,
+                                        setOf(MetadataFieldTarget.LYRICS)
+                                    )
+                                }
+                            }
+                        },
+                        style = PillButtonDefaults.style(PillButtonSize.Large)
+                    )
+                }
                 PillButton(
                     text = stringResource(R.string.apply_action),
                     onClick = {
@@ -969,14 +986,16 @@ private fun SearchResultApplyBottomSheet(
         },
         content = {
             Column(){
-                ApplySheetPillTabs(
-                    selectedTabIndex = applyPagerState.currentPage,
-                    onTabSelected = { index ->
-                        scope.launch {
-                            applyPagerState.animateScrollToPage(index)
+                if (supportsLyrics) {
+                    ApplySheetPillTabs(
+                        selectedTabIndex = applyPagerState.currentPage,
+                        onTabSelected = { index ->
+                            scope.launch {
+                                applyPagerState.animateScrollToPage(index)
+                            }
                         }
-                    }
-                )
+                    )
+                }
                 HorizontalPager(
                     state = applyPagerState,
                     modifier = Modifier

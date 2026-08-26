@@ -23,9 +23,6 @@ interface SourcePluginDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(plugin: SourcePluginEntity)
 
-    @Query("UPDATE source_plugins SET enabled = :enabled, updatedAt = :updatedAt WHERE id = :id")
-    suspend fun setEnabled(id: String, enabled: Boolean, updatedAt: Long)
-
     @Query("UPDATE source_plugins SET metadataEnabled = :enabled, updatedAt = :updatedAt WHERE id = :id")
     suspend fun setMetadataEnabled(id: String, enabled: Boolean, updatedAt: Long)
 
@@ -35,9 +32,6 @@ interface SourcePluginDao {
     @Query("UPDATE source_plugins SET coverEnabled = :enabled, updatedAt = :updatedAt WHERE id = :id")
     suspend fun setCoverEnabled(id: String, enabled: Boolean, updatedAt: Long)
 
-    @Query("UPDATE source_plugins SET sortOrder = :sortOrder, updatedAt = :updatedAt WHERE id = :id")
-    suspend fun updateSortOrder(id: String, sortOrder: Int, updatedAt: Long)
-
     @Query("UPDATE source_plugins SET metadataSortOrder = :sortOrder, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateMetadataSortOrder(id: String, sortOrder: Int, updatedAt: Long)
 
@@ -46,13 +40,6 @@ interface SourcePluginDao {
 
     @Query("UPDATE source_plugins SET coverSortOrder = :sortOrder, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateCoverSortOrder(id: String, sortOrder: Int, updatedAt: Long)
-
-    @Transaction
-    suspend fun updateAggregatedSortOrders(ids: List<String>, updatedAt: Long) {
-        ids.forEachIndexed { index, id ->
-            updateSortOrder(id, index, updatedAt)
-        }
-    }
 
     @Transaction
     suspend fun updateMetadataSortOrders(ids: List<String>, updatedAt: Long) {

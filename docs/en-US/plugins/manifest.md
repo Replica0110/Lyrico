@@ -77,19 +77,20 @@ capabilities are independent: neither `getLyrics` nor `searchCovers` requires `s
 Legacy plugins with a missing or empty capability list are treated as supporting `searchSongs`
 only.
 
-The host derives a displayed plugin type from the capability combination:
+The host displays the capabilities declared by the plugin directly:
 
-| Plugin type | Capability combination |
+| Capability type | Declared capability |
 |-------------|------------------------|
-| Aggregated | Supports `searchSongs`, `getLyrics`, and `searchCovers` |
 | Metadata | Supports `searchSongs` |
 | Lyrics | Supports `getLyrics` |
 | Covers | Supports `searchCovers` |
 
-Type tabs are not mutually exclusive. A plugin with all three capabilities displays only the
-Aggregated type label, but it also appears under the Metadata, Lyrics, and Covers tabs. Other
-mixed-capability plugins appear in every matching feature tab. Type information is shown in the install preview, plugin manager, and
-plugin configuration screen. The capability combination is persisted by the host during
+Capabilities are not mutually exclusive. A plugin with all three capabilities displays Metadata,
+Lyrics, and Covers labels beneath its name. The plugin manager exposes only Metadata, Lyrics, and
+Covers source types. Metadata sources are shared by single-song Main Search and batch metadata
+matching. Single-song operations expose Main Search, Lyrics, and Covers; batch operations expose separate Metadata, Lyrics, and Covers
+entries and do not automatically join capabilities inside one task. Capability information is shown in the install preview, plugin manager, and plugin
+configuration screen. The capability combination is persisted by the host during
 installation and updated with the manifest whenever the plugin is upgraded.
 
 `includeDirs` can only reference relative directories inside the plugin package. Absolute paths, `..`, network URLs, and cross-plugin files are not allowed.

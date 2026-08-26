@@ -41,7 +41,6 @@ internal fun List<SearchSource>.forSourceType(
 }.sortedWith(
     compareBy<SearchSource> { source ->
         when (sourceType) {
-            PluginSourceType.AGGREGATED -> source.aggregatedSortOrder
             PluginSourceType.METADATA -> source.metadataSortOrder
             PluginSourceType.LYRICS -> source.lyricsSortOrder
             PluginSourceType.COVER -> source.coverSortOrder

@@ -163,11 +163,14 @@ Cover URL aliases `coverUrl`, `cover_url`, and `artworkUrl` are also accepted. S
 
 ## Actual host call flow
 
-`capabilities` controls where a plugin can be used. Users can independently enable and prioritize a plugin for metadata, lyrics, and cover searches.
+`capabilities` controls where a plugin can be used. Metadata sources are shared by single-song Main Search and batch metadata matching; Lyrics and Covers sources are shared by their corresponding single-song and batch operations.
 
 | Scenario | Eligible sources | Call order |
 |---|---|---|
-| Single-song search | Aggregate sources with all three capabilities | Calls `searchSongs` only; independent lyrics and cover sources are excluded |
+| Single-song main search | Enabled Metadata sources with `searchSongs` | Calls `searchSongs`; lyrics UI and `getLyrics` are available only when the plugin that produced the result also declares `getLyrics` |
+| Batch metadata matching | Enabled metadata sources with `searchSongs` | Searches, scores, and writes fields other than lyrics and covers |
+| Batch lyrics matching | Enabled lyrics sources with `getLyrics` | Selects a song first when `searchSongs` exists; otherwise requests lyrics candidates directly |
+| Batch cover matching | Enabled cover sources with `searchCovers` | Calls `searchCovers` and scores results against the local song |
 | Independent lyrics search, with `searchSongs` | Enabled lyrics sources with `getLyrics` | Calls that same plugin's `searchSongs`; after selection, passes the selected result unchanged to the same plugin's `getLyrics` |
 | Independent lyrics search, without `searchSongs` | Enabled API4 lyrics sources with `getLyrics` | Calls `getLyrics` directly with current local-song metadata |
 | Cover search | Enabled sources with `searchCovers` | Calls each source's `searchCovers` directly |
@@ -206,7 +209,7 @@ Add `--json` to print the complete `request`, host-serialized `raw`, parsed `par
 | `getLyrics returned no usable lyrics candidates` | `raw`, lyrics `type`, and its payload field | Empty array or an unparseable lyrics object |
 | `lyrics candidate[n] is missing ...` | `tags.ti/ar/al/date` | Missing API4 judgement metadata |
 | `cover result[n] is missing ...` | `title/artist/album/date` and cover URL | Incomplete API4 cover result |
-| Plugin absent from single-song search | All three `capabilities` and metadata enable state | Single-song search only lists aggregate sources |
+| Plugin absent from single-song search | `searchSongs` capability and Metadata enabled state | Missing `searchSongs` or disabled as a Metadata source |
 | Song search succeeds but selecting lyrics fails | `raw/errors/logs` from `getLyrics --song` | Search success does not verify lyrics HTTP, decryption, or result parsing |
 | `InternalError: interrupted` | Per-callback duration and loop size | Android QuickJS has a 15-second load/call deadline; avoid fetching and decrypting several candidates inside one `getLyrics` call |
 | `Platform.xxx is not a function` | `Platform.runtime.getInfo().supportedHostApis` | Old Devkit/host or an understated `minHostApiVersion` |

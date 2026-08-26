@@ -148,7 +148,7 @@ class SearchViewModel(
                 null
             )
     private val allSourcesFlow =
-        searchSourceProvider.observeSources(PluginSourceType.AGGREGATED).stateIn(
+        searchSourceProvider.observeSources(PluginSourceType.METADATA).stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()
@@ -635,14 +635,18 @@ class SearchViewModel(
      */
     fun loadLyrics(song: SongSearchResult) {
         lyricsJob?.cancel()
+        val source = findSource(song.pluginId)
+        if (source == null || PluginCapability.GET_LYRICS !in source.capabilities) {
+            lyricsState.value = LyricsUiState(song = song)
+            return
+        }
 
         lyricsJob = viewModelScope.launch {
             lyricsState.value = LyricsUiState(song = song, isLoading = true)
             try {
-                val source = findSource(song.pluginId)
                 val lyricsResult = source
-                    ?.getLyricsCandidates(song)
-                    ?.firstOrNull()
+                    .getLyricsCandidates(song)
+                    .firstOrNull()
                     ?.lyrics
                 logSearch(
                     level = if (lyricsResult == null) AppLogLevel.WARNING else AppLogLevel.DEBUG,
@@ -789,7 +793,7 @@ class SearchViewModel(
     ): List<SearchSource> {
         if (searchConfig == null) return emptyList()
 
-        // SearchSourceProvider 已按聚合源优先级排序。
+        // SearchSourceProvider 已按元数据源优先级排序。
         return allSources
     }
 

@@ -114,6 +114,7 @@ fun SettingsScreen(
     val lyricLineOrder = settingsUiState.lyricLineOrder
     val themeMode = settingsUiState.themeMode
     val monetEnable = settingsUiState.monetEnable
+    val barBlurEnabled = settingsUiState.barBlurEnabled
     val currentKeyColor = settingsUiState.keyColor
     val translationEnabled = settingsUiState.translationEnabled
     val onlyTranslationIfAvailable = settingsUiState.onlyTranslationIfAvailable
@@ -333,6 +334,12 @@ fun SettingsScreen(
                         onSelectedIndexChange = { index ->
                             settingsViewModel.setThemeMode(ThemeMode.entries[index])
                         }
+                    )
+                    SwitchPreference(
+                        title = stringResource(R.string.bar_blur),
+                        summary = stringResource(R.string.bar_blur_summary),
+                        checked = barBlurEnabled,
+                        onCheckedChange = settingsViewModel::setBarBlurEnabled,
                     )
                     SwitchPreference(
                         title = stringResource(R.string.monet),

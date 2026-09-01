@@ -190,6 +190,8 @@
     <string name="cd_back">返回</string>
     <string name="monet">莫奈取色</string>
     <string name="key_color">种子色</string>
+    <string name="bar_blur">模糊</string>
+    <string name="bar_blur_summary">启用顶栏和底栏的模糊效果</string>
 
 
     <!-- 删除确认 -->

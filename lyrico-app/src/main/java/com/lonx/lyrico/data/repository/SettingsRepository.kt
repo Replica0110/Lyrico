@@ -52,6 +52,7 @@ interface SettingsRepository {
     val themeMode: Flow<ThemeMode>
     val keyColor: Flow<KeyColor>
     val monetEnable: Flow<Boolean>
+    val barBlurEnabled: Flow<Boolean>
     val onlyTranslationIfAvailable: Flow<Boolean>
     val removeEmptyLines: Flow<Boolean>
     val lyricsTagLineKeywords: Flow<List<String>>
@@ -90,6 +91,7 @@ interface SettingsRepository {
     suspend fun saveThemeMode(mode: ThemeMode)
     suspend fun saveKeyColor(selectedKeyColor: KeyColor)
     suspend fun saveMonetEnable(enabled: Boolean)
+    suspend fun saveBarBlurEnabled(enabled: Boolean)
     suspend fun saveOnlyTranslationIfAvailable(enabled: Boolean)
     suspend fun saveRemoveEmptyLines(enabled: Boolean)
     suspend fun saveLyricsTagLineKeywords(keywords: List<String>)

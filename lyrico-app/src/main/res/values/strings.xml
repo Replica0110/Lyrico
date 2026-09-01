@@ -187,6 +187,8 @@
     <string name="cd_back">Back</string>
     <string name="monet">Monet palette</string>
     <string name="key_color">Key Color</string>
+    <string name="bar_blur">Blur</string>
+    <string name="bar_blur_summary">Enable blur effect on the top and bottom bars</string>
 
 
     <!-- Delete dialog -->

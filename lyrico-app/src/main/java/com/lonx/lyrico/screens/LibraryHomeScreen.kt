@@ -5,6 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -20,7 +22,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.screens.library.AlbumsPage
 import com.lonx.lyrico.screens.library.ArtistsPage
 import com.lonx.lyrico.screens.library.LibraryTab
@@ -28,9 +32,12 @@ import com.lonx.lyrico.screens.library.SongsPage
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.library.LibraryBottomNavigationBar
 import com.lonx.lyrico.ui.components.library.LibraryNavigationRail
+import com.lonx.lyrico.ui.components.library.LocalLibraryBarBlurEnabled
+import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
+import com.lonx.lyrico.ui.components.library.rememberBlurBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import com.lonx.lyrico.ui.components.LocalScaffoldIncludesStartPadding
 import com.lonx.lyrico.ui.components.scaffoldBottomPadding
-import com.lonx.lyrico.ui.components.scaffoldHorizontalBottomPadding
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
 import com.ramcosta.composedestinations.annotation.Destination
@@ -38,6 +45,7 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinActivityViewModel
 import top.yukonga.miuix.kmp.basic.Scaffold
 
@@ -63,6 +71,9 @@ fun LibraryHomeScreen(
     val scope = rememberCoroutineScope()
     val viewModel: SongListViewModel = koinActivityViewModel()
     val selectionViewModel: SongSelectionViewModel = koinViewModel()
+    val settingsRepository: SettingsRepository = koinInject()
+    val barBlurEnabled by settingsRepository.barBlurEnabled.collectAsState(initial = false)
+    val standardBottomBackdrop = rememberBlurBackdrop(enableBlur = barBlurEnabled)
     val songs by viewModel.songs.collectAsState()
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState(initial = false)
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsState()
@@ -98,9 +109,13 @@ fun LibraryHomeScreen(
                     LibraryNavigationRail(
                         tabs = tabs,
                         selectedTab = selectedTab,
-                        onTabSelected = ::selectTab
+                        onTabSelected = ::selectTab,
                     )
-                    CompositionLocalProvider(LocalScaffoldIncludesStartPadding provides false) {
+                    CompositionLocalProvider(
+                        LocalScaffoldIncludesStartPadding provides false,
+                        LocalLibraryBottomContentPadding provides 0.dp,
+                        LocalLibraryBarBlurEnabled provides barBlurEnabled,
+                    ) {
                         LibraryHomePager(
                             tabs = tabs,
                             pagerState = pagerState,
@@ -115,7 +130,8 @@ fun LibraryHomeScreen(
                         LibraryBottomNavigationBar(
                             tabs = tabs,
                             selectedTab = selectedTab,
-                            onTabSelected = ::selectTab
+                            onTabSelected = ::selectTab,
+                            backdrop = standardBottomBackdrop,
                         )
                     }
                 ) { paddingValues ->
@@ -123,14 +139,37 @@ fun LibraryHomeScreen(
                         bottomBarPadding = scaffoldBottomPadding(paddingValues)
                     }
 
-                    LibraryHomePager(
-                        tabs = tabs,
-                        pagerState = pagerState,
-                        navigator = navigator,
+                    val layoutDirection = LocalLayoutDirection.current
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(scaffoldHorizontalBottomPadding(paddingValues))
-                    )
+                            .then(
+                                if (standardBottomBackdrop != null) {
+                                    Modifier.layerBackdrop(standardBottomBackdrop)
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                    ) {
+                        CompositionLocalProvider(
+                            // The pager stays behind the bar so the backdrop can sample it;
+                            // lists reserve this same space at their end instead.
+                            LocalLibraryBottomContentPadding provides scaffoldBottomPadding(paddingValues),
+                            LocalLibraryBarBlurEnabled provides barBlurEnabled,
+                        ) {
+                            LibraryHomePager(
+                                tabs = tabs,
+                                pagerState = pagerState,
+                                navigator = navigator,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(
+                                        start = paddingValues.calculateStartPadding(layoutDirection),
+                                        end = paddingValues.calculateEndPadding(layoutDirection),
+                                    )
+                            )
+                        }
+                    }
                 }
             }
 
@@ -169,5 +208,3 @@ private fun LibraryHomePager(
         }
     }
 }
-
-

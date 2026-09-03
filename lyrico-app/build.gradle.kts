@@ -124,6 +124,7 @@ dependencies {
     implementation(libs.miuix.preference.android)
     implementation(libs.miuix.ui.android)
     implementation(libs.miuix.icons.android)
+    implementation(libs.miuix.blur.android)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.reorderable)

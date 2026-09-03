@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -44,7 +45,12 @@ import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.bar.rememberAlphabetSideBarScrollController
 import com.lonx.lyrico.ui.components.library.LibraryEmptyState
+import com.lonx.lyrico.ui.components.library.LibraryBlurredBar
+import com.lonx.lyrico.ui.components.library.LocalLibraryBarBlurEnabled
+import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
+import com.lonx.lyrico.ui.components.library.rememberBlurBackdrop
 import com.lonx.lyrico.ui.components.scaffoldTopAppBarInsetsPadding
+import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
 import com.lonx.lyrico.ui.components.song.SongActionSheets
@@ -82,6 +88,7 @@ import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
@@ -169,6 +176,7 @@ fun SongsPage(
     val enableIndex = sections.isNotEmpty() && sortInfo.sortBy.supportsIndex
 
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+    val topBarBackdrop = rememberBlurBackdrop(LocalLibraryBarBlurEnabled.current)
     val refreshTexts = listOf(
         stringResource(R.string.pull_to_refresh),
         stringResource(R.string.release_to_refresh),
@@ -178,6 +186,10 @@ fun SongsPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
+            LibraryBlurredBar(
+                backdrop = topBarBackdrop,
+                modifier = Modifier.scaffoldTopAppBarInsetsPadding(),
+            ) {
             val topBarState = when {
                 isSelectionMode -> TopBarState.Selection
                 else -> TopBarState.Default
@@ -219,6 +231,8 @@ fun SongsPage(
                             songs = songs,
                             selectedSongUris = selectedSongUris,
                             scrollBehavior = topAppBarScrollBehavior,
+                            color = if (topBarBackdrop != null) Color.Transparent else Color.Unspecified,
+                            applyInsets = false,
                             onSelectAll = selectionViewModel::selectAll,
                             onDeselectAll = selectionViewModel::deselectAll,
                             onClose = selectionViewModel::exitSelectionMode
@@ -228,7 +242,8 @@ fun SongsPage(
                     TopBarState.Default -> {
                         SmallTopAppBar(
                             title = stringResource(R.string.song_list_title, songs.size),
-                            modifier = Modifier.scaffoldTopAppBarInsetsPadding(),
+                            color = if (topBarBackdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
+                            modifier = Modifier,
                             scrollBehavior = topAppBarScrollBehavior,
                             defaultWindowInsetsPadding = false,
                             navigationIcon = {
@@ -296,17 +311,20 @@ fun SongsPage(
                     }
                 }
             }
+            }
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
-                .padding(scaffoldTopHorizontalPadding(paddingValues))
                 .fillMaxSize()
+                .then(if (topBarBackdrop != null) Modifier.layerBackdrop(topBarBackdrop) else Modifier)
         ) {
             if (songs.isEmpty()) {
                 val scanProgress = scanState.progress
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .padding(scaffoldTopHorizontalPadding(paddingValues))
+                        .fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     when {
@@ -361,7 +379,10 @@ fun SongsPage(
                                 .fillMaxHeight(),
                             state = listState,
                             overscrollEffect = null,
-                            contentPadding = PaddingValues()
+                            contentPadding = scaffoldContentPadding(
+                                paddingValues = paddingValues,
+                                bottomExtra = LocalLibraryBottomContentPadding.current,
+                            ),
                         ) {
                             items(
                                 items = songs,
@@ -416,6 +437,7 @@ fun SongsPage(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
+                        .padding(scaffoldTopHorizontalPadding(paddingValues))
                         .padding(
                             top = 16.dp,
                             bottom = 16.dp

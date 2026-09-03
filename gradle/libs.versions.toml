@@ -54,6 +54,7 @@ lazycolumnscrollbar = { module = "com.github.nanihadesuka:LazyColumnScrollbar", 
 miuix-preference-android = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }
 miuix-ui-android = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
 miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
+miuix-blur-android = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
 opencc4j = { module = "com.github.houbb:opencc4j", version.ref = "opencc4j" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 tinypinyin = { module = "com.github.promeg:tinypinyin", version.ref = "tinypinyin" }

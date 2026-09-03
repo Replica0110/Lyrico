@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,6 +58,8 @@ fun SongSelectionTopAppBar(
     songs: List<SongEntity>,
     selectedSongUris: Set<String>,
     scrollBehavior: ScrollBehavior,
+    color: Color = Color.Unspecified,
+    applyInsets: Boolean = true,
     onSelectAll: (List<SongEntity>) -> Unit,
     onDeselectAll: () -> Unit,
     onClose: () -> Unit
@@ -68,7 +71,12 @@ fun SongSelectionTopAppBar(
 
         SmallTopAppBar(
             title = "",
-            modifier = Modifier.scaffoldTopAppBarInsetsPadding(),
+            color = color,
+            modifier = if (applyInsets) {
+                Modifier.scaffoldTopAppBarInsetsPadding()
+            } else {
+                Modifier
+            },
             scrollBehavior = scrollBehavior,
             defaultWindowInsetsPadding = false,
             navigationIcon = {

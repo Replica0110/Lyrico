@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -32,7 +33,12 @@ import com.lonx.lyrico.ui.components.artist.ArtistListItem
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.rememberAlphabetSideBarScrollController
 import com.lonx.lyrico.ui.components.library.LibraryEmptyState
+import com.lonx.lyrico.ui.components.library.LibraryBlurredBar
+import com.lonx.lyrico.ui.components.library.LocalLibraryBarBlurEnabled
+import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
+import com.lonx.lyrico.ui.components.library.rememberBlurBackdrop
 import com.lonx.lyrico.ui.components.scaffoldTopAppBarInsetsPadding
+import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.viewmodel.ArtistLibraryViewModel
 import com.lonx.lyrico.viewmodel.SortOrder
@@ -59,6 +65,7 @@ import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
@@ -80,6 +87,7 @@ fun ArtistsPage(
     val artistCoverCandidates by viewModel.artistCoverCandidates.collectAsStateWithLifecycle()
     val sortInfo by viewModel.sortInfo.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+    val topBarBackdrop = rememberBlurBackdrop(LocalLibraryBarBlurEnabled.current)
     val gridState = rememberLazyGridState()
     val alphabetScrollController = rememberAlphabetSideBarScrollController(gridState)
 
@@ -109,9 +117,14 @@ fun ArtistsPage(
     )
     Scaffold(
         topBar = {
+            LibraryBlurredBar(
+                backdrop = topBarBackdrop,
+                modifier = Modifier.scaffoldTopAppBarInsetsPadding(),
+            ) {
             SmallTopAppBar(
                 title = stringResource(R.string.artist_list_title, artists.size),
-                modifier = Modifier.scaffoldTopAppBarInsetsPadding(),
+                color = if (topBarBackdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
+                modifier = Modifier,
                 scrollBehavior = topAppBarScrollBehavior,
                 defaultWindowInsetsPadding = false,
                 navigationIcon = {
@@ -141,26 +154,33 @@ fun ArtistsPage(
                     }
                 }
             )
+            }
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
-                .padding(scaffoldTopHorizontalPadding(paddingValues))
                 .fillMaxSize()
+                .then(if (topBarBackdrop != null) Modifier.layerBackdrop(topBarBackdrop) else Modifier)
         ) {
             if (artists.isEmpty()) {
-                LibraryEmptyState(
-                    title = stringResource(R.string.empty_artists_title),
-                    summary = stringResource(R.string.empty_library_index_summary),
-                    modifier = Modifier.align(Alignment.Center),
-                    action = {
-                        TextButton(
-                            text = stringResource(R.string.refresh),
-                            onClick = { viewModel.refreshSongs() },
-                            colors = MiuixButtonDefaults.textButtonColorsPrimary()
-                        )
-                    }
-                )
+                Box(
+                    modifier = Modifier
+                        .padding(scaffoldTopHorizontalPadding(paddingValues))
+                        .fillMaxSize()
+                ) {
+                    LibraryEmptyState(
+                        title = stringResource(R.string.empty_artists_title),
+                        summary = stringResource(R.string.empty_library_index_summary),
+                        modifier = Modifier.align(Alignment.Center),
+                        action = {
+                            TextButton(
+                                text = stringResource(R.string.refresh),
+                                onClick = { viewModel.refreshSongs() },
+                                colors = MiuixButtonDefaults.textButtonColorsPrimary()
+                            )
+                        }
+                    )
+                }
             } else {
                 PullToRefresh(
                     isRefreshing = scanState.isScanning,
@@ -208,7 +228,10 @@ fun ArtistsPage(
                                         .fillMaxHeight(),
                                     state = gridState,
                                     overscrollEffect = null,
-                                    contentPadding = PaddingValues(),
+                                    contentPadding = scaffoldContentPadding(
+                                        paddingValues = paddingValues,
+                                        bottomExtra = LocalLibraryBottomContentPadding.current,
+                                    ),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
@@ -247,6 +270,7 @@ fun ArtistsPage(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .fillMaxHeight()
+                            .padding(scaffoldTopHorizontalPadding(paddingValues))
                             .padding(
                                 top = 16.dp,
                                 bottom = 16.dp

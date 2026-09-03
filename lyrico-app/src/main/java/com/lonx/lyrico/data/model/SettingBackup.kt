@@ -42,6 +42,7 @@ data class SettingsBackup(
     @SerialName("log_retention_option") val logRetentionOption: String? = null,
     @SerialName("key_theme_color") val keyThemeColor: Int? = null,
     @SerialName("monet_enable") val monetEnable: Boolean? = null,
+    @SerialName("bar_blur_enabled") val barBlurEnabled: Boolean? = null,
     @SerialName("artist_split_config") val artistSplitConfig: ArtistSplitConfig? = null,
     @SerialName("edit_field_visibility_overrides") val editFieldVisibilityOverrides: Map<String, Boolean>? = null
 )

@@ -51,6 +51,7 @@ data class SettingsUiState(
     val showAllSearchResultFields: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val monetEnable: Boolean = false,
+    val barBlurEnabled: Boolean = false,
     val keyColor: KeyColor = KeyColors[1],
     val onlyTranslationIfAvailable: Boolean = false,
     val removeEmptyLines: Boolean = true,
@@ -123,8 +124,9 @@ class SettingsViewModel(
 
     private val baseUiState = combine(
         settingsBaseState,
-        _categorizedCacheSize
-    ) { base, cacheMap ->
+        _categorizedCacheSize,
+        settingsRepository.barBlurEnabled,
+    ) { base, cacheMap, barBlur ->
         SettingsUiState(
             isInitialized = true,
             lyricFormat = base.lyric.format,
@@ -140,6 +142,7 @@ class SettingsViewModel(
             themeMode = base.theme.themeMode,
             ignoreShortAudio = base.ignoreShortAudio,
             monetEnable = base.theme.monetEnable,
+            barBlurEnabled = barBlur,
             keyColor = base.theme.keyColor,
             categorizedCacheSize = cacheMap,
             onlyTranslationIfAvailable = base.lyric.onlyTranslationIfAvailable,
@@ -206,6 +209,11 @@ class SettingsViewModel(
     fun setMonetEnable(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveMonetEnable(enabled)
+        }
+    }
+    fun setBarBlurEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveBarBlurEnabled(enabled)
         }
     }
     fun setKeyColor(selectedMode: KeyColor) {

@@ -42,3 +42,8 @@
 -dontwarn java.lang.management.RuntimeMXBean
 -keep class com.github.houbb.** { *; }
 
+############################################
+# miuix blur
+############################################
+-keep class top.yukonga.miuix.kmp.blur.** { *; }
+

@@ -6,12 +6,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -22,7 +25,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -30,10 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.ArtistSeparator
@@ -70,6 +74,7 @@ import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -104,9 +109,9 @@ fun SettingsScreen(
     navigator: DestinationsNavigator
 ) {
     val settingsViewModel: SettingsViewModel = koinViewModel()
-    val settingsUiState by settingsViewModel.uiState.collectAsState()
+    val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val folderViewModel: FolderManagerViewModel = koinViewModel()
-    val folderUiState by folderViewModel.uiState.collectAsState()
+    val folderUiState by folderViewModel.uiState.collectAsStateWithLifecycle()
 
     val lyricFormat = settingsUiState.lyricFormat
     val artistSeparator = settingsUiState.separator
@@ -137,6 +142,13 @@ fun SettingsScreen(
     val showClearCacheDialog = remember { mutableStateOf(false) }
     val showLyricLineOrderSheet = remember { mutableStateOf(false) }
     val showRgTargetDialog = remember { mutableStateOf(false) }
+    val monetVisibilityState = remember(settingsUiState.isInitialized) {
+        MutableTransitionState(monetEnable)
+    }
+
+    LaunchedEffect(monetEnable) {
+        monetVisibilityState.targetState = monetEnable
+    }
 
     val themeModeItems = ThemeMode.entries.map { stringResource(it.labelRes) }
     val selectedThemeModeIndex =
@@ -254,6 +266,18 @@ fun SettingsScreen(
             )
         }
     ) { paddingValues ->
+        if (!settingsUiState.isInitialized) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(size = 32.dp)
+            }
+            return@Scaffold
+        }
+
         WindowDialog(
             title = stringResource(R.string.clear_cache),
             show = showClearCacheDialog.value,
@@ -341,7 +365,7 @@ fun SettingsScreen(
                             settingsViewModel.setMonetEnable(!monetEnable)
                         }
                     )
-                    AnimatedVisibility(visible = (monetEnable)) {
+                    AnimatedVisibility(visibleState = monetVisibilityState) {
                         val currentSelectedIndex = KeyColors.indexOf(currentKeyColor).let {
                             if (it == -1) 0 else it
                         }

@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
+    val isInitialized: Boolean = false,
     val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
@@ -125,6 +126,7 @@ class SettingsViewModel(
         _categorizedCacheSize
     ) { base, cacheMap ->
         SettingsUiState(
+            isInitialized = true,
             lyricFormat = base.lyric.format,
             romaEnabled = base.lyric.showRomanization,
             lyricLineOrder = base.lyric.normalizedLineOrder,

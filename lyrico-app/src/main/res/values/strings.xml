@@ -187,8 +187,14 @@
     <string name="cd_back">Back</string>
     <string name="monet">Monet palette</string>
     <string name="key_color">Key Color</string>
+    <string name="floating_bottom_bar">Floating navigation bar</string>
+    <string name="floating_bottom_bar_summary">Use a floating glass bar on phones</string>
     <string name="bar_blur">Blur</string>
     <string name="bar_blur_summary">Enable blur effect on the top and bottom bars</string>
+    <string name="floating_bar_blur">Frosted glass</string>
+    <string name="floating_bar_blur_summary">Blur the floating navigation bar background</string>
+    <string name="liquid_glass">Liquid glass</string>
+    <string name="liquid_glass_summary">Add refraction to the floating navigation bar</string>
 
 
     <!-- Delete dialog -->

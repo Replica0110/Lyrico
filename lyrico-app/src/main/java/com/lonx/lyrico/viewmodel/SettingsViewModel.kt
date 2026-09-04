@@ -51,7 +51,10 @@ data class SettingsUiState(
     val showAllSearchResultFields: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val monetEnable: Boolean = false,
+    val floatingBottomBarEnabled: Boolean = true,
     val barBlurEnabled: Boolean = false,
+    val floatingBarBlurEnabled: Boolean = false,
+    val liquidGlassEnabled: Boolean = false,
     val keyColor: KeyColor = KeyColors[1],
     val onlyTranslationIfAvailable: Boolean = false,
     val removeEmptyLines: Boolean = true,
@@ -86,23 +89,45 @@ class SettingsViewModel(
         val ignoreShortAudio: Boolean,
         val lyricsTagLineKeywords: List<String>,
         val metadataFieldRules: List<PluginMetadataFieldWriteRule>,
-        val replayGainTargetLoudness: Double
+        val replayGainTargetLoudness: Double,
+        val floatingBottomBarEnabled: Boolean,
+        val barBlurEnabled: Boolean,
+        val floatingBarBlurEnabled: Boolean,
+        val liquidGlassEnabled: Boolean
+    )
+
+    private data class VisualSettingsState(
+        val floatingBottomBarEnabled: Boolean,
+        val barBlurEnabled: Boolean,
+        val floatingBarBlurEnabled: Boolean,
+        val liquidGlassEnabled: Boolean,
     )
 
     private data class SettingsTailState(
         val ignoreShortAudio: Boolean,
         val lyricsTagLineKeywords: List<String>,
         val metadataFieldRules: List<PluginMetadataFieldWriteRule>,
-        val replayGainTargetLoudness: Double
+        val replayGainTargetLoudness: Double,
+        val visual: VisualSettingsState
     )
+
+    private val visualSettingsState = combine(
+        settingsRepository.floatingBottomBarEnabled,
+        settingsRepository.barBlurEnabled,
+        settingsRepository.floatingBarBlurEnabled,
+        settingsRepository.liquidGlassEnabled,
+    ) { floatingBar, barBlur, floatingBarBlur, liquidGlass ->
+        VisualSettingsState(floatingBar, barBlur, floatingBarBlur, liquidGlass)
+    }
 
     private val settingsTailState = combine(
         settingsRepository.ignoreShortAudio,
         settingsRepository.lyricsTagLineKeywords,
         settingsRepository.metadataFieldWriteRules,
-        settingsRepository.replayGainTargetLoudness
-    ) { ignoreShort, lyricsTagLineKeywords, metadataFieldRules, rgTargetLoudness ->
-        SettingsTailState(ignoreShort, lyricsTagLineKeywords, metadataFieldRules, rgTargetLoudness)
+        settingsRepository.replayGainTargetLoudness,
+        visualSettingsState,
+    ) { ignoreShort, lyricsTagLineKeywords, metadataFieldRules, rgTargetLoudness, visual ->
+        SettingsTailState(ignoreShort, lyricsTagLineKeywords, metadataFieldRules, rgTargetLoudness, visual)
     }
 
     private val settingsBaseState = combine(
@@ -118,15 +143,18 @@ class SettingsViewModel(
             tail.ignoreShortAudio,
             tail.lyricsTagLineKeywords,
             tail.metadataFieldRules,
-            tail.replayGainTargetLoudness
+            tail.replayGainTargetLoudness,
+            tail.visual.floatingBottomBarEnabled,
+            tail.visual.barBlurEnabled,
+            tail.visual.floatingBarBlurEnabled,
+            tail.visual.liquidGlassEnabled,
         )
     }
 
     private val baseUiState = combine(
         settingsBaseState,
-        _categorizedCacheSize,
-        settingsRepository.barBlurEnabled,
-    ) { base, cacheMap, barBlur ->
+        _categorizedCacheSize
+    ) { base, cacheMap ->
         SettingsUiState(
             isInitialized = true,
             lyricFormat = base.lyric.format,
@@ -142,7 +170,10 @@ class SettingsViewModel(
             themeMode = base.theme.themeMode,
             ignoreShortAudio = base.ignoreShortAudio,
             monetEnable = base.theme.monetEnable,
-            barBlurEnabled = barBlur,
+            floatingBottomBarEnabled = base.floatingBottomBarEnabled,
+            barBlurEnabled = base.barBlurEnabled,
+            floatingBarBlurEnabled = base.floatingBarBlurEnabled,
+            liquidGlassEnabled = base.liquidGlassEnabled,
             keyColor = base.theme.keyColor,
             categorizedCacheSize = cacheMap,
             onlyTranslationIfAvailable = base.lyric.onlyTranslationIfAvailable,
@@ -211,11 +242,31 @@ class SettingsViewModel(
             settingsRepository.saveMonetEnable(enabled)
         }
     }
+
+    fun setFloatingBottomBarEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveFloatingBottomBarEnabled(enabled)
+        }
+    }
+
     fun setBarBlurEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveBarBlurEnabled(enabled)
         }
     }
+
+    fun setFloatingBarBlurEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveFloatingBarBlurEnabled(enabled)
+        }
+    }
+
+    fun setLiquidGlassEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveLiquidGlassEnabled(enabled)
+        }
+    }
+
     fun setKeyColor(selectedMode: KeyColor) {
         viewModelScope.launch {
             settingsRepository.saveKeyColor(selectedMode)

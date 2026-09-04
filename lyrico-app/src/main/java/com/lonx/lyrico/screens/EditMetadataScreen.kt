@@ -362,12 +362,8 @@ fun EditMetadataScreen(
         }
     }
 
-    BackHandler {
-        if (isFabMenuExpanded) {
-            isFabMenuExpanded = false
-        } else if (!navigator.popBackStack()) {
-            activity.finish()
-        }
+    BackHandler(enabled = isFabMenuExpanded) {
+        isFabMenuExpanded = false
     }
 
     if (uiState.editingTagData == null) {

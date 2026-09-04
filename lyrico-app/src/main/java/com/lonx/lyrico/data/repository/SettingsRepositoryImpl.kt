@@ -60,7 +60,10 @@ internal val Context.settingsDataStore by preferencesDataStore(name = "settings"
 
 object SettingsDefaults {
     const val MONET_ENABLE: Boolean = false
+    const val FLOATING_BOTTOM_BAR_ENABLED: Boolean = true
     const val BAR_BLUR_ENABLED: Boolean = false
+    const val FLOATING_BAR_BLUR_ENABLED: Boolean = false
+    const val LIQUID_GLASS_ENABLED: Boolean = false
     val KEY_THEME_COLOR = null
     val CONVERSION_MODE = ConversionMode.NONE
     const val RENAME_FORMAT = "@1 - @2"
@@ -129,7 +132,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SHOW_ALL_SEARCH_RESULT_FIELDS = booleanPreferencesKey("show_all_search_result_fields")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val MONET_ENABLE = booleanPreferencesKey("monet_enable")
+        val FLOATING_BOTTOM_BAR_ENABLED = booleanPreferencesKey("floating_bottom_bar_enabled")
         val BAR_BLUR_ENABLED = booleanPreferencesKey("bar_blur_enabled")
+        val FLOATING_BAR_BLUR_ENABLED = booleanPreferencesKey("floating_bar_blur_enabled")
+        val LIQUID_GLASS_ENABLED = booleanPreferencesKey("liquid_glass_enabled")
         val KEY_THEME_COLOR = intPreferencesKey("theme_color_argb")
         val ONLY_TRANSLATION_IF_AVAILABLE = booleanPreferencesKey("only_translation_if_available")
         val CHARACTER_MAPPING_CONFIG = stringPreferencesKey("character_mapping_config")
@@ -317,10 +323,27 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.MONET_ENABLE] ?: false
         }
+    override val floatingBottomBarEnabled: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED]
+                ?: SettingsDefaults.FLOATING_BOTTOM_BAR_ENABLED
+        }
     override val barBlurEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.BAR_BLUR_ENABLED]
                 ?: SettingsDefaults.BAR_BLUR_ENABLED
+        }
+    override val floatingBarBlurEnabled: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            val liquidGlassEnabled = preferences[PreferencesKeys.LIQUID_GLASS_ENABLED]
+                ?: SettingsDefaults.LIQUID_GLASS_ENABLED
+            preferences[PreferencesKeys.FLOATING_BAR_BLUR_ENABLED]
+                ?: SettingsDefaults.FLOATING_BAR_BLUR_ENABLED && !liquidGlassEnabled
+        }
+    override val liquidGlassEnabled: Flow<Boolean>
+        get() = context.settingsDataStore.data.map { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_ENABLED]
+                ?: SettingsDefaults.LIQUID_GLASS_ENABLED
         }
     override val conversionMode: Flow<ConversionMode>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -588,9 +611,30 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.MONET_ENABLE] = enabled
         }
     }
+
+    override suspend fun saveFloatingBottomBarEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED] = enabled
+        }
+    }
+
     override suspend fun saveBarBlurEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.BAR_BLUR_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun saveFloatingBarBlurEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.FLOATING_BAR_BLUR_ENABLED] = enabled
+            preferences[PreferencesKeys.LIQUID_GLASS_ENABLED] = false
+        }
+    }
+
+    override suspend fun saveLiquidGlassEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_ENABLED] = enabled
+            preferences[PreferencesKeys.FLOATING_BAR_BLUR_ENABLED] = false
         }
     }
 
@@ -733,8 +777,16 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 ?: SettingsDefaults.THEME_MODE.name,
             monetEnable = prefs[PreferencesKeys.MONET_ENABLE]
                 ?: SettingsDefaults.MONET_ENABLE,
+            floatingBottomBarEnabled = prefs[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED]
+                ?: SettingsDefaults.FLOATING_BOTTOM_BAR_ENABLED,
             barBlurEnabled = prefs[PreferencesKeys.BAR_BLUR_ENABLED]
                 ?: SettingsDefaults.BAR_BLUR_ENABLED,
+            floatingBarBlurEnabled = prefs[PreferencesKeys.FLOATING_BAR_BLUR_ENABLED]
+                ?: SettingsDefaults.FLOATING_BAR_BLUR_ENABLED &&
+                !(prefs[PreferencesKeys.LIQUID_GLASS_ENABLED]
+                    ?: SettingsDefaults.LIQUID_GLASS_ENABLED),
+            liquidGlassEnabled = prefs[PreferencesKeys.LIQUID_GLASS_ENABLED]
+                ?: SettingsDefaults.LIQUID_GLASS_ENABLED,
             keyThemeColor = prefs[PreferencesKeys.KEY_THEME_COLOR] ?: SettingsDefaults.KEY_THEME_COLOR,
 
             onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE]
@@ -759,7 +811,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                     ?.let { json ->
                         jsonFormatter.decodeFromString<EditFieldVisibilityOverridesJson>(json).values
                     }
-            }.getOrNull()
+            }.getOrNull(),
         )
 
         return jsonFormatter.encodeToString(backup)
@@ -825,7 +877,19 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
                 backup.themeMode?.let { prefs[PreferencesKeys.THEME_MODE] = it }
                 backup.monetEnable?.let { prefs[PreferencesKeys.MONET_ENABLE] = it }
+                backup.floatingBottomBarEnabled?.let {
+                    prefs[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED] = it
+                }
                 backup.barBlurEnabled?.let { prefs[PreferencesKeys.BAR_BLUR_ENABLED] = it }
+                backup.floatingBarBlurEnabled?.let {
+                    prefs[PreferencesKeys.FLOATING_BAR_BLUR_ENABLED] = it
+                }
+                backup.liquidGlassEnabled?.let { prefs[PreferencesKeys.LIQUID_GLASS_ENABLED] = it }
+                if (prefs[PreferencesKeys.FLOATING_BAR_BLUR_ENABLED] == true &&
+                    prefs[PreferencesKeys.LIQUID_GLASS_ENABLED] == true
+                ) {
+                    prefs[PreferencesKeys.FLOATING_BAR_BLUR_ENABLED] = false
+                }
                 backup.keyThemeColor?.let { prefs[PreferencesKeys.KEY_THEME_COLOR] = it }
                 backup.onlyTranslationIfAvailable?.let {
                     prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] = it
@@ -862,7 +926,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                         jsonFormatter.encodeToString(
                             EditFieldVisibilityOverridesJson(values = overrides)
                         )
-                }
+                    }
             }
             true
         } catch (e: Exception) {

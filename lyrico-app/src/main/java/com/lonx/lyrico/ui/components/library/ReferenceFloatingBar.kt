@@ -29,11 +29,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,8 +64,6 @@ import com.lonx.lyrico.ui.components.library.liquid.innerShadow
 import com.lonx.lyrico.ui.components.library.liquid.lens
 import com.lonx.lyrico.ui.components.library.liquid.rememberCombinedBackdrop
 import com.lonx.lyrico.ui.components.library.liquid.vibrancy
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.blur.BlurColors
@@ -270,9 +267,7 @@ private fun ReferenceLiquidBar(
             }
         }
     }
-    var currentIndex by remember {
-        mutableIntStateOf(selectedIndex.coerceIn(0, itemCount - 1))
-    }
+    val currentOnSelectionChanged by rememberUpdatedState(onSelectionChanged)
     class DragHolder {
         var instance: DampedDragAnimation? = null
     }
@@ -300,8 +295,9 @@ private fun ReferenceLiquidBar(
             onDragStarted = {},
             onDragStopped = {
                 val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, itemCount - 1)
-                currentIndex = targetIndex
-                animateToValue(targetIndex.toFloat())
+                val targetValue = targetIndex.toFloat()
+                if (this.targetValue != targetValue) animateToValue(targetValue)
+                currentOnSelectionChanged(targetIndex)
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
@@ -319,12 +315,16 @@ private fun ReferenceLiquidBar(
     }
 
     LaunchedEffect(selectedIndex) {
-        currentIndex = selectedIndex.coerceIn(0, itemCount - 1)
+        val targetValue = selectedIndex.coerceIn(0, itemCount - 1).toFloat()
+        if (drag.targetValue != targetValue) drag.animateToValue(targetValue)
     }
-    LaunchedEffect(drag) {
-        snapshotFlow { currentIndex }.drop(1).collectLatest { index ->
-            drag.animateToValue(index.toFloat())
-            onSelectionChanged(index)
+
+    val selectIndex: (Int) -> Unit = remember(drag, itemCount) {
+        { index ->
+            val targetIndex = index.coerceIn(0, itemCount - 1)
+            val targetValue = targetIndex.toFloat()
+            if (drag.targetValue != targetValue) drag.animateToValue(targetValue)
+            currentOnSelectionChanged(targetIndex)
         }
     }
 
@@ -413,7 +413,7 @@ private fun ReferenceLiquidBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CompositionLocalProvider(
-                LocalReferenceBarSelection provides { index -> currentIndex = index },
+                LocalReferenceBarSelection provides selectIndex,
                 LocalReferenceBarColor provides colors.onSurface,
                 LocalReferenceBarScale provides { 1f },
             ) {
@@ -423,7 +423,7 @@ private fun ReferenceLiquidBar(
 
         if (backdrop != null && tabsBackdrop != null) {
             CompositionLocalProvider(
-                LocalReferenceBarSelection provides { index -> currentIndex = index },
+                LocalReferenceBarSelection provides selectIndex,
                 LocalReferenceBarColor provides accent,
                 LocalReferenceBarScale provides { lerp(1f, 1.2f, drag.pressProgress) },
                 LocalContentColor provides accent,

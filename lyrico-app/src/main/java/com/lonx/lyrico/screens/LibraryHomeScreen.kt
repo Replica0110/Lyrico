@@ -99,7 +99,7 @@ fun LibraryHomeScreen(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val useNavigationRail = maxHeight < 520.dp
-        val selectedTab = tabs[pagerState.currentPage]
+        val selectedTab = tabs[pagerState.targetPage]
 
         BackHandler(enabled = isFabMenuExpanded || (isSelectionMode && selectedTab == LibraryTab.Songs)) {
             if (isFabMenuExpanded) {

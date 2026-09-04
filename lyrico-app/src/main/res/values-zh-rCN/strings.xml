@@ -190,8 +190,14 @@
     <string name="cd_back">返回</string>
     <string name="monet">莫奈取色</string>
     <string name="key_color">种子色</string>
+    <string name="floating_bottom_bar">悬浮导航栏</string>
+    <string name="floating_bottom_bar_summary">在手机端使用悬浮底栏</string>
     <string name="bar_blur">模糊</string>
     <string name="bar_blur_summary">启用顶栏和底栏的模糊效果</string>
+    <string name="floating_bar_blur">毛玻璃</string>
+    <string name="floating_bar_blur_summary">为悬浮导航栏增加背景模糊效果</string>
+    <string name="liquid_glass">液态玻璃</string>
+    <string name="liquid_glass_summary">为悬浮导航栏增加折射效果</string>
 
 
     <!-- 删除确认 -->

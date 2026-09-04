@@ -31,12 +31,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
@@ -70,6 +71,10 @@ import com.ramcosta.composedestinations.generated.destinations.QuickjsTestDestin
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import com.lonx.lyrico.ui.components.library.LibraryBlurredBar
+import com.lonx.lyrico.ui.components.library.rememberBlurBackdrop
+import com.lonx.lyrico.ui.components.scaffoldTopAppBarInsetsPadding
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -119,7 +124,10 @@ fun SettingsScreen(
     val lyricLineOrder = settingsUiState.lyricLineOrder
     val themeMode = settingsUiState.themeMode
     val monetEnable = settingsUiState.monetEnable
+    val floatingBottomBarEnabled = settingsUiState.floatingBottomBarEnabled
     val barBlurEnabled = settingsUiState.barBlurEnabled
+    val floatingBarBlurEnabled = settingsUiState.floatingBarBlurEnabled
+    val liquidGlassEnabled = settingsUiState.liquidGlassEnabled
     val currentKeyColor = settingsUiState.keyColor
     val translationEnabled = settingsUiState.translationEnabled
     val onlyTranslationIfAvailable = settingsUiState.onlyTranslationIfAvailable
@@ -249,22 +257,30 @@ fun SettingsScreen(
         }
     }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+    val topBarBackdrop = rememberBlurBackdrop(enableBlur = barBlurEnabled)
     Scaffold(
         topBar = {
-            SmallTopAppBar(
-                title = stringResource(R.string.settings_title),
-                navigationIcon = {
-                    IconButton(
-                        onClick = { navigator.popBackStack() }
-                    ) {
-                        Icon(
-                            MiuixIcons.Back,
-                            contentDescription = stringResource(R.string.action_back)
-                        )
-                    }
-                },
-                scrollBehavior = topAppBarScrollBehavior
-            )
+            LibraryBlurredBar(
+                backdrop = topBarBackdrop,
+                modifier = Modifier.scaffoldTopAppBarInsetsPadding(),
+            ) {
+                SmallTopAppBar(
+                    title = stringResource(R.string.settings_title),
+                    color = if (topBarBackdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
+                    defaultWindowInsetsPadding = false,
+                    navigationIcon = {
+                        IconButton(
+                            onClick = { navigator.popBackStack() }
+                        ) {
+                            Icon(
+                                MiuixIcons.Back,
+                                contentDescription = stringResource(R.string.action_back)
+                            )
+                        }
+                    },
+                    scrollBehavior = topAppBarScrollBehavior,
+                )
+            }
         }
     ) { paddingValues ->
         if (!settingsUiState.isInitialized) {
@@ -336,6 +352,17 @@ fun SettingsScreen(
                 onLineOrderChange = settingsViewModel::setLyricLineOrder
             )
         }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (topBarBackdrop != null) {
+                        Modifier.layerBackdrop(topBarBackdrop)
+                    } else {
+                        Modifier
+                    }
+                ),
+        ) {
         LazyColumn(
             modifier = Modifier
                 .scrollEndHaptic()
@@ -365,6 +392,28 @@ fun SettingsScreen(
                         checked = barBlurEnabled,
                         onCheckedChange = settingsViewModel::setBarBlurEnabled,
                     )
+                    SwitchPreference(
+                        title = stringResource(R.string.floating_bottom_bar),
+                        summary = stringResource(R.string.floating_bottom_bar_summary),
+                        checked = floatingBottomBarEnabled,
+                        onCheckedChange = { settingsViewModel.setFloatingBottomBarEnabled(it) }
+                    )
+                    AnimatedVisibility(visible = floatingBottomBarEnabled) {
+                        Column {
+                            SwitchPreference(
+                                title = stringResource(R.string.floating_bar_blur),
+                                summary = stringResource(R.string.floating_bar_blur_summary),
+                                checked = floatingBarBlurEnabled,
+                                onCheckedChange = settingsViewModel::setFloatingBarBlurEnabled,
+                            )
+                            SwitchPreference(
+                                title = stringResource(R.string.liquid_glass),
+                                summary = stringResource(R.string.liquid_glass_summary),
+                                checked = liquidGlassEnabled,
+                                onCheckedChange = settingsViewModel::setLiquidGlassEnabled,
+                            )
+                        }
+                    }
                     SwitchPreference(
                         title = stringResource(R.string.monet),
                         checked = monetEnable,
@@ -653,6 +702,7 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
         }
     }
 }

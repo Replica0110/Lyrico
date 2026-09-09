@@ -36,6 +36,7 @@ object TtmlParser : LyricsFormatParser {
         val root = dom.documentElement
 
         val translationsByKey = parseMetadataTranslations(root)
+        val transliterationsByKey = parseMetadataTransliterations(root)
         val originalLines = mutableListOf<LyricsDocumentLine>()
         val inlineTranslationLines = mutableListOf<LyricsDocumentLine>()
         val romanizationLines = mutableListOf<LyricsDocumentLine>()
@@ -107,6 +108,13 @@ object TtmlParser : LyricsFormatParser {
                 lines = lines
             )
         }
+        val metadataTransliterationTracks = transliterationsByKey.map { (language, lines) ->
+            LyricsTrack(
+                type = LyricsTrackType.Romanization,
+                language = language,
+                lines = lines
+            )
+        }
 
         val tracks = buildList {
             add(LyricsTrack(type = LyricsTrackType.Original, lines = originalLines))
@@ -114,7 +122,9 @@ object TtmlParser : LyricsFormatParser {
             if (inlineTranslationLines.isNotEmpty() && metadataTranslationTracks.isEmpty()) {
                 add(LyricsTrack(type = LyricsTrackType.Translation, lines = inlineTranslationLines))
             }
-            if (romanizationLines.isNotEmpty()) {
+            // head sidecar <transliteration> 携带词级 <span>（逐字注音），优先于正文内联整行音译
+            addAll(metadataTransliterationTracks)
+            if (romanizationLines.isNotEmpty() && metadataTransliterationTracks.isEmpty()) {
                 add(LyricsTrack(type = LyricsTrackType.Romanization, lines = romanizationLines))
             }
             if (backgroundLines.isNotEmpty()) {
@@ -165,6 +175,70 @@ object TtmlParser : LyricsFormatParser {
         }.filter { (_, lines) -> lines.isNotEmpty() }
             .groupBy({ it.first }, { it.second })
             .mapValues { (_, nested) -> nested.flatten() }
+    }
+
+    /**
+     * 解析 head sidecar <transliteration>（苹果/站内形态）。
+     * 每个 <text for="Ln">：内含定时 <span begin/end> 时按词级（逐字注音）解析；
+     * 否则退化为整行文本。和声 <span ttm:role="x-bg"> 不计入音译读音。
+     */
+    private fun parseMetadataTransliterations(root: Element): Map<String?, List<LyricsDocumentLine>> {
+        return root.elementsByLocalName("transliteration").map { transliteration ->
+            val language = transliteration.attr("lang", NS_XML)
+            val lines = transliteration.childElementsByLocalName("text").mapNotNull { text ->
+                val key = text.attr("for") ?: return@mapNotNull null
+                parseSidecarTextLine(text, key)
+            }
+            language to lines
+        }.filter { (_, lines) -> lines.isNotEmpty() }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, nested) -> nested.flatten() }
+    }
+
+    private fun parseSidecarTextLine(text: Element, key: String): LyricsDocumentLine? {
+        val words = parseSidecarTimedWords(text)
+        if (words.isNotEmpty()) {
+            return LyricsDocumentLine(
+                text = words.joinToString("") { it.text },
+                words = words,
+                linkKey = key,
+                extensions = text.attributesAsExtensions()
+            )
+        }
+        val whole = normalizeTtmlText(text.textContent ?: "", trimEdges = true)
+        if (whole.isBlank()) return null
+        return LyricsDocumentLine(
+            text = whole,
+            linkKey = key,
+            extensions = text.attributesAsExtensions()
+        )
+    }
+
+    private fun parseSidecarTimedWords(element: Element): List<LyricsDocumentWord> {
+        val words = mutableListOf<LyricsDocumentWord>()
+        fun visit(node: Node) {
+            if (node.nodeType != Node.ELEMENT_NODE) return
+            val el = node as Element
+            val role = el.attr("role", NS_TTM)
+            val start = el.attr("begin")?.let(::parseTtmlTimeMs)
+            if (start != null && role != "x-bg" && role != "x-translation" && role != "x-romanization") {
+                val value = normalizeTtmlText(el.textContent ?: "", trimEdges = false)
+                if (value.isNotBlank()) {
+                    words.add(
+                        LyricsDocumentWord(
+                            startMs = start,
+                            endMs = el.attr("end")?.let(::parseTtmlTimeMs),
+                            text = value,
+                            extensions = el.attributesAsExtensions()
+                        )
+                    )
+                }
+            } else {
+                el.childNodesList().forEach(::visit)
+            }
+        }
+        element.childNodesList().forEach(::visit)
+        return words
     }
 
     private data class ParsedPText(
@@ -338,10 +412,16 @@ object TtmlWriter : LyricsFormatWriter {
         val translationLines = document.tracks
             .filter { it.type == LyricsTrackType.Translation }
             .flatMap { it.lines }
+        val romanizationLines = document.tracks
+            .filter { it.type == LyricsTrackType.Romanization }
+            .flatMap { it.lines }
         val usedKeys = originalLines.mapNotNull { it.linkKey }.toMutableSet()
         var nextGeneratedKeyIndex = 1
         val originalLineKeys = originalLines.map { line ->
-            line.linkKey ?: if (translationLines.any { it.startMs != null && it.startMs == line.startMs }) {
+            line.linkKey ?: if (
+                translationLines.any { it.startMs != null && it.startMs == line.startMs } ||
+                romanizationLines.any { it.startMs != null && it.startMs == line.startMs }
+            ) {
                 generateLineKey(usedKeys) { nextGeneratedKeyIndex++ }
             } else null
         }
@@ -351,15 +431,12 @@ object TtmlWriter : LyricsFormatWriter {
         builder.append("    <div>\n")
         val backgroundByKey = document.linesByKey(LyricsTrackType.Background)
         val backgroundByStart = document.linesByStart(LyricsTrackType.Background)
-        val romanizationByKey = document.linesByKey(LyricsTrackType.Romanization)
-        val romanizationByStart = document.linesByStart(LyricsTrackType.Romanization)
         originalLines.forEachIndexed { index, line ->
             val backgroundLines = line.linkKey?.let { backgroundByKey[it] }
                 ?: line.startMs?.let { backgroundByStart[it] }
                 ?: emptyList()
-            val romanizationLine = line.linkKey?.let { romanizationByKey[it]?.firstOrNull() }
-                ?: line.startMs?.let { romanizationByStart[it]?.firstOrNull() }
-            appendOriginalLine(builder, line, originalLineKeys[index], romanizationLine, backgroundLines)
+            // 音译统一写入 head <transliterations> sidecar（支持词级），正文不再内联 x-romanization，避免重复
+            appendOriginalLine(builder, line, originalLineKeys[index], backgroundLines)
         }
         builder.append("    </div>\n")
         builder.append("  </body>\n")
@@ -374,7 +451,8 @@ object TtmlWriter : LyricsFormatWriter {
         originalLineKeys: List<String?>
     ) {
         val translations = document.tracks.filter { it.type == LyricsTrackType.Translation }
-        if (document.agents.isEmpty() && translations.isEmpty()) return
+        val transliterations = document.tracks.filter { it.type == LyricsTrackType.Romanization }
+        if (document.agents.isEmpty() && translations.isEmpty() && transliterations.isEmpty()) return
 
         builder.append("  <head>\n")
         if (document.agents.isNotEmpty()) {
@@ -392,34 +470,75 @@ object TtmlWriter : LyricsFormatWriter {
             builder.append("    </metadata>\n")
         }
 
-        if (translations.isNotEmpty()) {
+        if (translations.isNotEmpty() || transliterations.isNotEmpty()) {
             builder.append("    <metadata>\n")
             builder.append("      <iTunesMetadata xmlns=\"").append(NS_ITUNES_INTERNAL).append("\">\n")
-            builder.append("        <translations>\n")
-            translations.forEach { track ->
-                builder.append("          <translation")
-                track.language?.let { builder.append(" xml:lang=\"").append(escapeXml(it)).append("\"") }
-                builder.append(">\n")
-                track.lines.forEach { line ->
-                    val key = line.linkKey ?: originalKeyForLinkedLine(line, originalLines, originalLineKeys) ?: return@forEach
-                    builder.append("            <text for=\"").append(escapeXml(key)).append("\">")
-                        .append(escapeXml(line.visibleText()))
-                        .append("</text>\n")
+            if (translations.isNotEmpty()) {
+                builder.append("        <translations>\n")
+                translations.forEach { track ->
+                    builder.append("          <translation")
+                    track.language?.let { builder.append(" xml:lang=\"").append(escapeXml(it)).append("\"") }
+                    builder.append(">\n")
+                    track.lines.forEach { line ->
+                        val key = line.linkKey ?: originalKeyForLinkedLine(line, originalLines, originalLineKeys) ?: return@forEach
+                        builder.append("            <text for=\"").append(escapeXml(key)).append("\">")
+                            .append(escapeXml(line.visibleText()))
+                            .append("</text>\n")
+                    }
+                    builder.append("          </translation>\n")
                 }
-                builder.append("          </translation>\n")
+                builder.append("        </translations>\n")
             }
-            builder.append("        </translations>\n")
+            if (transliterations.isNotEmpty()) {
+                builder.append("        <transliterations>\n")
+                transliterations.forEach { track ->
+                    builder.append("          <transliteration")
+                    track.language?.let { builder.append(" xml:lang=\"").append(escapeXml(it)).append("\"") }
+                    builder.append(">\n")
+                    track.lines.forEach { line ->
+                        val key = line.linkKey ?: originalKeyForLinkedLine(line, originalLines, originalLineKeys) ?: return@forEach
+                        builder.append("            <text for=\"").append(escapeXml(key)).append("\">")
+                        appendSidecarRomanText(builder, line)
+                        builder.append("</text>\n")
+                    }
+                    builder.append("          </transliteration>\n")
+                }
+                builder.append("        </transliterations>\n")
+            }
             builder.append("      </iTunesMetadata>\n")
             builder.append("    </metadata>\n")
         }
         builder.append("  </head>\n")
     }
 
+    /** sidecar 音译文本：词级（带 begin/end 的词）输出 <span>，否则整行纯文本 */
+    private fun appendSidecarRomanText(builder: StringBuilder, line: LyricsDocumentLine) {
+        val timedWords = line.words.filter { it.startMs != null }
+        if (timedWords.isNotEmpty()) {
+            line.words.forEach { word ->
+                val start = word.startMs
+                val end = word.endMs
+                if (start != null && end != null) {
+                    builder.append("<span xmlns=\"").append(NS_TTML).append("\" begin=\"")
+                        .append(LyricFormatter.formatTtmlTimestamp(start))
+                        .append("\" end=\"")
+                        .append(LyricFormatter.formatTtmlTimestamp(end))
+                        .append("\">")
+                        .append(escapeXml(word.text))
+                        .append("</span>")
+                } else {
+                    builder.append(escapeXml(word.text))
+                }
+            }
+        } else {
+            builder.append(escapeXml(line.visibleText()))
+        }
+    }
+
     private fun appendOriginalLine(
         builder: StringBuilder,
         line: LyricsDocumentLine,
         lineKey: String?,
-        romanizationLine: LyricsDocumentLine? = null,
         backgroundLines: List<LyricsDocumentLine> = emptyList()
     ) {
         val start = line.startMs ?: return
@@ -439,11 +558,6 @@ object TtmlWriter : LyricsFormatWriter {
             }
         } else {
             builder.append(escapeXml(line.visibleText()))
-        }
-        if (romanizationLine != null && romanizationLine.visibleText().isNotBlank()) {
-            builder.append("<span ttm:role=\"x-romanization\">")
-                .append(escapeXml(romanizationLine.visibleText()))
-                .append("</span>")
         }
         backgroundLines.forEach { backgroundLine ->
             if (backgroundLine.visibleText().isNotBlank()) {

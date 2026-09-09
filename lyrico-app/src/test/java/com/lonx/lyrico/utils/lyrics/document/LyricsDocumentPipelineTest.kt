@@ -109,9 +109,10 @@ class LyricsDocumentPipelineTest {
             targetFormat = LyricFormat.TTML
         ).orEmpty()
 
-        assertTrue(output.contains("""<span ttm:role="x-romanization">Romanized line</span>"""))
+        assertTrue(output.contains("<transliterations>"))
+        assertTrue(output.contains(""">Romanized line</span>"""))
         assertTrue(output.contains("""<text for="L1">翻译行</text>"""))
-        assertFalse(output.contains("""<text for="L1">Romanized line</text>"""))
+        assertFalse(output.contains("""ttm:role="x-romanization""""))
     }
 
     @Test

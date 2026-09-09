@@ -243,11 +243,12 @@ object LyricEncoder {
         val builder = StringBuilder()
         val isWordLevel = convertedResult.isWordByWord
         val isTtml = config.format == TTML
-        // 如果是 TTML，先追加 XML 头部和根节点
+        // 如果是 TTML，先追加 XML 头部和根节点；正文暂存 bodyBuilder，循环结束后按需插入 head（词级音译 sidecar）
+        val bodyBuilder = StringBuilder()
+        val romanSidecar = mutableListOf<Pair<String, LyricsLine>>()
         if (isTtml) {
             builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
             builder.append("<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:ttm=\"http://www.w3.org/ns/ttml#metadata\" xmlns:itunes=\"http://music.apple.com/itunes/ttml\">\n")
-            builder.append("  <body>\n    <div>\n")
         }
 
         val romanMap = if (config.showRomanization) {
@@ -279,9 +280,13 @@ object LyricEncoder {
 
             if (isTtml) {
                 appendTtmlCombinedLine(
-                    builder, line, matchedRoman, matchedTranslation, offset, config, isWordLevel
-                )
-                builder.append("\n")
+                    bodyBuilder, line, matchedRoman, matchedTranslation, offset, config, isWordLevel
+                ) { romanLine ->
+                    val key = "L${romanSidecar.size + 1}"
+                    romanSidecar.add(key to romanLine)
+                    key
+                }
+                bodyBuilder.append("\n")
                 return@forEach // TTML 处理完毕直接返回下一行
             }
 
@@ -314,8 +319,27 @@ object LyricEncoder {
             }
         }
 
-        // 如果是 TTML，追加闭合标签
+        // 如果是 TTML，按需写入 head（词级音译 sidecar）后组装正文
         if (isTtml) {
+            if (romanSidecar.isNotEmpty()) {
+                builder.append("  <head>\n")
+                builder.append("    <metadata>\n")
+                builder.append("      <iTunesMetadata xmlns=\"http://music.apple.com/lyric-ttml-internal\">\n")
+                builder.append("        <transliterations>\n")
+                builder.append("          <transliteration>\n")
+                romanSidecar.forEach { (key, romanLine) ->
+                    builder.append("            <text for=\"").append(LyricFormatter.escapeXml(key)).append("\">")
+                    appendSidecarRomanText(builder, romanLine, offset)
+                    builder.append("</text>\n")
+                }
+                builder.append("          </transliteration>\n")
+                builder.append("        </transliterations>\n")
+                builder.append("      </iTunesMetadata>\n")
+                builder.append("    </metadata>\n")
+                builder.append("  </head>\n")
+            }
+            builder.append("  <body>\n    <div>\n")
+            builder.append(bodyBuilder)
             builder.append("    </div>\n  </body>\n</tt>")
         }
 
@@ -447,7 +471,8 @@ object LyricEncoder {
         transLine: LyricsLine?,
         offset: Long,
         config: LyricRenderConfig,
-        isWordLevel: Boolean // 歌词数据是否是逐字
+        isWordLevel: Boolean, // 歌词数据是否是逐字
+        registerRomanSidecar: ((LyricsLine) -> String)? = null // 注册 head 音译 sidecar 条目并返回 itunes:key
     ) {
         if (line.words.isEmpty()) return
 
@@ -463,9 +488,19 @@ object LyricEncoder {
         val startStr = LyricFormatter.formatTtmlTimestamp(start)
         val endStr = LyricFormatter.formatTtmlTimestamp(LyricFormatter.applyOffset(end, offset))
 
-        builder.append("      <p begin=\"").append(startStr).append("\" end=\"").append(endStr).append("\">")
-
         val showOriginal = !(config.onlyTranslationIfAvailable && transLine != null)
+
+        // 音译改写入 head <transliterations> sidecar（保留词级时间），正文不再内联 x-romanization
+        var lineKey: String? = null
+        if (registerRomanSidecar != null && romanLine != null && showOriginal) {
+            if (romanLine.words.joinToString("") { it.text }.isNotEmpty()) {
+                lineKey = registerRomanSidecar(romanLine)
+            }
+        }
+
+        builder.append("      <p begin=\"").append(startStr).append("\" end=\"").append(endStr).append("\"")
+        lineKey?.let { builder.append(" itunes:key=\"").append(LyricFormatter.escapeXml(it)).append("\"") }
+        builder.append(">")
         if (showOriginal) {
             if (isWordLevel) {
                 // 如果支持逐字，输出详细的 <span>
@@ -484,15 +519,6 @@ object LyricEncoder {
             }
         }
 
-        if (romanLine != null && showOriginal) {
-            val romanText = romanLine.words.joinToString("") { it.text }
-            if (romanText.isNotEmpty()) {
-                builder.append("<span ttm:role=\"x-romanization\">")
-                builder.append(LyricFormatter.escapeXml(romanText))
-                builder.append("</span>")
-            }
-        }
-
         if (transLine != null) {
             val transText = transLine.words.joinToString("") { it.text }
             if (transText.isNotEmpty()) {
@@ -503,6 +529,28 @@ object LyricEncoder {
         }
 
         builder.append("</p>")
+    }
+
+    /** head sidecar 音译文本：逐词输出带 begin/end 的 <span>（与 TtmlWriter sidecar 形态一致），无有效词时间时退化为纯文本 */
+    private fun appendSidecarRomanText(builder: StringBuilder, romanLine: LyricsLine, offset: Long) {
+        val timedWords = romanLine.words.filter { it.start > 0 || it.end > 0 }
+        if (timedWords.isEmpty()) {
+            val wholeText = romanLine.words.joinToString("") { it.text }
+            if (wholeText.isNotEmpty()) {
+                builder.append(LyricFormatter.escapeXml(wholeText))
+            }
+            return
+        }
+        romanLine.words.forEach { word ->
+            val wordEnd = if (word.end > word.start) word.end else word.start + 300
+            builder.append("<span xmlns=\"http://www.w3.org/ns/ttml\" begin=\"")
+                .append(LyricFormatter.formatTtmlTimestamp(LyricFormatter.applyOffset(word.start, offset)))
+                .append("\" end=\"")
+                .append(LyricFormatter.formatTtmlTimestamp(LyricFormatter.applyOffset(wordEnd, offset)))
+                .append("\">")
+            builder.append(LyricFormatter.escapeXml(word.text))
+            builder.append("</span>")
+        }
     }
 
     private fun appendEnhancedLine(builder: StringBuilder, line: LyricsLine, offset: Long) {

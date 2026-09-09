@@ -252,11 +252,18 @@ function getLyrics(request) {
 [lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...], extensions?]
 ```
 
-第 4 元素 `extensions`（可选，对象）：行级扩展属性，key 为带命名空间前缀的 TTML 属性名（如 `"ttm:agent"`、`"itunes:songPart"`），value 为属性值字符串。写入 TTML 时原样输出到对应 `<p>` 标签上；`itunes:songPart` 由宿主提取用于 `<div>` 分组（AMLL 规范 7.1 段落标注），不输出到 `<p>`。前缀白名单：`ttm:` / `itunes:` / 无前缀，其他前缀的属性解析时丢弃（根节点无对应命名空间声明，写出会破坏 XML 结构）。旧插件不传该元素，行为不变。属性值必须是字符串；非字符串值、非对象形态的第 4 元素整组忽略（不影响行本身）。
+第 4 元素 `extensions`（可选，对象）：行级扩展属性，key 为带命名空间前缀的 TTML 属性名（如 `"ttm:agent"`、`"itunes:songPart"`），value 为属性值字符串。写入 TTML 时原样输出到对应 `<p>` 标签上。以下两个 key 由宿主消费、**不输出到 `<p>`**：
+
+- `"itunes:songPart"`：段落标注，由宿主提取用于重建 `<div itunes:songPart="...">` 分组（AMLL 规范 7.1）；
+- `"divBegin"` / `"divEnd"`：段落时间窗（毫秒数字符串），段首行携带，宿主写入该段 `<div begin="..." end="...">`，用于无时间语义的纯标注段落保真往返。
+
+div 分组规则：`songPart` 值变化**或** `divBegin` 出现（显式时间窗分段）→ 强制开新 div。
+
+前缀白名单：`ttm:` / `itunes:` / 无前缀，其他前缀的属性解析时丢弃（根节点无对应命名空间声明，写出会破坏 XML 结构）。旧插件不传该元素，行为不变。属性值必须是字符串；非字符串值、非对象形态的第 4 元素整组忽略（不影响行本身）。
 
 ```javascript
-// 示例：带行级扩展属性的行
-[0, 2000, [[0, 500, "第一"], [500, 1000, "句"]], { "ttm:agent": "v1", "itunes:songPart": "Verse" }]
+// 示例：段首行携带 songPart + 段落时间窗，各行携带 ttm:agent
+[0, 6000, [[0, 500, "第一"], [500, 1000, "句"]], { "itunes:songPart": "Verse", "ttm:agent": "v1", "divBegin": "0", "divEnd": "6000" }]
 ```
 
 **`translated` 行格式**（整行文本；翻译无词级语义）：
@@ -314,17 +321,42 @@ metadata: [
   {
     "name": "songwriters",
     "children": [
-      { "name": "songwriter", "text": "BuzzY.D" },
-      { "name": "songwriter", "text": "NKidd" }
+      { "name": "songwriter", "text": "词作者A" },
+      { "name": "songwriter", "text": "词作者B" }
     ]
   },
-  // 非官方 key：原样透传（带非内置前缀时必须提供 namespace URI，即源文档根节点声明的 URI）
+  // 非官方 key：原样透传。带非内置前缀时必须提供 namespace URI——源文档根节点
+  // xmlns:amll 声明的地址（宿主不认识自定义前缀，缺 URI 无法写出合法 XML）；
+  // 宿主收集「前缀 → URI」后在根元素统一追加 xmlns:前缀="..." 声明（一个前缀只补一次）
   {
     "name": "amll:meta",
-    "namespace": "<源文档根节点 xmlns:amll 声明的 URI>",
+    "namespace": "http://www.example.com/ns/amll",
     "attributes": { "key": "musicName", "value": "歌曲名" }
   }
 ]
+```
+
+**扩展字段：语言码与根属性（`timing` / `language` / `translatedLang` / `romanizationLang`，可选）**
+
+structured 载荷还可携带以下顶层字段（全部可选、默认空字符串，不传时写回行为不变）：
+
+| 字段 | 写入 TTML 位置 | 说明 |
+|------|------|------|
+| `timing` | 根 `<tt itunes:timing="...">` | 时间粒度标志，词级数据传 `"Word"` |
+| `language` | 根 `<tt xml:lang="...">` | 原文语言码（BCP47） |
+| `translatedLang` | 内联翻译 `<span ttm:role="x-translation" xml:lang="...">` | 翻译轨语言码（BCP47） |
+| `romanizationLang` | head 音译 `<transliteration xml:lang="...">` | 音译轨语言码（BCP47，如 `zh-Latn-jyutping`） |
+
+语言码原样透传，不做折叠/枚举映射（BCP47 完整标签保持原样）。
+
+```javascript
+{
+  timing: "Word",
+  language: "zh-Hans",
+  translatedLang: "zh-Hant",
+  romanizationLang: "zh-Latn-jyutping",
+  original: [...], translated: [...], romanization: [...]
+}
 ```
 
 **格式 2：完整原始歌词文本**
@@ -378,10 +410,14 @@ function getLyrics(request) {
 | `romanization` | `Line[] \| null` | 仅 `type: "structured"` 使用，音译歌词（罗马音等）；行支持逐词（逐字注音）或整行文本 |
 | `agents` | `Agent[]` | 仅 `type: "structured"` 使用，演唱者列表（可选；写回 TTML head `<ttm:agent>`，详见上文扩展字段） |
 | `metadata` | `MetadataElement[]` | 仅 `type: "structured"` 使用，head 元数据元素树（可选；官方 key 按规范写回、非官方透传、错结构丢弃，详见上文扩展字段） |
+| `timing` | `string` | 仅 `type: "structured"` 使用，时间粒度标志（可选；词级传 `"Word"`，写回根 `<tt itunes:timing>`） |
+| `language` | `string` | 仅 `type: "structured"` 使用，原文语言码 BCP47（可选；写回根 `<tt xml:lang>`） |
+| `translatedLang` | `string` | 仅 `type: "structured"` 使用，翻译轨语言码 BCP47（可选；写回内联翻译的 `xml:lang`） |
+| `romanizationLang` | `string` | 仅 `type: "structured"` 使用，音译轨语言码 BCP47（可选；写回 head 音译的 `xml:lang`） |
 | `rawPlainLrc` | `string` | 仅 `type: "rawPlainLrc"` 使用 |
 | `rawVerbatimLrc` | `string` | 仅 `type: "rawVerbatimLrc"` 使用 |
 | `rawEnhancedLrc` | `string` | 仅 `type: "rawEnhancedLrc"` 使用 |
-| `rawTtml` | `string` | 仅 `type: "rawTtml"` 使用 |
+| `rawTtml` | `string` | `type: "rawTtml"` 必填；`type: "structured"` 也可附带（TTML 原文双保险，宿主直通管线保真往返，任何结构化投影未覆盖的细节不丢） |
 | `rawMultiPersonEnhancedLrc` | `string` | 仅 `type: "rawMultiPersonEnhancedLrc"` 使用 |
 
 ---

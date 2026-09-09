@@ -363,21 +363,30 @@ object LyricEncoder {
                     LyricLineTrack.TRANSLATION -> matchedTranslation
                 } ?: return@forEach
 
-                if (track == LyricLineTrack.ORIGINAL) {
-                    when (config.format) {
-                        PLAIN_LRC -> appendLineByLine(builder, trackLine, offset)
-                        ENHANCED_LRC -> {
-                            if (isWordLevel) appendEnhancedLine(builder, trackLine, offset)
-                            else appendLineByLine(builder, trackLine, offset) //  LRC 降级
-                        }
-                        VERBATIM_LRC -> {
-                            if (isWordLevel) appendWordByWord(builder, trackLine, offset)
-                            else appendLineByLine(builder, trackLine, offset) // LRC 降级
-                        }
-                        TTML -> Unit
+                // 该轨是否为词级（逐字）数据：
+                // - 原文：用全局 isWordByWord（插件声明的逐字标志）；
+                // - 音译：单独按本行词数判断——插件给逐字词数组（words.size > 1）时按逐字编码，
+                //   旧协议/旧插件音译只有整行（words.size == 1）时降级整行，行为与原先一致；
+                // - 翻译：无词级语义，恒整行。
+                val trackWordLevel = when (track) {
+                    LyricLineTrack.ORIGINAL -> isWordLevel
+                    LyricLineTrack.ROMANIZATION -> trackLine.words.size > 1
+                    else -> false
+                }
+                // 音译（拉丁音节等拼音文本）词间补空格分词，汉字原文无分隔符
+                val wordSeparator = if (track == LyricLineTrack.ROMANIZATION) " " else ""
+
+                when (config.format) {
+                    PLAIN_LRC -> appendLineByLine(builder, trackLine, offset)
+                    ENHANCED_LRC -> {
+                        if (trackWordLevel) appendEnhancedLine(builder, trackLine, offset, wordSeparator)
+                        else appendLineByLine(builder, trackLine, offset) // 无词级数据 → LRC 整行降级
                     }
-                } else {
-                    appendLineByLine(builder, trackLine, offset)
+                    VERBATIM_LRC -> {
+                        if (trackWordLevel) appendWordByWord(builder, trackLine, offset, wordSeparator)
+                        else appendLineByLine(builder, trackLine, offset) // 无词级数据 → LRC 整行降级
+                    }
+                    TTML -> Unit
                 }
                 builder.append("\n")
             }
@@ -750,13 +759,20 @@ object LyricEncoder {
         return name.isNotEmpty() && SAFE_XML_NAME.matches(name)
     }
 
-    private fun appendEnhancedLine(builder: StringBuilder, line: LyricsLine, offset: Long) {
+    private fun appendEnhancedLine(
+        builder: StringBuilder,
+        line: LyricsLine,
+        offset: Long,
+        wordSeparator: String = "" // 词间分隔符：音译传空格（拉丁音节分词），原文为空（汉字无需分隔）
+    ) {
         if (line.words.isEmpty()) return
 
         val start = LyricFormatter.applyOffset(line.start, offset)
         builder.append("[${LyricFormatter.formatTimestamp(start)}] ")
 
-        line.words.forEach { word ->
+        line.words.forEachIndexed { index, word ->
+            // 词间分隔符（非首词前补）：音译剥标签后为 "nung mou ce"，避免拉丁音节挤在一起
+            if (index > 0 && wordSeparator.isNotEmpty()) builder.append(wordSeparator)
             val wordStart = LyricFormatter.applyOffset(word.start, offset)
             builder.append("<${LyricFormatter.formatTimestamp(wordStart)}>")
             builder.append(word.text)
@@ -783,7 +799,12 @@ object LyricEncoder {
         builder.append("[$startTimeFormatted]$lineText")
     }
 
-    private fun appendWordByWord(builder: StringBuilder, line: LyricsLine, offset: Long) {
+    private fun appendWordByWord(
+        builder: StringBuilder,
+        line: LyricsLine,
+        offset: Long,
+        wordSeparator: String = "" // 词间分隔符：音译传空格（拉丁音节分词），原文为空（汉字无需分隔）
+    ) {
         line.words.forEachIndexed { index, word ->
 
             val startFormatted = LyricFormatter.formatTimestamp(LyricFormatter.applyOffset(word.start, offset))
@@ -797,6 +818,8 @@ object LyricEncoder {
 
             } else {
                 builder.append("[$startFormatted]${word.text}")
+                // 词间分隔符（非末词后补）：音译剥标签后为 "nung mou ce"，避免拉丁音节挤在一起
+                if (wordSeparator.isNotEmpty()) builder.append(wordSeparator)
             }
         }
     }

@@ -220,11 +220,13 @@ class PluginJsonParser(
             "translations"
         ).parseCompactTextLines().takeIf { it.isNotEmpty() }
 
+        // 音译支持词级（逐字注音，与 original 同构）：第三元素为词数组时逐词解析，
+        // 为整行字符串时退化为整行，兼容旧插件。
         val romanizationLines = obj.array(
             "romanization",
             "romanized",
             "roma"
-        ).parseCompactTextLines().takeIf { it.isNotEmpty() }
+        ).parseCompactWordLines().takeIf { it.isNotEmpty() }
 
         if (originalLines.isEmpty()) {
             return null
@@ -310,13 +312,13 @@ private fun String.toLyricsPayloadType(): LyricsPayloadType? {
 }
 
 /**
- * original 紧凑格式：
+ * original / romanization 紧凑格式（词级；romanization 词级用于逐字注音）：
  *
  * [
  *   [lineStart, lineEnd, [[wordStart, wordEnd, text], ...]]
  * ]
  *
- * 也兼容：
+ * 也兼容整行：
  *
  * [
  *   [lineStart, lineEnd, text]
@@ -374,7 +376,7 @@ private fun JsonArray?.parseCompactWordLines(): List<LyricsLine> {
 }
 
 /**
- * translated / romanization 紧凑格式：
+ * translated 紧凑格式（仅整行文本；翻译无词级语义）：
  *
  * [
  *   [lineStart, lineEnd, text]

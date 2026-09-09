@@ -252,7 +252,21 @@ function getLyrics(request) {
 [lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...]]
 ```
 
-**`translated` / `romanization` 行格式**（整行文本）：
+**`translated` 行格式**（整行文本；翻译无词级语义）：
+
+```
+[lineStartMs, lineEndMs, "text"]
+```
+
+**`romanization` 行格式**（逐词或整行）：
+
+逐词（逐字注音，与 `original` 词级格式同构；写入 TTML 时保留逐字时间）：
+
+```
+[lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...]]
+```
+
+整行（兼容旧插件）：
 
 ```
 [lineStartMs, lineEndMs, "text"]
@@ -306,7 +320,7 @@ function getLyrics(request) {
 | `tags` | `object` | 歌曲元信息标签 |
 | `original` | `Line[]` | 仅 `type: "structured"` 使用，原文歌词（逐词或整行） |
 | `translated` | `Line[] \| null` | 仅 `type: "structured"` 使用，翻译歌词 |
-| `romanization` | `Line[] \| null` | 仅 `type: "structured"` 使用，音译歌词（罗马音等） |
+| `romanization` | `Line[] \| null` | 仅 `type: "structured"` 使用，音译歌词（罗马音等）；行支持逐词（逐字注音）或整行文本 |
 | `rawPlainLrc` | `string` | 仅 `type: "rawPlainLrc"` 使用 |
 | `rawVerbatimLrc` | `string` | 仅 `type: "rawVerbatimLrc"` 使用 |
 | `rawEnhancedLrc` | `string` | 仅 `type: "rawEnhancedLrc"` 使用 |

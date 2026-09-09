@@ -256,7 +256,21 @@ function getLyrics(request) {
 [lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...]]
 ```
 
-**`translated` / `romanization` line format, whole-line text:**
+**`translated` line format, whole-line text** (translations have no word-level semantics):
+
+```
+[lineStartMs, lineEndMs, "text"]
+```
+
+**`romanization` line format, word-level or whole-line:**
+
+Word-level (syllable-by-syllable reading, same shape as `original` word-level; per-word timing is preserved when writing TTML):
+
+```
+[lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...]]
+```
+
+Whole-line (backward compatible with older plugins):
 
 ```
 [lineStartMs, lineEndMs, "text"]
@@ -310,7 +324,7 @@ function getLyrics(request) {
 | `tags` | `object` | Song metadata tags |
 | `original` | `Line[]` | Used only by `type: "structured"`, original lyrics, word-level or whole-line |
 | `translated` | `Line[] \| null` | Used only by `type: "structured"`, translated lyrics |
-| `romanization` | `Line[] \| null` | Used only by `type: "structured"`, romanized lyrics |
+| `romanization` | `Line[] \| null` | Used only by `type: "structured"`, romanized lyrics; lines may be word-level (syllable reading) or whole-line text |
 | `rawPlainLrc` | `string` | Used only by `type: "rawPlainLrc"` |
 | `rawVerbatimLrc` | `string` | Used only by `type: "rawVerbatimLrc"` |
 | `rawEnhancedLrc` | `string` | Used only by `type: "rawEnhancedLrc"` |

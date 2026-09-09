@@ -85,7 +85,15 @@ data class LyricsResult(
     // structured 协议扩展：演唱者列表（写回 TTML head <ttm:agent>）；旧插件为空
     val agents: List<LyricsAgentEntry> = emptyList(),
     // structured 协议扩展：head 元数据元素树（官方 key 按规范写回 / 非官方原样透传）；旧插件为空
-    val metadata: List<LyricsMetadataElement> = emptyList()
+    val metadata: List<LyricsMetadataElement> = emptyList(),
+    // structured 协议扩展：根 <tt> 属性与轨语言码（写回 TTML 用）；旧插件不传为空。
+    // timing = 词级时间标志（根 <tt itunes:timing="...">，如 "Word"）；
+    // language = 原文语言码（根 <tt xml:lang="...">，BCP47 如 "zh-Hans"）；
+    // translatedLang / romanizationLang = 翻译/音译轨语言码（写回对应轨元素的 xml:lang）
+    val timing: String = "",
+    val language: String = "",
+    val translatedLang: String = "",
+    val romanizationLang: String = ""
 ) : Parcelable
 
 data class LyricsCandidateResult(

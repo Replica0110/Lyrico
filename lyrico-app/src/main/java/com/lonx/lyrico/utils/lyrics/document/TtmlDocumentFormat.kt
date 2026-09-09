@@ -54,6 +54,9 @@ object TtmlParser : LyricsFormatParser {
             val agentId = p.attr("agent", NS_TTM) ?: p.attr("agent")
             // 祖先 <div> 的 itunes:songPart（段落标注）存入行扩展，写回时按值分组重建 div（保真往返）
             val songPart = p.ancestorDivSongPart()
+            // 段落时间窗：p 为所在 <div> 的首个 <p>（段首行）时携带 div 的 begin/end 存入行扩展，
+            // 写回时用于重建 <div begin/end>（时间窗保真往返）；非段首行不携带
+            val divTiming = p.firstPInAncestorDiv()
 
             val parsed = parsePText(p, start ?: 0L, end ?: start ?: 0L)
             val line = LyricsDocumentLine(
@@ -63,7 +66,9 @@ object TtmlParser : LyricsFormatParser {
                 words = parsed.words,
                 linkKey = linkKey,
                 agentId = agentId,
-                extensions = p.attributesAsExtensions().withSongPart(songPart)
+                extensions = p.attributesAsExtensions()
+                    .withSongPart(songPart)
+                    .withDivTiming(divTiming)
             )
 
             when (role) {
@@ -135,7 +140,13 @@ object TtmlParser : LyricsFormatParser {
         }
 
         return LyricsDocument(
-            metadata = LyricsMetadata(language = root.attr("lang", NS_XML)),
+            metadata = LyricsMetadata(
+                language = root.attr("lang", NS_XML),
+                // 根 <tt itunes:timing="..."> 词级时间标志（如 "Word"），写回时还原（保真往返）
+                timing = root.attr("timing", NS_ITUNES_INTERNAL)
+                    ?: root.attr("timing", NS_ITUNES_LEGACY)
+                    ?: root.attr("timing")
+            ),
             agents = parseAgents(root),
             tracks = tracks,
             extensions = root.attributesAsExtensions(),
@@ -408,6 +419,8 @@ object TtmlWriter : LyricsFormatWriter {
         builder.append(" xmlns:ttm=\"").append(NS_TTM).append("\"")
         builder.append(" xmlns:itunes=\"").append(NS_ITUNES_INTERNAL).append("\"")
         document.metadata.language?.let { builder.append(" xml:lang=\"").append(escapeXml(it)).append("\"") }
+        // 根 itunes:timing 词级时间标志（如 "Word"），解析侧收集、写回时还原（保真往返）
+        document.metadata.timing?.let { builder.append(" itunes:timing=\"").append(escapeXml(it)).append("\"") }
         builder.append(">\n")
 
         val originalLines = document.tracks.firstOrNull { it.type == LyricsTrackType.Original }?.lines.orEmpty()
@@ -431,7 +444,9 @@ object TtmlWriter : LyricsFormatWriter {
         appendHead(builder, document, originalLines, originalLineKeys)
         builder.append("  <body>\n")
         // 按行扩展中的 itunes:songPart 分组重建 <div>（AMLL 规范 7.1 段落标注）：
-        // 连续相同 songPart 的行归入同一 <div itunes:songPart="...">，无 songPart 的行进默认 <div>
+        // 连续相同 songPart 的行归入同一 <div itunes:songPart="...">，无 songPart 的行进默认 <div>；
+        // 段首行携带 divBegin/divEnd（段落时间窗）时强制开新 div 并写入 begin/end（保真往返），
+        // 两个 songPart 相同但源文件中分属不同 <div> 的段落也能正确分开
         var currentSongPart: String? = null
         var divOpen = false
         val backgroundByKey = document.linesByKey(LyricsTrackType.Background)
@@ -441,11 +456,22 @@ object TtmlWriter : LyricsFormatWriter {
                 ?: line.startMs?.let { backgroundByStart[it] }
                 ?: emptyList()
             val songPart = line.songPartExtensionValue()
-            if (songPart != currentSongPart) {
+            val divBegin = line.divTimingExtensionValue("divBegin")
+            val divEnd = line.divTimingExtensionValue("divEnd")
+            if (songPart != currentSongPart || divBegin != null) {
                 if (divOpen) builder.append("    </div>\n")
                 builder.append("    <div")
                 songPart?.let {
                     builder.append(" itunes:songPart=\"").append(escapeXml(it)).append("\"")
+                }
+                // 段落时间窗（段首行扩展携带的 div begin/end 毫秒值 → TTML 时间戳）
+                divBegin?.let {
+                    builder.append(" begin=\"")
+                        .append(LyricFormatter.formatTtmlTimestamp(it)).append("\"")
+                }
+                divEnd?.let {
+                    builder.append(" end=\"")
+                        .append(LyricFormatter.formatTtmlTimestamp(it)).append("\"")
                 }
                 builder.append(">\n")
                 currentSongPart = songPart
@@ -709,6 +735,26 @@ private fun Element.ancestorDivSongPart(): String? {
     return null
 }
 
+/**
+ * 判断 p 是否为最近 <div> 祖先内的首个 <p>（段首行）：
+ * 是则返回该 div 的 begin/end 时间窗（毫秒），否则返回 null（非段首行不携带段落时间窗）。
+ * 嵌套 div 时取最近一层（内层优先，外层时间窗忽略——AMLL 规范为平铺 div，嵌套极罕见）。
+ */
+private fun Element.firstPInAncestorDiv(): Pair<Long?, Long?>? {
+    var node: Node? = parentNode
+    while (node != null) {
+        if (node is Element && node.localName == "div") {
+            val firstP = node.elementsByLocalName("p").firstOrNull() ?: return null
+            if (firstP != this) return null
+            val begin = node.attr("begin")?.let(::parseTtmlTimeMs)
+            val end = node.attr("end")?.let(::parseTtmlTimeMs)
+            return begin to end
+        }
+        node = node.parentNode
+    }
+    return null
+}
+
 /** 行扩展追加/覆盖 itunes:songPart 属性（值为 null 时原样返回，不修改） */
 private fun ExtensionMap.withSongPart(value: String?): ExtensionMap {
     if (value == null) return this
@@ -723,11 +769,36 @@ private fun ExtensionMap.withSongPart(value: String?): ExtensionMap {
     )
 }
 
+/**
+ * 行扩展追加段落时间窗（段首行携带的 div begin/end，无命名空间裸 key "divBegin"/"divEnd"，
+ * 与 structured 协议 Line 扩展 key 一致，写回时由 TtmlWriter 消费重建 <div begin/end>）。
+ * divTiming 为 null（非段首行）或 begin/end 均无值时原样返回，不修改。
+ */
+private fun ExtensionMap.withDivTiming(divTiming: Pair<Long?, Long?>?): ExtensionMap {
+    if (divTiming == null) return this
+    var merged = attributes
+    divTiming.first?.let { begin ->
+        merged = merged + (QualifiedName(localName = "divBegin") to begin.toString())
+    }
+    divTiming.second?.let { end ->
+        merged = merged + (QualifiedName(localName = "divEnd") to end.toString())
+    }
+    if (merged === attributes) return this
+    return copy(attributes = merged)
+}
+
 /** 读取行扩展中的 itunes:songPart 值（TtmlWriter 分组重建 div 用）；有 <p> 上遗留的同名属性时同样取出 */
 private fun LyricsDocumentLine.songPartExtensionValue(): String? {
     return extensions.attributes.entries
         .firstOrNull { it.key.localName == "songPart" }
         ?.value?.takeIf { it.isNotBlank() }
+}
+
+/** 读取行扩展中的段落时间窗值（divBegin/divEnd 毫秒字符串，TtmlWriter 重建 <div> 时消费）；无值返回 null */
+private fun LyricsDocumentLine.divTimingExtensionValue(localName: String): Long? {
+    return extensions.attributes.entries
+        .firstOrNull { it.key.localName == localName }
+        ?.value?.toLongOrNull()
 }
 
 /**
@@ -751,8 +822,11 @@ private fun QualifiedName.ttmlOutputName(): String? {
     }
 }
 
-// TtmlWriter 自管的基础属性名（解析侧全量收集进扩展，写回时由 writer 按标准位置输出，扩展侧跳过避免重复）
-private val TTML_WRITER_MANAGED_LOCAL_NAMES = setOf("begin", "end", "id", "role", "agent", "key", "songPart")
+// TtmlWriter 自管的基础属性名（解析侧全量收集进扩展，写回时由 writer 按标准位置输出，扩展侧跳过避免重复；
+// divBegin/divEnd 段落时间窗由 div 分组逻辑消费重建 <div begin/end>，不输出到 <p>）
+private val TTML_WRITER_MANAGED_LOCAL_NAMES = setOf(
+    "begin", "end", "id", "role", "agent", "key", "songPart", "divBegin", "divEnd"
+)
 
 private fun Element.elementsByLocalName(localName: String): List<Element> {
     val result = mutableListOf<Element>()

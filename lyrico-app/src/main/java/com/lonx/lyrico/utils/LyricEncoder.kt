@@ -21,6 +21,10 @@ object LyricEncoder {
 
     // 行级扩展属性：itunes:songPart 提取用于 <div> 分组（AMLL 规范 7.1），不输出到 <p>
     private const val SONGPART_ATTR = "itunes:songPart"
+    // 行级扩展属性：段落时间窗（API 行表 div_begin/div_end，段首行携带），
+    // 用于 <div> 重建时写入 begin/end，不输出到 <p>
+    private const val DIV_BEGIN_ATTR = "divBegin"
+    private const val DIV_END_ATTR = "divEnd"
     // head 元数据元素树中的官方 iTunesMetadata 成员（写入 <iTunesMetadata> 容器内）
     private const val META_SONGWRITERS = "songwriters"
     // 安全 XML 名称（元素/属性名白名单：字母或下划线开头，仅含字母数字 _ . : -）
@@ -257,7 +261,19 @@ object LyricEncoder {
         val romanSidecar = mutableListOf<Pair<String, LyricsLine>>()
         if (isTtml) {
             builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-            builder.append("<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:ttm=\"http://www.w3.org/ns/ttml#metadata\" xmlns:itunes=\"http://music.apple.com/itunes/ttml\"")
+            // itunes 命名空间统一用 AMLL 规范 URI（http://music.apple.com/lyric-ttml-internal），
+            // 与 TtmlWriter / head 内 <iTunesMetadata> 的 xmlns 保持一致，避免同前缀双 URI
+            builder.append("<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:ttm=\"http://www.w3.org/ns/ttml#metadata\" xmlns:itunes=\"http://music.apple.com/lyric-ttml-internal\"")
+            // 根属性透传（structured 协议顶层字段）：
+            // itunes:timing = 词级时间标志（如 "Word"）；xml:lang = 原文语言码（BCP47 如 zh-Hans）
+            if (convertedResult.timing.isNotBlank()) {
+                builder.append(" itunes:timing=\"")
+                    .append(LyricFormatter.escapeXml(convertedResult.timing)).append("\"")
+            }
+            if (convertedResult.language.isNotBlank()) {
+                builder.append(" xml:lang=\"")
+                    .append(LyricFormatter.escapeXml(convertedResult.language)).append("\"")
+            }
             // metadata 透传元素的自定义前缀命名空间（如 amll:）需在根节点补 xmlns 声明，否则输出 XML 非法
             collectExtraNamespaces(convertedResult.metadata).forEach { (prefix, uri) ->
                 builder.append(" xmlns:").append(prefix).append("=\"")
@@ -279,7 +295,8 @@ object LyricEncoder {
         }
 
         // TTML 正文按 itunes:songPart 分组重建 <div>（AMLL 规范 7.1）：
-        // 连续相同 songPart 的行归入同一 <div itunes:songPart="...">，无 songPart 的行进默认 <div>
+        // 连续相同 songPart 的行归入同一 <div itunes:songPart="...">，无 songPart 的行进默认 <div>；
+        // 段首行携带 divBegin/divEnd（API 行表段落时间窗）时写入 <div> 的 begin/end（保真往返）
         var currentSongPart: String? = null
         var divOpen = false
 
@@ -299,21 +316,35 @@ object LyricEncoder {
             } else null
 
             if (isTtml) {
-                // songPart 取自行级扩展属性；变化时关闭当前 div、开新 div
+                // songPart 取自行级扩展属性；变化时关闭当前 div、开新 div。
+                // divBegin（段首行携带的段落时间窗起点）出现时强制开新 div：
+                // 两个 songPart 相同但源文件中分属不同 <div> 的段落也能正确分开，时间窗保真往返
                 val songPart = line.extensions[SONGPART_ATTR]?.takeIf { it.isNotBlank() }
-                if (songPart != currentSongPart) {
+                val divBegin = line.extensions[DIV_BEGIN_ATTR]?.takeIf { it.isNotBlank() }
+                val divEnd = line.extensions[DIV_END_ATTR]?.takeIf { it.isNotBlank() }
+                if (songPart != currentSongPart || divBegin != null) {
                     if (divOpen) bodyBuilder.append("    </div>\n")
                     bodyBuilder.append("    <div")
                     songPart?.let {
                         bodyBuilder.append(" ").append(SONGPART_ATTR).append("=\"")
                             .append(LyricFormatter.escapeXml(it)).append("\"")
                     }
+                    // 段落时间窗（API 行表 div_begin/div_end → div 的 begin/end，毫秒转 TTML 时间戳）
+                    divBegin?.toLongOrNull()?.let {
+                        bodyBuilder.append(" begin=\"")
+                            .append(LyricFormatter.formatTtmlTimestamp(it)).append("\"")
+                    }
+                    divEnd?.toLongOrNull()?.let {
+                        bodyBuilder.append(" end=\"")
+                            .append(LyricFormatter.formatTtmlTimestamp(it)).append("\"")
+                    }
                     bodyBuilder.append(">\n")
                     currentSongPart = songPart
                     divOpen = true
                 }
                 appendTtmlCombinedLine(
-                    bodyBuilder, line, matchedRoman, matchedTranslation, offset, config, isWordLevel
+                    bodyBuilder, line, matchedRoman, matchedTranslation, offset, config, isWordLevel,
+                    convertedResult.translatedLang
                 ) { romanLine ->
                     val key = "L${romanSidecar.size + 1}"
                     romanSidecar.add(key to romanLine)
@@ -376,7 +407,13 @@ object LyricEncoder {
                     builder.append("      <iTunesMetadata xmlns=\"http://music.apple.com/lyric-ttml-internal\">\n")
                     if (romanSidecar.isNotEmpty()) {
                         builder.append("        <transliterations>\n")
-                        builder.append("          <transliteration>\n")
+                        // 音译轨语言码（BCP47 如 zh-Latn-jyutping）：写 transliteration 的 xml:lang（AMLL 规范语言标注）
+                        builder.append("          <transliteration")
+                        if (convertedResult.romanizationLang.isNotBlank()) {
+                            builder.append(" xml:lang=\"")
+                                .append(LyricFormatter.escapeXml(convertedResult.romanizationLang)).append("\"")
+                        }
+                        builder.append(">\n")
                         romanSidecar.forEach { (key, romanLine) ->
                             builder.append("            <text for=\"").append(LyricFormatter.escapeXml(key)).append("\">")
                             appendSidecarRomanText(builder, romanLine, offset)
@@ -538,6 +575,7 @@ object LyricEncoder {
         offset: Long,
         config: LyricRenderConfig,
         isWordLevel: Boolean, // 歌词数据是否是逐字
+        translatedLang: String = "", // 翻译轨语言码（BCP47），写入内联 x-translation 的 xml:lang
         registerRomanSidecar: ((LyricsLine) -> String)? = null // 注册 head 音译 sidecar 条目并返回 itunes:key
     ) {
         if (line.words.isEmpty()) return
@@ -567,9 +605,12 @@ object LyricEncoder {
         builder.append("      <p begin=\"").append(startStr).append("\" end=\"").append(endStr).append("\"")
         lineKey?.let { builder.append(" itunes:key=\"").append(LyricFormatter.escapeXml(it)).append("\"") }
         // 行级扩展属性（structured 协议 Line 第 4 元素）：原样输出到 <p> 标签；
-        // itunes:songPart 已由外层提取用于 div 分组（规范中 songPart 是 <div> 的属性），不在此输出
+        // itunes:songPart 已由外层提取用于 div 分组（规范中 songPart 是 <div> 的属性），
+        // divBegin/divEnd（段落时间窗）已由外层写入 <div> 的 begin/end，均不在此输出
         line.extensions.forEach { (name, value) ->
-            if (name != SONGPART_ATTR && isSafeXmlName(name)) {
+            if (name != SONGPART_ATTR && name != DIV_BEGIN_ATTR && name != DIV_END_ATTR &&
+                isSafeXmlName(name)
+            ) {
                 builder.append(" ").append(name).append("=\"")
                     .append(LyricFormatter.escapeXml(value)).append("\"")
             }
@@ -596,7 +637,13 @@ object LyricEncoder {
         if (transLine != null) {
             val transText = transLine.words.joinToString("") { it.text }
             if (transText.isNotEmpty()) {
-                builder.append("<span ttm:role=\"x-translation\">")
+                // 翻译轨语言码（BCP47 如 zh-Hans）：写入内联 x-translation 的 xml:lang（AMLL 规范语言标注）
+                builder.append("<span ttm:role=\"x-translation\"")
+                if (translatedLang.isNotBlank()) {
+                    builder.append(" xml:lang=\"")
+                        .append(LyricFormatter.escapeXml(translatedLang)).append("\"")
+                }
+                builder.append(">")
                 builder.append(LyricFormatter.escapeXml(transText))
                 builder.append("</span>")
             }

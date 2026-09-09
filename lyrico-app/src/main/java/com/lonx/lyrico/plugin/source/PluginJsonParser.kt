@@ -239,6 +239,14 @@ class PluginJsonParser(
         // 官方 key + 错误结构 → 丢弃并输出 warn 日志（见 parseMetadataElements 内部）。
         val metadata = obj.array("metadata").parseMetadataElements()
 
+        // structured 协议扩展：根 <tt> 属性与轨语言码（写回 TTML 用）；旧插件不传为空。
+        // timing = 词级时间标志（根 itunes:timing）；language = 原文语言码（根 xml:lang）；
+        // translatedLang / romanizationLang = 翻译/音译轨语言码（BCP47，如 zh-Hans / zh-Latn-jyutping）
+        val timing = obj.string("timing").orEmpty()
+        val language = obj.string("language").orEmpty()
+        val translatedLang = obj.string("translatedLang", "translated_lang").orEmpty()
+        val romanizationLang = obj.string("romanizationLang", "romanization_lang").orEmpty()
+
         if (originalLines.isEmpty()) {
             return null
         }
@@ -253,7 +261,11 @@ class PluginJsonParser(
             payloadType = LyricsPayloadType.STRUCTURED,
             isWordByWord = isWordByWord,
             agents = agents,
-            metadata = metadata
+            metadata = metadata,
+            timing = timing,
+            language = language,
+            translatedLang = translatedLang,
+            romanizationLang = romanizationLang
         )
     }
 

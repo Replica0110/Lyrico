@@ -15,6 +15,8 @@ data class LyricsMetadata(
     val artist: String? = null,
     val album: String? = null,
     val language: String? = null,
+    // 根 <tt itunes:timing="..."> 词级时间标志（如 "Word"），保真往返
+    val timing: String? = null,
     val offsetMs: Long? = null,
     val extra: Map<String, String> = emptyMap()
 )

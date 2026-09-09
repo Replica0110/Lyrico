@@ -590,13 +590,7 @@ object LyricEncoder {
         if (line.words.isEmpty()) return
 
         val start = applyOffset(line.start, offset)
-        // 确定该行的结束时间：以原文最后一个词的结束时间为准
-        val lastWord = line.words.last()
-        val end = when {
-            lastWord.end > 0 -> lastWord.end
-            lastWord.start > 0 -> lastWord.start + 300
-            else -> line.start + 2000
-        }
+        val end = resolveLineEnd(line)
 
         val startStr = LyricFormatter.formatTtmlTimestamp(start)
         val endStr = LyricFormatter.formatTtmlTimestamp(LyricFormatter.applyOffset(end, offset))
@@ -604,19 +598,45 @@ object LyricEncoder {
         val showOriginal = !(config.onlyTranslationIfAvailable && transLine != null)
 
         // 音译改写入 head <transliterations> sidecar（保留词级时间），正文不再内联 x-romanization
-        var lineKey: String? = null
-        if (registerRomanSidecar != null && romanLine != null && showOriginal) {
-            if (romanLine.words.joinToString("") { it.text }.isNotEmpty()) {
-                lineKey = registerRomanSidecar(romanLine)
-            }
-        }
+        val lineKey = registerRomanSidecarKey(romanLine, registerRomanSidecar, showOriginal)
 
         builder.append("      <p begin=\"").append(startStr).append("\" end=\"").append(endStr).append("\"")
         lineKey?.let { builder.append(" itunes:key=\"").append(LyricFormatter.escapeXml(it)).append("\"") }
-        // 行级扩展属性（structured 协议 Line 第 4 元素）：原样输出到 <p> 标签；
-        // itunes:songPart 已由外层提取用于 div 分组（规范中 songPart 是 <div> 的属性），
-        // divBegin/divEnd（段落时间窗）已由外层写入 <div> 的 begin/end，均不在此输出
-        line.extensions.forEach { (name, value) ->
+        appendLineExtensions(builder, line.extensions)
+        builder.append(">")
+        appendOriginalContent(builder, line, offset, isWordLevel, showOriginal)
+        appendTranslationSpan(builder, transLine, translatedLang)
+
+        builder.append("</p>")
+    }
+
+    /** 行结束时间：以原文最后一个词的结束时间为准（无有效结束时间时逐级兜底） */
+    private fun resolveLineEnd(line: LyricsLine): Long {
+        val lastWord = line.words.last()
+        return when {
+            lastWord.end > 0 -> lastWord.end
+            lastWord.start > 0 -> lastWord.start + 300
+            else -> line.start + 2000
+        }
+    }
+
+    /** 注册 head 音译 sidecar 条目并返回 itunes:key；不满足条件（无回调/无音译行/隐藏原文/音译文本为空）返回 null */
+    private fun registerRomanSidecarKey(
+        romanLine: LyricsLine?,
+        registerRomanSidecar: ((LyricsLine) -> String)?,
+        showOriginal: Boolean
+    ): String? {
+        if (registerRomanSidecar == null || romanLine == null || !showOriginal) return null
+        if (romanLine.words.joinToString("") { it.text }.isEmpty()) return null
+        return registerRomanSidecar(romanLine)
+    }
+
+    /** 行级扩展属性（structured 协议 Line 第 4 元素）输出到 <p> 标签。
+     *  itunes:songPart 已由外层提取用于 div 分组（规范中 songPart 是 <div> 的属性），
+     *  divBegin/divEnd（段落时间窗）已由外层写入 <div> 的 begin/end，均不在此输出；
+     *  非安全 XML 名称跳过（防注入破坏结构） */
+    private fun appendLineExtensions(builder: StringBuilder, extensions: Map<String, String>) {
+        extensions.forEach { (name, value) ->
             if (name != SONGPART_ATTR && name != DIV_BEGIN_ATTR && name != DIV_END_ATTR &&
                 isSafeXmlName(name)
             ) {
@@ -624,41 +644,51 @@ object LyricEncoder {
                     .append(LyricFormatter.escapeXml(value)).append("\"")
             }
         }
-        builder.append(">")
-        if (showOriginal) {
-            if (isWordLevel) {
-                // 如果支持逐字，输出详细的 <span>
-                line.words.forEach { word ->
-                    val wordStart = LyricFormatter.formatTtmlTimestamp(LyricFormatter.applyOffset(word.start, offset))
-                    val wordEnd = if (word.end > 0) word.end else word.start + 300
-                    val wordEndStr = LyricFormatter.formatTtmlTimestamp(LyricFormatter.applyOffset(wordEnd, offset))
+    }
 
-                    builder.append("<span begin=\"").append(wordStart).append("\" end=\"").append(wordEndStr).append("\">")
-                    builder.append(LyricFormatter.escapeXml(word.text))
-                    builder.append("</span>")
-                }
-            } else {
-                val fullText = line.words.joinToString("") { it.text }
-                builder.append(LyricFormatter.escapeXml(fullText))
-            }
-        }
+    /** 原文正文：逐字数据输出带 begin/end 的 <span>，整行数据输出转义后的完整文本；隐藏原文时不输出 */
+    private fun appendOriginalContent(
+        builder: StringBuilder,
+        line: LyricsLine,
+        offset: Long,
+        isWordLevel: Boolean,
+        showOriginal: Boolean
+    ) {
+        if (!showOriginal) return
+        if (isWordLevel) {
+            // 如果支持逐字，输出详细的 <span>
+            line.words.forEach { word ->
+                val wordStart = LyricFormatter.formatTtmlTimestamp(LyricFormatter.applyOffset(word.start, offset))
+                val wordEnd = if (word.end > 0) word.end else word.start + 300
+                val wordEndStr = LyricFormatter.formatTtmlTimestamp(LyricFormatter.applyOffset(wordEnd, offset))
 
-        if (transLine != null) {
-            val transText = transLine.words.joinToString("") { it.text }
-            if (transText.isNotEmpty()) {
-                // 翻译轨语言码（BCP47 如 zh-Hans）：写入内联 x-translation 的 xml:lang（AMLL 规范语言标注）
-                builder.append("<span ttm:role=\"x-translation\"")
-                if (translatedLang.isNotBlank()) {
-                    builder.append(" xml:lang=\"")
-                        .append(LyricFormatter.escapeXml(translatedLang)).append("\"")
-                }
-                builder.append(">")
-                builder.append(LyricFormatter.escapeXml(transText))
+                builder.append("<span begin=\"").append(wordStart).append("\" end=\"").append(wordEndStr).append("\">")
+                builder.append(LyricFormatter.escapeXml(word.text))
                 builder.append("</span>")
             }
+        } else {
+            val fullText = line.words.joinToString("") { it.text }
+            builder.append(LyricFormatter.escapeXml(fullText))
         }
+    }
 
-        builder.append("</p>")
+    /** 内联翻译 <span ttm:role="x-translation">；translatedLang（BCP47）非空时写 xml:lang（AMLL 规范语言标注）；无翻译/空文本不输出 */
+    private fun appendTranslationSpan(
+        builder: StringBuilder,
+        transLine: LyricsLine?,
+        translatedLang: String
+    ) {
+        if (transLine == null) return
+        val transText = transLine.words.joinToString("") { it.text }
+        if (transText.isEmpty()) return
+        builder.append("<span ttm:role=\"x-translation\"")
+        if (translatedLang.isNotBlank()) {
+            builder.append(" xml:lang=\"")
+                .append(LyricFormatter.escapeXml(translatedLang)).append("\"")
+        }
+        builder.append(">")
+        builder.append(LyricFormatter.escapeXml(transText))
+        builder.append("</span>")
     }
 
     /** head sidecar 音译文本：逐词输出带 begin/end 的 <span>（与 TtmlWriter sidecar 形态一致），无有效词时间时退化为纯文本 */

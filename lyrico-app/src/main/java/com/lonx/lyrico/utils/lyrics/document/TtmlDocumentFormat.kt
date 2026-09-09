@@ -52,6 +52,8 @@ object TtmlParser : LyricsFormatParser {
                 ?: p.attr("key", NS_ITUNES_LEGACY)
                 ?: p.attr("key")
             val agentId = p.attr("agent", NS_TTM) ?: p.attr("agent")
+            // 祖先 <div> 的 itunes:songPart（段落标注）存入行扩展，写回时按值分组重建 div（保真往返）
+            val songPart = p.ancestorDivSongPart()
 
             val parsed = parsePText(p, start ?: 0L, end ?: start ?: 0L)
             val line = LyricsDocumentLine(
@@ -61,7 +63,7 @@ object TtmlParser : LyricsFormatParser {
                 words = parsed.words,
                 linkKey = linkKey,
                 agentId = agentId,
-                extensions = p.attributesAsExtensions()
+                extensions = p.attributesAsExtensions().withSongPart(songPart)
             )
 
             when (role) {
@@ -428,17 +430,31 @@ object TtmlWriter : LyricsFormatWriter {
 
         appendHead(builder, document, originalLines, originalLineKeys)
         builder.append("  <body>\n")
-        builder.append("    <div>\n")
+        // 按行扩展中的 itunes:songPart 分组重建 <div>（AMLL 规范 7.1 段落标注）：
+        // 连续相同 songPart 的行归入同一 <div itunes:songPart="...">，无 songPart 的行进默认 <div>
+        var currentSongPart: String? = null
+        var divOpen = false
         val backgroundByKey = document.linesByKey(LyricsTrackType.Background)
         val backgroundByStart = document.linesByStart(LyricsTrackType.Background)
         originalLines.forEachIndexed { index, line ->
             val backgroundLines = line.linkKey?.let { backgroundByKey[it] }
                 ?: line.startMs?.let { backgroundByStart[it] }
                 ?: emptyList()
+            val songPart = line.songPartExtensionValue()
+            if (songPart != currentSongPart) {
+                if (divOpen) builder.append("    </div>\n")
+                builder.append("    <div")
+                songPart?.let {
+                    builder.append(" itunes:songPart=\"").append(escapeXml(it)).append("\"")
+                }
+                builder.append(">\n")
+                currentSongPart = songPart
+                divOpen = true
+            }
             // 音译统一写入 head <transliterations> sidecar（支持词级），正文不再内联 x-romanization，避免重复
             appendOriginalLine(builder, line, originalLineKeys[index], backgroundLines)
         }
-        builder.append("    </div>\n")
+        if (divOpen) builder.append("    </div>\n")
         builder.append("  </body>\n")
         builder.append("</tt>")
         return builder.toString()
@@ -550,6 +566,16 @@ object TtmlWriter : LyricsFormatWriter {
             .append("\"")
         lineKey?.let { builder.append(" itunes:key=\"").append(escapeXml(it)).append("\"") }
         line.agentId?.let { builder.append(" ttm:agent=\"").append(escapeXml(it)).append("\"") }
+        // 行级扩展属性写回（保真：解析侧收集的行属性原样输出）：
+        // - 排除 writer 自管的基础属性（begin/end/id/role/agent/key）与 songPart（由 div 分组承载）；
+        // - 命名空间归一化：ttm/itunes 映射到根节点已声明前缀，xml 用内置前缀，
+        //   根节点未声明的命名空间前缀写出会破坏 XML 结构 → 跳过
+        line.extensions.attributes.forEach { (qName, value) ->
+            qName.ttmlOutputName()?.let { outputName ->
+                builder.append(" ").append(outputName).append("=\"")
+                    .append(escapeXml(value)).append("\"")
+            }
+        }
         builder.append(">")
 
         if (line.words.size > 1) {
@@ -668,6 +694,65 @@ private fun Element.attributesAsExtensions(): ExtensionMap {
     }
     return ExtensionMap(attributes = attributes)
 }
+
+/** 向上找最近的 <div> 祖先并读取其 itunes:songPart 属性（嵌套 div 取最近一层；AMLL 规范 7.1 段落标注） */
+private fun Element.ancestorDivSongPart(): String? {
+    var node: Node? = parentNode
+    while (node != null) {
+        if (node is Element && node.localName == "div") {
+            return node.attr("songPart", NS_ITUNES_INTERNAL)
+                ?: node.attr("songPart", NS_ITUNES_LEGACY)
+                ?: node.attr("songPart")
+        }
+        node = node.parentNode
+    }
+    return null
+}
+
+/** 行扩展追加/覆盖 itunes:songPart 属性（值为 null 时原样返回，不修改） */
+private fun ExtensionMap.withSongPart(value: String?): ExtensionMap {
+    if (value == null) return this
+    return copy(
+        attributes = attributes + (
+            QualifiedName(
+                namespaceUri = NS_ITUNES_INTERNAL,
+                localName = "songPart",
+                prefix = "itunes"
+            ) to value
+            )
+    )
+}
+
+/** 读取行扩展中的 itunes:songPart 值（TtmlWriter 分组重建 div 用）；有 <p> 上遗留的同名属性时同样取出 */
+private fun LyricsDocumentLine.songPartExtensionValue(): String? {
+    return extensions.attributes.entries
+        .firstOrNull { it.key.localName == "songPart" }
+        ?.value?.takeIf { it.isNotBlank() }
+}
+
+/**
+ * 扩展属性名 → TTML 输出属性名（写回用）：
+ * - 排除 writer 自管的基础属性（begin/end/id/role/agent/key）与 songPart（div 分组承载）；
+ * - 排除 xmlns 命名空间声明（写出侧自行管理）；
+ * - ttm/itunes 命名空间归一化到根节点已声明前缀；xml 用内置前缀；无命名空间裸输出；
+ * - 根节点未声明且无法归一化的命名空间 → 返回 null（跳过，避免输出非法 XML）
+ */
+private fun QualifiedName.ttmlOutputName(): String? {
+    if (localName == "xmlns" || prefix == "xmlns" || namespaceUri == "http://www.w3.org/2000/xmlns/") {
+        return null
+    }
+    if (localName in TTML_WRITER_MANAGED_LOCAL_NAMES) return null
+    return when (namespaceUri) {
+        null -> localName
+        NS_TTM -> "ttm:$localName"
+        NS_ITUNES_INTERNAL, NS_ITUNES_LEGACY -> "itunes:$localName"
+        NS_XML -> "xml:$localName"
+        else -> null
+    }
+}
+
+// TtmlWriter 自管的基础属性名（解析侧全量收集进扩展，写回时由 writer 按标准位置输出，扩展侧跳过避免重复）
+private val TTML_WRITER_MANAGED_LOCAL_NAMES = setOf("begin", "end", "id", "role", "agent", "key", "songPart")
 
 private fun Element.elementsByLocalName(localName: String): List<Element> {
     val result = mutableListOf<Element>()

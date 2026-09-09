@@ -1,7 +1,10 @@
 package com.lonx.lyrico.plugin.source
 
+import android.util.Log
+import com.lonx.lyrico.data.model.lyrics.LyricsAgentEntry
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsCandidateResult
+import com.lonx.lyrico.data.model.lyrics.LyricsMetadataElement
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
@@ -228,6 +231,14 @@ class PluginJsonParser(
             "roma"
         ).parseCompactWordLines().takeIf { it.isNotEmpty() }
 
+        // structured 协议扩展：演唱者列表（写回 TTML head <ttm:agent>）；旧插件不传为空
+        val agents = obj.array("agents").parseAgentEntries()
+
+        // structured 协议扩展：head 元数据元素树。
+        // 三分支规则：官方 key + 官方结构 → 按规范保留；非官方 key → 原样透传；
+        // 官方 key + 错误结构 → 丢弃并输出 warn 日志（见 parseMetadataElements 内部）。
+        val metadata = obj.array("metadata").parseMetadataElements()
+
         if (originalLines.isEmpty()) {
             return null
         }
@@ -241,6 +252,8 @@ class PluginJsonParser(
             romanization = romanizationLines,
             payloadType = LyricsPayloadType.STRUCTURED,
             isWordByWord = isWordByWord,
+            agents = agents,
+            metadata = metadata
         )
     }
 
@@ -323,6 +336,14 @@ private fun String.toLyricsPayloadType(): LyricsPayloadType? {
  * [
  *   [lineStart, lineEnd, text]
  * ]
+ *
+ * 第 4 元素（可选）为行级扩展属性对象，key 为带命名空间前缀的 TTML 属性名：
+ *
+ * [
+ *   [lineStart, lineEnd, words, {"ttm:agent": "v1", "itunes:songPart": "Verse"}]
+ * ]
+ *
+ * 属性值必须是字符串（JsonPrimitive）；非字符串值、非对象形态的第 4 元素整组忽略（不影响行本身）。
  */
 private fun JsonArray?.parseCompactWordLines(): List<LyricsLine> {
     return this?.mapNotNull { element ->
@@ -331,6 +352,13 @@ private fun JsonArray?.parseCompactWordLines(): List<LyricsLine> {
         val end = line.longAt(1) ?: start
         val wordsArray = line.arrayAt(2)
         val text = line.stringAt(2)
+        // 第 4 元素：行级扩展属性（ttm:agent / itunes:songPart 等），旧插件不传为空。
+        // 前缀白名单（ttm: / itunes: / 无前缀）：其他前缀的属性无根节点命名空间声明，
+        // 写出会导致 XML 非法，故解析时即过滤（静默，行本身不受影响）
+        val extensions = line.objectAt(3)
+            ?.parseStringMap()
+            ?.filterKeys { key -> key.substringBefore(':', "").let { it == "" || it == "ttm" || it == "itunes" } }
+            .orEmpty()
 
         val words = when {
             wordsArray != null -> {
@@ -370,7 +398,8 @@ private fun JsonArray?.parseCompactWordLines(): List<LyricsLine> {
         LyricsLine(
             start = start,
             end = end,
-            words = words
+            words = words,
+            extensions = extensions
         )
     }.orEmpty()
 }
@@ -417,6 +446,123 @@ private fun JsonArray.stringAt(index: Int): String? {
 
 private fun JsonArray.arrayAt(index: Int): JsonArray? {
     return getOrNull(index) as? JsonArray
+}
+
+private fun JsonArray.objectAt(index: Int): JsonObject? {
+    return getOrNull(index) as? JsonObject
+}
+
+/**
+ * agents 紧凑格式（对象数组；数量少，用可读性好的对象形态而不挤占紧凑空间）：
+ *
+ * [
+ *   { "id": "v1", "type": "person", "name": "艺人A" },
+ *   { "id": "v1000", "type": "group" }
+ * ]
+ *
+ * id 必填（缺失整条丢弃）；type/name 可选。type 原样字符串透传，不做枚举映射避免丢信息。
+ */
+private fun JsonArray?.parseAgentEntries(): List<LyricsAgentEntry> {
+    return this?.mapNotNull { element ->
+        val obj = element as? JsonObject ?: return@mapNotNull null
+        val id = obj.primitiveString("id") ?: return@mapNotNull null
+        LyricsAgentEntry(
+            id = id,
+            type = obj.primitiveString("type"),
+            name = obj.primitiveString("name")
+        )
+    }.orEmpty()
+}
+
+/**
+ * metadata 元素树解析 + 三分支规则（核心约定，勿改动语义）：
+ *
+ * 1. 官方 key + 官方结构 → 按规范保留，写回时输出到 TTML 对应位置；
+ * 2. 非官方 key（官方规范中不存在的元素名）→ 原样透传保留元素树；
+ * 3. 官方 key + 错误结构 → 丢弃整棵子树并输出 warn 日志（不猜插件意图、不做纠错兜底）。
+ *
+ * 官方 key 大小写敏感：AMLL 规范元素名全小写（songwriters / songwriter / ...），
+ * camelCase 形态（如 songWriters）视为非官方 key 走透传分支，不做归一化。
+ */
+private const val METADATA_TAG = "PluginJsonParser"
+
+// AMLL TTML 规范定义的 head 元素名（小写，大小写敏感）
+private const val META_NAME_SONGWRITERS = "songwriters"
+private const val META_NAME_SONGWRITER = "songwriter"
+// 官方 key，但已有专门字段承载（translated/romanization/agents），metadata 里出现必然重复 → 丢弃
+private val META_NAMES_DUPLICATED = setOf("translations", "transliterations", "ttm:agent")
+
+private fun JsonArray?.parseMetadataElements(): List<LyricsMetadataElement> {
+    return this?.mapNotNull { element ->
+        val obj = element as? JsonObject ?: return@mapNotNull null
+        val node = obj.parseMetadataElement() ?: return@mapNotNull null
+        // 三分支规则按顶层元素名分派（子元素递归解析时不重复校验，树结构由插件负责）
+        when (node.name) {
+            META_NAME_SONGWRITERS -> {
+                // 官方 songwriters 结构：children 全部为带非空 text 的 songwriter 元素
+                val valid = node.children.isNotEmpty() &&
+                    node.children.all { it.name == META_NAME_SONGWRITER && !it.text.isNullOrBlank() }
+                if (valid) {
+                    node
+                } else {
+                    Log.w(
+                        METADATA_TAG,
+                        "metadata 元素 \"songwriters\" 结构不符合 AMLL 规范（应为 songwriters 包裹带文本的 songwriter children），已丢弃"
+                    )
+                    null
+                }
+            }
+
+            in META_NAMES_DUPLICATED -> {
+                Log.w(
+                    METADATA_TAG,
+                    "metadata 元素 \"${node.name}\" 已由 structured 协议专门字段承载（translated/romanization/agents），请勿在 metadata 中重复提供，已丢弃"
+                )
+                null
+            }
+
+            else -> node // 非官方 key：原样透传
+        }
+    }.orEmpty()
+}
+
+/** 单个 metadata 节点：{ name, namespace, attributes, text, children }，name 必填（缺失整节点丢弃） */
+private fun JsonObject.parseMetadataElement(): LyricsMetadataElement? {
+    val name = primitiveString("name")?.takeIf { it.isNotBlank() } ?: return null
+    val namespace = primitiveString("namespace")
+    // 带前缀的元素名（非 ttm/itunes/xml 内置前缀）必须提供 namespace URI，否则写出 XML 非法 → 丢弃该节点
+    val prefix = name.substringBefore(':', "")
+    if (prefix.isNotEmpty() && prefix != "ttm" && prefix != "itunes" && prefix != "xml" &&
+        namespace.isNullOrBlank()
+    ) {
+        Log.w(METADATA_TAG, "metadata 元素 \"$name\" 带前缀但未提供 namespace URI，无法写回合法 XML，已丢弃")
+        return null
+    }
+    val attributes = this["attributes"] as? JsonObject
+    val children = this["children"] as? JsonArray
+    return LyricsMetadataElement(
+        name = name,
+        namespace = namespace,
+        attributes = attributes.parseStringMap(),
+        text = primitiveString("text"),
+        // children 纯解析不校验：非官方元素的树必须整体原样透传，宿主不深入子层校验/丢弃
+        children = children.parseMetadataTree()
+    )
+}
+
+/** 纯解析（无三分支校验）：用于 children 递归，保证透传元素树完整 */
+private fun JsonArray?.parseMetadataTree(): List<LyricsMetadataElement> {
+    return this?.mapNotNull { element ->
+        (element as? JsonObject)?.parseMetadataElement()
+    }.orEmpty()
+}
+
+/** JsonObject → Map<String, String>：仅保留字符串值（JsonPrimitive），非字符串值跳过 */
+private fun JsonObject?.parseStringMap(): Map<String, String> {
+    if (this == null) return emptyMap()
+    return mapValuesNotNull { (_, value) ->
+        (value as? JsonPrimitive)?.contentOrNull
+    }
 }
 
 private fun JsonObject.string(vararg keys: String): String? {

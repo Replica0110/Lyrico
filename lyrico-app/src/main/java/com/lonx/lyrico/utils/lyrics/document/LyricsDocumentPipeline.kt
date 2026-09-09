@@ -5,6 +5,7 @@ import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.model.lyrics.LyricsAgentEntry
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
@@ -16,6 +17,7 @@ import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentWord
 import com.lonx.lyrico.data.model.lyrics.document.LyricsMetadata
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrack
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
+import com.lonx.lyrico.data.model.lyrics.document.LyricsAgentType
 import com.lonx.lyrico.data.model.plugin.ResolvedFieldProcessRule
 
 object LyricsDocumentPipeline {
@@ -189,7 +191,15 @@ object LyricsDocumentPipeline {
             original = originalLines,
             translated = linkedTrackLines(LyricsTrackType.Translation),
             romanization = linkedTrackLines(LyricsTrackType.Romanization),
-            isWordByWord = originalLines.isWordByWord()
+            isWordByWord = originalLines.isWordByWord(),
+            // 演唱者列表带出（document → structured）：避免文档层解析到的 <ttm:agent> 转 structured 时丢失
+            agents = agents.map { agent ->
+                LyricsAgentEntry(
+                    id = agent.id,
+                    type = agent.type.toTtmlAgentType(),
+                    name = agent.name
+                )
+            }
         )
     }
 
@@ -290,10 +300,19 @@ object LyricsDocumentPipeline {
         return if (resultWords.isEmpty()) {
             null
         } else {
+            // 行级扩展属性带出（document → structured）：ttm:agent（演唱者引用）+ itunes:songPart（段落标注），
+            // 避免文档层解析到的信息在转 structured 时丢失；无扩展的行保持空 Map（旧插件行为一致）
+            val extensions = buildMap {
+                agentId?.let { put("ttm:agent", it) }
+                extensions.attributes.entries
+                    .firstOrNull { it.key.localName == "songPart" }
+                    ?.let { put("itunes:songPart", it.value) }
+            }
             LyricsLine(
                 start = start,
                 end = end,
-                words = resultWords
+                words = resultWords,
+                extensions = extensions
             )
         }
     }
@@ -306,6 +325,17 @@ object LyricsDocumentPipeline {
             offsetMs = this["offset"]?.toLongOrNull(),
             extra = filterKeys { it !in setOf("ti", "ar", "al", "offset") }
         )
+    }
+
+    /** document 演唱者类型 → AMLL 规范 ttm:agent type 值（Unknown 输出 null 由写回侧省略属性） */
+    private fun LyricsAgentType.toTtmlAgentType(): String? {
+        return when (this) {
+            LyricsAgentType.Person -> "person"
+            LyricsAgentType.Group -> "group"
+            LyricsAgentType.Character -> "character"
+            LyricsAgentType.Narrator -> "person"
+            LyricsAgentType.Unknown -> null
+        }
     }
 
     private fun LyricsMetadata.toTags(): Map<String, String> {

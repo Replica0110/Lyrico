@@ -8,7 +8,9 @@ import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricFormat.*
 import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.model.lyrics.LyricsAgentEntry
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
+import com.lonx.lyrico.data.model.lyrics.LyricsMetadataElement
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.isRaw
 import com.lonx.lyrico.utils.lyrics.document.LyricsDocumentPipeline
@@ -16,6 +18,13 @@ import com.lonx.lyrico.utils.lyrics.document.LyricsDocumentPipeline
 object LyricEncoder {
     // 匹配 TTML 格式: begin="00:01:23.456" 或 end="00:01:23.456"
     private val TTML_TIME_PATTERN = Regex("(begin=\"|end=\")(\\d{2,}):(\\d{2}):(\\d{2})\\.(\\d{2,3})(\")")
+
+    // 行级扩展属性：itunes:songPart 提取用于 <div> 分组（AMLL 规范 7.1），不输出到 <p>
+    private const val SONGPART_ATTR = "itunes:songPart"
+    // head 元数据元素树中的官方 iTunesMetadata 成员（写入 <iTunesMetadata> 容器内）
+    private const val META_SONGWRITERS = "songwriters"
+    // 安全 XML 名称（元素/属性名白名单：字母或下划线开头，仅含字母数字 _ . : -）
+    private val SAFE_XML_NAME = Regex("[A-Za-z_][A-Za-z0-9_.:-]*")
     
     /**
      * 计算应用偏移量，保证结果大于等于 0
@@ -239,7 +248,7 @@ object LyricEncoder {
         }
 
         val convertedResult = convertLyricsResult(result, config.conversionMode)
-        
+
         val builder = StringBuilder()
         val isWordLevel = convertedResult.isWordByWord
         val isTtml = config.format == TTML
@@ -248,7 +257,13 @@ object LyricEncoder {
         val romanSidecar = mutableListOf<Pair<String, LyricsLine>>()
         if (isTtml) {
             builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-            builder.append("<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:ttm=\"http://www.w3.org/ns/ttml#metadata\" xmlns:itunes=\"http://music.apple.com/itunes/ttml\">\n")
+            builder.append("<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:ttm=\"http://www.w3.org/ns/ttml#metadata\" xmlns:itunes=\"http://music.apple.com/itunes/ttml\"")
+            // metadata 透传元素的自定义前缀命名空间（如 amll:）需在根节点补 xmlns 声明，否则输出 XML 非法
+            collectExtraNamespaces(convertedResult.metadata).forEach { (prefix, uri) ->
+                builder.append(" xmlns:").append(prefix).append("=\"")
+                    .append(LyricFormatter.escapeXml(uri)).append("\"")
+            }
+            builder.append(">\n")
         }
 
         val romanMap = if (config.showRomanization) {
@@ -262,6 +277,11 @@ object LyricEncoder {
         } else {
             emptyMap()
         }
+
+        // TTML 正文按 itunes:songPart 分组重建 <div>（AMLL 规范 7.1）：
+        // 连续相同 songPart 的行归入同一 <div itunes:songPart="...">，无 songPart 的行进默认 <div>
+        var currentSongPart: String? = null
+        var divOpen = false
 
         convertedResult.original.forEach { line ->
             if (config.removeEmptyLines && isBlankOrPlaceholder(line)) {
@@ -279,6 +299,19 @@ object LyricEncoder {
             } else null
 
             if (isTtml) {
+                // songPart 取自行级扩展属性；变化时关闭当前 div、开新 div
+                val songPart = line.extensions[SONGPART_ATTR]?.takeIf { it.isNotBlank() }
+                if (songPart != currentSongPart) {
+                    if (divOpen) bodyBuilder.append("    </div>\n")
+                    bodyBuilder.append("    <div")
+                    songPart?.let {
+                        bodyBuilder.append(" ").append(SONGPART_ATTR).append("=\"")
+                            .append(LyricFormatter.escapeXml(it)).append("\"")
+                    }
+                    bodyBuilder.append(">\n")
+                    currentSongPart = songPart
+                    divOpen = true
+                }
                 appendTtmlCombinedLine(
                     bodyBuilder, line, matchedRoman, matchedTranslation, offset, config, isWordLevel
                 ) { romanLine ->
@@ -319,28 +352,61 @@ object LyricEncoder {
             }
         }
 
-        // 如果是 TTML，按需写入 head（词级音译 sidecar）后组装正文
+        // 如果是 TTML，按需写入 head（词级音译 sidecar / 演唱者 / 元数据元素树）后组装正文
         if (isTtml) {
-            if (romanSidecar.isNotEmpty()) {
+            // metadata 元素树分流：官方 iTunesMetadata 成员（songwriters）进容器内，其余原样透传
+            val officialMeta = convertedResult.metadata.filter { it.name == META_SONGWRITERS }
+            val passthroughMeta = convertedResult.metadata.filter { it.name != META_SONGWRITERS }
+            val hasHead = romanSidecar.isNotEmpty() || convertedResult.agents.isNotEmpty() ||
+                officialMeta.isNotEmpty() || passthroughMeta.isNotEmpty()
+
+            if (hasHead) {
                 builder.append("  <head>\n")
-                builder.append("    <metadata>\n")
-                builder.append("      <iTunesMetadata xmlns=\"http://music.apple.com/lyric-ttml-internal\">\n")
-                builder.append("        <transliterations>\n")
-                builder.append("          <transliteration>\n")
-                romanSidecar.forEach { (key, romanLine) ->
-                    builder.append("            <text for=\"").append(LyricFormatter.escapeXml(key)).append("\">")
-                    appendSidecarRomanText(builder, romanLine, offset)
-                    builder.append("</text>\n")
+                // 演唱者列表（structured 协议 agents 字段）→ <ttm:agent>（AMLL 规范 4.1）
+                if (convertedResult.agents.isNotEmpty()) {
+                    builder.append("    <metadata>\n")
+                    convertedResult.agents.forEach { agent ->
+                        appendTtmlAgent(builder, agent)
+                    }
+                    builder.append("    </metadata>\n")
                 }
-                builder.append("          </transliteration>\n")
-                builder.append("        </transliterations>\n")
-                builder.append("      </iTunesMetadata>\n")
-                builder.append("    </metadata>\n")
+                // 词级音译 sidecar + 官方元数据（songwriters）→ <iTunesMetadata> 容器内
+                if (romanSidecar.isNotEmpty() || officialMeta.isNotEmpty()) {
+                    builder.append("    <metadata>\n")
+                    builder.append("      <iTunesMetadata xmlns=\"http://music.apple.com/lyric-ttml-internal\">\n")
+                    if (romanSidecar.isNotEmpty()) {
+                        builder.append("        <transliterations>\n")
+                        builder.append("          <transliteration>\n")
+                        romanSidecar.forEach { (key, romanLine) ->
+                            builder.append("            <text for=\"").append(LyricFormatter.escapeXml(key)).append("\">")
+                            appendSidecarRomanText(builder, romanLine, offset)
+                            builder.append("</text>\n")
+                        }
+                        builder.append("          </transliteration>\n")
+                        builder.append("        </transliterations>\n")
+                    }
+                    // 官方 songwriters 结构已在解析侧校验（songwriters 包裹带文本的 songwriter children）
+                    officialMeta.forEach { element ->
+                        appendMetadataElement(builder, element, "        ")
+                    }
+                    builder.append("      </iTunesMetadata>\n")
+                    builder.append("    </metadata>\n")
+                }
+                // 非官方元素原样透传（结构解析侧已保留，此处仅序列化）
+                if (passthroughMeta.isNotEmpty()) {
+                    builder.append("    <metadata>\n")
+                    passthroughMeta.forEach { element ->
+                        appendMetadataElement(builder, element, "      ")
+                    }
+                    builder.append("    </metadata>\n")
+                }
                 builder.append("  </head>\n")
             }
-            builder.append("  <body>\n    <div>\n")
+            // body：div 分组结构已在循环内写入 bodyBuilder，此处收尾最后一个未闭合的 div
+            if (divOpen) bodyBuilder.append("    </div>\n")
+            builder.append("  <body>\n")
             builder.append(bodyBuilder)
-            builder.append("    </div>\n  </body>\n</tt>")
+            builder.append("  </body>\n</tt>")
         }
 
         return builder.toString().trim()
@@ -500,6 +566,14 @@ object LyricEncoder {
 
         builder.append("      <p begin=\"").append(startStr).append("\" end=\"").append(endStr).append("\"")
         lineKey?.let { builder.append(" itunes:key=\"").append(LyricFormatter.escapeXml(it)).append("\"") }
+        // 行级扩展属性（structured 协议 Line 第 4 元素）：原样输出到 <p> 标签；
+        // itunes:songPart 已由外层提取用于 div 分组（规范中 songPart 是 <div> 的属性），不在此输出
+        line.extensions.forEach { (name, value) ->
+            if (name != SONGPART_ATTR && isSafeXmlName(name)) {
+                builder.append(" ").append(name).append("=\"")
+                    .append(LyricFormatter.escapeXml(value)).append("\"")
+            }
+        }
         builder.append(">")
         if (showOriginal) {
             if (isWordLevel) {
@@ -551,6 +625,82 @@ object LyricEncoder {
             builder.append(LyricFormatter.escapeXml(word.text))
             builder.append("</span>")
         }
+    }
+
+    /**
+     * structured 协议 agents 字段 → head <ttm:agent>（AMLL 规范 4.1）：
+     * <ttm:agent xml:id="v1" type="person"><ttm:name type="full">名字</ttm:name></ttm:agent>
+     * 无名字时自闭合。type 原样透传（person/character/organization/group/other）。
+     */
+    private fun appendTtmlAgent(builder: StringBuilder, agent: LyricsAgentEntry) {
+        builder.append("      <ttm:agent xml:id=\"").append(LyricFormatter.escapeXml(agent.id)).append("\"")
+        agent.type?.takeIf { it.isNotBlank() }?.let {
+            builder.append(" type=\"").append(LyricFormatter.escapeXml(it)).append("\"")
+        }
+        val name = agent.name?.takeIf { it.isNotBlank() }
+        if (name == null) {
+            builder.append("/>\n")
+        } else {
+            builder.append(">\n        <ttm:name type=\"full\">")
+                .append(LyricFormatter.escapeXml(name))
+                .append("</ttm:name>\n      </ttm:agent>\n")
+        }
+    }
+
+    /**
+     * head 元数据元素树 → XML 序列化（官方与非官方通用；结构合法性已在解析侧校验/透传，此处只负责写出）。
+     * 自闭合（无 text 无 children）/ 纯文本 / 嵌套 children 三种形态均支持；元素名与属性名做安全白名单校验。
+     */
+    private fun appendMetadataElement(builder: StringBuilder, element: LyricsMetadataElement, indent: String) {
+        // 元素名安全校验：非法名称（含引号等注入字符）整节点跳过，避免破坏 XML 结构
+        if (!isSafeXmlName(element.name)) return
+        builder.append(indent).append("<").append(element.name)
+        element.attributes.forEach { (name, value) ->
+            if (isSafeXmlName(name)) {
+                builder.append(" ").append(name).append("=\"")
+                    .append(LyricFormatter.escapeXml(value)).append("\"")
+            }
+        }
+        val text = element.text?.takeIf { it.isNotEmpty() }
+        if (element.children.isEmpty() && text == null) {
+            builder.append("/>\n")
+            return
+        }
+        builder.append(">")
+        if (text != null) builder.append(LyricFormatter.escapeXml(text))
+        if (element.children.isNotEmpty()) {
+            builder.append("\n")
+            element.children.forEach { child ->
+                appendMetadataElement(builder, child, "$indent  ")
+            }
+            builder.append(indent)
+        }
+        builder.append("</").append(element.name).append(">\n")
+    }
+
+    /**
+     * 收集 metadata 元素树中需要根节点补声明的命名空间（prefix → URI）：
+     * ttm/itunes 根节点已声明、xml 为 XML 内置前缀，均跳过；
+     * 其余前缀（如 amll）由插件在节点 namespace 字段显式提供 URI，宿主不编造。
+     */
+    private fun collectExtraNamespaces(elements: List<LyricsMetadataElement>): Map<String, String> {
+        val result = mutableMapOf<String, String>()
+        fun visit(element: LyricsMetadataElement) {
+            val prefix = element.name.substringBefore(':', "")
+            if (prefix.isNotEmpty() && prefix != "ttm" && prefix != "itunes" && prefix != "xml") {
+                element.namespace?.takeIf { it.isNotBlank() }?.let { uri ->
+                    result.putIfAbsent(prefix, uri)
+                }
+            }
+            element.children.forEach { visit(it) }
+        }
+        elements.forEach { visit(it) }
+        return result
+    }
+
+    /** XML 名称安全校验（元素名/属性名共用）：字母或下划线开头，仅含字母数字 _ . : - */
+    private fun isSafeXmlName(name: String): Boolean {
+        return name.isNotEmpty() && SAFE_XML_NAME.matches(name)
     }
 
     private fun appendEnhancedLine(builder: StringBuilder, line: LyricsLine, offset: Long) {

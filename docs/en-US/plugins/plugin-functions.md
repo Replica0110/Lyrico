@@ -253,7 +253,14 @@ function getLyrics(request) {
 **`original` line format, word-level:**
 
 ```
-[lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...]]
+[lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...], extensions?]
+```
+
+The 4th element `extensions` (optional, object): line-level extension attributes. Keys are namespace-prefixed TTML attribute names (e.g. `"ttm:agent"`, `"itunes:songPart"`), values are attribute value strings. They are written verbatim onto the corresponding `<p>` tag when writing TTML; `itunes:songPart` is extracted by the host to build `<div>` grouping (AMLL spec 7.1 section annotation) and is not emitted on `<p>`. Prefix whitelist: `ttm:` / `itunes:` / no prefix; attributes with other prefixes are dropped at parse time (the root node has no corresponding namespace declaration, so writing them would produce invalid XML). Old plugins that omit this element behave as before. Attribute values must be strings; non-string values or a non-object 4th element cause the whole group to be ignored (the line itself is unaffected).
+
+```javascript
+// Example: a line with line-level extension attributes
+[0, 2000, [[0, 500, "First"], [500, 1000, "line"]], { "ttm:agent": "v1", "itunes:songPart": "Verse" }]
 ```
 
 **`translated` line format, whole-line text** (translations have no word-level semantics):
@@ -274,6 +281,54 @@ Whole-line (backward compatible with older plugins):
 
 ```
 [lineStartMs, lineEndMs, "text"]
+```
+
+**Extension fields: `agents` and `metadata` (optional)**
+
+Besides `original` / `translated` / `romanization`, a structured payload may carry two extension fields for passing through TTML head information. Old plugins that omit them behave as before.
+
+`agents`: performer list, corresponding to TTML head `<ttm:agent>`. An array of objects; `id` is required (entries missing it are dropped), `type` (person / character / organization / group / other) and `name` are optional. `type` is passed through verbatim as a string, with no enum mapping, to avoid losing information. Lines reference an agent via the line-level extension attribute `"ttm:agent": "id"`:
+
+```javascript
+agents: [
+  { "id": "v1", "type": "person", "name": "Artist A" },
+  { "id": "v1000", "type": "group" }
+]
+```
+
+`metadata`: a head metadata element tree, mapping one-to-one to elements inside TTML `<head>`. Each node is `{ name, namespace?, attributes?, text?, children? }`; repeated sibling elements with the same name = multiple same-name nodes in the array. The plugin constructs the tree itself (sibling stays sibling, children stay children); the host does not normalize.
+
+Host handling rules for `metadata` (three branches, dispatched on the top-level element name; children are not re-validated, the tree shape is the plugin's responsibility):
+
+| Branch | Condition | Behavior |
+|------|------|------|
+| Official key + official structure | e.g. `songwriters` wrapping `songwriter` children with text | Written back per the official spec (to the corresponding TTML head position) |
+| Non-official key | Element names not present in the official spec | Passed through verbatim (element tree preserved) |
+| Official key + wrong structure | e.g. `songwriters` with text directly on top, or children not named `songwriter` | Whole subtree dropped with a warn log (no guessing the plugin's intent, no corrective fallback) |
+
+Official keys are case-sensitive: AMLL spec element names are all-lowercase (`songwriters` / `songwriter` / ...); camelCase forms (e.g. `songWriters`) are treated as non-official keys and take the passthrough branch, with no normalization.
+
+The following official keys are already carried by dedicated structured fields (`translated` / `romanization` / `agents`); providing them in `metadata` is necessarily duplicate → dropped with a warn: `translations`, `transliterations`, `ttm:agent`.
+
+Prefixed element names (with prefixes other than the built-in `ttm:` / `itunes:` / `xml:`) must provide a `namespace` URI, otherwise the host cannot emit valid XML → the node is dropped with a warn.
+
+```javascript
+metadata: [
+  // Official key: songwriters wrapping songwriter children (AMLL spec)
+  {
+    "name": "songwriters",
+    "children": [
+      { "name": "songwriter", "text": "BuzzY.D" },
+      { "name": "songwriter", "text": "NKidd" }
+    ]
+  },
+  // Non-official key: passthrough (a non-built-in prefix must provide the namespace URI declared on the source document's root node)
+  {
+    "name": "amll:meta",
+    "namespace": "<the URI declared via xmlns:amll on the source document root>",
+    "attributes": { "key": "musicName", "value": "Song Title" }
+  }
+]
 ```
 
 **Format 2: full raw lyrics text**
@@ -325,6 +380,8 @@ function getLyrics(request) {
 | `original` | `Line[]` | Used only by `type: "structured"`, original lyrics, word-level or whole-line |
 | `translated` | `Line[] \| null` | Used only by `type: "structured"`, translated lyrics |
 | `romanization` | `Line[] \| null` | Used only by `type: "structured"`, romanized lyrics; lines may be word-level (syllable reading) or whole-line text |
+| `agents` | `Agent[]` | Used only by `type: "structured"`, performer list (optional; written to TTML head `<ttm:agent>`, see the extension fields section above) |
+| `metadata` | `MetadataElement[]` | Used only by `type: "structured"`, head metadata element tree (optional; official keys written per spec, non-official passed through, wrong-structure dropped — see the extension fields section above) |
 | `rawPlainLrc` | `string` | Used only by `type: "rawPlainLrc"` |
 | `rawVerbatimLrc` | `string` | Used only by `type: "rawVerbatimLrc"` |
 | `rawEnhancedLrc` | `string` | Used only by `type: "rawEnhancedLrc"` |

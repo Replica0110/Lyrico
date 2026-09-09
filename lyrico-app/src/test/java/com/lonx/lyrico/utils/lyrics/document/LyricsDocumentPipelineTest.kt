@@ -8,6 +8,7 @@ import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,6 +25,63 @@ class LyricsDocumentPipelineTest {
         val translation = document.tracks.first { it.type == LyricsTrackType.Translation }
         assertEquals("zh-Hans", translation.language)
         assertEquals("L1", translation.lines.first().linkKey)
+    }
+
+    @Test
+    fun ttmlSongPartDivsSurviveRoundTrip() {
+        // 管线路径保真：div 的 itunes:songPart 解析进行扩展，写回时按值分组重建 div
+        val raw = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <tt xmlns="http://www.w3.org/ns/ttml"
+                xmlns:itunes="http://music.apple.com/lyric-ttml-internal"
+                xmlns:ttm="http://www.w3.org/ns/ttml#metadata">
+              <body>
+                <div>
+                  <p begin="1.000" end="2.000">intro</p>
+                </div>
+                <div itunes:songPart="Verse">
+                  <p begin="3.000" end="4.000">A</p>
+                  <p begin="5.000" end="6.000">B</p>
+                </div>
+                <div itunes:songPart="Chorus">
+                  <p begin="7.000" end="8.000">C</p>
+                </div>
+              </body>
+            </tt>
+        """.trimIndent()
+
+        val document = TtmlParser.parse(raw)
+        val originalLines = document.tracks.first { it.type == LyricsTrackType.Original }.lines
+        // 解析侧：每行继承最近祖先 div 的 songPart
+        assertNull(originalLines[0].songPartValueForTest())
+        assertEquals("Verse", originalLines[1].songPartValueForTest())
+        assertEquals("Verse", originalLines[2].songPartValueForTest())
+        assertEquals("Chorus", originalLines[3].songPartValueForTest())
+
+        // 写回侧：按 songPart 分组重建 div
+        val output = LyricsDocumentPipeline.process(
+            raw = raw,
+            sourceFormat = LyricFormat.TTML,
+            targetFormat = LyricFormat.TTML,
+            conversionMode = ConversionMode.NONE
+        ).orEmpty()
+
+        val defaultDiv = output.indexOf("    <div>\n")
+        val verseDiv = output.indexOf("""    <div itunes:songPart="Verse">""")
+        val chorusDiv = output.indexOf("""    <div itunes:songPart="Chorus">""")
+        assertTrue(defaultDiv in 0 until verseDiv)
+        assertTrue(verseDiv in defaultDiv until chorusDiv)
+        assertTrue(chorusDiv > verseDiv)
+        // songPart 不落在 <p> 上
+        val pTags = Regex("""<p [^>]*>""").findAll(output).map { it.value }.toList()
+        assertTrue(pTags.none { it.contains("songPart") })
+    }
+
+    /** 测试辅助：读取行扩展中的 songPart 值 */
+    private fun com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentLine.songPartValueForTest(): String? {
+        return extensions.attributes.entries
+            .firstOrNull { it.key.localName == "songPart" }
+            ?.value?.takeIf { it.isNotBlank() }
     }
 
     @Test

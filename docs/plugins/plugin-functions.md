@@ -249,7 +249,14 @@ function getLyrics(request) {
 **`original` 行格式**（逐词）：
 
 ```
-[lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...]]
+[lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...], extensions?]
+```
+
+第 4 元素 `extensions`（可选，对象）：行级扩展属性，key 为带命名空间前缀的 TTML 属性名（如 `"ttm:agent"`、`"itunes:songPart"`），value 为属性值字符串。写入 TTML 时原样输出到对应 `<p>` 标签上；`itunes:songPart` 由宿主提取用于 `<div>` 分组（AMLL 规范 7.1 段落标注），不输出到 `<p>`。前缀白名单：`ttm:` / `itunes:` / 无前缀，其他前缀的属性解析时丢弃（根节点无对应命名空间声明，写出会破坏 XML 结构）。旧插件不传该元素，行为不变。属性值必须是字符串；非字符串值、非对象形态的第 4 元素整组忽略（不影响行本身）。
+
+```javascript
+// 示例：带行级扩展属性的行
+[0, 2000, [[0, 500, "第一"], [500, 1000, "句"]], { "ttm:agent": "v1", "itunes:songPart": "Verse" }]
 ```
 
 **`translated` 行格式**（整行文本；翻译无词级语义）：
@@ -270,6 +277,54 @@ function getLyrics(request) {
 
 ```
 [lineStartMs, lineEndMs, "text"]
+```
+
+**扩展字段：`agents` 与 `metadata`（可选）**
+
+除 `original` / `translated` / `romanization` 外，structured 载荷还可携带两个扩展字段，用于透传 TTML head 信息。旧插件不传，行为不变。
+
+`agents`：演唱者列表，对应 TTML head 的 `<ttm:agent>`。对象数组，`id` 必填（缺失整条丢弃），`type`（person / character / organization / group / other）、`name` 可选。`type` 原样字符串透传，不做枚举映射避免丢信息。正文行通过行级扩展属性 `"ttm:agent": "id"` 引用：
+
+```javascript
+agents: [
+  { "id": "v1", "type": "person", "name": "艺人A" },
+  { "id": "v1000", "type": "group" }
+]
+```
+
+`metadata`：head 元数据元素树，与 TTML `<head>` 内元素一一对应。每个节点为 `{ name, namespace?, attributes?, text?, children? }`；同级重复的同名元素 = 数组中的多个同名节点。插件自行构造树形结构（源数据同级就同级、children 就 children），宿主不归一化。
+
+宿主对 `metadata` 的处理规则（三分支，按顶层元素名分派；子元素不重复校验，树结构由插件负责）：
+
+| 分支 | 条件 | 行为 |
+|------|------|------|
+| 官方 key + 官方结构 | 如 `songwriters` 包裹带文本的 `songwriter` children | 按官方规范写回（输出到 TTML head 对应位置） |
+| 非官方 key | 官方规范中不存在的元素名 | 原样透传写回（保留元素树） |
+| 官方 key + 错误结构 | 如 `songwriters` 顶层直接放 text、children 名不是 `songwriter` | 丢弃整棵子树并输出 warn 日志（不猜插件意图、不做纠错兜底） |
+
+官方 key 大小写敏感：AMLL 规范元素名全小写（`songwriters` / `songwriter` / ...），camelCase 形态（如 `songWriters`）视为非官方 key 走透传分支，不做归一化。
+
+以下官方 key 已由 structured 协议专门字段承载（`translated` / `romanization` / `agents`），在 `metadata` 中出现必然重复 → 丢弃并 warn：`translations`、`transliterations`、`ttm:agent`。
+
+带前缀的元素名（非 `ttm:` / `itunes:` / `xml:` 内置前缀）必须提供 `namespace` URI，否则宿主无法写出合法 XML → 丢弃该节点并 warn。
+
+```javascript
+metadata: [
+  // 官方 key：songwriters 包裹 songwriter children（AMLL 规范）
+  {
+    "name": "songwriters",
+    "children": [
+      { "name": "songwriter", "text": "BuzzY.D" },
+      { "name": "songwriter", "text": "NKidd" }
+    ]
+  },
+  // 非官方 key：原样透传（带非内置前缀时必须提供 namespace URI，即源文档根节点声明的 URI）
+  {
+    "name": "amll:meta",
+    "namespace": "<源文档根节点 xmlns:amll 声明的 URI>",
+    "attributes": { "key": "musicName", "value": "歌曲名" }
+  }
+]
 ```
 
 **格式 2：完整原始歌词文本**
@@ -321,6 +376,8 @@ function getLyrics(request) {
 | `original` | `Line[]` | 仅 `type: "structured"` 使用，原文歌词（逐词或整行） |
 | `translated` | `Line[] \| null` | 仅 `type: "structured"` 使用，翻译歌词 |
 | `romanization` | `Line[] \| null` | 仅 `type: "structured"` 使用，音译歌词（罗马音等）；行支持逐词（逐字注音）或整行文本 |
+| `agents` | `Agent[]` | 仅 `type: "structured"` 使用，演唱者列表（可选；写回 TTML head `<ttm:agent>`，详见上文扩展字段） |
+| `metadata` | `MetadataElement[]` | 仅 `type: "structured"` 使用，head 元数据元素树（可选；官方 key 按规范写回、非官方透传、错结构丢弃，详见上文扩展字段） |
 | `rawPlainLrc` | `string` | 仅 `type: "rawPlainLrc"` 使用 |
 | `rawVerbatimLrc` | `string` | 仅 `type: "rawVerbatimLrc"` 使用 |
 | `rawEnhancedLrc` | `string` | 仅 `type: "rawEnhancedLrc"` 使用 |

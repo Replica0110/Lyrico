@@ -47,7 +47,7 @@ import com.ramcosta.composedestinations.generated.destinations.ArtistDetailDesti
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import my.nanihadesuka.compose.LazyVerticalGridScrollbar
+import my.nanihadesuka.compose.InternalLazyVerticalGridScrollbar
 import my.nanihadesuka.compose.ScrollbarSelectionMode
 import my.nanihadesuka.compose.ScrollbarSettings
 import org.koin.androidx.compose.koinViewModel
@@ -235,25 +235,20 @@ fun ArtistsPage(
                                 )
                             }
                         }
-                    }
-                }
-                if (!enableIndex) {
-                    LazyVerticalGridScrollbar(
-                        state = gridState,
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .libraryScrollbarOverlay(
-                                paddingValues = paddingValues,
-                                refreshIndicatorHeight = 56.dp,
-                            ),
-                        settings = ScrollbarSettings.Default.copy(
-                            alwaysShowScrollbar = true,
-                            selectionMode = ScrollbarSelectionMode.Full,
-                            thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                        ),
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize())
+                        if (!enableIndex) {
+                            InternalLazyVerticalGridScrollbar(
+                                state = gridState,
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .libraryScrollbarOverlay(paddingValues = paddingValues),
+                                settings = ScrollbarSettings.Default.copy(
+                                    alwaysShowScrollbar = true,
+                                    selectionMode = ScrollbarSelectionMode.Full,
+                                    thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                    thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                ),
+                            )
+                        }
                     }
                 }
                 if (enableIndex) {

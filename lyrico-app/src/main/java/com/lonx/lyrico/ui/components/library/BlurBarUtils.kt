@@ -27,7 +27,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 internal val FloatingNavigationBarHeight = 64.dp
 internal val FloatingNavigationBarBottomMargin = 16.dp
 internal val ContentBreathingRoom = 12.dp
-internal val LibraryScrollbarTrackWidth = 20.dp
+internal val LibraryScrollbarTrackWidth = 22.dp
 
 internal val LocalLibraryBottomContentPadding = staticCompositionLocalOf { ContentBreathingRoom }
 internal val LocalLibraryBarBlurEnabled = staticCompositionLocalOf { false }
@@ -70,11 +70,10 @@ internal fun Modifier.libraryScrollbarOverlay(
     paddingValues: PaddingValues,
     extraTop: Dp = 0.dp,
     extraBottom: Dp = 0.dp,
-    refreshIndicatorHeight: Dp = 0.dp,
 ): Modifier {
     val layoutDirection = LocalLayoutDirection.current
     return padding(
-        top = paddingValues.calculateTopPadding() + extraTop + refreshIndicatorHeight,
+        top = paddingValues.calculateTopPadding() + extraTop,
         end = paddingValues.calculateEndPadding(layoutDirection),
         bottom = LocalLibraryBottomContentPadding.current + extraBottom,
     )

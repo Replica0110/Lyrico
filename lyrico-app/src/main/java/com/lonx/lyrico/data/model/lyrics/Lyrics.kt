@@ -25,8 +25,8 @@ data class LyricsLine(
     val end: Long,
     val words: List<LyricsWord>,
     // 行级扩展属性透传（structured 协议 Line 第 4 元素）：
-    // key 为带命名空间前缀的 TTML 属性名（如 "ttm:agent"、"itunes:songPart"），value 为属性值。
-    // 写回 TTML 时原样输出到对应 <p> 标签上。旧插件不传该字段，默认空。
+    // key 为带命名空间前缀的 TTML 属性名（如 "ttm:agent"、"itunes:song-part"），value 为属性值。
+    // 写回 TTML 时输出到对应 <p>；song-part、key 和 div 时间由 writer 统一管理。
     val extensions: Map<String, String> = emptyMap()
 ) : Parcelable
 

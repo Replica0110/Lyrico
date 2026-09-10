@@ -250,51 +250,46 @@ function getLyrics(request) {
 }
 ```
 
-**`original` line format, word-level:**
+### Structured line formats
+
+`original` and `romanization` both accept word-level lines:
 
 ```
 [lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...], extensions?]
 ```
 
-The 4th element `extensions` (optional, object): line-level extension attributes. Keys are namespace-prefixed TTML attribute names (e.g. `"ttm:agent"`, `"itunes:songPart"`), values are attribute value strings. They are written verbatim onto the corresponding `<p>` tag when writing TTML. The following keys are consumed by the host and **not emitted on `<p>`**:
+They also accept whole-line text. `translated` uses only this form:
 
-- `"itunes:songPart"`: section annotation, extracted by the host to rebuild `<div itunes:songPart="...">` grouping (AMLL spec 7.1);
-- `"divBegin"` / `"divEnd"`: section time window (millisecond strings), carried on the first line of a section; the host writes them to that section's `<div begin="..." end="...">`, enabling faithful round-trip of purely annotated sections without time semantics.
+```
+[lineStartMs, lineEndMs, "text"]
+```
 
-div grouping rule: a new div is forced when the `songPart` value changes **or** a `divBegin` appears (explicit time-window segmentation).
+When exported as TTML, word-level romanization keeps its timing. Lyrico inserts spaces between adjacent syllables when needed.
 
-Prefix whitelist: `ttm:` / `itunes:` / no prefix; attributes with other prefixes are dropped at parse time (the root node has no corresponding namespace declaration, so writing them would produce invalid XML). Old plugins that omit this element behave as before. Attribute values must be strings; non-string values or a non-object 4th element cause the whole group to be ignored (the line itself is unaffected).
+### TTML extensions
+
+The fields in this section affect TTML output only. TTML-specific structure is not retained when exporting to LRC.
+
+This section describes the TTML subset available through the structured plugin payload; it is not a replacement for the AMLL TTML DB submission specification. Ruby, `body dur`, and unknown XML nodes cannot currently be represented by a structured payload. Return `type: "rawTtml"` when the complete source document must be retained. If the user later applies script conversion, track filtering, or another transformation, Lyrico will parse and rewrite that document, and unmodeled structures may be lost.
+
+An `original` line may include extension attributes as its fourth item:
 
 ```javascript
-// Example: the first line of a section carries songPart + the section time window; lines carry ttm:agent
-[0, 6000, [[0, 500, "First"], [500, 1000, "line"]], { "itunes:songPart": "Verse", "ttm:agent": "v1", "divBegin": "0", "divEnd": "6000" }]
+[0, 6000, [[0, 500, "First"], [500, 1000, "line"]], {
+  "ttm:agent": "v1",
+  "itunes:song-part": "Verse",
+  "divBegin": "0",
+  "divEnd": "6000"
+}]
 ```
 
-**`translated` line format, whole-line text** (translations have no word-level semantics):
+- `ttm:agent` refers to an entry in `agents`.
+- `itunes:song-part` creates a `<div itunes:song-part="...">`. The legacy `itunes:songPart` spelling is accepted on input, but output always uses `song-part`.
+- `divBegin` and `divEnd` are Lyrico transport fields for a section's time range, in milliseconds. Put them on the section's first line; they become the containing `<div>`'s `begin` and `end` attributes.
 
-```
-[lineStartMs, lineEndMs, "text"]
-```
+Lyrico generates continuous `itunes:key` values (`L1`, `L2`, …) for every output `<p>`, so plugins do not need to provide them. Extension attributes may be unprefixed or use the `ttm:` and `itunes:` prefixes; other prefixes are ignored.
 
-**`romanization` line format, word-level or whole-line:**
-
-Word-level (syllable-by-syllable reading, same shape as `original` word-level; per-word timing is preserved when writing TTML):
-
-```
-[lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...]]
-```
-
-Whole-line (backward compatible with older plugins):
-
-```
-[lineStartMs, lineEndMs, "text"]
-```
-
-**Extension fields: `agents` and `metadata` (optional)**
-
-Besides `original` / `translated` / `romanization`, a structured payload may carry two extension fields for passing through TTML head information. Old plugins that omit them behave as before.
-
-`agents`: performer list, corresponding to TTML head `<ttm:agent>`. An array of objects; `id` is required (entries missing it are dropped), `type` (person / character / organization / group / other) and `name` are optional. `type` is passed through verbatim as a string, with no enum mapping, to avoid losing information. Lines reference an agent via the line-level extension attribute `"ttm:agent": "id"`:
+`agents` generates `<ttm:agent>` elements. `id` is required; `type` and `name` are optional:
 
 ```javascript
 agents: [
@@ -303,66 +298,22 @@ agents: [
 ]
 ```
 
-`metadata`: a head metadata element tree, mapping one-to-one to elements inside TTML `<head>`. Each node is `{ name, namespace?, attributes?, text?, children? }`; repeated sibling elements with the same name = multiple same-name nodes in the array. The plugin constructs the tree itself (sibling stays sibling, children stay children); the host does not normalize.
+`metadata` adds elements to `<head>`. Each node has the form `{ name, namespace?, attributes?, text?, children? }`. `songwriters` is written inside Apple-style `<iTunesMetadata>`; other nodes are written inside regular `<metadata>`. Current constraints are:
 
-Host handling rules for `metadata` (three branches, dispatched on the top-level element name; children are not re-validated, the tree shape is the plugin's responsibility):
+- `songwriters` must contain one or more `songwriter` children with text;
+- `translations`, `transliterations`, and `ttm:agent` have dedicated fields and should not also appear in `metadata`;
+- a custom prefix requires `namespace`, for example `{ "name": "amll:meta", "namespace": "http://www.example.com/ns/amll", ... }`.
 
-| Branch | Condition | Behavior |
-|------|------|------|
-| Official key + official structure | e.g. `songwriters` wrapping `songwriter` children with text | Written back per the official spec (to the corresponding TTML head position) |
-| Non-official key | Element names not present in the official spec | Passed through verbatim (element tree preserved) |
-| Official key + wrong structure | e.g. `songwriters` with text directly on top, or children not named `songwriter` | Whole subtree dropped with a warn log (no guessing the plugin's intent, no corrective fallback) |
+The following fields set root attributes and auxiliary-track languages:
 
-Official keys are case-sensitive: AMLL spec element names are all-lowercase (`songwriters` / `songwriter` / ...); camelCase forms (e.g. `songWriters`) are treated as non-official keys and take the passthrough branch, with no normalization.
+| Field | TTML location |
+|------|---------------|
+| `timing` | `<tt itunes:timing>`; commonly `Word` or `Line` |
+| `language` | `<tt xml:lang>` |
+| `translatedLang` | `xml:lang` on the inline translation |
+| `romanizationLang` | `xml:lang` on `<transliteration>` |
 
-The following official keys are already carried by dedicated structured fields (`translated` / `romanization` / `agents`); providing them in `metadata` is necessarily duplicate → dropped with a warn: `translations`, `transliterations`, `ttm:agent`.
-
-Prefixed element names (with prefixes other than the built-in `ttm:` / `itunes:` / `xml:`) must provide a `namespace` URI, otherwise the host cannot emit valid XML → the node is dropped with a warn.
-
-```javascript
-metadata: [
-  // Official key: songwriters wrapping songwriter children (AMLL spec)
-  {
-    "name": "songwriters",
-    "children": [
-      { "name": "songwriter", "text": "Songwriter A" },
-      { "name": "songwriter", "text": "Songwriter B" }
-    ]
-  },
-  // Non-official key: passthrough. A non-built-in prefix must provide the namespace URI —
-  // the address declared via xmlns:amll on the source document root (the host does not know
-  // custom prefixes; without the URI it cannot emit valid XML). The host collects the
-  // "prefix → URI" mapping and appends a single xmlns:prefix="..." declaration on the root element.
-  {
-    "name": "amll:meta",
-    "namespace": "http://www.example.com/ns/amll",
-    "attributes": { "key": "musicName", "value": "Song Title" }
-  }
-]
-```
-
-**Extension fields: language codes and root attributes (`timing` / `language` / `translatedLang` / `romanizationLang`, optional)**
-
-A structured payload may also carry the following top-level fields (all optional, default empty string; writing behavior is unchanged when omitted):
-
-| Field | Written to TTML at | Description |
-|------|------|-------------|
-| `timing` | Root `<tt itunes:timing="...">` | Timing granularity flag; pass `"Word"` for word-level data |
-| `language` | Root `<tt xml:lang="...">` | Original-language code (BCP47) |
-| `translatedLang` | Inline translation `<span ttm:role="x-translation" xml:lang="...">` | Translation-track language code (BCP47) |
-| `romanizationLang` | Head romanization `<transliteration xml:lang="...">` | Romanization-track language code (BCP47, e.g. `zh-Latn-jyutping`) |
-
-Language codes are passed through verbatim, with no folding or enum mapping (full BCP47 tags are preserved).
-
-```javascript
-{
-  timing: "Word",
-  language: "zh-Hans",
-  translatedLang: "zh-Hant",
-  romanizationLang: "zh-Latn-jyutping",
-  original: [...], translated: [...], romanization: [...]
-}
-```
+Use BCP 47 language tags such as `zh-Hans` and `ja-Latn`.
 
 **Format 2: full raw lyrics text**
 
@@ -414,7 +365,7 @@ function getLyrics(request) {
 | `translated` | `Line[] \| null` | Used only by `type: "structured"`, translated lyrics |
 | `romanization` | `Line[] \| null` | Used only by `type: "structured"`, romanized lyrics; lines may be word-level (syllable reading) or whole-line text |
 | `agents` | `Agent[]` | Used only by `type: "structured"`, performer list (optional; written to TTML head `<ttm:agent>`, see the extension fields section above) |
-| `metadata` | `MetadataElement[]` | Used only by `type: "structured"`, head metadata element tree (optional; official keys written per spec, non-official passed through, wrong-structure dropped — see the extension fields section above) |
+| `metadata` | `MetadataElement[]` | Used only by `type: "structured"`, elements added to the TTML head (optional; see constraints above) |
 | `timing` | `string` | Used only by `type: "structured"`, timing granularity flag (optional; pass `"Word"` for word-level, written to root `<tt itunes:timing>`) |
 | `language` | `string` | Used only by `type: "structured"`, original-language code BCP47 (optional; written to root `<tt xml:lang>`) |
 | `translatedLang` | `string` | Used only by `type: "structured"`, translation-track language code BCP47 (optional; written to the inline translation's `xml:lang`) |
@@ -422,7 +373,7 @@ function getLyrics(request) {
 | `rawPlainLrc` | `string` | Used only by `type: "rawPlainLrc"` |
 | `rawVerbatimLrc` | `string` | Used only by `type: "rawVerbatimLrc"` |
 | `rawEnhancedLrc` | `string` | Used only by `type: "rawEnhancedLrc"` |
-| `rawTtml` | `string` | Required for `type: "rawTtml"`; may also accompany `type: "structured"` (TTML source as a fidelity backstop — the host round-trips it through the passthrough pipeline, so any detail not covered by the structured projection is preserved) |
+| `rawTtml` | `string` | Used only by `type: "rawTtml"` |
 | `rawMultiPersonEnhancedLrc` | `string` | Used only by `type: "rawMultiPersonEnhancedLrc"` |
 
 ---

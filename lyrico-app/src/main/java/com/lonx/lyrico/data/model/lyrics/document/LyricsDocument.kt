@@ -7,6 +7,9 @@ data class LyricsDocument(
     val agents: List<LyricsAgent> = emptyList(),
     val tracks: List<LyricsTrack> = emptyList(),
     val extensions: ExtensionMap = ExtensionMap(),
+    val bodyExtensions: ExtensionMap = ExtensionMap(),
+    val headMetadataElements: List<ExtensionElement> = emptyList(),
+    val itunesMetadataElements: List<ExtensionElement> = emptyList(),
     val sourceFormat: LyricFormat? = null
 )
 
@@ -25,6 +28,7 @@ data class LyricsAgent(
     val id: String,
     val type: LyricsAgentType = LyricsAgentType.Unknown,
     val name: String? = null,
+    val rawType: String? = null,
     val extensions: ExtensionMap = ExtensionMap()
 )
 
@@ -32,6 +36,8 @@ enum class LyricsAgentType {
     Person,
     Group,
     Character,
+    Organization,
+    Other,
     Narrator,
     Unknown
 }
@@ -66,6 +72,7 @@ data class LyricsDocumentWord(
     val startMs: Long? = null,
     val endMs: Long? = null,
     val text: String,
+    val rubyText: String? = null,
     val extensions: ExtensionMap = ExtensionMap()
 )
 

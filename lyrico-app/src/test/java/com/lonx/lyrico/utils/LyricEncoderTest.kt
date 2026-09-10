@@ -2,16 +2,51 @@ package com.lonx.lyrico.utils
 
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricsAgentEntry
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsMetadataElement
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LyricEncoderTest {
+    @Test
+    fun structuredTtmlDelegationKeepsRenderConfigBehavior() {
+        val result = LyricsResult(
+            tags = emptyMap(),
+            original = listOf(
+                LyricsLine(1000L, 2000L, listOf(LyricsWord(1000L, 2000L, "原文")))
+            ),
+            translated = listOf(
+                LyricsLine(1000L, 2000L, listOf(LyricsWord(1000L, 2000L, "後來")))
+            ),
+            romanization = listOf(
+                LyricsLine(1000L, 2000L, listOf(LyricsWord(1000L, 2000L, "hou lai")))
+            )
+        )
+
+        val output = LyricEncoder.encode(
+            result,
+            LyricRenderConfig(
+                format = LyricFormat.TTML,
+                conversionMode = ConversionMode.TRADITIONAL_TO_SIMPLIFIED,
+                onlyTranslationIfAvailable = true,
+                showTranslation = true,
+                showRomanization = true
+            ),
+            offset = 500L
+        )
+
+        assertTrue(output.contains("""<p begin="00:00:01.500" end="00:00:02.500" itunes:key="L1">后来</p>"""))
+        assertFalse(output.contains("原文"))
+        assertFalse(output.contains("<translations>"))
+        assertFalse(output.contains("<transliterations>"))
+    }
+
     @Test
     fun structuredWordLevelRomanizationIsWrittenToTtmlHeadSidecar() {
         val result = LyricsResult(
@@ -59,9 +94,10 @@ class LyricEncoderTest {
         assertTrue(output.contains("<transliterations>"))
         assertTrue(output.contains("""<span xmlns="http://www.w3.org/ns/ttml" begin="00:00:01.000" end="00:00:01.500">ngaan</span>"""))
         assertTrue(output.contains("""<span xmlns="http://www.w3.org/ns/ttml" begin="00:00:01.500" end="00:00:02.000">cin</span>"""))
+        assertTrue(output.contains(">ngaan</span> <span"))
         // 词级音译不再被拼成整行内联 x-romanization
         assertFalse(output.contains("""ttm:role="x-romanization""""))
-        // 翻译为整行内联，保持不变
+        // 统一 writer 后仍保持 structured 接口原有的行内翻译形态
         assertTrue(output.contains("""ttm:role="x-translation">面前</span>"""))
     }
 
@@ -107,6 +143,8 @@ class LyricEncoderTest {
         // 行级扩展属性（ttm:agent 等）原样输出到 <p> 标签
         val result = LyricsResult(
             tags = emptyMap(),
+            translated = null,
+            romanization = null,
             original = listOf(
                 LyricsLine(
                     start = 1000L,
@@ -119,10 +157,10 @@ class LyricEncoderTest {
 
         val output = LyricEncoder.encode(
             result = result,
-            config = LyricRenderConfig(format = LyricFormat.TTML)
+            config = LyricRenderConfig(format = LyricFormat.TTML, showRomanization = false)
         )
 
-        assertTrue(output.contains("""<p begin="00:00:01.000" end="00:00:02.000" ttm:agent="v1">"""))
+        assertTrue(output.contains("""<p begin="00:00:01.000" end="00:00:02.000" itunes:key="L1" ttm:agent="v1">"""))
     }
 
     @Test
@@ -137,6 +175,8 @@ class LyricEncoderTest {
 
         val result = LyricsResult(
             tags = emptyMap(),
+            translated = null,
+            romanization = null,
             original = listOf(
                 line(1000L, null),      // 默认 div
                 line(2000L, "Verse"),   // Verse div
@@ -148,13 +188,13 @@ class LyricEncoderTest {
 
         val output = LyricEncoder.encode(
             result = result,
-            config = LyricRenderConfig(format = LyricFormat.TTML)
+            config = LyricRenderConfig(format = LyricFormat.TTML, showRomanization = false)
         )
 
         // 分组 div：默认 → Verse → Chorus → 默认（连续相同 songPart 归入同一 div）
         val defaultDivIndex = output.indexOf("    <div>\n")
-        val verseDivIndex = output.indexOf("""    <div itunes:songPart="Verse">""")
-        val chorusDivIndex = output.indexOf("""    <div itunes:songPart="Chorus">""")
+        val verseDivIndex = output.indexOf("""    <div itunes:song-part="Verse">""")
+        val chorusDivIndex = output.indexOf("""    <div itunes:song-part="Chorus">""")
         val lastDefaultDivIndex = output.lastIndexOf("    <div>\n")
 
         assertTrue(defaultDivIndex in 0 until verseDivIndex)
@@ -164,7 +204,11 @@ class LyricEncoderTest {
 
         // songPart 是 div 属性，<p> 上不得出现
         val pTags = Regex("""<p [^>]*>""").findAll(output).map { it.value }.toList()
-        assertTrue(pTags.none { it.contains("songPart") })
+        assertTrue(pTags.none { it.contains("songPart") || it.contains("song-part") })
+        assertEquals(
+            listOf("L1", "L2", "L3", "L4", "L5"),
+            Regex("""<p [^>]*itunes:key="([^"]+)"""").findAll(output).map { it.groupValues[1] }.toList()
+        )
     }
 
     @Test
@@ -172,6 +216,8 @@ class LyricEncoderTest {
         // agents → head <ttm:agent xml:id="..." type="..."><ttm:name type="full">...</ttm:name></ttm:agent>
         val result = LyricsResult(
             tags = emptyMap(),
+            translated = null,
+            romanization = null,
             original = listOf(
                 LyricsLine(
                     start = 1000L,
@@ -187,7 +233,7 @@ class LyricEncoderTest {
 
         val output = LyricEncoder.encode(
             result = result,
-            config = LyricRenderConfig(format = LyricFormat.TTML)
+            config = LyricRenderConfig(format = LyricFormat.TTML, showRomanization = false)
         )
 
         assertTrue(output.contains("""<ttm:agent xml:id="v1" type="person">"""))
@@ -203,6 +249,8 @@ class LyricEncoderTest {
         // 官方 songwriters 结构 → <iTunesMetadata> 容器内输出
         val result = LyricsResult(
             tags = emptyMap(),
+            translated = null,
+            romanization = null,
             original = listOf(
                 LyricsLine(
                     start = 1000L,
@@ -223,7 +271,7 @@ class LyricEncoderTest {
 
         val output = LyricEncoder.encode(
             result = result,
-            config = LyricRenderConfig(format = LyricFormat.TTML)
+            config = LyricRenderConfig(format = LyricFormat.TTML, showRomanization = false)
         )
 
         assertTrue(output.contains("<iTunesMetadata xmlns=\"http://music.apple.com/lyric-ttml-internal\">"))
@@ -237,6 +285,8 @@ class LyricEncoderTest {
         // 非官方元素透传：带前缀的元素在根节点补 xmlns 声明
         val result = LyricsResult(
             tags = emptyMap(),
+            translated = null,
+            romanization = null,
             original = listOf(
                 LyricsLine(
                     start = 1000L,
@@ -260,7 +310,7 @@ class LyricEncoderTest {
 
         val output = LyricEncoder.encode(
             result = result,
-            config = LyricRenderConfig(format = LyricFormat.TTML)
+            config = LyricRenderConfig(format = LyricFormat.TTML, showRomanization = false)
         )
 
         // 根节点补 amll 命名空间声明
@@ -278,6 +328,8 @@ class LyricEncoderTest {
         // 无 agents/metadata/音译时不输出 <head>（与旧版行为一致）
         val result = LyricsResult(
             tags = emptyMap(),
+            translated = null,
+            romanization = null,
             original = listOf(
                 LyricsLine(
                     start = 1000L,
@@ -289,7 +341,7 @@ class LyricEncoderTest {
 
         val output = LyricEncoder.encode(
             result = result,
-            config = LyricRenderConfig(format = LyricFormat.TTML)
+            config = LyricRenderConfig(format = LyricFormat.TTML, showRomanization = false)
         )
 
         assertFalse(output.contains("<head>"))

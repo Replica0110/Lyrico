@@ -13,6 +13,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LyricsDocumentPipelineTest {
+    @Test(expected = IllegalArgumentException::class)
+    fun ttmlParserRejectsDoctypeWithoutDependingOnParserFeatures() {
+        TtmlParser.parse(
+            """
+                <?xml version="1.0"?>
+                <!DOCTYPE tt [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+                <tt xmlns="http://www.w3.org/ns/ttml"><body><div><p begin="1" end="2">&xxe;</p></div></body></tt>
+            """.trimIndent()
+        )
+    }
+
     @Test
     fun ttmlParserPreservesAgentKeyAndTranslationLink() {
         val document = TtmlParser.parse(sampleTtml())
@@ -25,6 +36,46 @@ class LyricsDocumentPipelineTest {
         val translation = document.tracks.first { it.type == LyricsTrackType.Translation }
         assertEquals("zh-Hans", translation.language)
         assertEquals("L1", translation.lines.first().linkKey)
+    }
+
+    @Test
+    fun documentToStructuredResultPreservesTtmlLanguagesTimingAndDivWindow() {
+        val raw = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <tt xmlns="http://www.w3.org/ns/ttml"
+                xmlns:itunes="http://music.apple.com/lyric-ttml-internal"
+                xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+                xml:lang="zh-Hant"
+                itunes:timing="Word">
+              <head>
+                <metadata>
+                  <iTunesMetadata xmlns="http://music.apple.com/lyric-ttml-internal">
+                    <translations>
+                      <translation xml:lang="zh-Hans"><text for="L1">翻译</text></translation>
+                    </translations>
+                    <transliterations>
+                      <transliteration xml:lang="zh-Latn"><text for="L1">roman</text></transliteration>
+                    </transliterations>
+                  </iTunesMetadata>
+                </metadata>
+              </head>
+              <body>
+                <div begin="1.000" end="5.000">
+                  <p begin="1.000" end="2.000" itunes:key="L1">原文</p>
+                </div>
+              </body>
+            </tt>
+        """.trimIndent()
+
+        val document = TtmlParser.parse(raw)
+        val result = with(LyricsDocumentPipeline) { document.toLyricsResult() }
+
+        assertEquals("Word", result.timing)
+        assertEquals("zh-Hant", result.language)
+        assertEquals("zh-Hans", result.translatedLang)
+        assertEquals("zh-Latn", result.romanizationLang)
+        assertEquals("1000", result.original.single().extensions["divBegin"])
+        assertEquals("5000", result.original.single().extensions["divEnd"])
     }
 
     @Test
@@ -67,20 +118,20 @@ class LyricsDocumentPipelineTest {
         ).orEmpty()
 
         val defaultDiv = output.indexOf("    <div>\n")
-        val verseDiv = output.indexOf("""    <div itunes:songPart="Verse">""")
-        val chorusDiv = output.indexOf("""    <div itunes:songPart="Chorus">""")
+        val verseDiv = output.indexOf("""    <div itunes:song-part="Verse">""")
+        val chorusDiv = output.indexOf("""    <div itunes:song-part="Chorus">""")
         assertTrue(defaultDiv in 0 until verseDiv)
         assertTrue(verseDiv in defaultDiv until chorusDiv)
         assertTrue(chorusDiv > verseDiv)
         // songPart 不落在 <p> 上
         val pTags = Regex("""<p [^>]*>""").findAll(output).map { it.value }.toList()
-        assertTrue(pTags.none { it.contains("songPart") })
+        assertTrue(pTags.none { it.contains("songPart") || it.contains("song-part") })
     }
 
     /** 测试辅助：读取行扩展中的 songPart 值 */
     private fun com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentLine.songPartValueForTest(): String? {
         return extensions.attributes.entries
-            .firstOrNull { it.key.localName == "songPart" }
+            .firstOrNull { it.key.localName == "song-part" || it.key.localName == "songPart" }
             ?.value?.takeIf { it.isNotBlank() }
     }
 
@@ -96,6 +147,91 @@ class LyricsDocumentPipelineTest {
         assertTrue(output.contains("""ttm:agent="v1""""))
         assertTrue(output.contains("""itunes:key="L1""""))
         assertTrue(output.contains("后来"))
+    }
+
+    @Test
+    fun amllCanonicalRolesMetadataAndAgentsSurviveRewrite() {
+        val raw = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <tt xmlns="http://www.w3.org/ns/ttml"
+                xmlns:itunes="http://music.apple.com/lyric-ttml-internal"
+                xmlns:ttm="http://www.w3.org/ns/ttml#metadata">
+              <head>
+                <metadata>
+                  <ttm:agent xml:id="v1" type="other"><ttm:name type="full">Guest</ttm:name></ttm:agent>
+                </metadata>
+                <metadata>
+                  <iTunesMetadata xmlns="http://music.apple.com/lyric-ttml-internal">
+                    <translations>
+                      <translation type="replacement" xml:lang="zh-Hans"><text for="old-key">翻译</text></translation>
+                    </translations>
+                  </iTunesMetadata>
+                </metadata>
+              </head>
+              <body>
+                <div itunes:song-part="Verse">
+                  <p begin="1.000" end="2.000" itunes:key="old-key" ttm:agent="v1">原文<span ttm:role="x-roman">yuan wen</span></p>
+                </div>
+              </body>
+            </tt>
+        """.trimIndent()
+
+        val document = TtmlParser.parse(raw)
+        assertEquals("yuan wen", document.tracks.first { it.type == LyricsTrackType.Romanization }.lines.single().visibleText())
+        assertEquals("Verse", document.tracks.first { it.type == LyricsTrackType.Original }.lines.single().songPartValueForTest())
+
+        val output = TtmlWriter.write(document, emptyList())
+        assertTrue(output.contains("""itunes:key="L1"""))
+        assertTrue(output.contains("""<div itunes:song-part="Verse">"""))
+        assertTrue(output.contains("""<translation type="replacement" xml:lang="zh-Hans">"""))
+        assertTrue(output.contains("""<ttm:agent xml:id="v1" type="other">"""))
+        assertTrue(output.contains("""<ttm:name type="full">Guest</ttm:name>"""))
+        assertTrue(output.contains("""<text for="L1">yuan wen</text>"""))
+    }
+
+    @Test
+    fun ttmlRewritePreservesBodyDurationHeadExtensionsAndRuby() {
+        val raw = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <tt xmlns="http://www.w3.org/ns/ttml"
+                xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+                xmlns:itunes="http://music.apple.com/lyric-ttml-internal"
+                xmlns:amll="http://www.example.com/ns/amll"
+                xmlns:tts="http://www.w3.org/ns/ttml#styling"
+                itunes:timing="Word">
+              <head>
+                <metadata>
+                  <ttm:title>題名</ttm:title>
+                  <amll:meta key="musicName" value="題名"/>
+                </metadata>
+                <metadata>
+                  <iTunesMetadata xmlns="http://music.apple.com/lyric-ttml-internal">
+                    <songwriters><songwriter>作者</songwriter></songwriters>
+                  </iTunesMetadata>
+                </metadata>
+              </head>
+              <body dur="00:10.000">
+                <div>
+                  <p begin="1.000" end="2.000" itunes:key="L9">
+                    <span tts:ruby="container"><span tts:ruby="base">所</span><span tts:ruby="textContainer"><span tts:ruby="text" begin="1.000" end="2.000">しょ</span></span></span>
+                  </p>
+                </div>
+              </body>
+            </tt>
+        """.trimIndent()
+
+        val document = TtmlParser.parse(raw)
+        val word = document.tracks.first { it.type == LyricsTrackType.Original }.lines.single().words.single()
+        assertEquals("所", word.text)
+        assertEquals("しょ", word.rubyText)
+
+        val output = TtmlWriter.write(document, emptyList())
+        assertTrue(output.contains("""<body dur="00:10.000">"""))
+        assertTrue(output.contains("""<ttm:title>題名</ttm:title>"""))
+        assertTrue(output.contains("""<amll:meta key="musicName" value="題名"/>"""))
+        assertTrue(output.contains("""<songwriter>作者</songwriter>"""))
+        assertTrue(output.contains("""tts:ruby="base">所</span>"""))
+        assertTrue(output.contains("""tts:ruby="text" begin="00:00:01.000" end="00:00:02.000">しょ</span>"""))
     }
 
     @Test

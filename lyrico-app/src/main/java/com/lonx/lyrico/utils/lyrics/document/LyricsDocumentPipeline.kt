@@ -7,6 +7,7 @@ import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsAgentEntry
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
+import com.lonx.lyrico.data.model.lyrics.LyricsMetadataElement
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
@@ -18,9 +19,16 @@ import com.lonx.lyrico.data.model.lyrics.document.LyricsMetadata
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrack
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
 import com.lonx.lyrico.data.model.lyrics.document.LyricsAgentType
+import com.lonx.lyrico.data.model.lyrics.document.LyricsAgent
+import com.lonx.lyrico.data.model.lyrics.document.ExtensionElement
+import com.lonx.lyrico.data.model.lyrics.document.ExtensionMap
+import com.lonx.lyrico.data.model.lyrics.document.QualifiedName
 import com.lonx.lyrico.data.model.plugin.ResolvedFieldProcessRule
 
 object LyricsDocumentPipeline {
+    private const val NS_TTM = "http://www.w3.org/ns/ttml#metadata"
+    private const val NS_ITUNES = "http://music.apple.com/lyric-ttml-internal"
+    private const val NS_XML = "http://www.w3.org/XML/1998/namespace"
     private val parsers: Map<LyricFormat, LyricsFormatParser> = listOf(
         PlainLrcParser,
         VerbatimLrcParser,
@@ -101,8 +109,50 @@ object LyricsDocumentPipeline {
     ): String? {
         val parser = parsers[sourceFormat] ?: return null
         val writer = writers[targetFormat] ?: return null
-        var document = parser.parse(raw)
+        val document = parser.parse(raw)
+        return processDocument(
+            document = document,
+            writer = writer,
+            conversionMode = conversionMode,
+            showTranslation = showTranslation,
+            showRomanization = showRomanization,
+            onlyTranslationIfAvailable = onlyTranslationIfAvailable,
+            lineOrder = lineOrder,
+            normalizeWhitespace = normalizeWhitespace,
+            removeEmptyLines = removeEmptyLines,
+            removeTagLineKeywords = removeTagLineKeywords,
+            offset = offset
+        )
+    }
 
+    fun processStructuredResult(result: LyricsResult, config: LyricRenderConfig, offset: Long = 0L): String? {
+        return processDocument(
+            document = result.toLyricsDocument(),
+            writer = TtmlWriter,
+            conversionMode = config.conversionMode,
+            showTranslation = config.showTranslation,
+            showRomanization = config.showRomanization,
+            onlyTranslationIfAvailable = config.onlyTranslationIfAvailable,
+            lineOrder = config.normalizedLineOrder,
+            removeEmptyLines = config.removeEmptyLines,
+            offset = offset
+        )
+    }
+
+    private fun processDocument(
+        document: LyricsDocument,
+        writer: LyricsFormatWriter,
+        conversionMode: ConversionMode,
+        showTranslation: Boolean,
+        showRomanization: Boolean,
+        onlyTranslationIfAvailable: Boolean,
+        lineOrder: List<LyricLineTrack>,
+        normalizeWhitespace: Boolean = false,
+        removeEmptyLines: Boolean,
+        removeTagLineKeywords: List<String> = emptyList(),
+        offset: Long
+    ): String? {
+        var processed = document
         val processors = buildList {
             if (conversionMode != ConversionMode.NONE) {
                 add(TextTransformPostProcessor { text -> convertText(text, conversionMode) })
@@ -124,9 +174,9 @@ object LyricsDocumentPipeline {
         }
 
         processors.forEach { processor ->
-            document = processor.process(document)
+            processed = processor.process(processed)
         }
-        return writer.write(document, lineOrder).takeIf { it.isNotBlank() }
+        return writer.write(processed, lineOrder).takeIf { it.isNotBlank() }
     }
 
     fun LyricsResult.toLyricsDocument(): LyricsDocument {
@@ -139,24 +189,32 @@ object LyricsDocumentPipeline {
             )
             translated?.let { lines ->
                 add(
-                    LyricsTrack(
-                        type = LyricsTrackType.Translation,
-                        lines = lines.map { it.toDocumentLine() }
+                LyricsTrack(
+                    type = LyricsTrackType.Translation,
+                    language = translatedLang.takeIf { it.isNotBlank() },
+                    lines = lines.map { it.toDocumentLine() }
                     )
                 )
             }
             romanization?.let { lines ->
                 add(
-                    LyricsTrack(
-                        type = LyricsTrackType.Romanization,
-                        lines = lines.map { it.toDocumentLine() }
+                LyricsTrack(
+                    type = LyricsTrackType.Romanization,
+                    language = romanizationLang.takeIf { it.isNotBlank() },
+                    lines = lines.map { it.toDocumentLine() }
                     )
                 )
             }
         }
         return LyricsDocument(
-            metadata = tags.toLyricsMetadata(),
+            metadata = tags.toLyricsMetadata().copy(
+                timing = timing.takeIf { it.isNotBlank() },
+                language = language.takeIf { it.isNotBlank() }
+            ),
+            agents = agents.map { LyricsAgent(id = it.id, name = it.name, rawType = it.type) },
             tracks = tracks,
+            headMetadataElements = metadata.filterNot { it.name == "songwriters" }.map { it.toExtensionElement() },
+            itunesMetadataElements = metadata.filter { it.name == "songwriters" }.map { it.toExtensionElement() },
             sourceFormat = null
         )
     }
@@ -196,10 +254,17 @@ object LyricsDocumentPipeline {
             agents = agents.map { agent ->
                 LyricsAgentEntry(
                     id = agent.id,
-                    type = agent.type.toTtmlAgentType(),
+                    type = agent.rawType ?: agent.type.toTtmlAgentType(),
                     name = agent.name
                 )
-            }
+            },
+            metadata = (headMetadataElements + itunesMetadataElements).map { it.toLyricsMetadataElement() },
+            timing = metadata.timing.orEmpty(),
+            language = metadata.language.orEmpty(),
+            translatedLang = tracks.firstOrNull { it.type == LyricsTrackType.Translation }
+                ?.language.orEmpty(),
+            romanizationLang = tracks.firstOrNull { it.type == LyricsTrackType.Romanization }
+                ?.language.orEmpty()
         )
     }
 
@@ -229,6 +294,9 @@ object LyricsDocumentPipeline {
     }
 
     private fun com.lonx.lyrico.data.model.lyrics.LyricsLine.toDocumentLine(): LyricsDocumentLine {
+        val extensionMap = ExtensionMap(
+            attributes = extensions.map { (name, value) -> name.toQualifiedName() to value }.toMap()
+        )
         return LyricsDocumentLine(
             startMs = start,
             endMs = end,
@@ -239,7 +307,45 @@ object LyricsDocumentPipeline {
                     endMs = word.end,
                     text = word.text
                 )
-            }
+            },
+            agentId = extensions["ttm:agent"],
+            extensions = extensionMap
+        )
+    }
+
+    private fun String.toQualifiedName(): QualifiedName {
+        val prefix = substringBefore(':', "").takeIf { it.isNotEmpty() }
+        val localName = if (prefix == null) this else substringAfter(':')
+        val namespace = when (prefix) {
+            "ttm" -> NS_TTM
+            "itunes" -> NS_ITUNES
+            "xml" -> NS_XML
+            else -> null
+        }
+        return QualifiedName(namespaceUri = namespace, localName = localName, prefix = prefix)
+    }
+
+    private fun LyricsMetadataElement.toExtensionElement(): ExtensionElement {
+        val elementName = name.toQualifiedName().let { qualified ->
+            if (namespace.isNullOrBlank()) qualified else qualified.copy(namespaceUri = namespace)
+        }
+        return ExtensionElement(
+            name = elementName,
+            attributes = attributes.map { (name, value) -> name.toQualifiedName() to value }.toMap(),
+            text = text,
+            children = children.map { it.toExtensionElement() }
+        )
+    }
+
+    private fun ExtensionElement.toLyricsMetadataElement(): LyricsMetadataElement {
+        return LyricsMetadataElement(
+            name = name.prefix?.takeIf { it.isNotBlank() }?.let { "$it:${name.localName}" } ?: name.localName,
+            namespace = name.namespaceUri,
+            attributes = attributes.map { (name, value) ->
+                (name.prefix?.takeIf { it.isNotBlank() }?.let { "$it:${name.localName}" } ?: name.localName) to value
+            }.toMap(),
+            text = text,
+            children = children.map { it.toLyricsMetadataElement() }
         )
     }
 
@@ -305,8 +411,14 @@ object LyricsDocumentPipeline {
             val extensions = buildMap {
                 agentId?.let { put("ttm:agent", it) }
                 extensions.attributes.entries
-                    .firstOrNull { it.key.localName == "songPart" }
-                    ?.let { put("itunes:songPart", it.value) }
+                    .firstOrNull { it.key.localName == "song-part" || it.key.localName == "songPart" }
+                    ?.let { put("itunes:song-part", it.value) }
+                extensions.attributes.entries
+                    .firstOrNull { it.key.localName == "divBegin" }
+                    ?.let { put("divBegin", it.value) }
+                extensions.attributes.entries
+                    .firstOrNull { it.key.localName == "divEnd" }
+                    ?.let { put("divEnd", it.value) }
             }
             LyricsLine(
                 start = start,
@@ -333,6 +445,8 @@ object LyricsDocumentPipeline {
             LyricsAgentType.Person -> "person"
             LyricsAgentType.Group -> "group"
             LyricsAgentType.Character -> "character"
+            LyricsAgentType.Organization -> "organization"
+            LyricsAgentType.Other -> "other"
             LyricsAgentType.Narrator -> "person"
             LyricsAgentType.Unknown -> null
         }
@@ -395,7 +509,10 @@ class TextTransformPostProcessor(
                         line.copy(
                             text = transformer(line.text),
                             words = line.words.map { word ->
-                                word.copy(text = transformer(word.text))
+                                word.copy(
+                                    text = transformer(word.text),
+                                    rubyText = word.rubyText?.let(transformer)
+                                )
                             }
                         )
                     }
@@ -518,6 +635,7 @@ object OnlyTranslationPostProcessor : LyricsPostProcessor {
                     document.tracks.filterNot {
                         it.type == LyricsTrackType.Original ||
                                 it.type == LyricsTrackType.Translation ||
+                                it.type == LyricsTrackType.Romanization ||
                                 it.type == LyricsTrackType.Background
                     }
         )

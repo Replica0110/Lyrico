@@ -352,7 +352,7 @@ private fun String.toLyricsPayloadType(): LyricsPayloadType? {
  * 第 4 元素（可选）为行级扩展属性对象，key 为带命名空间前缀的 TTML 属性名：
  *
  * [
- *   [lineStart, lineEnd, words, {"ttm:agent": "v1", "itunes:songPart": "Verse"}]
+ *   [lineStart, lineEnd, words, {"ttm:agent": "v1", "itunes:song-part": "Verse"}]
  * ]
  *
  * 属性值必须是字符串（JsonPrimitive）；非字符串值、非对象形态的第 4 元素整组忽略（不影响行本身）。
@@ -364,7 +364,7 @@ private fun JsonArray?.parseCompactWordLines(): List<LyricsLine> {
         val end = line.longAt(1) ?: start
         val wordsArray = line.arrayAt(2)
         val text = line.stringAt(2)
-        // 第 4 元素：行级扩展属性（ttm:agent / itunes:songPart 等），旧插件不传为空。
+        // 第 4 元素：行级扩展属性（ttm:agent / itunes:song-part 等），旧插件不传为空。
         // 前缀白名单（ttm: / itunes: / 无前缀）：其他前缀的属性无根节点命名空间声明，
         // 写出会导致 XML 非法，故解析时即过滤（静默，行本身不受影响）
         val extensions = line.objectAt(3)

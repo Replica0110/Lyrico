@@ -13,6 +13,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -359,80 +360,79 @@ fun SongsPage(
                     isRefreshing = scanState.isScanning,
                     onRefresh = { viewModel.refreshSongs() },
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
                     topAppBarScrollBehavior = topAppBarScrollBehavior,
                     refreshTexts = refreshTexts
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .scrollEndHaptic()
-                                .overScrollVertical()
-                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                                .fillMaxHeight(),
-                            state = listState,
-                            overscrollEffect = null,
-                            contentPadding = scaffoldContentPadding(
-                                paddingValues = paddingValues,
-                                bottomExtra = LocalLibraryBottomContentPadding.current,
-                            ),
-                        ) {
-                            items(
-                                items = songs,
-                                key = { song ->
-                                    song.uri.takeIf { it.isNotBlank() && it != "0" }
-                                        ?: "song-${song.id}"
-                                }
-                            ) { song ->
-                                SongListItem(
-                                    song = song,
-                                    modifier = Modifier.animateItem(),
-                                    isSelectionMode = isSelectionMode,
-                                    isSelected = selectedSongUris.contains(song.uri),
-                                    swipeSelectionLabel = swipeSelectionLabel,
-                                    swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                                    onClick = {
-                                        navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
-                                    },
-                                    onToggleSelection = {
-                                        selectionViewModel.toggleSelection(song.uri)
-                                    },
-                                    onSwipeSelection = {
-                                        selectionViewModel.swipeSelect(song, songs)
-                                    },
-                                    trailingContent = {
-                                        Box(modifier = Modifier.padding(end = 8.dp)) {
-                                            SongListItemActions(
-                                                isSelectionMode = isSelectionMode,
-                                                isSelected = selectedSongUris.contains(song.uri),
-                                                onToggleSelection = {
-                                                    selectionViewModel.toggleSelection(song.uri)
-                                                },
-                                                onShowMenu = {
-                                                    showMenuSheet = true
-                                                    selectedSong = song
-                                                }
-                                            )
-                                        }
-                                    }
-                                )
+                    LazyColumn(
+                        modifier = Modifier
+                            .scrollEndHaptic()
+                            .overScrollVertical()
+                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                            .fillMaxHeight(),
+                        state = listState,
+                        overscrollEffect = null,
+                        contentPadding = scaffoldContentPadding(
+                            paddingValues = paddingValues,
+                            bottomExtra = LocalLibraryBottomContentPadding.current,
+                        ),
+                    ) {
+                        items(
+                            items = songs,
+                            key = { song ->
+                                song.uri.takeIf { it.isNotBlank() && it != "0" }
+                                    ?: "song-${song.id}"
                             }
-                        }
-                        if (!enableIndex) {
-                            InternalLazyColumnScrollbar(
-                                state = listState,
-                                modifier = Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .libraryScrollbarOverlay(paddingValues = paddingValues),
-                                settings = ScrollbarSettings.Default.copy(
-                                    alwaysShowScrollbar = true,
-                                    selectionMode = ScrollbarSelectionMode.Full,
-                                    thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                    thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                ),
+                        ) { song ->
+                            SongListItem(
+                                song = song,
+                                modifier = Modifier.animateItem(),
+                                isSelectionMode = isSelectionMode,
+                                isSelected = selectedSongUris.contains(song.uri),
+                                swipeSelectionLabel = swipeSelectionLabel,
+                                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
+                                onClick = {
+                                    navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                                },
+                                onToggleSelection = {
+                                    selectionViewModel.toggleSelection(song.uri)
+                                },
+                                onSwipeSelection = {
+                                    selectionViewModel.swipeSelect(song, songs)
+                                },
+                                trailingContent = {
+                                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                                        SongListItemActions(
+                                            isSelectionMode = isSelectionMode,
+                                            isSelected = selectedSongUris.contains(song.uri),
+                                            onToggleSelection = {
+                                                selectionViewModel.toggleSelection(song.uri)
+                                            },
+                                            onShowMenu = {
+                                                showMenuSheet = true
+                                                selectedSong = song
+                                            }
+                                        )
+                                    }
+                                }
                             )
                         }
                     }
                 }
+            }
+            if (!enableIndex && songs.isNotEmpty()) {
+                InternalLazyColumnScrollbar(
+                    state = listState,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .libraryScrollbarOverlay(paddingValues = paddingValues),
+                    settings = ScrollbarSettings.Default.copy(
+                        alwaysShowScrollbar = true,
+                        selectionMode = ScrollbarSelectionMode.Full,
+                        thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                    ),
+                )
             }
             if (enableIndex && songs.isNotEmpty()) {
                 AlphabetSideBar(

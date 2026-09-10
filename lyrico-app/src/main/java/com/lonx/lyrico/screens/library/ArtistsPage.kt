@@ -3,6 +3,7 @@ package com.lonx.lyrico.screens.library
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -187,12 +188,11 @@ fun ArtistsPage(
                     isRefreshing = scanState.isScanning,
                     onRefresh = { viewModel.refreshSongs() },
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
                     topAppBarScrollBehavior = topAppBarScrollBehavior,
                     refreshTexts = refreshTexts
                 ) {
-                    BoxWithConstraints(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    BoxWithConstraints {
                         val targetColumns = if (maxWidth >= 600.dp) 2 else 1
 
                         LaunchedEffect(targetColumns) {
@@ -235,21 +235,21 @@ fun ArtistsPage(
                                 )
                             }
                         }
-                        if (!enableIndex) {
-                            InternalLazyVerticalGridScrollbar(
-                                state = gridState,
-                                modifier = Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .libraryScrollbarOverlay(paddingValues = paddingValues),
-                                settings = ScrollbarSettings.Default.copy(
-                                    alwaysShowScrollbar = true,
-                                    selectionMode = ScrollbarSelectionMode.Full,
-                                    thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                    thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                ),
-                            )
-                        }
                     }
+                }
+                if (!enableIndex) {
+                    InternalLazyVerticalGridScrollbar(
+                        state = gridState,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .libraryScrollbarOverlay(paddingValues = paddingValues),
+                        settings = ScrollbarSettings.Default.copy(
+                            alwaysShowScrollbar = true,
+                            selectionMode = ScrollbarSelectionMode.Full,
+                            thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        ),
+                    )
                 }
                 if (enableIndex) {
                     AlphabetSideBar(

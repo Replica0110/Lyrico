@@ -72,12 +72,12 @@ internal fun Modifier.libraryScrollbarOverlay(
     extraBottom: Dp = 0.dp,
 ): Modifier {
     val layoutDirection = LocalLayoutDirection.current
-    return padding(
-        top = paddingValues.calculateTopPadding() + extraTop,
-        end = paddingValues.calculateEndPadding(layoutDirection),
-        bottom = LocalLibraryBottomContentPadding.current + extraBottom,
-    )
-        .fillMaxHeight()
+    return fillMaxHeight()
+        .padding(
+            top = paddingValues.calculateTopPadding() + extraTop,
+            end = paddingValues.calculateEndPadding(layoutDirection),
+            bottom = LocalLibraryBottomContentPadding.current + extraBottom,
+        )
         .width(LibraryScrollbarTrackWidth)
 }
 

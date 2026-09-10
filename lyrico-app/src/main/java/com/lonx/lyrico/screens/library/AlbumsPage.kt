@@ -269,6 +269,7 @@ fun AlbumsPage(
                                 paddingValues = paddingValues,
                                 extraTop = 12.dp,
                                 extraBottom = 12.dp,
+                                refreshIndicatorHeight = 56.dp,
                             ),
                         settings = ScrollbarSettings.Default.copy(
                             alwaysShowScrollbar = true,

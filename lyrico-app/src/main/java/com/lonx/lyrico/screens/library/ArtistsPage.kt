@@ -242,7 +242,10 @@ fun ArtistsPage(
                         state = gridState,
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .libraryScrollbarOverlay(paddingValues),
+                            .libraryScrollbarOverlay(
+                                paddingValues = paddingValues,
+                                refreshIndicatorHeight = 56.dp,
+                            ),
                         settings = ScrollbarSettings.Default.copy(
                             alwaysShowScrollbar = true,
                             selectionMode = ScrollbarSelectionMode.Full,

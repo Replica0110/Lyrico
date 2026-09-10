@@ -70,10 +70,11 @@ internal fun Modifier.libraryScrollbarOverlay(
     paddingValues: PaddingValues,
     extraTop: Dp = 0.dp,
     extraBottom: Dp = 0.dp,
+    refreshIndicatorHeight: Dp = 0.dp,
 ): Modifier {
     val layoutDirection = LocalLayoutDirection.current
     return padding(
-        top = paddingValues.calculateTopPadding() + extraTop,
+        top = paddingValues.calculateTopPadding() + extraTop + refreshIndicatorHeight,
         end = paddingValues.calculateEndPadding(layoutDirection),
         bottom = LocalLibraryBottomContentPadding.current + extraBottom,
     )

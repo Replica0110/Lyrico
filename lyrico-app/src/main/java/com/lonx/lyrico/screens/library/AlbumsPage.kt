@@ -1,12 +1,8 @@
 package com.lonx.lyrico.screens.library
 
 import android.widget.Toast
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,7 +15,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +38,8 @@ import com.lonx.lyrico.ui.components.library.LibraryEmptyState
 import com.lonx.lyrico.ui.components.library.LibraryBlurredBar
 import com.lonx.lyrico.ui.components.library.LocalLibraryBarBlurEnabled
 import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
+import com.lonx.lyrico.ui.components.library.libraryOverlayInsets
+import com.lonx.lyrico.ui.components.library.libraryScrollbarOverlay
 import com.lonx.lyrico.ui.components.library.rememberAlbumGridTextStyle
 import com.lonx.lyrico.ui.components.library.rememberBlurBackdrop
 import com.lonx.lyrico.ui.components.scaffoldTopAppBarInsetsPadding
@@ -68,7 +65,6 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TopAppBarDefaults
 import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Search
@@ -217,62 +213,71 @@ fun AlbumsPage(
                     topAppBarScrollBehavior = topAppBarScrollBehavior,
                     refreshTexts = refreshTexts
                 ) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(albumGridColumns),
+                        state = gridState,
+                        modifier = Modifier
+                            .scrollEndHaptic()
+                            .overScrollVertical()
+                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                            .fillMaxSize(),
+                        contentPadding = scaffoldContentPadding(
+                            paddingValues = paddingValues,
+                            topExtra = 12.dp,
+                            bottomExtra = 12.dp + LocalLibraryBottomContentPadding.current,
+                            horizontalExtra = 12.dp,
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        overscrollEffect = null
+                    ) {
+                        items(
+                            items = albums,
+                            key = { it.id }
+                        ) { album ->
+                            AlbumGridItem(
+                                albumName = album.name,
+                                summary = buildAlbumSummary(
+                                    songCountText = stringResource(
+                                        R.string.song_count,
+                                        album.songCount
+                                    ),
+                                    year = album.year
+                                ),
+                                coverUri = album.coverSongUri,
+                                coverLastModified = album.coverSongLastModified,
+                                titleStyle = albumTextStyle.title,
+                                summaryStyle = albumTextStyle.summary,
+                                titleMaxLines = albumTextStyle.titleMaxLines,
+                                onClick = {
+                                    navigator.navigate(AlbumDetailDestination(albumId = album.id))
+                                },
+                                onLongClick = {
+                                    selectedAlbum = album
+                                    showAlbumActionSheet = true
+                                }
+                            )
+                        }
+                    }
+                }
+                if (!enableIndex) {
                     LazyVerticalGridScrollbar(
                         state = gridState,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .libraryScrollbarOverlay(
+                                paddingValues = paddingValues,
+                                extraTop = 12.dp,
+                                extraBottom = 12.dp,
+                            ),
                         settings = ScrollbarSettings.Default.copy(
-                            enabled = !enableIndex,
-                            alwaysShowScrollbar = !enableIndex,
+                            alwaysShowScrollbar = true,
                             selectionMode = ScrollbarSelectionMode.Full,
                             thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions
-                        )
+                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        ),
                     ) {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(albumGridColumns),
-                            state = gridState,
-                            modifier = Modifier
-                                .scrollEndHaptic()
-                                .overScrollVertical()
-                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                                .fillMaxSize(),
-                            contentPadding = scaffoldContentPadding(
-                                paddingValues = paddingValues,
-                                topExtra = 12.dp,
-                                bottomExtra = 12.dp + LocalLibraryBottomContentPadding.current,
-                                horizontalExtra = 12.dp,
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            overscrollEffect = null
-                        ) {
-                            items(
-                                items = albums,
-                                key = { it.id }
-                            ) { album ->
-                                AlbumGridItem(
-                                    albumName = album.name,
-                                    summary = buildAlbumSummary(
-                                        songCountText = stringResource(
-                                            R.string.song_count,
-                                            album.songCount
-                                        ),
-                                        year = album.year
-                                    ),
-                                    coverUri = album.coverSongUri,
-                                    coverLastModified = album.coverSongLastModified,
-                                    titleStyle = albumTextStyle.title,
-                                    summaryStyle = albumTextStyle.summary,
-                                    titleMaxLines = albumTextStyle.titleMaxLines,
-                                    onClick = {
-                                        navigator.navigate(AlbumDetailDestination(albumId = album.id))
-                                    },
-                                    onLongClick = {
-                                        selectedAlbum = album
-                                        showAlbumActionSheet = true
-                                    }
-                                )
-                            }
-                        }
+                        Box(modifier = Modifier.fillMaxSize())
                     }
                 }
                 if (enableIndex) {
@@ -283,12 +288,12 @@ fun AlbumsPage(
                         scrollController = alphabetScrollController,
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .fillMaxHeight()
-                            .padding(scaffoldTopHorizontalPadding(paddingValues))
-                            .padding(
-                                top = 16.dp,
-                                bottom = 16.dp
+                            .libraryOverlayInsets(
+                                paddingValues = paddingValues,
+                                extraTop = 16.dp,
+                                extraBottom = 16.dp,
                             )
+                            .fillMaxHeight()
                     )
                 }
             }

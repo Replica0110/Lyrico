@@ -3,7 +3,6 @@ package com.lonx.lyrico.screens.library
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -36,6 +35,8 @@ import com.lonx.lyrico.ui.components.library.LibraryEmptyState
 import com.lonx.lyrico.ui.components.library.LibraryBlurredBar
 import com.lonx.lyrico.ui.components.library.LocalLibraryBarBlurEnabled
 import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
+import com.lonx.lyrico.ui.components.library.libraryOverlayInsets
+import com.lonx.lyrico.ui.components.library.libraryScrollbarOverlay
 import com.lonx.lyrico.ui.components.library.rememberBlurBackdrop
 import com.lonx.lyrico.ui.components.scaffoldTopAppBarInsetsPadding
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
@@ -189,76 +190,67 @@ fun ArtistsPage(
                     topAppBarScrollBehavior = topAppBarScrollBehavior,
                     refreshTexts = refreshTexts
                 ) {
+                    BoxWithConstraints(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        val targetColumns = if (maxWidth >= 600.dp) 2 else 1
+
+                        LaunchedEffect(targetColumns) {
+                            artistGridColumns = targetColumns
+                        }
+
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(artistGridColumns),
+                            modifier = Modifier
+                                .scrollEndHaptic()
+                                .overScrollVertical()
+                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                                .fillMaxHeight(),
+                            state = gridState,
+                            overscrollEffect = null,
+                            contentPadding = scaffoldContentPadding(
+                                paddingValues = paddingValues,
+                                bottomExtra = LocalLibraryBottomContentPadding.current,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(0.dp)
+                        ) {
+                            items(
+                                items = artists,
+                                key = { it.id }
+                            ) { artist ->
+                                ArtistListItem(
+                                    artist = artist,
+                                    coverCandidates = artistCoverCandidates[artist.id]
+                                        .orEmpty()
+                                        .map { candidate ->
+                                            CoverCandidate(
+                                                uri = candidate.uri.toUri(),
+                                                lastUpdate = candidate.lastModified
+                                            )
+                                        },
+                                    onClick = {
+                                        navigator.navigate(ArtistDetailDestination(artistId = artist.id))
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                if (!enableIndex) {
                     LazyVerticalGridScrollbar(
                         state = gridState,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .libraryScrollbarOverlay(paddingValues),
                         settings = ScrollbarSettings.Default.copy(
-                            enabled = !enableIndex,
-                            alwaysShowScrollbar = !enableIndex,
+                            alwaysShowScrollbar = true,
                             selectionMode = ScrollbarSelectionMode.Full,
                             thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions
-                        )
+                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        ),
                     ) {
-                        BoxWithConstraints(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            val targetColumns = if (maxWidth >= 600.dp) 2 else 1
-
-                            LaunchedEffect(targetColumns) {
-                                artistGridColumns = targetColumns
-                            }
-
-
-                            LazyVerticalGridScrollbar(
-                                state = gridState,
-                                settings = ScrollbarSettings.Default.copy(
-                                    enabled = !enableIndex,
-                                    alwaysShowScrollbar = !enableIndex,
-                                    selectionMode = ScrollbarSelectionMode.Full,
-                                    thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                    thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions
-                                )
-                            ) {
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(artistGridColumns),
-                                    modifier = Modifier
-                                        .scrollEndHaptic()
-                                        .overScrollVertical()
-                                        .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                                        .fillMaxHeight(),
-                                    state = gridState,
-                                    overscrollEffect = null,
-                                    contentPadding = scaffoldContentPadding(
-                                        paddingValues = paddingValues,
-                                        bottomExtra = LocalLibraryBottomContentPadding.current,
-                                    ),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(0.dp)
-                                ) {
-                                    items(
-                                        items = artists,
-                                        key = { it.id }
-                                    ) { artist ->
-                                        ArtistListItem(
-                                            artist = artist,
-                                            coverCandidates = artistCoverCandidates[artist.id]
-                                                .orEmpty()
-                                                .map { candidate ->
-                                                    CoverCandidate(
-                                                        uri = candidate.uri.toUri(),
-                                                        lastUpdate = candidate.lastModified
-                                                    )
-                                                },
-                                            onClick = {
-                                                navigator.navigate(ArtistDetailDestination(artistId = artist.id))
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-
-                        }
+                        Box(modifier = Modifier.fillMaxSize())
                     }
                 }
                 if (enableIndex) {
@@ -269,12 +261,12 @@ fun ArtistsPage(
                         scrollController = alphabetScrollController,
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .fillMaxHeight()
-                            .padding(scaffoldTopHorizontalPadding(paddingValues))
-                            .padding(
-                                top = 16.dp,
-                                bottom = 16.dp
+                            .libraryOverlayInsets(
+                                paddingValues = paddingValues,
+                                extraTop = 16.dp,
+                                extraBottom = 16.dp,
                             )
+                            .fillMaxHeight()
                     )
                 }
             }

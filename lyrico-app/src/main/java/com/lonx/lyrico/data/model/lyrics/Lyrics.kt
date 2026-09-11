@@ -16,6 +16,23 @@ data class LyricsData(
 data class LyricsWord(
     val start: Long,
     val end: Long,
+    val text: String,
+    // structured 协议词级扩展（word 第 4 元素）：Ruby 注音音节列表（AMLL TTML 规范）。
+    // 一个基文本（汉字）可对应多个注音音节（如「詮」→ せ / ん），单音节也是单元素列表；
+    // null = 无注音（旧插件行为不变）。音节时间为绝对毫秒，缺省时宿主用词时间兜底
+    val ruby: List<LyricsRuby>? = null
+) : Parcelable
+
+/**
+ * structured 协议：一个 Ruby 注音音节（对应 TTML <span tts:ruby="text" begin end>注音</span>）。
+ * @param start 音节开始时间（绝对毫秒）；缺省 null 时写回省略 begin
+ * @param end   音节结束时间（绝对毫秒）；缺省 null 时写回省略 end
+ * @param text  注音文本（假名/拼音等）
+ */
+@Parcelize
+data class LyricsRuby(
+    val start: Long?,
+    val end: Long?,
     val text: String
 ) : Parcelable
 

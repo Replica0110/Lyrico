@@ -7,6 +7,7 @@ import com.lonx.lyrico.data.model.lyrics.LyricsCandidateResult
 import com.lonx.lyrico.data.model.lyrics.LyricsMetadataElement
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.LyricsRuby
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
 import com.lonx.lyrico.data.model.lyrics.SongSearchResult
 import com.lonx.lyrico.data.model.lyrics.isWordByWord
@@ -346,13 +347,21 @@ private fun String.toLyricsPayloadType(): LyricsPayloadType? {
  *   [lineStart, lineEnd, [[wordStart, wordEnd, text], ...]]
  * ]
  *
+ * 词可带第 4 元素（可选）= Ruby 注音音节数组（AMLL TTML 规范，一个基文本对应多个注音音节）：
+ *
+ * [
+ *   [lineStart, lineEnd, [
+ *     [wordStart, wordEnd, "詮", [[27820, 27880, "せ"], [27880, 27950, "ん"]]]
+ *   ]]
+ * ]
+ *
  * 也兼容整行：
  *
  * [
  *   [lineStart, lineEnd, text]
  * ]
  *
- * 第 4 元素（可选）为行级扩展属性对象，key 为带命名空间前缀的 TTML 属性名：
+ * 行第 4 元素（可选）为行级扩展属性对象，key 为带命名空间前缀的 TTML 属性名：
  *
  * [
  *   [lineStart, lineEnd, words, {"ttm:agent": "v1", "itunes:song-part": "Verse"}]
@@ -390,7 +399,13 @@ private fun JsonArray?.parseCompactWordLines(): List<LyricsLine> {
                     LyricsWord(
                         start = wordStart,
                         end = wordEnd,
-                        text = wordText
+                        text = wordText,
+                        // 词第 4 元素（可选）：Ruby 注音音节数组（AMLL TTML 规范），
+                        // 每个音节与词同构 [syllableStartMs, syllableEndMs, "注音文本"]（绝对毫秒）。
+                        // 一个基文本可对应多个音节（如「詮」→ [[27820,27880,"せ"],[27880,27950,"ん"]]），
+                        // 单音节也是单元素数组；时间可缺省（宿主写回时用词时间兜底）；
+                        // 非数组形态/空数组/无有效音节 → null（无注音，旧插件行为不变）
+                        ruby = word.arrayAt(3).parseRubySyllables()
                     )
                 }
             }
@@ -447,6 +462,31 @@ private fun JsonArray?.parseCompactTextLines(): List<LyricsLine> {
             )
         )
     }.orEmpty()
+}
+
+/**
+ * word 第 4 元素 → Ruby 注音音节列表：
+ *
+ * [
+ *   [syllableStartMs, syllableEndMs, "注音音节文本"],
+ *   ...
+ * ]
+ *
+ * 音节结构与词同构（时间为绝对毫秒，均可缺省——缺省时宿主写回用词时间兜底）；
+ * 第 3 元素文本必填且非空，否则该音节跳过；全部音节无效或入参非数组时返回 null（无注音）。
+ */
+private fun JsonArray?.parseRubySyllables(): List<LyricsRuby>? {
+    val array = this?.takeIf { it.isNotEmpty() } ?: return null
+    val syllables = array.mapNotNull { element ->
+        val syllable = element as? JsonArray ?: return@mapNotNull null
+        val text = syllable.stringAt(2)?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+        LyricsRuby(
+            start = syllable.longAt(0),
+            end = syllable.longAt(1),
+            text = text
+        )
+    }
+    return syllables.takeIf { it.isNotEmpty() }
 }
 
 private fun JsonArray.longAt(index: Int): Long? {

@@ -10,6 +10,7 @@ import com.lonx.lyrico.data.model.lyrics.document.LyricsDocument
 import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentLine
 import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentWord
 import com.lonx.lyrico.data.model.lyrics.document.LyricsMetadata
+import com.lonx.lyrico.data.model.lyrics.document.LyricsRubySyllable
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrack
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
 import com.lonx.lyrico.data.model.lyrics.document.QualifiedName
@@ -337,7 +338,7 @@ object TtmlParser : LyricsFormatParser {
                     val element = child as Element
                     val role = element.attr("role", NS_TTM)
                     val text = StringBuilder().also { appendVisibleText(element, it) }.toString()
-                    val rubyWord = element.parseRubyWord(fallbackEnd)
+                    val rubyWord = element.parseRubyWord(fallbackStart, fallbackEnd)
                     when {
                         rubyWord != null -> words.add(rubyWord)
                         role == "x-translation" -> translation.append(normalizeTtmlText(text, trimEdges = true))
@@ -347,14 +348,14 @@ object TtmlParser : LyricsFormatParser {
                                 startMs = fallbackStart,
                                 endMs = fallbackEnd,
                                 text = normalizeTtmlText(text, trimEdges = false),
-                                words = parseContentWords(element, fallbackEnd),
+                                words = parseContentWords(element, fallbackStart, fallbackEnd),
                                 extensions = element.attributesAsExtensions()
                             )
                         )
                         else -> {
                             val start = element.attr("begin")?.let(::parseTtmlTimeMs)
                             val end = element.attr("end")?.let(::parseTtmlTimeMs)
-                            val parsedWords = parseContentWords(element, fallbackEnd)
+                            val parsedWords = parseContentWords(element, start ?: fallbackStart, fallbackEnd)
                             if (start != null) {
                                 val normalized = normalizeTtmlText(text, trimEdges = false)
                                 val isFormattingWhitespace =
@@ -407,7 +408,7 @@ object TtmlParser : LyricsFormatParser {
         )
     }
 
-    private fun parseContentWords(element: Element, fallbackEnd: Long): List<LyricsDocumentWord> {
+    private fun parseContentWords(element: Element, fallbackStart: Long, fallbackEnd: Long): List<LyricsDocumentWord> {
         val words = mutableListOf<LyricsDocumentWord>()
 
         fun visit(node: Node) {
@@ -423,7 +424,7 @@ object TtmlParser : LyricsFormatParser {
 
                 Node.ELEMENT_NODE -> {
                     val child = node as Element
-                    val rubyWord = child.parseRubyWord(fallbackEnd)
+                    val rubyWord = child.parseRubyWord(fallbackStart, fallbackEnd)
                     if (rubyWord != null) {
                         words.add(rubyWord)
                         return
@@ -455,26 +456,56 @@ object TtmlParser : LyricsFormatParser {
         return words
     }
 
-    private fun Element.parseRubyWord(fallbackEnd: Long): LyricsDocumentWord? {
+    /**
+     * 解析 Ruby 标注容器（AMTT TTML 规范 Ruby 标注：container > base + textContainer > text*）。
+     *
+     * 多音节：一个基文本（base）可对应多个 tts:ruby="text" 注音音节（如「詮」→ せ / ん），
+     * 每个音节独立携带 begin/end —— 全部收入 rubySyllables，写回时逐音节还原，不得只取第一个。
+     *
+     * 时间口径与 AMLL 官方解析器一致：词开始/结束 = 全部注音音节时间的 min/max；
+     * 音节时间全缺时回退容器自身 begin/end（Apple Music 变体），再缺用行时间兜底。
+     * 结构容错：textContainer 缺失时在容器内递归查找 ruby="text"（非规范变体，尽量保真不丢注音）。
+     */
+    private fun Element.parseRubyWord(fallbackStart: Long, fallbackEnd: Long): LyricsDocumentWord? {
         if (attr("ruby", NS_TTS) != "container") return null
         val spans = elementsByLocalName("span")
         val base = spans.firstOrNull { it.attr("ruby", NS_TTS) == "base" } ?: return null
-        val annotation = spans.firstOrNull { it.attr("ruby", NS_TTS) == "text" } ?: return null
         val baseText = normalizeTtmlText(base.textContent.orEmpty(), trimEdges = false)
-        val rubyText = normalizeTtmlText(annotation.textContent.orEmpty(), trimEdges = false)
-        if (baseText.isEmpty() || rubyText.isEmpty()) return null
-        val start = attr("begin")?.let(::parseTtmlTimeMs)
-            ?: base.attr("begin")?.let(::parseTtmlTimeMs)
-            ?: annotation.attr("begin")?.let(::parseTtmlTimeMs)
-        val end = attr("end")?.let(::parseTtmlTimeMs)
-            ?: base.attr("end")?.let(::parseTtmlTimeMs)
-            ?: annotation.attr("end")?.let(::parseTtmlTimeMs)
-            ?: start?.let { fallbackEnd }
+        if (baseText.isEmpty()) return null
+
+        // 注音音节：优先 textContainer 的直接元素子节点（规范结构），缺失时递归兜底
+        val textContainer = childNodesList()
+            .filterIsInstance<Element>()
+            .firstOrNull { it.attr("ruby", NS_TTS) == "textContainer" }
+        val rtElements = if (textContainer != null) {
+            textContainer.childNodesList()
+                .filterIsInstance<Element>()
+                .filter { it.attr("ruby", NS_TTS) == "text" }
+        } else {
+            spans.filter { it.attr("ruby", NS_TTS) == "text" }
+        }
+        val syllables = rtElements.mapNotNull { rt ->
+            val rtText = normalizeTtmlText(rt.textContent.orEmpty(), trimEdges = false)
+            if (rtText.isEmpty()) return@mapNotNull null
+            LyricsRubySyllable(
+                text = rtText,
+                startMs = rt.attr("begin")?.let(::parseTtmlTimeMs),
+                endMs = rt.attr("end")?.let(::parseTtmlTimeMs)
+            )
+        }
+
+        // 词时间：注音音节 min/max 优先（与 AMLL 官方解析器一致），容器时间兜底，最后行时间兜底
+        val start = syllables.mapNotNull { it.startMs }.minOrNull()
+            ?: attr("begin")?.let(::parseTtmlTimeMs)
+            ?: fallbackStart
+        val end = syllables.mapNotNull { it.endMs }.maxOrNull()
+            ?: attr("end")?.let(::parseTtmlTimeMs)
+            ?: fallbackEnd
         return LyricsDocumentWord(
             startMs = start,
             endMs = end,
             text = baseText,
-            rubyText = rubyText,
+            rubySyllables = syllables,
             extensions = attributesAsExtensions()
         )
     }
@@ -713,7 +744,7 @@ object TtmlWriter : LyricsFormatWriter {
         }
         builder.append(">")
 
-        if (line.words.size > 1 || line.words.any { it.rubyText != null }) {
+        if (line.words.size > 1 || line.words.any { it.rubyText != null || it.rubySyllables.isNotEmpty() }) {
             line.words.forEach { word ->
                 appendWord(builder, word)
             }
@@ -742,23 +773,50 @@ object TtmlWriter : LyricsFormatWriter {
     }
 
     private fun appendWord(builder: StringBuilder, word: LyricsDocumentWord) {
-        if (!word.rubyText.isNullOrEmpty()) {
-            builder.append("<span tts:ruby=\"container\"")
-            appendUnmanagedAttributes(builder, word.extensions, setOf("ruby", "begin", "end"))
-            builder.append(">")
-                .append("<span tts:ruby=\"base\">").append(escapeXml(word.text)).append("</span>")
-                .append("<span tts:ruby=\"textContainer\">")
-                .append("<span tts:ruby=\"text\"")
-            word.startMs?.let {
+        when {
+            // 多音节注音（structured 协议 / TTML 解析产出）：textContainer 内逐音节输出 rt
+            word.rubySyllables.isNotEmpty() -> appendRubyWord(builder, word, word.rubySyllables)
+            // 单注音文本（无音节时间的旧形态）：仅一个 rt，时间用词整体时间
+            !word.rubyText.isNullOrEmpty() -> appendRubyWord(
+                builder,
+                word,
+                listOf(LyricsRubySyllable(word.rubyText, word.startMs, word.endMs))
+            )
+            else -> appendPlainWord(builder, word)
+        }
+    }
+
+    /**
+     * 输出 Ruby 标注词（AMLL TTML 规范四层结构）：
+     * <span tts:ruby="container">
+     *   <span tts:ruby="base">基文本</span>
+     *   <span tts:ruby="textContainer">
+     *     <span tts:ruby="text" begin end>注音音节</span>...
+     *   </span>
+     * </span>
+     * 与 AMLL 官方生成器一致：base 不写时间戳，container 也不写 begin/end（时间由各 rt 承载）。
+     * 音节缺时间戳（非规范源文件/旧数据）时用词整体时间兜底，保证 rt 不丢失时间信息。
+     */
+    private fun appendRubyWord(builder: StringBuilder, word: LyricsDocumentWord, syllables: List<LyricsRubySyllable>) {
+        builder.append("<span tts:ruby=\"container\"")
+        appendUnmanagedAttributes(builder, word.extensions, setOf("ruby", "begin", "end"))
+        builder.append(">")
+            .append("<span tts:ruby=\"base\">").append(escapeXml(word.text)).append("</span>")
+            .append("<span tts:ruby=\"textContainer\">")
+        syllables.forEach { syllable ->
+            builder.append("<span tts:ruby=\"text\"")
+            (syllable.startMs ?: word.startMs)?.let {
                 builder.append(" begin=\"").append(LyricFormatter.formatTtmlTimestamp(it)).append("\"")
             }
-            word.endMs?.let {
+            (syllable.endMs ?: word.endMs)?.let {
                 builder.append(" end=\"").append(LyricFormatter.formatTtmlTimestamp(it)).append("\"")
             }
-            builder.append(">").append(escapeXml(word.rubyText)).append("</span>")
-                .append("</span></span>")
-            return
+            builder.append(">").append(escapeXml(syllable.text)).append("</span>")
         }
+        builder.append("</span></span>")
+    }
+
+    private fun appendPlainWord(builder: StringBuilder, word: LyricsDocumentWord) {
         val wordStart = word.startMs
         val wordEnd = word.endMs
         if (wordStart != null && wordEnd != null) {
@@ -1055,7 +1113,11 @@ private fun collectDocumentNamespaces(document: LyricsDocument): Map<String, Str
     collectMap(document.bodyExtensions)
     document.headMetadataElements.forEach(::collectElement)
     document.itunesMetadataElements.forEach(::collectElement)
-    if (document.tracks.any { track -> track.lines.any { line -> line.words.any { it.rubyText != null } } }) {
+    if (document.tracks.any { track ->
+            track.lines.any { line ->
+                line.words.any { it.rubyText != null || it.rubySyllables.isNotEmpty() }
+            }
+        }) {
         namespaces["tts"] = NS_TTS
     }
     return namespaces

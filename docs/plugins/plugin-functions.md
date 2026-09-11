@@ -254,6 +254,26 @@ function getLyrics(request) {
 [lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...], extensions?]
 ```
 
+词可以携带第 4 个元素表示 Ruby 注音（AMLL TTML 规范的振假名/拼音标注）：
+
+```
+[wordStartMs, wordEndMs, "基文本", [[syllableStartMs, syllableEndMs, "注音"], ...]]
+```
+
+- 一个基文本（通常是汉字）可对应多个注音音节，例如「詮」对应 `せ`、`ん` 两个音节；只有一个音节时同样使用单元素数组。
+- 音节结构与词相同，时间均为绝对毫秒；时间可以省略，宿主导出时会用词的时间兜底。
+- 没有注音的词无需提供第 4 个元素。
+- 导出 TTML 时生成 `<span tts:ruby="container">` 四层结构，基文本写入 `tts:ruby="base"`，每个音节写入一个带 `begin`/`end` 的 `tts:ruby="text"`；导出为 LRC 时注音不保留。
+
+```javascript
+original: [
+  [27000, 28000, [
+    [27690, 27820, "所", [[27690, 27820, "しょ"]]],
+    [27820, 27950, "詮", [[27820, 27880, "せ"], [27880, 27950, "ん"]]]
+  ]]
+]
+```
+
 两者也都兼容整行文本；`translated` 只使用这种格式：
 
 ```
@@ -266,7 +286,7 @@ function getLyrics(request) {
 
 以下字段只影响 TTML 导出。导出为 LRC 时，TTML 专属结构不会保留。
 
-这里描述的是 structured 协议能够表达的 TTML 子集，不是 AMLL TTML DB 的投稿规范。Ruby 和未知 XML 节点目前无法通过 structured 载荷表示；需要保留完整源文档时应返回 `type: "rawTtml"`。如果用户随后执行繁简转换、轨道筛选等操作，宿主仍会解析并重写该文档，未建模结构可能丢失。
+这里描述的是 structured 协议能够表达的 TTML 子集，不是 AMLL TTML DB 的投稿规范。未建模的未知 XML 节点无法通过 structured 载荷表示；需要保留完整源文档时应返回 `type: "rawTtml"`。如果用户随后执行繁简转换、轨道筛选等操作，宿主仍会解析并重写该文档，未建模结构可能丢失。
 
 `original` 行可在第 4 个元素中提供扩展属性：
 

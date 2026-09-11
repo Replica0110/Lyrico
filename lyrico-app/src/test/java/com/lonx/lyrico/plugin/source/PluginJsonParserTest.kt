@@ -60,6 +60,75 @@ class PluginJsonParserTest {
         assertTrue(result.original.single().extensions.isEmpty())
     }
 
+    // ---------- word 第 4 元素：Ruby 注音音节 ----------
+
+    @Test
+    fun wordFourthElementMultiSyllableRubyParsed() {
+        // 多音节：基文本「詮」→ せ / ん，音节与词同构 [startMs, endMs, text]
+        val json = structuredJson(
+            original = """[[27000, 28000, [[27820, 27950, "詮", [[27820, 27880, "せ"], [27880, 27950, "ん"]]]]]]"""
+        )
+        val result = parser.parseLyrics(json)!!
+
+        val ruby = result.original.single().words.single().ruby
+        assertEquals(listOf("せ", "ん"), ruby?.map { it.text })
+        assertEquals(listOf(27820L, 27880L), ruby?.map { it.start })
+        assertEquals(listOf(27880L, 27950L), ruby?.map { it.end })
+    }
+
+    @Test
+    fun wordFourthElementSingleSyllableRubyParsed() {
+        // 单音节也是单元素数组
+        val json = structuredJson(
+            original = """[[27000, 28000, [[27690, 27820, "所", [[27690, 27820, "しょ"]]]]]]"""
+        )
+        val result = parser.parseLyrics(json)!!
+
+        val ruby = result.original.single().words.single().ruby
+        assertEquals(1, ruby?.size)
+        assertEquals("しょ", ruby?.single()?.text)
+    }
+
+    @Test
+    fun wordFourthElementRubyTimingOptional() {
+        // 音节时间可缺省（宿主写回时用词时间兜底）
+        val json = structuredJson(
+            original = """[[27000, 28000, [[27820, 27950, "詮", [[null, null, "せん"]]]]]]"""
+        )
+        val result = parser.parseLyrics(json)!!
+
+        val ruby = result.original.single().words.single().ruby
+        assertEquals("せん", ruby?.single()?.text)
+        assertNull(ruby?.single()?.start)
+        assertNull(ruby?.single()?.end)
+    }
+
+    @Test
+    fun wordWithoutRubyFourthElementDefaultsNull() {
+        // 旧插件词只有 3 元素 → ruby 为 null
+        val json = structuredJson(
+            original = """[[1000, 2000, [[1000, 1500, "眼"], [1500, 2000, "前"]]]]"""
+        )
+        val result = parser.parseLyrics(json)!!
+
+        assertTrue(result.original.single().words.all { it.ruby == null })
+    }
+
+    @Test
+    fun wordFourthElementEmptyOrInvalidRubyIgnored() {
+        // 空数组 / 非数组 / 音节文本缺失 → ruby 为 null（词本身保留，不影响行解析）
+        val json = structuredJson(
+            original = """[[1000, 2000, [
+                [1000, 1200, "眼", []],
+                [1200, 1500, "前", "ruby"],
+                [1500, 2000, "詮", [[1500, 2000, ""]]]
+            ]]]"""
+        )
+        val result = parser.parseLyrics(json)!!
+
+        assertTrue(result.original.single().words.all { it.ruby == null })
+    }
+
     // ---------- agents：演唱者列表 ----------
 
     @Test

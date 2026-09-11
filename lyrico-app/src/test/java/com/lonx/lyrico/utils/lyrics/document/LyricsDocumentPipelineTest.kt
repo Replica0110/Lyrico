@@ -6,6 +6,7 @@ import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.LyricsRuby
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
 import org.junit.Assert.assertEquals
@@ -225,7 +226,11 @@ class LyricsDocumentPipelineTest {
         val document = TtmlParser.parse(raw)
         val word = document.tracks.first { it.type == LyricsTrackType.Original }.lines.single().words.single()
         assertEquals("所", word.text)
-        assertEquals("しょ", word.rubyText)
+        // 单音节注音解析到 rubySyllables（时间随 rt 携带），旧的整串 rubyText 不再由 TTML 解析填充
+        assertEquals(1, word.rubySyllables.size)
+        assertEquals("しょ", word.rubySyllables.single().text)
+        assertEquals(1000L, word.rubySyllables.single().startMs)
+        assertEquals(2000L, word.rubySyllables.single().endMs)
 
         val output = TtmlWriter.write(document, emptyList())
         assertTrue(output.contains("""<body dur="00:10.000">"""))
@@ -234,6 +239,86 @@ class LyricsDocumentPipelineTest {
         assertTrue(output.contains("""<songwriter>作者</songwriter>"""))
         assertTrue(output.contains("""tts:ruby="base">所</span>"""))
         assertTrue(output.contains("""tts:ruby="text" begin="00:00:01.000" end="00:00:02.000">しょ</span>"""))
+    }
+
+    @Test
+    fun ttmlMultiSyllableRubySurvivesRoundTrip() {
+        // AMLL 规范多音节 Ruby：一个基文本「詮」对应两个 rt（せ / ん），各自独立时间戳
+        val raw = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <tt xmlns="http://www.w3.org/ns/ttml"
+                xmlns:tts="http://www.w3.org/ns/ttml#styling"
+                itunes:timing="Word">
+              <body>
+                <div>
+                  <p begin="27.690" end="28.000" itunes:key="L1">
+                    <span tts:ruby="container"><span tts:ruby="base">詮</span><span tts:ruby="textContainer"><span tts:ruby="text" begin="27.820" end="27.880">せ</span><span tts:ruby="text" begin="27.880" end="27.950">ん</span></span></span>
+                  </p>
+                </div>
+              </body>
+            </tt>
+        """.trimIndent()
+
+        val document = TtmlParser.parse(raw)
+        val word = document.tracks.first { it.type == LyricsTrackType.Original }.lines.single().words.single()
+        assertEquals("詮", word.text)
+        // 词时间 = 注音音节时间的 min/max（与 AMLL 官方解析器一致）
+        assertEquals(27820L, word.startMs)
+        assertEquals(27950L, word.endMs)
+        assertEquals(listOf("せ", "ん"), word.rubySyllables.map { it.text })
+        assertEquals(listOf(27820L, 27880L), word.rubySyllables.map { it.startMs })
+        assertEquals(listOf(27880L, 27950L), word.rubySyllables.map { it.endMs })
+
+        val output = TtmlWriter.write(document, emptyList())
+        // 写回四层结构：container / base 均不写时间，两个 rt 各带自己的 begin/end
+        assertTrue(output.contains("""tts:ruby="base">詮</span>"""))
+        assertTrue(output.contains("""tts:ruby="text" begin="00:00:27.820" end="00:00:27.880">せ</span>"""))
+        assertTrue(output.contains("""tts:ruby="text" begin="00:00:27.880" end="00:00:27.950">ん</span>"""))
+        assertTrue(output.contains("""xmlns:tts="http://www.w3.org/ns/ttml#styling""""))
+
+        // 二次解析保持不丢音节（往返幂等）
+        val reparsed = TtmlParser.parse(output)
+        val reparsedWord = reparsed.tracks.first { it.type == LyricsTrackType.Original }.lines.single().words.single()
+        assertEquals(listOf("せ", "ん"), reparsedWord.rubySyllables.map { it.text })
+
+        // document → structured：注音音节原样带出（供 structured 路径消费）
+        val structured = with(LyricsDocumentPipeline) { reparsed.toLyricsResult() }
+        val structuredWord = structured.original.single().words.single()
+        assertEquals(listOf("せ", "ん"), structuredWord.ruby?.map { it.text })
+    }
+
+    @Test
+    fun structuredWordRubyWritesMultiSyllableTtml() {
+        // structured 协议词第 4 元素 → TTML 多音节 ruby（插件直供 structured 的路径）
+        val result = LyricsResult(
+            tags = mapOf("ti" to "題名", "ar" to "艺人A", "al" to "专辑A"),
+            original = listOf(
+                LyricsLine(
+                    start = 27000L,
+                    end = 28000L,
+                    words = listOf(
+                        LyricsWord(
+                            start = 27820L,
+                            end = 27950L,
+                            text = "詮",
+                            ruby = listOf(
+                                LyricsRuby(start = 27820L, end = 27880L, text = "せ"),
+                                LyricsRuby(start = 27880L, end = 27950L, text = "ん")
+                            )
+                        )
+                    )
+                )
+            ),
+            translated = null,
+            romanization = null
+        )
+        val output = LyricsDocumentPipeline.processStructuredResult(
+            result,
+            LyricRenderConfig(format = LyricFormat.TTML)
+        ).orEmpty()
+        assertTrue(output.contains("""tts:ruby="base">詮</span>"""))
+        assertTrue(output.contains("""tts:ruby="text" begin="00:00:27.820" end="00:00:27.880">せ</span>"""))
+        assertTrue(output.contains("""tts:ruby="text" begin="00:00:27.880" end="00:00:27.950">ん</span>"""))
     }
 
     @Test

@@ -258,6 +258,26 @@ function getLyrics(request) {
 [lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...], extensions?]
 ```
 
+A word may carry a fourth item for Ruby annotation (furigana / pinyin as defined by the AMLL TTML specification):
+
+```
+[wordStartMs, wordEndMs, "base text", [[syllableStartMs, syllableEndMs, "ruby"], ...]]
+```
+
+- One base run (typically a kanji/hanzi run) may map to multiple ruby syllables; a single-syllable annotation still uses a one-element array.
+- Each syllable mirrors the word shape with absolute millisecond timing. Timing may be omitted; on TTML export the host falls back to the word's timing.
+- Words without annotation simply omit the fourth item.
+- TTML export emits the four-level `<span tts:ruby="container">` structure: the base text goes into `tts:ruby="base"`, and every syllable becomes a timed `tts:ruby="text"` span. Ruby is not retained in LRC output.
+
+```javascript
+original: [
+  [27000, 28000, [
+    [27690, 27820, "所", [[27690, 27820, "しょ"]]],
+    [27820, 27950, "詮", [[27820, 27880, "せ"], [27880, 27950, "ん"]]]
+  ]]
+]
+```
+
 They also accept whole-line text. `translated` uses only this form:
 
 ```
@@ -270,7 +290,7 @@ When exported as TTML, word-level romanization keeps its timing. Lyrico inserts 
 
 The fields in this section affect TTML output only. TTML-specific structure is not retained when exporting to LRC.
 
-This section describes the TTML subset available through the structured plugin payload; it is not a replacement for the AMLL TTML DB submission specification. Ruby and unknown XML nodes cannot currently be represented by a structured payload. Return `type: "rawTtml"` when the complete source document must be retained. If the user later applies script conversion, track filtering, or another transformation, Lyrico will parse and rewrite that document, and unmodeled structures may be lost.
+This section describes the TTML subset available through the structured plugin payload; it is not a replacement for the AMLL TTML DB submission specification. Unmodeled unknown XML nodes cannot be represented by a structured payload. Return `type: "rawTtml"` when the complete source document must be retained. If the user later applies script conversion, track filtering, or another transformation, Lyrico will parse and rewrite that document, and unmodeled structures may be lost.
 
 An `original` line may include extension attributes as its fourth item:
 

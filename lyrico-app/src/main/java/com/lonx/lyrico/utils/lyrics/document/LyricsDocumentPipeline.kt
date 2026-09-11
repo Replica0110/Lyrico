@@ -10,12 +10,14 @@ import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsMetadataElement
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.LyricsRuby
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
 import com.lonx.lyrico.data.model.lyrics.isWordByWord
 import com.lonx.lyrico.data.model.lyrics.document.LyricsDocument
 import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentLine
 import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentWord
 import com.lonx.lyrico.data.model.lyrics.document.LyricsMetadata
+import com.lonx.lyrico.data.model.lyrics.document.LyricsRubySyllable
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrack
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
 import com.lonx.lyrico.data.model.lyrics.document.LyricsAgentType
@@ -310,7 +312,11 @@ object LyricsDocumentPipeline {
                 LyricsDocumentWord(
                     startMs = word.start,
                     endMs = word.end,
-                    text = word.text
+                    text = word.text,
+                    // structured 词级 ruby（word 第 4 元素）→ 文档层多音节注音，写回 TTML 时逐 rt 还原
+                    rubySyllables = word.ruby?.map { ruby ->
+                        LyricsRubySyllable(text = ruby.text, startMs = ruby.start, endMs = ruby.end)
+                    }.orEmpty()
                 )
             },
             agentId = extensions["ttm:agent"],
@@ -382,7 +388,10 @@ object LyricsDocumentPipeline {
                 LyricsWord(
                     start = wordStart,
                     end = wordEnd,
-                    text = pendingUntimedText + word.text
+                    text = pendingUntimedText + word.text,
+                    // document → structured：多音节注音原样带出；单串注音（无音节时间）包成单元素，
+                    // 时间取词整体时间，避免 TTML 解析到的 ruby 在转 structured 时丢失
+                    ruby = word.toStructuredRuby(wordEnd)
                 )
             )
             pendingUntimedText = ""
@@ -432,6 +441,22 @@ object LyricsDocumentPipeline {
                 extensions = extensions
             )
         }
+    }
+
+    /**
+     * 文档层词注音 → structured 词级 ruby（document → structured 方向保真）：
+     * - rubySyllables 非空：逐音节带出（含各自时间，缺省为 null）；
+     * - 否则 rubyText 非空（旧形态单串注音）：包成单音节，时间用词 start/fallbackEnd 兜底；
+     * - 都没有返回 null（无注音，旧行为不变）。
+     */
+    private fun LyricsDocumentWord.toStructuredRuby(fallbackEnd: Long): List<LyricsRuby>? {
+        if (rubySyllables.isNotEmpty()) {
+            return rubySyllables.map { LyricsRuby(start = it.startMs, end = it.endMs, text = it.text) }
+        }
+        if (!rubyText.isNullOrEmpty()) {
+            return listOf(LyricsRuby(start = startMs, end = endMs ?: fallbackEnd, text = rubyText))
+        }
+        return null
     }
 
     private fun Map<String, String>.toLyricsMetadata(): LyricsMetadata {
@@ -516,7 +541,11 @@ class TextTransformPostProcessor(
                             words = line.words.map { word ->
                                 word.copy(
                                     text = transformer(word.text),
-                                    rubyText = word.rubyText?.let(transformer)
+                                    rubyText = word.rubyText?.let(transformer),
+                                    // 注音音节文本同样过转换器（OpenCC 对假名无影响，汉字注音保持一致转换）
+                                    rubySyllables = word.rubySyllables.map { syllable ->
+                                        syllable.copy(text = transformer(syllable.text))
+                                    }
                                 )
                             }
                         )

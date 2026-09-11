@@ -72,8 +72,26 @@ data class LyricsDocumentWord(
     val startMs: Long? = null,
     val endMs: Long? = null,
     val text: String,
+    // 单注音文本（无独立音节时间）：仅兼容旧形态/非 TTML 解析路径；
+    // 与 rubySyllables 二选一——多音节解析（TTML / structured 协议）一律走 rubySyllables
     val rubyText: String? = null,
+    // 多音节注音（AMLL TTML 规范 6.x Ruby 标注）：一个基文本（汉字）可对应多个
+    // <span tts:ruby="text"> 注音音节，各自带独立 begin/end（如「詮」→ せ / ん）。
+    // 写回时在 textContainer 内逐音节输出；空列表 = 无注音
+    val rubySyllables: List<LyricsRubySyllable> = emptyList(),
     val extensions: ExtensionMap = ExtensionMap()
+)
+
+/**
+ * Ruby 注音音节（对应一个 <span tts:ruby="text" begin end>注音</span>）。
+ * @param text    注音文本（假名/拼音等）
+ * @param startMs 音节开始时间（绝对毫秒）；源文件缺时间戳时为 null，写回省略 begin
+ * @param endMs   音节结束时间（绝对毫秒）；源文件缺时间戳时为 null，写回省略 end
+ */
+data class LyricsRubySyllable(
+    val text: String,
+    val startMs: Long? = null,
+    val endMs: Long? = null
 )
 
 data class ExtensionMap(

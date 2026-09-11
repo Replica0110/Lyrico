@@ -214,4 +214,33 @@ class PluginJsonParserTest {
         assertEquals("amll:meta", result.metadata[0].name)
         assertEquals("http://www.example.com/ns/amll", result.metadata[0].namespace)
     }
+
+    // ---------- bodyDur：<body dur> 参考总时长 ----------
+
+    @Test
+    fun bodyDurParsedAsRawTimeExpression() {
+        // 驼峰 bodyDur：TTML 时间字符串原文透传，不做转换
+        val json = """{"type": "structured", "original": [[1000, 2000, [[1000, 1500, "眼"]]]], "bodyDur": "04:24.660"}"""
+        val result = parser.parseLyrics(json)!!
+
+        assertEquals("04:24.660", result.bodyDur)
+    }
+
+    @Test
+    fun bodyDurSnakeCaseAlsoAccepted() {
+        // 下划线 body_dur 兼容写法
+        val json = """{"type": "structured", "original": [[1000, 2000, [[1000, 1500, "眼"]]]], "body_dur": "00:10.000"}"""
+        val result = parser.parseLyrics(json)!!
+
+        assertEquals("00:10.000", result.bodyDur)
+    }
+
+    @Test
+    fun bodyDurMissingDefaultsToEmpty() {
+        // 旧插件不传 → 空字符串（写回 <body> 不带 dur）
+        val json = structuredJson(original = """[[1000, 2000, [[1000, 1500, "眼"]]]]""")
+        val result = parser.parseLyrics(json)!!
+
+        assertEquals("", result.bodyDur)
+    }
 }

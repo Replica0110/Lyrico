@@ -3,8 +3,10 @@ package com.lonx.lyrico.utils.lyrics.document
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.model.lyrics.LyricsLine
 import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.lyrics.LyricsWord
 import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -462,6 +464,48 @@ class LyricsDocumentPipelineTest {
         assertTrue(output.contains("""ttm:agent="v1""""))
         assertTrue(output.contains("""itunes:key="L1""""))
         assertFalse(output.contains("<translations>"))
+    }
+
+    @Test
+    fun structuredResultWritesBodyDurVerbatim() {
+        // structured 载荷带 bodyDur → 经 toLyricsDocument 填入 bodyExtensions → <body dur="..."> 原文输出
+        val result = structuredResult(bodyDur = "04:24.660")
+        val output = LyricsDocumentPipeline.processStructuredResult(
+            result = result,
+            config = LyricRenderConfig(format = LyricFormat.TTML)
+        ).orEmpty()
+
+        assertTrue(output.contains("""<body dur="04:24.660">"""))
+    }
+
+    @Test
+    fun structuredResultWithoutBodyDurOmitsDurAttribute() {
+        // 旧插件不传 bodyDur（默认空串）→ <body> 不带 dur，行为与改动前一致
+        val result = structuredResult(bodyDur = "")
+        val output = LyricsDocumentPipeline.processStructuredResult(
+            result = result,
+            config = LyricRenderConfig(format = LyricFormat.TTML)
+        ).orEmpty()
+
+        assertFalse(Regex("""<body[^>]*\bdur=""" ).containsMatchIn(output))
+    }
+
+    /** 构造最小 structured 歌词结果（单行逐词），可选携带 bodyDur */
+    private fun structuredResult(bodyDur: String): LyricsResult {
+        return LyricsResult(
+            tags = emptyMap(),
+            original = listOf(
+                LyricsLine(
+                    start = 1000L,
+                    end = 2000L,
+                    words = listOf(LyricsWord(1000L, 2000L, "原"))
+                )
+            ),
+            translated = null,
+            romanization = null,
+            payloadType = LyricsPayloadType.STRUCTURED,
+            bodyDur = bodyDur
+        )
     }
 
     private fun sampleTtml(

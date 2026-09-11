@@ -246,6 +246,8 @@ class PluginJsonParser(
         val language = obj.string("language").orEmpty()
         val translatedLang = obj.string("translatedLang", "translated_lang").orEmpty()
         val romanizationLang = obj.string("romanizationLang", "romanization_lang").orEmpty()
+        // <body dur> 参考总时长，TTML 时间字符串原文透传（兼容 body_dur 下划线写法）
+        val bodyDur = obj.string("bodyDur", "body_dur").orEmpty()
 
         if (originalLines.isEmpty()) {
             return null
@@ -265,7 +267,8 @@ class PluginJsonParser(
             timing = timing,
             language = language,
             translatedLang = translatedLang,
-            romanizationLang = romanizationLang
+            romanizationLang = romanizationLang,
+            bodyDur = bodyDur
         )
     }
 

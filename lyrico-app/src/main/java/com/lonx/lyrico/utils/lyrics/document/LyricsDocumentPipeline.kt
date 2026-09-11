@@ -213,6 +213,11 @@ object LyricsDocumentPipeline {
             ),
             agents = agents.map { LyricsAgent(id = it.id, name = it.name, rawType = it.type) },
             tracks = tracks,
+            // <body dur> 参考总时长：dur 为无命名空间属性（QualifiedName 仅 localName），
+            // TtmlWriter 经 bodyExtensions 原样输出到 <body dur="...">；bodyDur 为空时 bodyExtensions 为空 map → 不带 dur
+            bodyExtensions = bodyDur.takeIf { it.isNotBlank() }?.let { dur ->
+                ExtensionMap(attributes = mapOf(QualifiedName(localName = "dur") to dur))
+            } ?: ExtensionMap(),
             headMetadataElements = metadata.filterNot { it.name == "songwriters" }.map { it.toExtensionElement() },
             itunesMetadataElements = metadata.filter { it.name == "songwriters" }.map { it.toExtensionElement() },
             sourceFormat = null

@@ -266,7 +266,7 @@ function getLyrics(request) {
 
 以下字段只影响 TTML 导出。导出为 LRC 时，TTML 专属结构不会保留。
 
-这里描述的是 structured 协议能够表达的 TTML 子集，不是 AMLL TTML DB 的投稿规范。Ruby、`body dur` 和未知 XML 节点目前无法通过 structured 载荷表示；需要保留完整源文档时应返回 `type: "rawTtml"`。如果用户随后执行繁简转换、轨道筛选等操作，宿主仍会解析并重写该文档，未建模结构可能丢失。
+这里描述的是 structured 协议能够表达的 TTML 子集，不是 AMLL TTML DB 的投稿规范。Ruby 和未知 XML 节点目前无法通过 structured 载荷表示；需要保留完整源文档时应返回 `type: "rawTtml"`。如果用户随后执行繁简转换、轨道筛选等操作，宿主仍会解析并重写该文档，未建模结构可能丢失。
 
 `original` 行可在第 4 个元素中提供扩展属性：
 
@@ -300,12 +300,13 @@ agents: [
 - `translations`、`transliterations` 和 `ttm:agent` 已有专门字段，不应再放入 `metadata`；
 - 自定义前缀需要同时提供 `namespace`，例如 `{ "name": "amll:meta", "namespace": "http://www.example.com/ns/amll", ... }`。
 
-根属性和辅助轨语言可用下列字段设置：
+根属性、body 属性和辅助轨语言可用下列字段设置：
 
 | 字段 | TTML 位置 |
 |------|-----------|
 | `timing` | `<tt itunes:timing>`；常用值为 `Word` 或 `Line` |
 | `language` | `<tt xml:lang>` |
+| `bodyDur` | `<body dur>`；TTML 时间字符串原文（如 `"04:24.660"`），参考总时长，宿主不做转换，时间偏移时也不改动 |
 | `translatedLang` | 内联翻译的 `xml:lang` |
 | `romanizationLang` | `<transliteration>` 的 `xml:lang` |
 
@@ -364,6 +365,7 @@ function getLyrics(request) {
 | `metadata` | `MetadataElement[]` | 仅 `type: "structured"` 使用，补充 TTML head 的元素树（可选，约束见上文） |
 | `timing` | `string` | 仅 `type: "structured"` 使用，时间粒度标志（可选；词级传 `"Word"`，写回根 `<tt itunes:timing>`） |
 | `language` | `string` | 仅 `type: "structured"` 使用，原文语言码 BCP47（可选；写回根 `<tt xml:lang>`） |
+| `bodyDur` | `string` | 仅 `type: "structured"` 使用，`<body dur>` 参考总时长（可选；TTML 时间字符串原文透传，如 `"04:24.660"`，也兼容 `body_dur`） |
 | `translatedLang` | `string` | 仅 `type: "structured"` 使用，翻译轨语言码 BCP47（可选；写回内联翻译的 `xml:lang`） |
 | `romanizationLang` | `string` | 仅 `type: "structured"` 使用，音译轨语言码 BCP47（可选；写回 head 音译的 `xml:lang`） |
 | `rawPlainLrc` | `string` | 仅 `type: "rawPlainLrc"` 使用 |

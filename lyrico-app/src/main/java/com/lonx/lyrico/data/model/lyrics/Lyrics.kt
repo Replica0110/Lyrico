@@ -93,7 +93,11 @@ data class LyricsResult(
     val timing: String = "",
     val language: String = "",
     val translatedLang: String = "",
-    val romanizationLang: String = ""
+    val romanizationLang: String = "",
+    // structured 协议扩展：<body dur="..."> 参考总时长（AMLL 规范：可选、不影响时长计算，仅供参考）。
+    // 直接透传 TTML 时间字符串原文（如 "04:24.660"），写回 <body dur="...">，宿主不做格式转换；
+    // 旧插件不传为空字符串 → <body> 不带 dur，行为不变。
+    val bodyDur: String = ""
 ) : Parcelable
 
 data class LyricsCandidateResult(

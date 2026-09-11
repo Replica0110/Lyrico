@@ -270,7 +270,7 @@ When exported as TTML, word-level romanization keeps its timing. Lyrico inserts 
 
 The fields in this section affect TTML output only. TTML-specific structure is not retained when exporting to LRC.
 
-This section describes the TTML subset available through the structured plugin payload; it is not a replacement for the AMLL TTML DB submission specification. Ruby, `body dur`, and unknown XML nodes cannot currently be represented by a structured payload. Return `type: "rawTtml"` when the complete source document must be retained. If the user later applies script conversion, track filtering, or another transformation, Lyrico will parse and rewrite that document, and unmodeled structures may be lost.
+This section describes the TTML subset available through the structured plugin payload; it is not a replacement for the AMLL TTML DB submission specification. Ruby and unknown XML nodes cannot currently be represented by a structured payload. Return `type: "rawTtml"` when the complete source document must be retained. If the user later applies script conversion, track filtering, or another transformation, Lyrico will parse and rewrite that document, and unmodeled structures may be lost.
 
 An `original` line may include extension attributes as its fourth item:
 
@@ -304,12 +304,13 @@ agents: [
 - `translations`, `transliterations`, and `ttm:agent` have dedicated fields and should not also appear in `metadata`;
 - a custom prefix requires `namespace`, for example `{ "name": "amll:meta", "namespace": "http://www.example.com/ns/amll", ... }`.
 
-The following fields set root attributes and auxiliary-track languages:
+The following fields set root/body attributes and auxiliary-track languages:
 
 | Field | TTML location |
 |------|---------------|
 | `timing` | `<tt itunes:timing>`; commonly `Word` or `Line` |
 | `language` | `<tt xml:lang>` |
+| `bodyDur` | `<body dur>`; the raw TTML time expression (e.g. `"04:24.660"`), a reference total duration. Passed through without conversion and left unchanged by time offset |
 | `translatedLang` | `xml:lang` on the inline translation |
 | `romanizationLang` | `xml:lang` on `<transliteration>` |
 
@@ -368,6 +369,7 @@ function getLyrics(request) {
 | `metadata` | `MetadataElement[]` | Used only by `type: "structured"`, elements added to the TTML head (optional; see constraints above) |
 | `timing` | `string` | Used only by `type: "structured"`, timing granularity flag (optional; pass `"Word"` for word-level, written to root `<tt itunes:timing>`) |
 | `language` | `string` | Used only by `type: "structured"`, original-language code BCP47 (optional; written to root `<tt xml:lang>`) |
+| `bodyDur` | `string` | Used only by `type: "structured"`, reference total duration for `<body dur>` (optional; the raw TTML time expression is passed through verbatim, e.g. `"04:24.660"`; `body_dur` also accepted) |
 | `translatedLang` | `string` | Used only by `type: "structured"`, translation-track language code BCP47 (optional; written to the inline translation's `xml:lang`) |
 | `romanizationLang` | `string` | Used only by `type: "structured"`, romanization-track language code BCP47 (optional; written to the head romanization's `xml:lang`) |
 | `rawPlainLrc` | `string` | Used only by `type: "rawPlainLrc"` |

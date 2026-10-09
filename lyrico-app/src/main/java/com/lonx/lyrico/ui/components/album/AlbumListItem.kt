@@ -96,7 +96,7 @@ fun AlbumListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (!album.albumArtist.isNullOrBlank()) {
                         Text(
-                            text = "${album.albumArtist} · ",
+                            text = "${album.albumArtist} - ",
                             color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                             fontSize = 13.sp,
                             maxLines = 1,
@@ -116,7 +116,7 @@ fun AlbumListItem(
                     )
                     if (!album.year.isNullOrBlank()){
                         Text(
-                            text = " · ${album.year}",
+                            text = " - ${album.year}",
                             color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                             fontSize = 13.sp,
                             maxLines = 1,

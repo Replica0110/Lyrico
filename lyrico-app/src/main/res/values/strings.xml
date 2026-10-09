@@ -419,7 +419,7 @@
     <string name="format_preset_show_placeholders">Placeholder help</string>
     <string name="action_rename">Rename</string>
     <string name="preview_title">Preview (%1$d)</string>
-    <string name="preview_title_generating">Preview (%1$d) · Generating…</string>
+    <string name="preview_title_generating">Preview (%1$d), Generating…</string>
     <string name="preview_empty_tip">No files available for preview</string>
     <string name="label_old_name">Old: %1$s</string>
     <string name="label_new_name">New: %1$s</string>
@@ -718,7 +718,7 @@
     <string name="artist_tab_albums">Albums</string>
     <string name="song_count">%1$d songs</string>
     <string name="album_count">%1$d albums</string>
-    <string name="album_song_count">%1$d albums · %2$d songs</string>
+    <string name="album_song_count">%1$d albums, %2$d songs</string>
     <string name="sort_ascending">Ascending</string>
     <string name="sort_descending">Descending</string>
     <string name="artist_split_settings_title">Artist split rules</string>
@@ -775,7 +775,7 @@
     <string name="plugin_uninstall_confirm_message">Uninstall "%1$s"? This cannot be undone</string>
     <string name="plugin_update_source_configured">Update source</string>
     <string name="plugin_version_with_value">Version: %1$s</string>
-    <string name="plugin_api_versions_with_value">Plugin API %1$d · Minimum Host API %2$d</string>
+    <string name="plugin_api_versions_with_value">Plugin API %1$d, Minimum Host API %2$d</string>
     <string name="plugin_switch_to_compact">Switch to compact mode</string>
     <string name="plugin_switch_to_detailed">Switch to detailed mode</string>
     <string name="plugin_author_with_value">Author: %1$s</string>

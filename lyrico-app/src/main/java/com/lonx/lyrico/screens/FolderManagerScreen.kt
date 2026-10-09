@@ -14,8 +14,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,14 +26,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,8 +52,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.FolderEntity
@@ -81,6 +75,8 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.BreadcrumbBar
+import top.yukonga.miuix.kmp.basic.BreadcrumbItem
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -1053,47 +1049,18 @@ private fun FolderPathHeader(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .fillMaxWidth(),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                breadcrumbs.forEachIndexed { index, breadcrumb ->
-                    if (index > 0) {
-                        Text(
-                            text = ">",
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            fontSize = MiuixTheme.textStyles.body2.fontSize,
-                            modifier = Modifier.padding(horizontal = 6.dp)
-                        )
+            BreadcrumbBar(
+                items = breadcrumbs.map { breadcrumb ->
+                    BreadcrumbItem(path = breadcrumb.folderId.toString(), text = breadcrumb.label)
+                },
+                onItemClick = { index ->
+                    if (index != breadcrumbs.lastIndex) {
+                        onBreadcrumbClick(breadcrumbs[index].folderId)
                     }
-
-                    val isCurrent = index == breadcrumbs.lastIndex
-                    Text(
-                        text = breadcrumb.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = if (isCurrent) {
-                            MiuixTheme.colorScheme.onBackground
-                        } else {
-                            MiuixTheme.colorScheme.primary
-                        },
-                        fontWeight = if (isCurrent) FontWeight.Medium else FontWeight.Normal,
-                        modifier = Modifier
-                            .widthIn(max = 180.dp)
-                            .then(
-                                if (isCurrent) {
-                                    Modifier
-                                } else {
-                                    Modifier.clickable {
-                                        onBreadcrumbClick(breadcrumb.folderId)
-                                    }
-                                }
-                            )
-                    )
-                }
-            }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = PaddingValues(vertical = 4.dp)
+            )
 
             Spacer(modifier = Modifier.height(4.dp))
 

@@ -3,9 +3,9 @@
     <string name="artist_poster_folders_empty">Choose a folder for reading and adding artist posters</string>
     <string name="artist_poster_folder_unavailable">Folder unavailable. Grant access again.</string>
     <string name="artist_poster_file_count">%1$d posters</string>
-    <string name="artist_poster_folder_status">%1$d posters · %2$d matched to library artists</string>
+    <string name="artist_poster_folder_status">%1$d posters\n%2$d matched to library artists</string>
     <string name="artist_poster_folder_remove_tip">Stop using posters in this folder. Files will not be deleted.</string>
-    <string name="artist_poster_folders">Artist poster folder</string>
+    <string name="artist_poster_folders">Artist posters</string>
     <string name="artist_poster_folder_not_selected">No folder selected</string>
     <string name="artist_poster_folder_selected">Folder selected</string>
     <string name="artist_poster_folders_help">**File naming**\n\n- `Artist.jpg` — exact artist name\n- `Artist_live.jpg` — artist name followed by `_` and a suffix\n- `AC_DC.jpg`, `AC-DC.jpg`, `AC／DC.jpg` or `ACDC.jpg` — artist name containing characters a file name cannot hold (`\\ / : * ? \" &lt; &gt; |`)\n\nSupports JPG, JPEG, PNG, WebP and MP4.\n\nOnly files directly inside the selected folder are used, with exact artist names matched first.</string>
@@ -37,4 +37,6 @@
     <string name="msg_artist_poster_cancelled">Cancelled</string>
     <string name="action_done">Done</string>
     <string name="action_grant_permission">Grant</string>
+    <string name="artist_poster_folder_details">Folder details</string>
+    <string name="artist_poster_empty_hint">Place images named after artists in this folder, then refresh.</string>
 </resources>

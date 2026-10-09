@@ -63,7 +63,7 @@ object BatchTaskNotification {
         )
 
         val contentText = if (currentFile != null) {
-            "$current / $total  ·  $currentFile"
+            "$current / $total: $currentFile"
         } else {
             "$current / $total"
         }

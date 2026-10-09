@@ -3,9 +3,9 @@
     <string name="artist_poster_folders_empty">选择用于读取和添加艺术家海报的文件夹</string>
     <string name="artist_poster_folder_unavailable">文件夹不可用，请重新授权</string>
     <string name="artist_poster_file_count">%1$d 张海报</string>
-    <string name="artist_poster_folder_status">%1$d 张海报 · %2$d 张匹配到库内艺术家</string>
+    <string name="artist_poster_folder_status">%1$d 张海报\n%2$d 张匹配到库内艺术家</string>
     <string name="artist_poster_folder_remove_tip">停止使用此文件夹中的海报，不会删除文件。</string>
-    <string name="artist_poster_folders">艺术家海报文件夹</string>
+    <string name="artist_poster_folders">艺术家海报</string>
     <string name="artist_poster_folder_not_selected">未选择文件夹</string>
     <string name="artist_poster_folder_selected">已选择文件夹</string>
     <string name="artist_poster_folders_help">**命名规则**\n\n- `艺术家.jpg` —— 与艺术家名完全一致\n- `艺术家_live.jpg` —— 艺术家名后接 `_` 和后缀\n- `AC_DC.jpg`、`AC-DC.jpg`、`AC／DC.jpg` 或 `ACDC.jpg` —— 艺术家名中含有文件名不能出现的字符时（`\\ / : * ? \" &lt; &gt; |`）\n\n支持 JPG、JPEG、PNG、WebP 和 MP4。\n\n仅查找所选文件夹中的文件，优先匹配与艺术家名完全一致的文件名。</string>
@@ -37,4 +37,6 @@
     <string name="msg_artist_poster_cancelled">已取消</string>
     <string name="action_done">完成</string>
     <string name="action_grant_permission">授权</string>
+    <string name="artist_poster_folder_details">文件夹详情</string>
+    <string name="artist_poster_empty_hint">将按艺术家姓名命名的图片放入此文件夹，然后刷新。</string>
 </resources>

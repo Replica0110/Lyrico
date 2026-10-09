@@ -316,7 +316,7 @@ fun SongListItem(
 
                         if (!song.album.isNullOrBlank()) {
                             Text(
-                                text = " · ${song.album}",
+                                text = " - ${song.album}",
                                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                                 fontSize = 13.sp,
                                 maxLines = 1,

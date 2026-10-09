@@ -664,14 +664,14 @@ private fun PluginImportFailedItem(
         failed.versionName
             ?.takeIf { it.isNotBlank() }
             ?.let {
-                if (isNotEmpty()) append(" · ")
+                if (isNotEmpty()) append("\n")
                 append(stringResource(R.string.plugin_import_version))
                 append(" ")
                 append(it)
             }
 
         if (failed.rootPath.isNotBlank()) {
-            if (isNotEmpty()) append(" · ")
+            if (isNotEmpty()) append("\n")
             append(failed.rootPath)
         }
     }
@@ -737,7 +737,7 @@ private fun PluginImportFailedItem(
                     text = subtitle,
                     fontSize = 12.sp,
                     color = colorScheme.onErrorContainer.copy(alpha = 0.82f),
-                    maxLines = 1,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }

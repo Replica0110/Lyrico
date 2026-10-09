@@ -2076,7 +2076,7 @@ private fun CoverSection(
                                     val info = listOfNotNull(
                                         imageSize?.let { "${it.first}×${it.second}" },
                                         item.sourceLabel
-                                    ).joinToString(" · ")
+                                    ).joinToString(" / ")
                                     if (info.isNotEmpty()) {
                                         Box(
                                             modifier = Modifier

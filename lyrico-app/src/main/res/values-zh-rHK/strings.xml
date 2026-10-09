@@ -78,7 +78,7 @@
     <string name="search_source_tab_style_icon_only">僅圖示</string>
     <string name="search_source_tab_style_text_only">僅文字</string>
     <string name="search_source_tab_style_icon_and_text">圖示和文字</string>
-    <string name="search_result_track_of_disc">第 %2$s 碟 · 第 %1$s 軌</string>
+    <string name="search_result_track_of_disc">第 %2$s 碟，第 %1$s 軌</string>
     <string name="batch_match_overwrite_mode">覆寫模式</string>
     <string name="batch_match_overwrite_mode_summary">開啟後覆寫已有內容，關閉時只補充缺失的部分</string>
     <string name="batch_match_prefer_filename">依檔名比對</string>
@@ -405,7 +405,7 @@
     <string name="format_preset_show_placeholders">檢視佔位符說明</string>
     <string name="action_rename">重新命名</string>
     <string name="preview_title">預覽（%1$d）</string>
-    <string name="preview_title_generating">預覽（%1$d） · 產生中…</string>
+    <string name="preview_title_generating">預覽（%1$d），產生中…</string>
     <string name="preview_empty_tip">沒有可預覽的檔案</string>
 
     <string name="label_old_name">舊：%1$s</string>
@@ -725,7 +725,7 @@
     <string name="artist_tab_albums">專輯</string>
     <string name="song_count">%1$d 首</string>
     <string name="album_count">%1$d 張專輯</string>
-    <string name="album_song_count">%1$d 張專輯 · %2$d 首</string>
+    <string name="album_song_count">%1$d 張專輯，%2$d 首</string>
     <string name="sort_ascending">遞增</string>
     <string name="sort_descending">遞減</string>
     <string name="artist_split_settings_title">演出者拆分規則</string>
@@ -782,7 +782,7 @@
     <string name="plugin_uninstall_confirm_message">確定要解除安裝“%1$s”？此操作無法復原</string>
     <string name="plugin_update_source_configured">更新來源</string>
     <string name="plugin_version_with_value">版本：%1$s</string>
-    <string name="plugin_api_versions_with_value">外掛 API %1$d · 最低主程式 API %2$d</string>
+    <string name="plugin_api_versions_with_value">外掛 API %1$d，最低主程式 API %2$d</string>
     <string name="plugin_switch_to_compact">切換為簡潔模式</string>
     <string name="plugin_switch_to_detailed">切換為詳細模式</string>
     <string name="plugin_author_with_value">作者：%1$s</string>

@@ -2,6 +2,7 @@ package com.lonx.lyrico.screens
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.os.Bundle
 import android.content.ClipData
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -247,9 +248,18 @@ fun EditMetadataScreen(
     val activity = context as Activity
     fun closeEditor(saved: Boolean) {
         if (externalEditRequestId != null) {
+            val extra = if (saved) Bundle().apply {
+                editingTagData?.title?.let { putString(ExternalEditExtras.TITLE, it) }
+                editingTagData?.artist?.let { putString(ExternalEditExtras.ARTIST, it) }
+                editingTagData?.albumArtist?.let { putString(ExternalEditExtras.ALBUM_ARTIST, it) }
+                editingTagData?.album?.let { putString(ExternalEditExtras.ALBUM, it) }
+                editingTagData?.genre?.let { putString(ExternalEditExtras.GENRE, it) }
+                editingTagData?.lyrics?.let { putString(ExternalEditExtras.LYRICS, it) }
+            } else null
             (activity as? ExternalAudioEditHost)?.finishExternalAudioEdit(
                 requestId = externalEditRequestId,
                 saved = saved,
+                extra = extra,
             )
         } else if (!navigator.popBackStack()) {
             activity.finish()

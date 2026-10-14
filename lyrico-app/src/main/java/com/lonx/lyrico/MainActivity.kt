@@ -232,12 +232,14 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
         super.onSaveInstanceState(outState)
     }
 
-    override fun finishExternalAudioEdit(requestId: Long, saved: Boolean) {
+    override fun finishExternalAudioEdit(requestId: Long, saved: Boolean, extra: android.os.Bundle?) {
         // An old editor must not finish a newer request delivered through onNewIntent.
         if (requestId != externalEditRequestId) return
         val uri = externalUri ?: return
         if (saved) {
-            setResult(RESULT_OK, Intent().setData(uri))
+            val result = Intent().setData(uri)
+            extra?.let { result.putExtras(it) }
+            setResult(RESULT_OK, result)
         } else {
             setResult(RESULT_CANCELED)
         }

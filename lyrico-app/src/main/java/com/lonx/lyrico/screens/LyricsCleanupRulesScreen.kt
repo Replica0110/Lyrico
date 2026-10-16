@@ -1,7 +1,10 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -26,22 +31,36 @@ import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.ChipGrid
 import com.lonx.lyrico.ui.components.ManagedChip
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.SettingsViewModel
+import com.moriafly.salt.ui.Button
+import com.moriafly.salt.ui.ButtonAppearance
+import com.moriafly.salt.ui.ItemButton
+import com.moriafly.salt.ui.ItemEdit
+import com.moriafly.salt.ui.ItemOuterTitle
+import com.moriafly.salt.ui.RoundedColumn
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.Text as SaltText
+import com.moriafly.salt.ui.dialog.BasicDialog
+import com.moriafly.salt.ui.dialog.DialogTitle
+import com.moriafly.salt.ui.dialog.YesNoDialog as SaltYesNoDialog
+import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
+import top.yukonga.miuix.kmp.basic.Button as MiuixButton
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
@@ -65,10 +84,13 @@ fun LyricsCleanupRulesScreen(
     var deletingRule by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val invalidOrDuplicateRule = stringResource(R.string.invalid_or_duplicate_rule)
+    val salt = LocalUiEngine.current == UiEngine.SALT
 
     val topBarBackdrop = rememberBarBlurBackdrop()
-    Scaffold(
-        topBar = {
+    LibraryDetailPage(
+        title = stringResource(R.string.non_lyrics_cleanup_rules_title),
+        onBack = { navigator.popBackStack() },
+        miuixTopBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
                 SmallTopAppBar(
                     color = Color.Transparent,
@@ -77,7 +99,7 @@ fun LyricsCleanupRulesScreen(
                     navigationIcon = {
                         IconButton(onClick = { navigator.popBackStack() }) {
                             Icon(
-                                FilledIcons.ArrowLeft,
+                                LucideIcons.ArrowLeft,
                                 contentDescription = stringResource(R.string.action_back)
                             )
                         }
@@ -88,65 +110,102 @@ fun LyricsCleanupRulesScreen(
         }
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
+            modifier = (if (salt) Modifier else Modifier
                 .blurSource(topBarBackdrop)
                 .scrollEndHaptic()
                 .overScrollVertical()
-                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection))
                 .fillMaxHeight(),
             contentPadding = scaffoldContentPadding(
                 paddingValues = paddingValues,
                 bottomExtra = 12.dp
             ),
-            overscrollEffect = null
+            overscrollEffect = if (salt) rememberOverscrollEffect() else null
         ) {
             item(key = "rules") {
-                SmallTitle(text = stringResource(R.string.non_lyrics_cleanup_rules_section))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    ChipGrid(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
-                    ) {
-                        uiState.lyricsTagLineKeywords.forEach { rule ->
-                            ManagedChip(
-                                text = rule,
-                                onClick = { editingRule = rule },
-                                onDelete = { deletingRule = rule }
-                            )
+                if (salt) {
+                    ItemOuterTitle(text = stringResource(R.string.non_lyrics_cleanup_rules_section))
+                    ScreenCard {
+                        ChipGrid(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
+                        ) {
+                            uiState.lyricsTagLineKeywords.forEach { rule ->
+                                ManagedChip(
+                                    text = rule,
+                                    onClick = { editingRule = rule },
+                                    onDelete = { deletingRule = rule }
+                                )
+                            }
                         }
-                    }
-                    Text(
-                        text = stringResource(R.string.non_lyrics_cleanup_rules_hint),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
+                        SaltText(
+                            text = stringResource(R.string.non_lyrics_cleanup_rules_hint),
+                            color = SaltTheme.colors.subText,
+                            style = SaltTheme.textStyles.sub,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        )
+                        ItemButton(
                             onClick = {
                                 errorMessage = null
                                 addingRule = true
                             },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColorsPrimary()
-                        ) {
-                            Icon(FilledIcons.Plus, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onPrimary)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.add_non_lyrics_cleanup_rule), color = MiuixTheme.colorScheme.onPrimary,
-                                style = MiuixTheme.textStyles.button)
-                        }
-                        Button(
+                            text = stringResource(R.string.add_non_lyrics_cleanup_rule),
+                            iconPainter = rememberVectorPainter(LucideIcons.Plus)
+                        )
+                        ItemButton(
                             onClick = viewModel::resetNonLyricsContentRules,
-                            modifier = Modifier.weight(1f)
+                            text = stringResource(R.string.reset_to_default),
+                            iconPainter = rememberVectorPainter(LucideIcons.RotateCcw),
+                            iconColor = SaltTheme.colors.subText
+                        )
+                    }
+                } else {
+                    SmallTitle(text = stringResource(R.string.non_lyrics_cleanup_rules_section))
+                    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                        ChipGrid(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
                         ) {
-                            Icon(FilledIcons.RotateCcw, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onSecondaryContainer)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.reset_to_default), color = MiuixTheme.colorScheme.onSecondaryContainer,
-                                style = MiuixTheme.textStyles.button)
+                            uiState.lyricsTagLineKeywords.forEach { rule ->
+                                ManagedChip(
+                                    text = rule,
+                                    onClick = { editingRule = rule },
+                                    onDelete = { deletingRule = rule }
+                                )
+                            }
+                        }
+                        Text(
+                            text = stringResource(R.string.non_lyrics_cleanup_rules_hint),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            fontSize = MiuixTheme.textStyles.footnote1.fontSize,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            MiuixButton(
+                                onClick = {
+                                    errorMessage = null
+                                    addingRule = true
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = MiuixButtonDefaults.buttonColorsPrimary()
+                            ) {
+                                Icon(LucideIcons.Plus, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onPrimary)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.add_non_lyrics_cleanup_rule), color = MiuixTheme.colorScheme.onPrimary,
+                                    style = MiuixTheme.textStyles.button)
+                            }
+                            MiuixButton(
+                                onClick = viewModel::resetNonLyricsContentRules,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(LucideIcons.RotateCcw, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onSecondaryContainer)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.reset_to_default), color = MiuixTheme.colorScheme.onSecondaryContainer,
+                                    style = MiuixTheme.textStyles.button)
+                            }
                         }
                     }
                 }
@@ -193,7 +252,22 @@ fun LyricsCleanupRulesScreen(
         }
     )
 
-    WindowDialog(
+    if (salt) {
+        if (deletingRule != null) SaltYesNoDialog(
+            title = stringResource(R.string.non_lyrics_cleanup_delete_rule_title),
+            content = stringResource(
+                R.string.non_lyrics_cleanup_delete_rule_message,
+                deletingRule.orEmpty()
+            ),
+            onDismissRequest = { deletingRule = null },
+            onConfirm = {
+                deletingRule?.let(viewModel::removeNonLyricsContentRule)
+                deletingRule = null
+            },
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.common_delete),
+        )
+    } else WindowDialog(
         show = deletingRule != null,
         title = stringResource(R.string.non_lyrics_cleanup_delete_rule_title),
         onDismissRequest = { deletingRule = null }
@@ -213,7 +287,7 @@ fun LyricsCleanupRulesScreen(
                     onClick = { deletingRule = null },
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 TextButton(
                     text = stringResource(R.string.common_delete),
                     onClick = {
@@ -221,7 +295,7 @@ fun LyricsCleanupRulesScreen(
                         deletingRule = null
                     },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary()
+                    colors = MiuixButtonDefaults.textButtonColorsPrimary()
                 )
             }
         }
@@ -238,6 +312,26 @@ private fun CleanupRuleInputDialog(
     onSave: (String) -> Unit
 ) {
     var text by remember(show, initialValue) { mutableStateOf(initialValue) }
+    val salt = LocalUiEngine.current == UiEngine.SALT
+
+    if (salt) {
+        com.lonx.lyrico.ui.components.base.SaltConfirmDialog(
+            show = show, title = title, onDismissRequest = onDismiss, onConfirm = { onSave(text) },
+            cancelText = stringResource(R.string.cancel), confirmText = stringResource(R.string.confirm),
+            dismissOnConfirm = false,
+        ) {
+            RoundedColumn(paddingValues = PaddingValues(0.dp)) {
+                ItemEdit(text = text, onChange = { text = it })
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            SaltText(
+                text = errorMessage ?: stringResource(R.string.non_lyrics_cleanup_rule_input_hint),
+                color = if (errorMessage == null) SaltTheme.colors.subText else SaltTheme.colors.error,
+                style = SaltTheme.textStyles.sub
+            )
+        }
+        return
+    }
 
     WindowDialog(
         show = show,
@@ -268,12 +362,12 @@ private fun CleanupRuleInputDialog(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 TextButton(
                     text = stringResource(R.string.confirm),
                     onClick = { onSave(text) },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary()
+                    colors = MiuixButtonDefaults.textButtonColorsPrimary()
                 )
             }
         }

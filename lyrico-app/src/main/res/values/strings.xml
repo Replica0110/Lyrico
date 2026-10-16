@@ -644,6 +644,7 @@
     <string name="app_log_summary">View crash, metadata, and batch operation logs</string>
     <string name="app_log_empty">No logs yet</string>
     <string name="action_copy_log">Copy log</string>
+    <string name="action_copy_lyrics">Copy lyrics</string>
     <string name="action_export_logs">Export</string>
     <string name="app_log_delete_title">Delete logs?</string>
     <string name="app_log_delete_message">Delete %d log entries? This cannot be undone</string>
@@ -827,4 +828,7 @@
     <string name="poster_preview_info">Image info</string>
     <string name="poster_preview_dimensions">Dimensions</string>
     <string name="poster_preview_format">Format</string>
+    <string name="ui_engine">界面风格</string>
+    <string name="ui_engine_pilot_summary">SaltUI currently supports selected pages</string>
+    <string name="common_edit">Edit</string>
 </resources>

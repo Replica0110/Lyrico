@@ -12,13 +12,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.FilledIcons
-import top.yukonga.miuix.kmp.basic.BasicComponentColors
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.preference.ArrowPreference
+import com.lonx.lyrico.ui.components.base.ItemMenuAction
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
@@ -33,52 +31,42 @@ fun AlbumActionBottomSheet(
     onDelete: () -> Unit,
     onCalculateReplayGain: () -> Unit
 ) {
-    WindowBottomSheet(
-        show = show,
-        onDismissRequest = onDismissRequest,
-        onDismissFinished = onDismissFinished
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            SmallTitle(
-                text = albumName.ifBlank { stringResource(R.string.album_detail_title) },
-                insideMargin = PaddingValues(4.dp)
-            )
-            Card(
-                modifier = Modifier.padding(bottom = 12.dp),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                ArrowPreference(
-                    startAction = { PreferenceIcon(FilledIcons.Volume2, PreferenceIconTone.Library, enabled = !isCalculatingReplayGain) },
-                    title = stringResource(R.string.menu_action_calculate_album_replay_gain),
-                    enabled = !isCalculatingReplayGain,
-                    onClick = {
-                        if (!isCalculatingReplayGain) {
-                            onCalculateReplayGain()
-                        }
-                    }
-                )
-                ArrowPreference(
-                    startAction = { PreferenceIcon(FilledIcons.Share2, PreferenceIconTone.Tools) },
-                    title = stringResource(R.string.menu_action_share_album),
-                    onClick = onShare
-                )
-                ArrowPreference(
-                    startAction = { PreferenceIcon(FilledIcons.Trash, PreferenceIconTone.Danger) },
-                    title = stringResource(R.string.menu_action_delete_album),
-                    summary = stringResource(R.string.menu_action_delete_album_sub),
-                    titleColor = BasicComponentColors(
-                        MiuixTheme.colorScheme.error,
-                        MiuixTheme.colorScheme.disabledOnSecondaryVariant
-                    ),
-                    onClick = onDelete
-                )
+    val actions: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
+        ItemMenuAction(
+            icon = LucideIcons.Volume2, tone = PreferenceIconTone.Library,
+            title = stringResource(R.string.menu_action_calculate_album_replay_gain),
+            enabled = !isCalculatingReplayGain,
+            onClick = {
+                if (!isCalculatingReplayGain) {
+                    onCalculateReplayGain()
+                }
+            }
+        )
+        ItemMenuAction(
+            icon = LucideIcons.Share2, tone = PreferenceIconTone.Tools,
+            title = stringResource(R.string.menu_action_share_album),
+            onClick = onShare
+        )
+        ItemMenuAction(
+            icon = LucideIcons.Trash, tone = PreferenceIconTone.Danger,
+            title = stringResource(R.string.menu_action_delete_album),
+            summary = stringResource(R.string.menu_action_delete_album_sub),
+            onClick = onDelete
+        )
+    }
+    val label = albumName.ifBlank { stringResource(R.string.album_detail_title) }
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+        com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+            show = show, label = label, onDismissRequest = onDismissRequest,
+            onDismissFinished = onDismissFinished, content = actions)
+    } else {
+        WindowBottomSheet(show = show, onDismissRequest = onDismissRequest,
+            onDismissFinished = onDismissFinished) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 12.dp).verticalScroll(rememberScrollState())) {
+                SmallTitle(text = label, insideMargin = PaddingValues(4.dp))
+                Card(Modifier.padding(bottom = 12.dp),
+                    colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
+                    content = actions)
             }
         }
     }

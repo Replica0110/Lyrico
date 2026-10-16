@@ -1,0 +1,10 @@
+{
+  "uniqueId": "lucide:icons",
+  "name": "Lucide Icons",
+  "artifactVersion": "1.57.0",
+  "description": "Outline SVG icons adapted to Compose ImageVector",
+  "website": "https://lucide.dev",
+  "licenses": [
+    "lucide-isc-mit"
+  ]
+}

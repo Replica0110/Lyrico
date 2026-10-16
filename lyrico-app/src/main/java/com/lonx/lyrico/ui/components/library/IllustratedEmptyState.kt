@@ -1,5 +1,8 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.ui.components.library
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -22,13 +25,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Forward
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -40,7 +45,7 @@ fun IllustratedEmptyState(
     actionText: String? = null,
     onAction: () -> Unit = {},
     illustration: (@Composable () -> Unit)? = null,
-    icon: ImageVector = MiuixIcons.Forward,
+    icon: ImageVector = LucideIcons.ArrowRight,
     kind: EmptyStateKind = EmptyStateKind.List,
 ) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
@@ -60,23 +65,34 @@ fun IllustratedEmptyState(
             if (illustration != null) illustration() else EmptyStateAnimation(kind, compact)
             Spacer(Modifier.height(if (compact) 12.dp else 24.dp))
 
-            Text(
-                text = title,
-                style = MiuixTheme.textStyles.title4,
-                textAlign = TextAlign.Center
-            )
-
-            if (!summary.isNullOrBlank()) {
+            if (LocalUiEngine.current == UiEngine.SALT) {
+                com.moriafly.salt.ui.Text(title, textAlign = TextAlign.Center)
+                if (!summary.isNullOrBlank()) com.moriafly.salt.ui.Text(
+                    summary, color = SaltTheme.colors.subText,
+                    style = SaltTheme.textStyles.sub,
+                    modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center)
+            } else {
                 Text(
-                    text = summary,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 8.dp),
+                    text = title,
+                    style = MiuixTheme.textStyles.title4,
+                    textAlign = TextAlign.Center
                 )
+
+                if (!summary.isNullOrBlank()) {
+                    Text(
+                        text = summary,
+                        style = MiuixTheme.textStyles.body2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+
             }
 
-            // 使用强调色行内链接
+            val salt = LocalUiEngine.current == UiEngine.SALT
+            val actionColor = if (salt) SaltTheme.colors.highlight else MiuixTheme.colorScheme.primary
+            // Both engines keep the lightweight highlighted-text action.
             if (!actionText.isNullOrBlank()) {
                 Spacer(Modifier.height(if (compact) 10.dp else 16.dp))
                 Row(
@@ -84,27 +100,48 @@ fun IllustratedEmptyState(
                         .clip(RoundedCornerShape(8.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(color = MiuixTheme.colorScheme.primary),
+                            indication = ripple(color = actionColor),
                             onClick = onAction
                         )
                         .padding(horizontal = 12.dp, vertical = 6.dp), // 保证触控舒适度
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
-                    Text(
-                        text = actionText,
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .padding(start = 2.dp)
-                    )
+                    if (salt) {
+                        com.moriafly.salt.ui.Text(
+                            text = actionText,
+                            style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
+                            color = actionColor,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    } else {
+                        Text(
+                            text = actionText,
+                            style = MiuixTheme.textStyles.body2,
+                            color = actionColor,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                    // Salt 原生 Icon 只接受 Painter，用矢量画笔保持同一图标与尺寸。
+                    if (salt) {
+                        com.moriafly.salt.ui.Icon(
+                            painter = rememberVectorPainter(icon),
+                            contentDescription = null,
+                            tint = actionColor,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(start = 2.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = actionColor,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(start = 2.dp)
+                        )
+                    }
                 }
             }
         }

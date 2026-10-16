@@ -1,3 +1,5 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.ui.components.song
 
 
@@ -142,6 +144,7 @@ private fun RenameSongDialog(
     YesNoDialog(
         title = androidx.compose.ui.res.stringResource(R.string.dialog_rename_title),
         show = show,
+        confirmEnabled = newName.isNotBlank() && newName.trim() + extensionDot != song.fileName,
         onDismissRequest = onDismissRequest,
         onConfirm = {
             val fullNewName = newName.trim() + extensionDot
@@ -150,7 +153,20 @@ private fun RenameSongDialog(
             }
         },
         content = {
-            TextField(
+            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+                com.moriafly.salt.ui.RoundedColumn(
+                    paddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                ) {
+                    com.moriafly.salt.ui.ItemEdit(text = newName, onChange = { newName = it },
+                        hint = oldName)
+                }
+                if (extensionDot.isNotEmpty()) com.moriafly.salt.ui.Text(
+                    text = extensionDot,
+                    style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
+                    color = com.moriafly.salt.ui.SaltTheme.colors.subText,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            } else TextField(
                 value = newName,
                 onValueChange = { newName = it },
                 maxLines = 1,

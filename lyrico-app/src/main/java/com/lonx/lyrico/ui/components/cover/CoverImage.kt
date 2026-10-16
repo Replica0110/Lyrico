@@ -1,5 +1,6 @@
 package com.lonx.lyrico.ui.components.cover
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -19,10 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import com.lonx.audiotag.model.AudioPictureType
+import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.components.CoverCandidate
 import com.lonx.lyrico.ui.components.CoverRequest
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Image
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.theme.LyricoColors
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -67,17 +69,22 @@ fun CoverImage(
     // so keep the placeholder icon instead of an empty box.
     var loadFailed by remember(request) { mutableStateOf(false) }
 
+    // 封面占位与回退图标随引擎取色：Salt 页面沿用应用既有的封面占位约定色。
+    val salt = LocalUiEngine.current == UiEngine.SALT
     Box(
         modifier = modifier
             .clip(shape)
-            .background(MiuixTheme.colorScheme.surfaceVariant),
+            .background(
+                if (salt) LyricoColors.coverPlaceholder else MiuixTheme.colorScheme.surfaceVariant
+            ),
         contentAlignment = Alignment.Center
     ) {
         if (!hasSource || loadFailed) {
             Icon(
-                imageVector = MiuixIcons.Image,
+                imageVector = LucideIcons.Image,
                 contentDescription = contentDescription,
-                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                tint = if (salt) LyricoColors.coverPlaceholderIcon
+                else MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 modifier = Modifier.size(26.dp)
             )
         }

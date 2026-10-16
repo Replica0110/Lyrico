@@ -1,5 +1,8 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.border
@@ -9,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -26,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -48,8 +53,6 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -361,14 +364,18 @@ fun QuickJsTestScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT
+
+    com.lonx.lyrico.ui.components.library.LibraryDetailPage(
+        title = stringResource(R.string.quickjs_test_title),
+        onBack = { navigator.popBackStack() },
+        miuixTopBar = {
             SmallTopAppBar(
                 title = stringResource(R.string.quickjs_test_title),
                 navigationIcon = {
                     IconButton(onClick = { navigator.popBackStack() }) {
                         Icon(
-                            imageVector = MiuixIcons.Back,
+                            imageVector = LucideIcons.ArrowLeft,
                             contentDescription = stringResource(R.string.action_back)
                         )
                     }
@@ -378,9 +385,10 @@ fun QuickJsTestScreen(
         }
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
+            modifier = (if (salt) Modifier else Modifier
                 .scrollEndHaptic()
-                .overScrollVertical(),
+                .overScrollVertical())
+                .fillMaxSize(),
             contentPadding = scaffoldContentPadding(
                 paddingValues = paddingValues,
                 topExtra = 8.dp,
@@ -389,7 +397,16 @@ fun QuickJsTestScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item("description") {
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                if (salt) {
+                    com.moriafly.salt.ui.Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                        com.moriafly.salt.ui.Item(
+                            onClick = {},
+                            text = stringResource(R.string.quickjs_test_description),
+                            sub = stringResource(R.string.quickjs_test_description_summary),
+                            arrowType = com.moriafly.salt.ui.ItemArrowType.None,
+                        )
+                    }
+                } else Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                     BasicComponent(
                         insideMargin = PaddingValues(16.dp),
                         title = stringResource(R.string.quickjs_test_description),
@@ -455,13 +472,19 @@ private fun EvalTestCard(
     onRun: () -> Unit,
     isRunning: Boolean
 ) {
-    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT
+    QuickJsCard(modifier = Modifier.padding(horizontal = 12.dp)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
+            if (salt) com.moriafly.salt.ui.Text(
+                text = title,
+                style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
+                fontWeight = FontWeight.Medium,
+                color = com.moriafly.salt.ui.SaltTheme.colors.text
+            ) else Text(
                 text = title,
                 style = MiuixTheme.textStyles.title3,
                 color = MiuixTheme.colorScheme.onSurface
@@ -469,7 +492,11 @@ private fun EvalTestCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
+            if (salt) com.moriafly.salt.ui.Text(
+                text = description,
+                style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
+                color = com.moriafly.salt.ui.SaltTheme.colors.subText
+            ) else Text(
                 text = description,
                 style = MiuixTheme.textStyles.body2,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary
@@ -477,7 +504,11 @@ private fun EvalTestCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
+            if (salt) com.moriafly.salt.ui.Text(
+                text = "脚本内容",
+                style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
+                color = com.moriafly.salt.ui.SaltTheme.colors.text
+            ) else Text(
                 text = "脚本内容",
                 style = MiuixTheme.textStyles.body2,
                 color = MiuixTheme.colorScheme.onSurface
@@ -489,7 +520,10 @@ private fun EvalTestCard(
                 value = script,
                 onValueChange = onScriptChange,
                 enabled = !isRunning,
-                textStyle = MiuixTheme.textStyles.body2.copy(
+                textStyle = if (salt) com.moriafly.salt.ui.SaltTheme.textStyles.main.copy(
+                    color = com.moriafly.salt.ui.SaltTheme.colors.text,
+                    fontFamily = FontFamily.Monospace
+                ) else MiuixTheme.textStyles.body2.copy(
                     color = MiuixTheme.colorScheme.onSurface,
                     fontFamily = FontFamily.Monospace
                 ),
@@ -498,14 +532,20 @@ private fun EvalTestCard(
                     .heightIn(min = 180.dp)
                     .border(
                         width = 1.dp,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        color = if (salt) com.moriafly.salt.ui.SaltTheme.colors.stroke
+                        else MiuixTheme.colorScheme.onSurfaceVariantActions,
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(12.dp),
                 decorationBox = { innerTextField ->
                     Box(modifier = Modifier.fillMaxWidth()) {
                         if (script.isBlank()) {
-                            Text(
+                            if (salt) com.moriafly.salt.ui.Text(
+                                text = "请输入 JavaScript 脚本，最后一个表达式会作为 eval 返回值",
+                                style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
+                                color = com.moriafly.salt.ui.SaltTheme.colors.subText,
+                                fontFamily = FontFamily.Monospace
+                            ) else Text(
                                 text = "请输入 JavaScript 脚本，最后一个表达式会作为 eval 返回值",
                                 style = MiuixTheme.textStyles.body2,
                                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
@@ -519,7 +559,11 @@ private fun EvalTestCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
+            if (salt) com.moriafly.salt.ui.Text(
+                text = "示例脚本",
+                style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
+                color = com.moriafly.salt.ui.SaltTheme.colors.text
+            ) else Text(
                 text = "示例脚本",
                 style = MiuixTheme.textStyles.body2,
                 color = MiuixTheme.colorScheme.onSurface
@@ -536,7 +580,12 @@ private fun EvalTestCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        TextButton(
+                        if (salt) com.moriafly.salt.ui.Button(
+                            onClick = { onScriptChange(example.script) },
+                            text = example.title,
+                            enabled = !isRunning,
+                            appearance = com.moriafly.salt.ui.ButtonAppearance.Plain,
+                        ) else TextButton(
                             text = example.title,
                             enabled = !isRunning,
                             onClick = { onScriptChange(example.script) },
@@ -552,7 +601,12 @@ private fun EvalTestCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(
+                if (salt) com.moriafly.salt.ui.Button(
+                    onClick = onRun,
+                    text = stringResource(R.string.quickjs_test_run),
+                    enabled = !isRunning,
+                    appearance = com.moriafly.salt.ui.ButtonAppearance.Plain,
+                ) else TextButton(
                     text = stringResource(R.string.quickjs_test_run),
                     onClick = onRun,
                     enabled = !isRunning,
@@ -573,13 +627,19 @@ private fun TestCard(
     onRun: () -> Unit,
     isRunning: Boolean
 ) {
-    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT
+    QuickJsCard(modifier = Modifier.padding(horizontal = 12.dp)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
+            if (salt) com.moriafly.salt.ui.Text(
+                text = title,
+                style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
+                fontWeight = FontWeight.Medium,
+                color = com.moriafly.salt.ui.SaltTheme.colors.text
+            ) else Text(
                 text = title,
                 style = MiuixTheme.textStyles.title3,
                 color = MiuixTheme.colorScheme.onSurface
@@ -587,7 +647,11 @@ private fun TestCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
+            if (salt) com.moriafly.salt.ui.Text(
+                text = description,
+                style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
+                color = com.moriafly.salt.ui.SaltTheme.colors.subText
+            ) else Text(
                 text = description,
                 style = MiuixTheme.textStyles.body2,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary
@@ -599,7 +663,12 @@ private fun TestCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(
+                if (salt) com.moriafly.salt.ui.Button(
+                    onClick = onRun,
+                    text = stringResource(R.string.quickjs_test_run),
+                    enabled = !isRunning,
+                    appearance = com.moriafly.salt.ui.ButtonAppearance.Plain,
+                ) else TextButton(
                     text = stringResource(R.string.quickjs_test_run),
                     onClick = onRun,
                     enabled = !isRunning,
@@ -612,11 +681,36 @@ private fun TestCard(
     }
 }
 
+/** 卡片外壳：Salt 用 Salt 卡片，Miuix 用原卡片，内部结构保持不变。 */
+@Composable
+private fun QuickJsCard(
+    modifier: Modifier = Modifier,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
+        com.lonx.lyrico.data.model.UiEngine.SALT
+    ) {
+        com.moriafly.salt.ui.Card(modifier = modifier) { content() }
+    } else Card(modifier = modifier) { content() }
+}
+
 @Composable
 private fun ResultText(result: String?) {
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT
     result?.let {
         Spacer(modifier = Modifier.height(12.dp))
-        Text(
+        if (salt) com.moriafly.salt.ui.Text(
+            text = it,
+            style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
+            color = when {
+                it.startsWith("✅") -> com.moriafly.salt.ui.SaltTheme.colors.highlight
+                it.startsWith("❌") -> com.moriafly.salt.ui.SaltTheme.colors.error
+                it.startsWith("⚠️") -> com.moriafly.salt.ui.SaltTheme.colors.warning
+                else -> com.moriafly.salt.ui.SaltTheme.colors.subText
+            },
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.fillMaxWidth()
+        ) else Text(
             text = it,
             style = MiuixTheme.textStyles.body2,
             color = when {

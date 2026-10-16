@@ -1,5 +1,8 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,22 +28,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.base.SaltDropdownRow
+import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.BatchTaskListViewModel
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.dialog.YesNoDialog as SaltYesNoDialog
+import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.BatchTaskDetailDestination
@@ -50,7 +63,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -72,6 +84,7 @@ fun BatchTaskListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
+    val salt = LocalUiEngine.current == UiEngine.SALT
 
     val typeItems = remember {
         BatchTaskType.entries.map { it.labelRes }
@@ -103,101 +116,152 @@ fun BatchTaskListScreen(
         selectedTaskIds = selectedTaskIds.intersect(visibleIds)
     }
 
-    WindowDialog(
-        title = stringResource(R.string.batch_task_delete_title),
-        show = showDeleteDialog,
-        onDismissRequest = {
-            showDeleteDialog = false
-        },
-        onDismissFinished = {
-            showDeleteDialog = false
-            selectedTaskId = null
-            pendingDeleteTaskIds = emptyList()
-        }
-    ) {
-        Column {
-            Text(
-                text = if (pendingDeleteTaskIds.size > 1) {
-                    stringResource(
-                        R.string.batch_task_delete_selected_message,
-                        pendingDeleteTaskIds.size
-                    )
+    val deleteMessage = if (pendingDeleteTaskIds.size > 1) {
+        stringResource(
+            R.string.batch_task_delete_selected_message,
+            pendingDeleteTaskIds.size
+        )
+    } else {
+        stringResource(R.string.batch_task_delete_message)
+    }
+
+    if (salt) {
+        if (showDeleteDialog) SaltYesNoDialog(
+            title = stringResource(R.string.batch_task_delete_title),
+            content = deleteMessage,
+            onDismissRequest = {
+                showDeleteDialog = false
+                selectedTaskId = null
+                pendingDeleteTaskIds = emptyList()
+            },
+            onConfirm = {
+                if (pendingDeleteTaskIds.isNotEmpty()) {
+                    viewModel.deleteTasks(pendingDeleteTaskIds)
                 } else {
-                    stringResource(R.string.batch_task_delete_message)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                color = MiuixTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = {
-                        showDeleteDialog = false
-                        selectedTaskId = null
-                    },
-                    modifier = Modifier.weight(1f)
+                    selectedTaskId?.let(viewModel::deleteTask)
+                }
+                selectedTaskIds = emptySet()
+                selectedTaskId = null
+                pendingDeleteTaskIds = emptyList()
+                showDeleteDialog = false
+            },
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.confirm),
+        )
+        if (showClearDialog) SaltYesNoDialog(
+            title = stringResource(R.string.batch_task_clear_title),
+            content = stringResource(R.string.batch_task_clear_message),
+            onDismissRequest = { showClearDialog = false },
+            onConfirm = {
+                viewModel.deleteTasks(deletableFilteredTaskIds)
+                selectedTaskIds = emptySet()
+                showClearDialog = false
+            },
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.confirm),
+        )
+    } else {
+        WindowDialog(
+            title = stringResource(R.string.batch_task_delete_title),
+            show = showDeleteDialog,
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+            onDismissFinished = {
+                showDeleteDialog = false
+                selectedTaskId = null
+                pendingDeleteTaskIds = emptyList()
+            }
+        ) {
+            Column {
+                Text(
+                    text = deleteMessage,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MiuixTheme.colorScheme.onBackground
                 )
-                TextButton(
-                    text = stringResource(R.string.confirm),
-                    onClick = {
-                        if (pendingDeleteTaskIds.isNotEmpty()) {
-                            viewModel.deleteTasks(pendingDeleteTaskIds)
-                        } else {
-                            selectedTaskId?.let(viewModel::deleteTask)
-                        }
-                        selectedTaskIds = emptySet()
-                        showDeleteDialog = false
-                        selectedTaskId = null
-                        pendingDeleteTaskIds = emptyList()
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    TextButton(
+                        text = stringResource(R.string.cancel),
+                        onClick = {
+                            showDeleteDialog = false
+                            selectedTaskId = null
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        text = stringResource(R.string.confirm),
+                        onClick = {
+                            if (pendingDeleteTaskIds.isNotEmpty()) {
+                                viewModel.deleteTasks(pendingDeleteTaskIds)
+                            } else {
+                                selectedTaskId?.let(viewModel::deleteTask)
+                            }
+                            selectedTaskIds = emptySet()
+                            showDeleteDialog = false
+                            selectedTaskId = null
+                            pendingDeleteTaskIds = emptyList()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
+                    )
+                }
+            }
+        }
+
+        WindowDialog(
+            title = stringResource(R.string.batch_task_clear_title),
+            show = showClearDialog,
+            onDismissRequest = { showClearDialog = false }
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.batch_task_clear_message),
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    TextButton(
+                        text = stringResource(R.string.cancel),
+                        onClick = { showClearDialog = false },
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        text = stringResource(R.string.confirm),
+                        onClick = {
+                            viewModel.deleteTasks(deletableFilteredTaskIds)
+                            selectedTaskIds = emptySet()
+                            showClearDialog = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
+                    )
+                }
             }
         }
     }
 
-    WindowDialog(
-        title = stringResource(R.string.batch_task_clear_title),
-        show = showClearDialog,
-        onDismissRequest = { showClearDialog = false }
-    ) {
-        Column {
-            Text(
-                text = stringResource(R.string.batch_task_clear_message),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = { showClearDialog = false },
-                    modifier = Modifier.weight(1f)
-                )
-                TextButton(
-                    text = stringResource(R.string.confirm),
-                    onClick = {
-                        viewModel.deleteTasks(deletableFilteredTaskIds)
-                        selectedTaskIds = emptySet()
-                        showClearDialog = false
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
-                )
-            }
-        }
-    }
-
+    val canClearFinishedTasks = deletableFilteredTaskIds.isNotEmpty()
     val topBarBackdrop = rememberBarBlurBackdrop()
-    Scaffold(
-        topBar = {
+    LibraryDetailPage(
+        title = stringResource(R.string.batch_task_list_title),
+        onBack = { navigator.popBackStack() },
+        actions = {
+            SaltIconButton(
+                icon = LucideIcons.Trash,
+                label = stringResource(R.string.batch_task_clear_title),
+                enabled = canClearFinishedTasks,
+                tint = if (canClearFinishedTasks) SaltTheme.colors.error else SaltTheme.colors.subText,
+                onClick = { showClearDialog = true }
+            )
+        },
+        miuixTopBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
                 SmallTopAppBar(
                     color = Color.Transparent,
@@ -208,13 +272,12 @@ fun BatchTaskListScreen(
                             onClick = { navigator.popBackStack() }
                         ) {
                             Icon(
-                                imageVector = FilledIcons.ArrowLeft,
+                                imageVector = LucideIcons.ArrowLeft,
                                 contentDescription = stringResource(R.string.action_back)
                             )
                         }
                     },
                     actions = {
-                        val canClearFinishedTasks = deletableFilteredTaskIds.isNotEmpty()
                         IconButton(
                             enabled = canClearFinishedTasks,
                             onClick = {
@@ -224,7 +287,7 @@ fun BatchTaskListScreen(
                             }
                         ) {
                             Icon(
-                                FilledIcons.Trash,
+                                LucideIcons.Trash,
                                 contentDescription = stringResource(R.string.batch_task_clear_title),
                                 tint = if (canClearFinishedTasks) {
                                     MiuixTheme.colorScheme.error
@@ -240,29 +303,50 @@ fun BatchTaskListScreen(
         }
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
+            modifier = (if (salt) Modifier else Modifier
                 .blurSource(topBarBackdrop)
                 .scrollEndHaptic()
                 .overScrollVertical()
-                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection))
                 .fillMaxHeight(),
             contentPadding = scaffoldContentPadding(
                 paddingValues = paddingValues,
                 bottomExtra = 12.dp
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            overscrollEffect = null,
+            overscrollEffect = if (salt) rememberOverscrollEffect() else null,
         ) {
             item {
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.ListFilter, PreferenceIconTone.Tools) },
-                        title = stringResource(R.string.batch_task_filter_type),
-                        items = listOf(stringResource(R.string.batch_task_filter_all)) + typeItems.map {
-                            stringResource(
-                                it
+                val typeLabels = listOf(stringResource(R.string.batch_task_filter_all)) +
+                        typeItems.map { stringResource(it) }
+                val statusLabels = listOf(stringResource(R.string.batch_task_filter_all)) +
+                        statusItems.map { stringResource(it) }
+                if (salt) {
+                    ScreenCard {
+                        SaltDropdownRow(
+                            title = stringResource(R.string.batch_task_filter_type),
+                            labels = typeLabels,
+                            selectedIndex = selectedTypeIndex,
+                        ) { index ->
+                            viewModel.setFilterType(
+                                if (index == 0) null else BatchTaskType.entries[index - 1]
                             )
-                        },
+                        }
+                        SaltDropdownRow(
+                            title = stringResource(R.string.batch_task_filter_status),
+                            labels = statusLabels,
+                            selectedIndex = selectedStatusIndex,
+                        ) { index ->
+                            viewModel.setFilterStatus(
+                                if (index == 0) null else BatchTaskStatus.entries[index - 1]
+                            )
+                        }
+                    }
+                } else Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    WindowDropdownPreference(
+                        startAction = { PreferenceIcon(LucideIcons.ListFilter, PreferenceIconTone.Tools) },
+                        title = stringResource(R.string.batch_task_filter_type),
+                        items = typeLabels,
                         selectedIndex = selectedTypeIndex,
                         onSelectedIndexChange = { index ->
                             viewModel.setFilterType(
@@ -271,13 +355,9 @@ fun BatchTaskListScreen(
                         }
                     )
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.ListChecks, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.ListChecks, PreferenceIconTone.Tools) },
                         title = stringResource(R.string.batch_task_filter_status),
-                        items = listOf(stringResource(R.string.batch_task_filter_all)) + statusItems.map {
-                            stringResource(
-                                it
-                            )
-                        },
+                        items = statusLabels,
                         selectedIndex = selectedStatusIndex,
                         onSelectedIndexChange = { index ->
                             viewModel.setFilterStatus(
@@ -331,18 +411,53 @@ private fun BatchTaskCard(
     onDeleteClick: () -> Unit,
     onCancelClick: () -> Unit
 ) {
+    val isRunning =
+        task.status == BatchTaskStatus.RUNNING || task.status == BatchTaskStatus.QUEUED
+
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        com.moriafly.salt.ui.Card(modifier = modifier.padding(horizontal = 12.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(role = Role.Button, onClick = onClick)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    BatchTaskCardDetails(
+                        task = task,
+                        formattedDate = formattedDate,
+                        salt = true,
+                        isRunning = isRunning
+                    )
+                }
+                if (isRunning) {
+                    SaltIconButton(
+                        icon = LucideIcons.Close,
+                        label = stringResource(R.string.action_close),
+                        onClick = onCancelClick,
+                        tint = SaltTheme.colors.error,
+                        size = 36.dp,
+                        iconSize = 20.dp
+                    )
+                } else {
+                    SaltIconButton(
+                        icon = LucideIcons.Trash,
+                        label = stringResource(R.string.common_delete),
+                        onClick = onDeleteClick,
+                        tint = SaltTheme.colors.error,
+                        size = 36.dp,
+                        iconSize = 20.dp
+                    )
+                }
+            }
+        }
+        return
+    }
+
     Card(
         modifier = modifier.padding(horizontal = 12.dp)
     ) {
-        val typeLabel = stringResource(task.type.labelRes)
-        val statusLabel = stringResource(task.status.labelRes)
-        val durationSecs = if (task.startedAt != null && task.finishedAt != null) {
-            (task.finishedAt - task.startedAt) / 1000.0
-        } else null
-
-        val isRunning =
-            task.status == BatchTaskStatus.RUNNING || task.status == BatchTaskStatus.QUEUED
-
         BasicComponent(
             onClick = onClick,
             insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
@@ -358,7 +473,7 @@ private fun BatchTaskCard(
                 } else {
                     IconButton(onClick = onDeleteClick) {
                         Icon(
-                            FilledIcons.Trash,
+                            LucideIcons.Trash,
                             contentDescription = stringResource(R.string.common_delete),
                             tint = MiuixTheme.colorScheme.error
                         )
@@ -366,61 +481,137 @@ private fun BatchTaskCard(
                 }
             }
         ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = formattedDate,
-                        fontWeight = FontWeight.Bold,
-                        color = MiuixTheme.colorScheme.onSurface
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+            BatchTaskCardDetails(
+                task = task,
+                formattedDate = formattedDate,
+                salt = false,
+                isRunning = isRunning
+            )
+        }
+    }
+}
+
+/** 卡片正文：两引擎共用同一组字段与顺序，只换排版语义。 */
+@Composable
+private fun BatchTaskCardDetails(
+    task: BatchTaskEntity,
+    formattedDate: String,
+    salt: Boolean,
+    isRunning: Boolean,
+) {
+    val typeLabel = stringResource(task.type.labelRes)
+    val statusLabel = stringResource(task.status.labelRes)
+    val durationSecs = if (task.startedAt != null && task.finishedAt != null) {
+        (task.finishedAt - task.startedAt) / 1000.0
+    } else null
+    val finished = task.status == BatchTaskStatus.SUCCEEDED ||
+            task.status == BatchTaskStatus.FAILED ||
+            task.status == BatchTaskStatus.CANCELLED
+
+    if (!salt) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(
-                    text = stringResource(R.string.batch_task_type_label) + typeLabel,
-                    style = MiuixTheme.textStyles.body2,
+                    text = formattedDate,
+                    fontWeight = FontWeight.Bold,
                     color = MiuixTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = stringResource(R.string.batch_task_status_label) + statusLabel,
-                    style = MiuixTheme.textStyles.body2,
-                    color = MiuixTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                if (task.status == BatchTaskStatus.SUCCEEDED || task.status == BatchTaskStatus.FAILED || task.status == BatchTaskStatus.CANCELLED) {
-                    Text(
-                        text = stringResource(
-                            R.string.batch_match_stat_format,
-                            task.successCount,
-                            task.failureCount,
-                            task.skippedCount
-                        ),
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.onSurface
-                    )
-                } else if (task.status == BatchTaskStatus.RUNNING || task.status == BatchTaskStatus.QUEUED) {
-                    Text(
-                        text = "${task.current}/${task.total}",
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.onSurface
-                    )
-                }
-                if (durationSecs != null) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.batch_match_duration_format,
-                            durationSecs
-                        ),
-                        style = MiuixTheme.textStyles.body2,
-                        color = MiuixTheme.colorScheme.onSurface
-                    )
-                }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.batch_task_type_label) + typeLabel,
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = stringResource(R.string.batch_task_status_label) + statusLabel,
+                style = MiuixTheme.textStyles.body2,
+                color = MiuixTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            if (finished) {
+                Text(
+                    text = stringResource(
+                        R.string.batch_match_stat_format,
+                        task.successCount,
+                        task.failureCount,
+                        task.skippedCount
+                    ),
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+            } else if (isRunning) {
+                Text(
+                    text = "${task.current}/${task.total}",
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+            }
+            if (durationSecs != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(
+                        R.string.batch_match_duration_format,
+                        durationSecs
+                    ),
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+            }
+        }
+        return
+    }
+
+    Column {
+        com.moriafly.salt.ui.Text(
+            text = formattedDate,
+            style = SaltTheme.textStyles.main,
+            fontWeight = FontWeight.Medium,
+            color = SaltTheme.colors.text
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        com.moriafly.salt.ui.Text(
+            text = stringResource(R.string.batch_task_type_label) + typeLabel,
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText
+        )
+        com.moriafly.salt.ui.Text(
+            text = stringResource(R.string.batch_task_status_label) + statusLabel,
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText
+        )
+        if (finished) {
+            com.moriafly.salt.ui.Text(
+                text = stringResource(
+                    R.string.batch_match_stat_format,
+                    task.successCount,
+                    task.failureCount,
+                    task.skippedCount
+                ),
+                style = SaltTheme.textStyles.sub,
+                color = SaltTheme.colors.subText
+            )
+        } else if (isRunning) {
+            com.moriafly.salt.ui.Text(
+                text = "${task.current}/${task.total}",
+                style = SaltTheme.textStyles.sub,
+                color = SaltTheme.colors.subText
+            )
+        }
+        if (durationSecs != null) {
+            com.moriafly.salt.ui.Text(
+                text = stringResource(
+                    R.string.batch_match_duration_format,
+                    durationSecs
+                ),
+                style = SaltTheme.textStyles.sub,
+                color = SaltTheme.colors.subText
+            )
         }
     }
 }

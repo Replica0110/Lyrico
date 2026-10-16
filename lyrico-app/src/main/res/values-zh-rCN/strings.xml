@@ -651,6 +651,7 @@
     <string name="app_log_summary">查看崩溃、元数据和批量操作日志</string>
     <string name="app_log_empty">暂无日志</string>
     <string name="action_copy_log">复制日志</string>
+    <string name="action_copy_lyrics">复制歌词</string>
     <string name="action_export_logs">导出</string>
     <string name="app_log_delete_title">删除日志？</string>
     <string name="app_log_delete_message">确认删除 %d 条日志吗？此操作不可撤销</string>
@@ -834,4 +835,7 @@
     <string name="poster_preview_info">图片信息</string>
     <string name="poster_preview_dimensions">尺寸</string>
     <string name="poster_preview_format">格式</string>
+    <string name="ui_engine">界面风格</string>
+    <string name="ui_engine_pilot_summary">SaltUI 目前支持部分页面</string>
+    <string name="common_edit">编辑</string>
 </resources>

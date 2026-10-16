@@ -8,6 +8,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -16,13 +19,17 @@ internal enum class PreferenceIconTone {
 
     @Composable
     fun color(): Color {
-        val dark = MiuixTheme.colorScheme.surface.luminance() < 0.5f
+        // 暗色判断与语义色都跟随当前引擎，避免 Salt 下取到 Miuix 色板。
+        val salt = LocalUiEngine.current == UiEngine.SALT
+        val dark = if (salt) SaltTheme.colors.background.luminance() < 0.5f
+        else MiuixTheme.colorScheme.surface.luminance() < 0.5f
         return when (this) {
+            // 三个品牌色是应用级标识，两种引擎下保持一致。
             Appearance -> if (dark) Color(0xFFC4A7FF) else Color(0xFF7952B3)
             Library -> if (dark) Color(0xFFF3BF75) else Color(0xFF99600C)
             Lyrics -> if (dark) Color(0xFF7DD6AB) else Color(0xFF23784F)
-            Tools -> MiuixTheme.colorScheme.primary
-            Danger -> MiuixTheme.colorScheme.error
+            Tools -> if (salt) SaltTheme.colors.highlight else MiuixTheme.colorScheme.primary
+            Danger -> if (salt) SaltTheme.colors.error else MiuixTheme.colorScheme.error
         }
     }
 }

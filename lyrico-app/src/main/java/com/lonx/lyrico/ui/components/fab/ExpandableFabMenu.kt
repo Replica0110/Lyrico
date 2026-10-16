@@ -39,9 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.Icon
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
 
 enum class ExpandableFabMenuPosition {
     BottomEnd,
@@ -197,6 +200,15 @@ private fun MorphExpandableFabMenu(
 private fun CollapsedFabIcon(
     style: ExpandableFabMenuStyle
 ) {
+    if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+        com.moriafly.salt.ui.Icon(
+            painter = rememberVectorPainter(style.mainIcon),
+            contentDescription = "Actions",
+            tint = style.mainContentColor,
+            modifier = Modifier.size(style.mainIconSize),
+        )
+        return
+    }
     Icon(
         imageVector = style.mainIcon,
         contentDescription = "Actions",

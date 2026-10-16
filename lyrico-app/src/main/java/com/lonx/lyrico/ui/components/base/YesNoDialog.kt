@@ -9,6 +9,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -30,6 +36,20 @@ fun YesNoDialog(
     confirmText: String = stringResource(R.string.confirm),
     confirmEnabled: Boolean = true
 ) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+        var wasVisible by remember { mutableStateOf(show) }
+        val finished by rememberUpdatedState(onDismissFinished)
+        LaunchedEffect(show) {
+            if (!show && wasVisible) finished()
+            wasVisible = show
+        }
+        SaltConfirmDialog(
+            show = show, title = title, summary = summary, content = content,
+            onDismissRequest = onDismissRequest, onConfirm = onConfirm,
+            cancelText = cancelText, confirmText = confirmText, confirmEnabled = confirmEnabled,
+        )
+        return
+    }
     WindowDialog(
         show = show,
         summary = summary,

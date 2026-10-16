@@ -38,7 +38,9 @@ import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.components.CoverRequest
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
-import top.yukonga.miuix.kmp.basic.Text
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
+import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @SuppressLint("DefaultLocale")
@@ -105,7 +107,9 @@ fun SongListItemContent(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                MiuixTheme.colorScheme.secondary
+                                if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+                                    com.moriafly.salt.ui.SaltTheme.colors.subBackground
+                                } else MiuixTheme.colorScheme.secondary
                             ),
                         )
                     )
@@ -114,7 +118,9 @@ fun SongListItemContent(
                     text = song.fileName.substringAfterLast('.', "").uppercase(),
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MiuixTheme.colorScheme.onSecondary,
+                    color = if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+                        com.moriafly.salt.ui.SaltTheme.colors.text
+                    } else MiuixTheme.colorScheme.onSecondary,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .padding(bottom = 1.dp)

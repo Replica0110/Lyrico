@@ -1,3 +1,5 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.ui.components.base
 
 import androidx.compose.foundation.layout.Column
@@ -14,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.data.model.ExportDestination
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -30,14 +32,36 @@ fun ExportDestinationBottomSheet(
     var destination by remember(show) {
         mutableStateOf(ExportDestination.SELECTED_DIRECTORY)
     }
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
+            com.lonx.lyrico.data.model.UiEngine.SALT
 
     YesNoBottomSheet(
         show = show,
         title = stringResource(R.string.export_destination_title),
         onDismissRequest = onDismissRequest,
         onConfirm = { onConfirm(destination) },
+        groupContent = false,
         content = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            if (salt) {
+                com.moriafly.salt.ui.RoundedColumn {
+                com.moriafly.salt.ui.ItemCheck(
+                    state = destination == ExportDestination.SELECTED_DIRECTORY,
+                    onChange = { checked ->
+                        if (checked) destination = ExportDestination.SELECTED_DIRECTORY
+                    },
+                    text = stringResource(R.string.export_destination_selected_folder),
+                    sub = stringResource(R.string.export_destination_selected_folder_summary),
+                )
+                com.moriafly.salt.ui.ItemCheck(
+                    state = destination == ExportDestination.AUDIO_DIRECTORY,
+                    onChange = { checked ->
+                        if (checked) destination = ExportDestination.AUDIO_DIRECTORY
+                    },
+                    text = stringResource(R.string.export_destination_audio_folder),
+                    sub = stringResource(R.string.export_destination_audio_folder_summary),
+                )
+                }
+            } else Column(modifier = Modifier.fillMaxWidth()) {
                 Card(
                     modifier = Modifier.padding(bottom = 12.dp),
                     colors = CardDefaults.defaultColors(
@@ -45,14 +69,14 @@ fun ExportDestinationBottomSheet(
                     )
                 ) {
                     RadioButtonPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Folder, PreferenceIconTone.Library) },
+                        startAction = { PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Library) },
                         title = stringResource(R.string.export_destination_selected_folder),
                         summary = stringResource(R.string.export_destination_selected_folder_summary),
                         selected = destination == ExportDestination.SELECTED_DIRECTORY,
                         onClick = { destination = ExportDestination.SELECTED_DIRECTORY }
                     )
                     RadioButtonPreference(
-                        startAction = { PreferenceIcon(FilledIcons.FileMusic, PreferenceIconTone.Library) },
+                        startAction = { PreferenceIcon(LucideIcons.FileMusic, PreferenceIconTone.Library) },
                         title = stringResource(R.string.export_destination_audio_folder),
                         summary = stringResource(R.string.export_destination_audio_folder_summary),
                         selected = destination == ExportDestination.AUDIO_DIRECTORY,

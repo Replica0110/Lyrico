@@ -3,7 +3,6 @@
     <!-- 友站播放器選擇 -->
     <string name="choose_player">選擇播放器</string>
     <string name="play_with">播放方式</string>
-    <string name="recommended_players">推薦播放器</string>
     <string name="friendly_player_cone_player">光錐音樂</string>
     <string name="friendly_player_halcyon">Halcyon</string>
     <string name="friendly_player_salt_player">Salt Player</string>

@@ -1,14 +1,19 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
 import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -29,7 +34,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,26 +41,39 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.base.SaltBottomSheet
+import com.lonx.lyrico.ui.components.base.SaltDropdownRow
+import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.LogRetentionOption
 import com.lonx.lyrico.data.model.entity.AppLogEntity
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.AppLogEvent
 import com.lonx.lyrico.viewmodel.AppLogViewModel
+import com.moriafly.salt.ui.ItemOuterTitle
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.innerPadding
+import com.moriafly.salt.ui.dialog.YesNoDialog as SaltYesNoDialog
+import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -68,7 +85,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
@@ -128,6 +144,7 @@ fun AppLogScreen(
     val selectedTypeIndex = remember(selectedType) {
         selectedType?.let { type -> AppLogType.entries.indexOf(type) + 1 } ?: 0
     }
+    val salt = LocalUiEngine.current == UiEngine.SALT
 
     LaunchedEffect(filteredLogs) {
         val visibleIds = filteredLogs.mapTo(mutableSetOf()) { it.id }
@@ -145,15 +162,43 @@ fun AppLogScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is AppLogEvent.ShowMessage -> {
-                    event.message.asString(context)?.let { snackbarHostState.showSnackbar(it) }
+                    event.message.asString(context)?.let { text ->
+                        if (salt) android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
+                        else snackbarHostState.showSnackbar(text)
+                    }
                 }
             }
         }
     }
 
     val topBarBackdrop = rememberBarBlurBackdrop()
-    Scaffold(
-        topBar = {
+    LibraryDetailPage(
+        title = stringResource(R.string.app_log_title),
+        onBack = { navigator.popBackStack() },
+        actions = {
+            SaltIconButton(
+                icon = LucideIcons.Share2,
+                label = stringResource(R.string.action_export_logs),
+                enabled = filteredLogs.isNotEmpty(),
+                onClick = {
+                    pendingExportIds = filteredLogs.map { it.id }
+                    exportLauncher.launch("lyrico_log_${System.currentTimeMillis()}.log")
+                }
+            )
+            SaltIconButton(
+                icon = LucideIcons.Trash,
+                label = stringResource(R.string.action_delete),
+                enabled = filteredLogs.isNotEmpty(),
+                tint = SaltTheme.colors.error,
+                onClick = {
+                    pendingDeleteIds = filteredLogs.map { it.id }
+                    showDeleteConfirmDialog = true
+                }
+            )
+        },
+        // SaltUI 3.0.0-beta02 没有 Snackbar，Salt 侧改用平台 Toast（与项目其它 Salt 路径一致）。
+        snackbarHost = { if (!salt) SnackbarHost(snackbarHostState) },
+        miuixTopBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
                 SmallTopAppBar(
                     color = Color.Transparent,
@@ -162,7 +207,7 @@ fun AppLogScreen(
                     navigationIcon = {
                         IconButton(onClick = { navigator.popBackStack() }) {
                             Icon(
-                                imageVector = FilledIcons.ArrowLeft,
+                                imageVector = LucideIcons.ArrowLeft,
                                 contentDescription = stringResource(R.string.action_back)
                             )
                         }
@@ -176,7 +221,7 @@ fun AppLogScreen(
                             }
                         ) {
                             Icon(
-                                imageVector = FilledIcons.Share2,
+                                imageVector = LucideIcons.Share2,
                                 contentDescription = stringResource(R.string.action_export_logs)
                             )
                         }
@@ -188,7 +233,7 @@ fun AppLogScreen(
                             }
                         ) {
                             Icon(
-                                imageVector = FilledIcons.Trash,
+                                imageVector = LucideIcons.Trash,
                                 contentDescription = stringResource(R.string.action_delete),
                                 tint = MiuixTheme.colorScheme.error
                             )
@@ -197,16 +242,15 @@ fun AppLogScreen(
                     scrollBehavior = topAppBarScrollBehavior
                 )
             }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = (if (salt) Modifier else Modifier
                 .blurSource(topBarBackdrop)
                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
                 .scrollEndHaptic()
-                .overScrollVertical(),
+                .overScrollVertical())
+                .fillMaxSize(),
             contentPadding = scaffoldContentPadding(
                 paddingValues = paddingValues,
                 topExtra = 8.dp,
@@ -215,35 +259,55 @@ fun AppLogScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item("filters") {
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                val levelLabels = listOf(stringResource(R.string.app_log_filter_all)) +
+                        levelItems.map { stringResource(it) }
+                val typeLabels = listOf(stringResource(R.string.app_log_filter_all)) +
+                        typeItems.map { stringResource(it) }
+                if (salt) {
+                    ScreenCard {
+                        SaltDropdownRow(
+                            title = stringResource(R.string.app_log_filter_level),
+                            labels = levelLabels,
+                            selectedIndex = selectedLevelIndex,
+                        ) { index ->
+                            selectedLevel = if (index == 0) null else AppLogLevel.entries[index - 1]
+                        }
+                        SaltDropdownRow(
+                            title = stringResource(R.string.app_log_filter_type),
+                            labels = typeLabels,
+                            selectedIndex = selectedTypeIndex,
+                        ) { index ->
+                            selectedType = if (index == 0) null else AppLogType.entries[index - 1]
+                        }
+                        SaltDropdownRow(
+                            title = stringResource(R.string.log_retention_title),
+                            labels = logRetentionItems,
+                            selectedIndex = selectedLogRetentionIndex,
+                        ) { index ->
+                            viewModel.setLogRetentionOption(LogRetentionOption.entries[index])
+                        }
+                    }
+                } else Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.ListFilter, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.ListFilter, PreferenceIconTone.Tools) },
                         title = stringResource(R.string.app_log_filter_level),
-                        items = listOf(stringResource(R.string.app_log_filter_all)) + levelItems.map {
-                            stringResource(
-                                it
-                            )
-                        },
+                        items = levelLabels,
                         selectedIndex = selectedLevelIndex,
                         onSelectedIndexChange = { index ->
                             selectedLevel = if (index == 0) null else AppLogLevel.entries[index - 1]
                         }
                     )
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Logs, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.Logs, PreferenceIconTone.Tools) },
                         title = stringResource(R.string.app_log_filter_type),
-                        items = listOf(stringResource(R.string.app_log_filter_all)) + typeItems.map {
-                            stringResource(
-                                it
-                            )
-                        },
+                        items = typeLabels,
                         selectedIndex = selectedTypeIndex,
                         onSelectedIndexChange = { index ->
                             selectedType = if (index == 0) null else AppLogType.entries[index - 1]
                         }
                     )
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Calendar, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.Calendar, PreferenceIconTone.Tools) },
                         title = stringResource(R.string.log_retention_title),
                         summary = stringResource(R.string.log_retention_summary),
                         items = logRetentionItems,
@@ -290,13 +354,28 @@ fun AppLogScreen(
                 val clipData = ClipData.newPlainText("copy log", log.formatForCopy())
                 val clipEntry = ClipEntry(clipData)
                 clipboardManager.setClipEntry(clipEntry)
-                snackbarHostState.showSnackbar(copiedMessage)
+                if (salt) android.widget.Toast.makeText(context, copiedMessage, android.widget.Toast.LENGTH_SHORT).show()
+                else snackbarHostState.showSnackbar(copiedMessage)
             }
             showDetailSheet = false
         }
     )
 
-    WindowDialog(
+    if (salt) {
+        if (showDeleteConfirmDialog) SaltYesNoDialog(
+            title = stringResource(R.string.app_log_delete_title),
+            content = stringResource(R.string.app_log_delete_message, pendingDeleteIds.size),
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            onConfirm = {
+                viewModel.deleteLogs(pendingDeleteIds)
+                selectedLogIds = emptySet()
+                pendingDeleteIds = emptyList()
+                showDeleteConfirmDialog = false
+            },
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.confirm),
+        )
+    } else WindowDialog(
         show = showDeleteConfirmDialog,
         title = stringResource(R.string.app_log_delete_title),
         onDismissRequest = { showDeleteConfirmDialog = false }
@@ -330,12 +409,74 @@ fun AppLogScreen(
     }
 }
 
-
 @Composable
 private fun AppLogItem(
     log: AppLogEntity,
     onClick: () -> Unit
 ) {
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    if (salt) {
+        com.moriafly.salt.ui.Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(role = Role.Button, onClick = onClick)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SeverityBadge(log.level)
+                        com.moriafly.salt.ui.Text(
+                            text = stringResource(log.type.labelRes),
+                            style = SaltTheme.textStyles.main,
+                            fontWeight = FontWeight.Bold,
+                            color = SaltTheme.colors.text,
+                        )
+                    }
+                    com.moriafly.salt.ui.Text(
+                        text = formatTime(log.createdAt),
+                        style = SaltTheme.textStyles.sub,
+                        color = SaltTheme.colors.subText,
+                        maxLines = 1
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                com.moriafly.salt.ui.Text(
+                    text = log.message,
+                    style = SaltTheme.textStyles.main,
+                    color = SaltTheme.colors.text,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                com.moriafly.salt.ui.Text(
+                    text = log.tag,
+                    style = SaltTheme.textStyles.sub,
+                    color = SaltTheme.colors.subText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                log.relatedId?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    com.moriafly.salt.ui.Text(
+                        text = it,
+                        style = SaltTheme.textStyles.sub,
+                        color = SaltTheme.colors.subText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+        return
+    }
     Card(
         modifier = Modifier
             .padding(horizontal = 12.dp)
@@ -399,17 +540,44 @@ private fun AppLogItem(
 
 @Composable
 private fun SeverityBadge(level: AppLogLevel) {
-    val background = when (level) {
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val background = if (salt) {
+        when (level) {
+            AppLogLevel.ERROR -> SaltTheme.colors.error
+            AppLogLevel.WARNING -> SaltTheme.colors.warning
+            AppLogLevel.INFO -> SaltTheme.colors.highlight
+            AppLogLevel.DEBUG -> SaltTheme.colors.subBackground
+        }
+    } else when (level) {
         AppLogLevel.ERROR -> MiuixTheme.colorScheme.error
         AppLogLevel.WARNING -> MiuixTheme.colorScheme.tertiaryContainer
         AppLogLevel.INFO -> MiuixTheme.colorScheme.primary
         AppLogLevel.DEBUG -> MiuixTheme.colorScheme.secondaryContainer
     }
-    val content = when (level) {
+    val content = if (salt) {
+        when (level) {
+            AppLogLevel.ERROR, AppLogLevel.INFO -> SaltTheme.colors.onHighlight
+            AppLogLevel.WARNING, AppLogLevel.DEBUG -> SaltTheme.colors.text
+        }
+    } else when (level) {
         AppLogLevel.ERROR -> MiuixTheme.colorScheme.onError
         AppLogLevel.WARNING -> MiuixTheme.colorScheme.onSurface
         AppLogLevel.INFO -> MiuixTheme.colorScheme.onPrimary
         AppLogLevel.DEBUG -> MiuixTheme.colorScheme.onSurfaceVariantActions
+    }
+    if (salt) {
+        com.moriafly.salt.ui.Text(
+            text = stringResource(level.labelRes),
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(background)
+                .padding(horizontal = 7.dp, vertical = 2.dp),
+            color = content,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+        return
     }
     Text(
         text = stringResource(level.labelRes),
@@ -431,6 +599,37 @@ private fun AppLogDetailSheet(
     onDismissFinished: () -> Unit,
     onCopy: (AppLogEntity) -> Unit
 ) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        SaltBottomSheet(
+            show = show,
+            onDismissRequest = onDismiss,
+            onDismissFinished = onDismissFinished,
+            groupContent = true,
+            // 详情是纯文本，没有自带滚动，由弹层滚动。
+            scrollContent = true,
+            header = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.weight(1f)) {
+                        ItemOuterTitle(text = stringResource(R.string.app_log_detail_title))
+                    }
+                    log?.let {
+                        SaltIconButton(
+                            icon = LucideIcons.Copy,
+                            label = stringResource(R.string.action_copy_log),
+                            onClick = { onCopy(it) }
+                        )
+                    }
+                }
+            },
+        ) {
+            val current = log ?: return@SaltBottomSheet
+            AppLogDetailContent(current)
+        }
+        return
+    }
     WindowBottomSheet(
         show = show,
         enableNestedScroll = false,
@@ -443,7 +642,7 @@ private fun AppLogDetailSheet(
                     }
                 ) {
                     Icon(
-                        imageVector = FilledIcons.Copy,
+                        imageVector = LucideIcons.Copy,
                         contentDescription = stringResource(R.string.action_copy_log)
                     )
                 }
@@ -452,61 +651,90 @@ private fun AppLogDetailSheet(
         onDismissRequest = onDismiss,
         onDismissFinished = onDismissFinished
     ) {
-        log ?: return@WindowBottomSheet
+        val current = log ?: return@WindowBottomSheet
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Column {
-                DetailRow(
-                    stringResource(R.string.app_log_field_time),
-                    formatDateTime(log.createdAt)
+            AppLogDetailContent(current)
+        }
+    }
+}
+
+@Composable
+private fun AppLogDetailContent(log: AppLogEntity) {
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        DetailRow(
+            stringResource(R.string.app_log_field_time),
+            formatDateTime(log.createdAt)
+        )
+        DetailRow(
+            stringResource(R.string.app_log_field_level),
+            stringResource(log.level.labelRes)
+        )
+        DetailRow(
+            stringResource(R.string.app_log_field_type),
+            stringResource(log.type.labelRes)
+        )
+        DetailRow(stringResource(R.string.app_log_field_tag), log.tag)
+        log.relatedId?.let {
+            DetailRow(stringResource(R.string.app_log_field_related), it)
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        if (salt) com.moriafly.salt.ui.Text(
+            text = stringResource(R.string.app_log_field_message),
+            color = SaltTheme.colors.subText,
+            style = SaltTheme.textStyles.sub,
+            fontWeight = FontWeight.Bold
+        ) else Text(
+            text = stringResource(R.string.app_log_field_message),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            fontWeight = FontWeight.Bold
+        )
+        SelectionContainer {
+            if (salt) com.moriafly.salt.ui.Text(
+                text = log.message,
+                modifier = Modifier.padding(top = 4.dp),
+                color = SaltTheme.colors.text
+            ) else Text(
+                text = log.message,
+                modifier = Modifier.padding(top = 4.dp),
+                color = MiuixTheme.colorScheme.onSurface
+            )
+        }
+        log.detail?.takeIf { it.isNotBlank() }?.let { detail ->
+            Spacer(modifier = Modifier.height(12.dp))
+            if (salt) com.moriafly.salt.ui.Text(
+                text = stringResource(R.string.app_log_field_detail),
+                color = SaltTheme.colors.subText,
+                style = SaltTheme.textStyles.sub,
+                fontWeight = FontWeight.Bold
+            ) else Text(
+                text = stringResource(R.string.app_log_field_detail),
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                fontWeight = FontWeight.Bold
+            )
+            SelectionContainer {
+                if (salt) com.moriafly.salt.ui.Text(
+                    text = detail,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    color = SaltTheme.colors.text,
+                    fontFamily = FontFamily.Monospace
+                ) else Text(
+                    text = detail,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    color = MiuixTheme.colorScheme.onSurface,
+                    fontFamily = FontFamily.Monospace
                 )
-                DetailRow(
-                    stringResource(R.string.app_log_field_level),
-                    stringResource(log.level.labelRes)
-                )
-                DetailRow(
-                    stringResource(R.string.app_log_field_type),
-                    stringResource(log.type.labelRes)
-                )
-                DetailRow(stringResource(R.string.app_log_field_tag), log.tag)
-                log.relatedId?.let {
-                    DetailRow(stringResource(R.string.app_log_field_related), it)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.app_log_field_message),
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                    fontWeight = FontWeight.Bold
-                )
-                SelectionContainer {
-                    Text(
-                        text = log.message,
-                        modifier = Modifier.padding(top = 4.dp),
-                        color = MiuixTheme.colorScheme.onSurface
-                    )
-                }
-                log.detail?.takeIf { it.isNotBlank() }?.let { detail ->
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(R.string.app_log_field_detail),
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    SelectionContainer {
-                        Text(
-                            text = detail,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            color = MiuixTheme.colorScheme.onSurface,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-                }
             }
         }
     }
@@ -517,14 +745,25 @@ private fun DetailRow(
     label: String,
     value: String
 ) {
+    val salt = LocalUiEngine.current == UiEngine.SALT
     Column(modifier = Modifier.padding(bottom = 8.dp)) {
-        Text(
+        if (salt) com.moriafly.salt.ui.Text(
+            text = label,
+            color = SaltTheme.colors.subText,
+            style = SaltTheme.textStyles.sub,
+            fontWeight = FontWeight.Bold
+        ) else Text(
             text = label,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             fontWeight = FontWeight.Bold
         )
         SelectionContainer {
-            Text(
+            if (salt) com.moriafly.salt.ui.Text(
+                text = value,
+                color = SaltTheme.colors.text,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            ) else Text(
                 text = value,
                 color = MiuixTheme.colorScheme.onSurface,
                 maxLines = 3,

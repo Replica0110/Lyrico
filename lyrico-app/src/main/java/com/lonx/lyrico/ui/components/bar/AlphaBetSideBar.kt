@@ -40,7 +40,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.SortOrder
+import com.moriafly.salt.ui.Icon as SaltIcon
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.Text as SaltText
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -246,6 +251,8 @@ private fun AlphabetSideBarIndicator(
     item: AlphabetSideBarItem?,
     visible: Boolean
 ) {
+    // 指示气泡按引擎取语义色：Salt 高亮底 + onHighlight 前景，Miuix 保持原色。
+    val isSalt = LocalUiEngine.current == UiEngine.SALT
     AnimatedVisibility(
         visible = visible && item != null,
         enter = fadeIn() + scaleIn(),
@@ -257,30 +264,50 @@ private fun AlphabetSideBarIndicator(
                     .width(50.dp)
                     .height(50.dp)
                     .background(
-                        color = MiuixTheme.colorScheme.primary,
+                        color = if (isSalt) SaltTheme.colors.highlight else MiuixTheme.colorScheme.primary,
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 when (item) {
                     AlphabetSideBarItem.ScrollTop -> {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_up_24dp),
-                            modifier = Modifier.size(30.dp),
-                            contentDescription = null,
-                            tint = MiuixTheme.colorScheme.onPrimary
-                        )
+                        if (isSalt) {
+                            SaltIcon(
+                                painter = painterResource(R.drawable.ic_arrow_up_24dp),
+                                modifier = Modifier.size(30.dp),
+                                contentDescription = null,
+                                tint = SaltTheme.colors.onHighlight
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_arrow_up_24dp),
+                                modifier = Modifier.size(30.dp),
+                                contentDescription = null,
+                                tint = MiuixTheme.colorScheme.onPrimary
+                            )
+                        }
                     }
 
                     is AlphabetSideBarItem.Section -> {
-                        Text(
-                            text = item.value,
-                            style = MiuixTheme.textStyles.title1,
-                            color = MiuixTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1
-                        )
+                        if (isSalt) {
+                            SaltText(
+                                text = item.value,
+                                style = SaltTheme.textStyles.main,
+                                color = SaltTheme.colors.onHighlight,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1
+                            )
+                        } else {
+                            Text(
+                                text = item.value,
+                                style = MiuixTheme.textStyles.title1,
+                                color = MiuixTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }
@@ -337,6 +364,7 @@ private fun AlphabetSideBarCell(
     selected: Boolean,
     size: Dp
 ) {
+    // 字号随格位高度推导（最小格仅 10dp），是布局约束而非照搬某个引擎的主题字号。
     val fontSize = when {
         size < 15.dp -> 6.sp
         size < 20.dp -> 9.sp
@@ -349,37 +377,67 @@ private fun AlphabetSideBarCell(
         size < 24.dp -> size * 0.66f
         else -> size * 0.62f
     }
+    // 单元格按引擎取语义色：Salt 用 highlight/subText，Miuix 保持原色。
+    val isSalt = LocalUiEngine.current == UiEngine.SALT
     Box(
         modifier = Modifier.size(size),
         contentAlignment = Alignment.Center
     ) {
         when (item) {
             AlphabetSideBarItem.ScrollTop -> {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_up_24dp),
-                    contentDescription = null,
-                    tint = if (selected) {
-                        MiuixTheme.colorScheme.primary
-                    } else {
-                        MiuixTheme.colorScheme.onSurfaceContainer
-                    },
-                    modifier = Modifier.size(iconSize)
-                )
+                if (isSalt) {
+                    SaltIcon(
+                        painter = painterResource(R.drawable.ic_arrow_up_24dp),
+                        contentDescription = null,
+                        tint = if (selected) {
+                            SaltTheme.colors.highlight
+                        } else {
+                            SaltTheme.colors.subText
+                        },
+                        modifier = Modifier.size(iconSize)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_up_24dp),
+                        contentDescription = null,
+                        tint = if (selected) {
+                            MiuixTheme.colorScheme.primary
+                        } else {
+                            MiuixTheme.colorScheme.onSurfaceContainer
+                        },
+                        modifier = Modifier.size(iconSize)
+                    )
+                }
             }
 
             is AlphabetSideBarItem.Section -> {
-                Text(
-                    text = item.value,
-                    style = MiuixTheme.textStyles.body2.copy(fontSize = fontSize),
-                    color = if (selected) {
-                        MiuixTheme.colorScheme.primary
-                    } else {
-                        MiuixTheme.colorScheme.onSurfaceContainer
-                    },
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1
-                )
+                if (isSalt) {
+                    SaltText(
+                        text = item.value,
+                        style = SaltTheme.textStyles.sub.copy(fontSize = fontSize),
+                        color = if (selected) {
+                            SaltTheme.colors.highlight
+                        } else {
+                            SaltTheme.colors.subText
+                        },
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                } else {
+                    Text(
+                        text = item.value,
+                        style = MiuixTheme.textStyles.body2.copy(fontSize = fontSize),
+                        color = if (selected) {
+                            MiuixTheme.colorScheme.primary
+                        } else {
+                            MiuixTheme.colorScheme.onSurfaceContainer
+                        },
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }

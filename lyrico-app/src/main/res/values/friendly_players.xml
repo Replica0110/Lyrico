@@ -3,7 +3,6 @@
     <!-- Friendly player picker -->
     <string name="choose_player">Choose Player</string>
     <string name="play_with">Play with</string>
-    <string name="recommended_players">Recommended players</string>
     <string name="friendly_player_cone_player">Cone Player</string>
     <string name="friendly_player_halcyon">Halcyon</string>
     <string name="friendly_player_salt_player">Salt Player</string>

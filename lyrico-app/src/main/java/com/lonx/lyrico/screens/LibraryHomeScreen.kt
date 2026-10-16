@@ -1,5 +1,8 @@
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.screens.library.SaltLibraryHome
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
@@ -103,6 +107,12 @@ fun LibraryHomeScreen(
     var isFabMenuExpanded by remember { mutableStateOf(false) }
     var bottomBarPadding by remember { mutableStateOf(0.dp) }
 
+    val pagerContent = remember(tabs, pagerState, navigator, artistSelectionViewModel, artistEditor) {
+        movableContentOf<Modifier> { modifier ->
+            LibraryHomePager(tabs, pagerState, navigator, artistSelectionViewModel, artistEditor, modifier)
+        }
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val useNavigationRail = maxHeight < 520.dp
         val selectedTab = tabs[pagerState.targetPage]
@@ -133,7 +143,12 @@ fun LibraryHomeScreen(
         )
 
         Box(modifier = Modifier.fillMaxSize()) {
-            if (useNavigationRail) {
+            if (LocalUiEngine.current == UiEngine.SALT) {
+                SideEffect { bottomBarPadding = if (useNavigationRail) 0.dp else 56.dp + systemBottom }
+                SaltLibraryHome(tabs = tabs, selectedTab = selectedTab, rail = useNavigationRail, onTabSelected = ::selectTab) {
+                    pagerContent(Modifier.fillMaxSize())
+                }
+            } else if (useNavigationRail) {
                 SideEffect {
                     bottomBarPadding = 0.dp
                 }
@@ -149,13 +164,7 @@ fun LibraryHomeScreen(
                         LocalLibraryBottomContentPadding provides 0.dp,
                         LocalBarBlurEnabled provides barBlurEnabled,
                     ) {
-                        LibraryHomePager(
-                            tabs = tabs,
-                            pagerState = pagerState,
-                            navigator = navigator,
-                            artistSelectionViewModel = artistSelectionViewModel,
-                            artistEditor = artistEditor,
-                            modifier = Modifier.fillMaxSize()
+                        pagerContent(Modifier.fillMaxSize()
                         )
                     }
                 }
@@ -173,13 +182,7 @@ fun LibraryHomeScreen(
                         LocalLibraryBottomContentPadding provides floatingContentPadding,
                         LocalBarBlurEnabled provides barBlurEnabled,
                     ) {
-                        LibraryHomePager(
-                            tabs = tabs,
-                            pagerState = pagerState,
-                            navigator = navigator,
-                            artistSelectionViewModel = artistSelectionViewModel,
-                            artistEditor = artistEditor,
-                            modifier = Modifier.fillMaxSize()
+                        pagerContent(Modifier.fillMaxSize()
                         )
                     }
                 }
@@ -219,13 +222,7 @@ fun LibraryHomeScreen(
                             LocalLibraryBottomContentPadding provides scaffoldBottomPadding(paddingValues),
                             LocalBarBlurEnabled provides barBlurEnabled,
                         ) {
-                            LibraryHomePager(
-                                tabs = tabs,
-                                pagerState = pagerState,
-                                navigator = navigator,
-                                artistSelectionViewModel = artistSelectionViewModel,
-                                artistEditor = artistEditor,
-                                modifier = Modifier
+                            pagerContent(Modifier
                                     .fillMaxSize()
                                     .padding(
                                         start = paddingValues.calculateStartPadding(layoutDirection),

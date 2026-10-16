@@ -1,5 +1,6 @@
 package com.lonx.lyrico.ui.components.library
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -19,10 +20,6 @@ import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationRail
 import top.yukonga.miuix.kmp.basic.NavigationRailItem
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Album
-import top.yukonga.miuix.kmp.icon.extended.Contacts
-import top.yukonga.miuix.kmp.icon.extended.Music
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -125,7 +122,7 @@ fun LibraryBlurBottomBar(
 
 private val LibraryTab.icon: ImageVector
     get() = when (this) {
-        LibraryTab.Songs -> MiuixIcons.Music
-        LibraryTab.Artists -> MiuixIcons.Contacts
-        LibraryTab.Albums -> MiuixIcons.Album
+        LibraryTab.Songs -> LucideIcons.Music
+        LibraryTab.Artists -> LucideIcons.Users
+        LibraryTab.Albums -> LucideIcons.Disc
     }

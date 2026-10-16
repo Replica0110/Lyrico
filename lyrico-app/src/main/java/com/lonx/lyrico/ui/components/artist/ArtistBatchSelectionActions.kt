@@ -6,7 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
 import com.lonx.lyrico.ui.components.poster.ArtistPosterRemovalHost
@@ -31,7 +31,7 @@ fun BoxScope.ArtistBatchSelectionActions(
         enabled = selectedIds.isNotEmpty() && !operation.isRunning,
         itemCount = 1, modifier = modifier, onExpandedChange = onExpandedChange
     ) {
-        FabMenuItem(label = stringResource(R.string.poster_remove_artwork), icon = FilledIcons.Trash, onClick = {
+        FabMenuItem(label = stringResource(R.string.poster_remove_artwork), icon = LucideIcons.Trash, onClick = {
             onExpandedChange(false)
             pendingRemoval = selectedIds.map { it.toLong() }.toSet()
         })

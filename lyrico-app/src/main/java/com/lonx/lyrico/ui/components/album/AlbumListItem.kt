@@ -41,7 +41,10 @@ import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.AlbumEntity
 import com.lonx.lyrico.ui.components.cover.CoverImage
-import top.yukonga.miuix.kmp.basic.Text
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
+import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.abs
 
@@ -57,7 +60,10 @@ fun AlbumListItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MiuixTheme.colorScheme.surface)
+            .background(
+                if (LocalLibraryUiEngine.current == UiEngine.SALT) SaltTheme.colors.background
+                else MiuixTheme.colorScheme.surface
+            )
             .clickable(
                 onClick = {
                     onClick()

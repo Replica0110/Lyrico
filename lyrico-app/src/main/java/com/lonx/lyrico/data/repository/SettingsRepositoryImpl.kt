@@ -31,6 +31,7 @@ import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.SettingsBackup
 import com.lonx.lyrico.data.model.SourceSettingsStore
 import com.lonx.lyrico.data.model.ThemeConfig
+import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.model.AlbumSortBy
 import com.lonx.lyrico.data.model.AlbumSortInfo
@@ -167,6 +168,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val SEARCH_SOURCE_TAB_STYLE = stringPreferencesKey("search_source_tab_style")
         val SHOW_ALL_SEARCH_RESULT_FIELDS = booleanPreferencesKey("show_all_search_result_fields")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val UI_ENGINE = stringPreferencesKey("ui_engine")
         val MONET_ENABLE = booleanPreferencesKey("monet_enable")
         val FLOATING_BOTTOM_BAR_ENABLED = booleanPreferencesKey("floating_bottom_bar_enabled")
         val BAR_BLUR_ENABLED = booleanPreferencesKey("bar_blur_enabled")
@@ -340,6 +342,15 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.SHOW_ALL_SEARCH_RESULT_FIELDS]
                 ?: SettingsDefaults.SHOW_ALL_SEARCH_RESULT_FIELDS
         }
+
+    override val uiEngine: Flow<UiEngine>
+        get() = context.settingsDataStore.data.map { preferences ->
+            UiEngine.fromValue(preferences[PreferencesKeys.UI_ENGINE])
+        }
+
+    override suspend fun saveUiEngine(engine: UiEngine) {
+        context.settingsDataStore.edit { it[PreferencesKeys.UI_ENGINE] = engine.value }
+    }
 
     override val themeMode: Flow<ThemeMode>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -821,6 +832,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             showAllSearchResultFields = prefs[PreferencesKeys.SHOW_ALL_SEARCH_RESULT_FIELDS]
                 ?: SettingsDefaults.SHOW_ALL_SEARCH_RESULT_FIELDS,
 
+            uiEngine = UiEngine.fromValue(prefs[PreferencesKeys.UI_ENGINE]).value,
             themeMode = prefs[PreferencesKeys.THEME_MODE]
                 ?: SettingsDefaults.THEME_MODE.name,
             monetEnable = prefs[PreferencesKeys.MONET_ENABLE]
@@ -915,6 +927,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.showAllSearchResultFields?.let {
                     prefs[PreferencesKeys.SHOW_ALL_SEARCH_RESULT_FIELDS] = it
                 }
+                backup.uiEngine?.let { prefs[PreferencesKeys.UI_ENGINE] = UiEngine.fromValue(it).value }
                 backup.themeMode?.let { prefs[PreferencesKeys.THEME_MODE] = it }
                 backup.monetEnable?.let { prefs[PreferencesKeys.MONET_ENABLE] = it }
                 backup.floatingBottomBarEnabled?.let {

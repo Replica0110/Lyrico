@@ -26,7 +26,10 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.theme.LyricoColors
+import com.moriafly.salt.ui.SaltTheme
 
 enum class EmptyStateKind(internal val asset: String) {
     List("list"), Songs("songs"), Albums("albums"), Artists("artists"),
@@ -41,14 +44,17 @@ internal fun EmptyStateAnimation(kind: EmptyStateKind, compact: Boolean) = key(k
         LottieCompositionSpec.Asset("empty_states/${kind.asset}.json"),
     )
     val composition by compositionResult
-    val colors = MiuixTheme.colorScheme
+    // 动画色槽随引擎取色，保持与静态插画一致的语义；暖色/冷色沿用应用约定色。
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val accent = if (salt) SaltTheme.colors.highlight else MiuixTheme.colorScheme.primary
+    val surface = if (salt) SaltTheme.colors.subBackground else MiuixTheme.colorScheme.surfaceContainer
     val warm = LyricoColors.emptyIllustrationWarm
     val fresh = LyricoColors.emptyIllustrationFresh
     val properties = rememberLottieDynamicProperties(
-        rememberLottieDynamicProperty(LottieProperty.COLOR, colors.primary.toArgb(), "**", "Accent"),
-        rememberLottieDynamicProperty(LottieProperty.COLOR, colors.primary.toArgb(), "**", "Soft"),
-        rememberLottieDynamicProperty(LottieProperty.COLOR, colors.surfaceContainer.toArgb(), "**", "Surface"),
-        rememberLottieDynamicProperty(LottieProperty.STROKE_COLOR, colors.primary.toArgb(), "**", "Outline"),
+        rememberLottieDynamicProperty(LottieProperty.COLOR, accent.toArgb(), "**", "Accent"),
+        rememberLottieDynamicProperty(LottieProperty.COLOR, accent.toArgb(), "**", "Soft"),
+        rememberLottieDynamicProperty(LottieProperty.COLOR, surface.toArgb(), "**", "Surface"),
+        rememberLottieDynamicProperty(LottieProperty.STROKE_COLOR, accent.toArgb(), "**", "Outline"),
         rememberLottieDynamicProperty(LottieProperty.COLOR, warm.toArgb(), "**", "Warm"),
         rememberLottieDynamicProperty(LottieProperty.STROKE_COLOR, warm.toArgb(), "**", "WarmOutline"),
         rememberLottieDynamicProperty(LottieProperty.COLOR, fresh.toArgb(), "**", "Fresh"),

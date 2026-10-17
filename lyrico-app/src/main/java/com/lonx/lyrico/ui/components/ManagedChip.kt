@@ -65,7 +65,7 @@ fun ManagedChip(
     onEdit: (() -> Unit)? = null,
     editDescription: String = stringResource(R.string.common_edit),
 ) {
-    if (com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
         SaltManagedChip(text, modifier, checked, onClick, onDelete, onEdit, editDescription)
         return
     }

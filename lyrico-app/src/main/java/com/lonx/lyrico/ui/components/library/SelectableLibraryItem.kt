@@ -52,7 +52,7 @@ fun SelectableLibraryItem(
     val displayedSwipeOffsetX = if (isSwipeDragging) swipeOffsetX else animatedSwipeOffsetX
     val revealWidth = with(density) { abs(displayedSwipeOffsetX).toDp() }
 
-    val salt = com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT
     val selectionColor = if (salt) com.moriafly.salt.ui.SaltTheme.colors.highlight else MiuixTheme.colorScheme.primary
     val surfaceColor = if (salt) com.moriafly.salt.ui.SaltTheme.colors.background else MiuixTheme.colorScheme.surface
     val backgroundColor =

@@ -1,6 +1,6 @@
 package com.lonx.lyrico.screens.library
 
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
 
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +73,6 @@ import com.lonx.lyrico.ui.components.library.libraryOverlayInsets
 import com.lonx.lyrico.ui.components.library.libraryScrollbarOverlay
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
-import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.ArtistLibraryViewModel
 import com.lonx.lyrico.viewmodel.SortOrder
 import com.moriafly.salt.ui.SaltTheme
@@ -149,9 +148,9 @@ fun ArtistsPage(
     }
     val sortInfo by viewModel.sortInfo.collectAsStateWithLifecycle()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
-    // 引擎判定统一走全局作用域；LocalLibraryUiEngine 只决定 SaltLibraryPage 入口。
+    // 使用应用级 UI 引擎，页面与共享列表组件保持一致。
     val isSaltEngine = LocalUiEngine.current == UiEngine.SALT
-    val topBarBackdrop = rememberBarBlurBackdrop(enabled = LocalLibraryUiEngine.current == UiEngine.MIUIX && com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled())
+    val topBarBackdrop = rememberBarBlurBackdrop(enabled = LocalUiEngine.current == UiEngine.MIUIX && com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled())
     val gridState = rememberLazyGridState()
     val alphabetScrollController = rememberAlphabetSideBarScrollController(gridState)
 
@@ -308,7 +307,7 @@ fun ArtistsPage(
         }
 
     }
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
         SaltLibraryPage(
             selection = if (selecting) LibrarySelectionState(
             allSelected = artists.isNotEmpty() && selectedIds.size == artists.size,
@@ -424,13 +423,13 @@ fun ArtistsPage(
                 },
             )
             else -> {
-                ItemMenuAction(icon = LucideIcons.Image, tone = PreferenceIconTone.Library,
+                ItemMenuAction(icon = LucideIcons.Image, tone = PreferenceIconTone.Appearance,
                     title = stringResource(R.string.poster_view_artwork), onClick = {
                     previewPoster = source
                     showArtistMenu = false
                 })
                 ItemMenuAction(
-                    icon = LucideIcons.Crop, tone = PreferenceIconTone.Library,
+                    icon = LucideIcons.Crop, tone = PreferenceIconTone.Tools,
                     title = stringResource(R.string.label_crop_artist_image),
                     summary = if (!source.canCrop) stringResource(R.string.artist_poster_video_crop_unavailable) else null,
                     enabled = source.canCrop && !removalState.isRunning,

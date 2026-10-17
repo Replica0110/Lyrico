@@ -35,7 +35,7 @@
     <string name="apply_lyrics_only_action">Lyrics Only</string>
     <string name="cd_no_results">No results</string>
     <string name="search_limit">Results per load</string>
-    <string name="search_limit_tip">Results loaded from each source at a time. Higher values use more data and cache more images</string>
+    <string name="search_limit_tip">Number of results loaded from each source at a time</string>
     <string name="search_loading_more">Loading more…</string>
     <string name="search_load_more">Load more</string>
     <string name="search_load_more_failed">Load failed. Tap to retry</string>
@@ -66,7 +66,7 @@
     <!-- Sections -->
     <string name="section_appearance">Appearance</string>
     <string name="lyric_index_title">Lyrics indexing</string>
-    <string name="lyric_index_summary">Index lyrics during scans for local lyrics search. This increases scan time. Rescan existing songs after enabling</string>
+    <string name="lyric_index_summary">Used for local lyrics search. Rescan existing songs after enabling</string>
     <string name="section_scan">Scan Settings</string>
     <string name="section_search">Search Settings</string>
     <string name="section_lyrics">Lyrics</string>
@@ -828,7 +828,8 @@
     <string name="poster_preview_info">Image info</string>
     <string name="poster_preview_dimensions">Dimensions</string>
     <string name="poster_preview_format">Format</string>
-    <string name="ui_engine">界面风格</string>
-    <string name="ui_engine_pilot_summary">SaltUI currently supports selected pages</string>
+    <string name="ui_engine">Interface style</string>
     <string name="common_edit">Edit</string>
+    <string name="ui_engine_miuix">Miuix</string>
+    <string name="ui_engine_salt">SaltUI</string>
 </resources>

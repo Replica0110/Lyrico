@@ -252,7 +252,7 @@ fun ArtistPosterMenu(
             ) {
                 // 一个艺术家只有一张海报，所以「从本地选择」同时就是新增和替换
                 ArrowPreference(
-                    startAction = { PreferenceIcon(LucideIcons.ImageAdd, PreferenceIconTone.Library) },
+                    startAction = { PreferenceIcon(LucideIcons.ImageAdd, PreferenceIconTone.Appearance) },
                     title = stringResource(R.string.label_change_artist_image),
                     onClick = {
                         state.closeOptions()
@@ -295,7 +295,7 @@ fun ArtistPosterMenu(
                     colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)
                 ) {
                     ArrowPreference(
-                        startAction = { PreferenceIcon(LucideIcons.UserSwitch, PreferenceIconTone.Library) },
+                        startAction = { PreferenceIcon(LucideIcons.UserSwitch, PreferenceIconTone.Lyrics) },
                         title = stringResource(
                             R.string.label_reassign_artist_image,
                             currentEntry.displayName(untaggedLabel)

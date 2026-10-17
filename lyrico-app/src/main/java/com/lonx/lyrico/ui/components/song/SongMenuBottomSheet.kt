@@ -29,7 +29,7 @@ fun SongMenuBottomSheet(
         onDismissFinished = onDismissFinished, enableNestedScroll = enableNestedScroll
     ) {
     ItemMenuAction(
-        icon = LucideIcons.Play, tone = PreferenceIconTone.Library,
+        icon = LucideIcons.Play, tone = PreferenceIconTone.Appearance,
         title = stringResource(R.string.menu_action_play),
         summary = stringResource(R.string.menu_action_play_sub),
         onClick = { onPlay() }
@@ -40,12 +40,12 @@ fun SongMenuBottomSheet(
         onClick = { showInfo() }
     )
     ItemMenuAction(
-        icon = LucideIcons.Share2, tone = PreferenceIconTone.Tools,
+        icon = LucideIcons.Share2, tone = PreferenceIconTone.Library,
         title = stringResource(R.string.menu_action_share),
         onClick = { onShare() }
     )
     ItemMenuAction(
-        icon = LucideIcons.Pencil, tone = PreferenceIconTone.Tools,
+        icon = LucideIcons.Pencil, tone = PreferenceIconTone.Lyrics,
         title = stringResource(R.string.menu_action_rename),
         onClick = { onRename() }
     )

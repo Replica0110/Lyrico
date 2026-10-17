@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.SaltTheme
 
 data class ExpandableFabMenuStyle(
@@ -35,7 +35,7 @@ data class ExpandableFabMenuStyle(
     companion object {
         @Composable
         fun default(): ExpandableFabMenuStyle {
-            if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+            if (LocalUiEngine.current == UiEngine.SALT) {
                 return ExpandableFabMenuStyle(
                     mainContainerColor = SaltTheme.colors.highlight,
                     mainContentColor = SaltTheme.colors.onHighlight,

@@ -42,7 +42,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.AlbumEntity
 import com.lonx.lyrico.ui.components.cover.CoverImage
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
 import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -61,7 +61,7 @@ fun AlbumListItem(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                if (LocalLibraryUiEngine.current == UiEngine.SALT) SaltTheme.colors.background
+                if (LocalUiEngine.current == UiEngine.SALT) SaltTheme.colors.background
                 else MiuixTheme.colorScheme.surface
             )
             .clickable(

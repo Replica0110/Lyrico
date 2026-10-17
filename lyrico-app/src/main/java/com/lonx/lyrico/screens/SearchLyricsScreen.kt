@@ -64,7 +64,7 @@ import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.lyrics.LyricRenderConfigBottomSheet
 import com.lonx.lyrico.ui.components.lyrics.LyricsPreviewPane
 import com.lonx.lyrico.ui.components.scaffoldTopAppBarInsetsPadding

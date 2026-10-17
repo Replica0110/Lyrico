@@ -36,8 +36,8 @@ import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.components.CoverRequest
-import com.lonx.lyrico.ui.components.base.SaltBottomSheet
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.ItemValue
 import com.moriafly.salt.ui.RoundedColumn

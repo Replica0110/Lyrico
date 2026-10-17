@@ -1,7 +1,7 @@
 package com.lonx.lyrico.screens.library
 
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
 
 import android.widget.Toast
@@ -50,7 +50,6 @@ import com.lonx.lyrico.ui.components.library.libraryScrollbarOverlay
 import com.lonx.lyrico.ui.components.library.rememberAlbumGridTextStyle
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
-import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.AlbumActionsViewModel
 import com.lonx.lyrico.viewmodel.AlbumLibraryViewModel
 import com.lonx.lyrico.viewmodel.SortOrder
@@ -96,9 +95,9 @@ fun AlbumsPage(
     val albumGridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
     val albumTextStyle = rememberAlbumGridTextStyle(albumGridColumns)
     val topAppBarScrollBehavior = MiuixScrollBehavior()
-    // 引擎判定统一走全局作用域；LocalLibraryUiEngine 只决定 SaltLibraryPage 入口。
+    // 使用应用级 UI 引擎，页面与共享列表组件保持一致。
     val isSaltEngine = LocalUiEngine.current == UiEngine.SALT
-    val topBarBackdrop = rememberBarBlurBackdrop(enabled = LocalLibraryUiEngine.current == UiEngine.MIUIX && com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled())
+    val topBarBackdrop = rememberBarBlurBackdrop(enabled = LocalUiEngine.current == UiEngine.MIUIX && com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled())
     val gridState = rememberLazyGridState()
     val alphabetScrollController = rememberAlphabetSideBarScrollController(gridState)
     val context = LocalContext.current
@@ -262,7 +261,7 @@ fun AlbumsPage(
         }
 
     }
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) SaltLibraryPage(
+    if (LocalUiEngine.current == UiEngine.SALT) SaltLibraryPage(
         title = stringResource(R.string.album_list_title, albums.size),
         onSettings = { navigator.navigate(SettingsDestination()) },
         onSearch = { navigator.navigate(LocalSearchDestination) },

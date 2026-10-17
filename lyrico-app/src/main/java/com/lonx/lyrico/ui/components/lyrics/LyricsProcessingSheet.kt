@@ -118,7 +118,7 @@ fun LyricsOrganizationMenu(onSelect: (LyricsOperation) -> Unit, anchor: @Composa
                                     LyricsOperation.REMOVE_EMPTY -> LucideIcons.RemoveLines
                                     else -> LucideIcons.FilterLyrics
                                 },
-                                PreferenceIconTone.Lyrics,
+                                PreferenceIconTone.Appearance,
                                 modifier = modifier,
                             )
                         },
@@ -201,7 +201,7 @@ private fun LyricsColumnCountSettings(
                 val kept = destination >= 0
                 val outputCount = mapping.order.size + if (kept) 0 else 1
                 val positions = (1..outputCount).map { stringResource(R.string.lyrics_output_line, it) }
-                com.lonx.lyrico.ui.components.base.SaltDropdownRow(
+                com.lonx.lyrico.ui.components.salt.SaltDropdownRow(
                     title = stringResource(R.string.lyrics_input_line, source + 1),
                     labels = positions + stringResource(R.string.lyrics_column_remove),
                     selectedIndex = if (kept) destination else positions.size,

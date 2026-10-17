@@ -2,9 +2,12 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.screens.settings.*
+import kotlin.math.roundToInt
 import android.annotation.SuppressLint
 import android.text.format.Formatter
 import android.widget.Toast
@@ -23,8 +26,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -68,7 +71,6 @@ import com.ramcosta.composedestinations.generated.destinations.LyricsCleanupRule
 import com.ramcosta.composedestinations.generated.destinations.PluginManagerDestination
 import com.ramcosta.composedestinations.generated.destinations.QuickjsTestDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -118,9 +120,7 @@ fun SettingsScreen(
 
     val minSearchSize = 1
     val maxSearchSize = 20
-    val tempSearchPageSize = remember(searchPageSize) {
-        mutableIntStateOf(searchPageSize)
-    }
+    val tempSearchPageSize = remember(searchPageSize) { mutableIntStateOf(searchPageSize) }
     val showClearCacheDialog = remember { mutableStateOf(false) }
     val showRgTargetDialog = remember { mutableStateOf(false) }
     val monetVisibilityState = remember(settingsUiState.isInitialized) {
@@ -237,9 +237,9 @@ fun SettingsScreen(
                 SectionTitle(text = stringResource(R.string.section_appearance))
                 Group {
                     Choice(
+                        icon = LucideIcons.SwatchBook, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.ui_engine),
-                        summary = stringResource(R.string.ui_engine_pilot_summary),
-                        items = listOf("Miuix", "SaltUI"),
+                        items = listOf(stringResource(R.string.ui_engine_miuix), stringResource(R.string.ui_engine_salt)),
                         selectedIndex = uiEngine.ordinal,
                         onSelectedIndexChange = { index ->
                             scope.launch { settingsRepository.saveUiEngine(UiEngine.entries[index]) }
@@ -253,7 +253,7 @@ fun SettingsScreen(
                         )
                     }
                     Choice(
-                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Appearance,
+                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Tools,
                         title = stringResource(R.string.app_language),
                         items = AppLanguage.entries.map { stringResource(it.labelRes) },
                         selectedIndex = AppLanguage.entries.indexOfFirst {
@@ -267,7 +267,7 @@ fun SettingsScreen(
                         }
                     )
                     Choice(
-                        icon = LucideIcons.Moon, tone = PreferenceIconTone.Appearance,
+                        icon = LucideIcons.Moon, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.theme_mode),
                         items = themeModeItems,
                         selectedIndex = selectedThemeModeIndex,
@@ -277,14 +277,14 @@ fun SettingsScreen(
                     )
                     if (uiEngine == UiEngine.MIUIX) {
                         Toggle(
-                            icon = LucideIcons.Blend, tone = PreferenceIconTone.Appearance,
+                            icon = LucideIcons.Blend, tone = PreferenceIconTone.Lyrics,
                             title = stringResource(R.string.bar_blur),
                             summary = stringResource(R.string.bar_blur_summary),
                             checked = barBlurEnabled,
                             onCheckedChange = settingsViewModel::setBarBlurEnabled,
                         )
                         Toggle(
-                            icon = LucideIcons.PanelBottom, tone = PreferenceIconTone.Appearance,
+                            icon = LucideIcons.PanelBottom, tone = PreferenceIconTone.Pink,
                             title = stringResource(R.string.floating_bottom_bar),
                             summary = stringResource(R.string.floating_bottom_bar_summary),
                             checked = floatingBottomBarEnabled,
@@ -292,7 +292,7 @@ fun SettingsScreen(
                         )
                         AnimatedVisibility(visible = floatingBottomBarEnabled) {
                             Choice(
-                                icon = LucideIcons.Layers, tone = PreferenceIconTone.Appearance,
+                                icon = LucideIcons.Layers, tone = PreferenceIconTone.Teal,
                                 title = stringResource(R.string.floating_bar_effect),
                                 items = floatingBarEffectItems,
                                 selectedIndex = floatingBarEffect.ordinal,
@@ -305,7 +305,7 @@ fun SettingsScreen(
                         }
                     }
                     Toggle(
-                        icon = LucideIcons.Palette, tone = PreferenceIconTone.Appearance,
+                        icon = LucideIcons.Palette, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.monet),
                         checked = monetEnable,
                         onCheckedChange = {
@@ -351,7 +351,7 @@ fun SettingsScreen(
                         stringResource(R.string.folder_manage_hint)
                     }
                     Action(
-                        icon = LucideIcons.Folder, tone = PreferenceIconTone.Library,
+                        icon = LucideIcons.Folder, tone = PreferenceIconTone.Tools,
                         title = stringResource(R.string.folder_manager),
                         summary = folderSummary,
                         onClick = { navigator.navigate(FolderManagerDestination()) }
@@ -369,20 +369,20 @@ fun SettingsScreen(
                         onClick = { navigator.navigate(ArtistPosterFoldersDestination()) }
                     )
                     Toggle(
-                        icon = LucideIcons.AudioLines, tone = PreferenceIconTone.Library,
+                        icon = LucideIcons.AudioLines, tone = PreferenceIconTone.Lyrics,
                         title = stringResource(R.string.ignore_short_audio),
                         checked = ignoreShortAudio,
                         onCheckedChange = { settingsViewModel.setIgnoreShortAudio(it) }
                     )
                     Toggle(
-                        icon = LucideIcons.Database, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Database, tone = PreferenceIconTone.Pink,
                         title = stringResource(R.string.lyric_index_title),
                         summary = stringResource(R.string.lyric_index_summary),
                         checked = settingsUiState.lyricIndexEnabled,
                         onCheckedChange = { settingsViewModel.setLyricIndexEnabled(it) }
                     )
                     Action(
-                        icon = LucideIcons.Volume2, tone = PreferenceIconTone.Library,
+                        icon = LucideIcons.Volume2, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.settings_replay_gain_target_loudness),
                         summary = stringResource(R.string.settings_replay_gain_target_loudness_summary),
                         endActions = {
@@ -396,7 +396,7 @@ fun SettingsScreen(
                         holdDownState = showRgTargetDialog.value
                     )
                     Choice(
-                        icon = LucideIcons.Activity, tone = PreferenceIconTone.Library,
+                        icon = LucideIcons.Activity, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.settings_replay_gain_peak_mode),
                         items = replayGainPeakModeItems,
                         selectedIndex = selectedReplayGainPeakModeIndex,
@@ -413,7 +413,7 @@ fun SettingsScreen(
                 SectionTitle(text = stringResource(R.string.section_search))
                 Group {
                     Action(
-                        icon = LucideIcons.Plug, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.Plug, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.plugin_manager_title),
                         onClick = { navigator.navigate(PluginManagerDestination()) }
                     )
@@ -429,22 +429,20 @@ fun SettingsScreen(
                         }
                     )
                     Range(
-                        icon = LucideIcons.ListFilter, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.ListFilter, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.search_limit),
                         valueText = tempSearchPageSize.intValue.toString(),
                         summary = stringResource(R.string.search_limit_tip),
                         valueRange = minSearchSize.toFloat()..maxSearchSize.toFloat(),
                         steps = maxSearchSize - minSearchSize - 1,
                         value = tempSearchPageSize.intValue.toFloat(),
-                        onValueChange = {
-                            tempSearchPageSize.intValue = it.roundToInt()
-                        },
+                        onValueChange = { tempSearchPageSize.intValue = it.roundToInt() },
                         onValueChangeFinished = {
                             settingsViewModel.setSearchPageSize(tempSearchPageSize.intValue)
                         }
                     )
                     Choice(
-                        icon = LucideIcons.Split, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.Split, tone = PreferenceIconTone.Lyrics,
                         title = stringResource(R.string.artist_separator),
                         summary = stringResource(R.string.artist_separator_hint),
                         items = artistSeparatorItems,
@@ -454,7 +452,7 @@ fun SettingsScreen(
                         }
                     )
                     Toggle(
-                        icon = LucideIcons.TextSearch, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.TextSearch, tone = PreferenceIconTone.Pink,
                         title = stringResource(R.string.show_all_search_result_fields),
                         summary = stringResource(R.string.show_all_search_result_fields_summary),
                         checked = showAllSearchResultFields,
@@ -467,7 +465,7 @@ fun SettingsScreen(
                 SectionTitle(text = stringResource(R.string.section_lyrics))
                 Group {
                     Choice(
-                        icon = LucideIcons.FileMusic, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.FileMusic, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.lyric_mode),
                         items = lyricFormatItems,
                         selectedIndex = selectedLyricFormatIndex,
@@ -476,14 +474,14 @@ fun SettingsScreen(
                         }
                     )
                     Toggle(
-                        icon = LucideIcons.Type, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Type, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.roma),
                         summary = stringResource(R.string.roma_hint),
                         checked = romaEnabled,
                         onCheckedChange = { settingsViewModel.setRomaEnabled(it) }
                     )
                     Toggle(
-                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.translation),
                         summary = stringResource(R.string.translation_hint),
                         checked = translationEnabled,
@@ -491,7 +489,7 @@ fun SettingsScreen(
                     )
                     AnimatedVisibility(visible = translationEnabled) {
                         Toggle(
-                            icon = LucideIcons.Captions, tone = PreferenceIconTone.Lyrics,
+                            icon = LucideIcons.Captions, tone = PreferenceIconTone.Tools,
                             title = stringResource(R.string.only_translation_if_available),
                             summary = stringResource(R.string.only_translation_if_available_hint),
                             enabled = translationEnabled,
@@ -506,7 +504,7 @@ fun SettingsScreen(
                 SectionTitle(text = stringResource(R.string.section_text_processing))
                 Group {
                     Choice(
-                        icon = LucideIcons.ALargeSmall, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.ALargeSmall, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.conversion_mode),
                         summary = stringResource(R.string.conversion_mode_hint),
                         items = conversionModeItems,
@@ -523,19 +521,19 @@ fun SettingsScreen(
                         onCheckedChange = { settingsViewModel.setRemoveEmptyLines(it) }
                     )
                     Action(
-                        icon = LucideIcons.FilterLyrics, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.FilterLyrics, tone = PreferenceIconTone.Pink,
                         title = stringResource(R.string.non_lyrics_cleanup_rules_title),
                         summary = stringResource(R.string.non_lyrics_cleanup_rules_summary),
                         onClick = { navigator.navigate(LyricsCleanupRulesDestination()) }
                     )
                     Action(
-                        icon = LucideIcons.Users, tone = PreferenceIconTone.Library,
+                        icon = LucideIcons.Users, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.artist_split_settings_title),
                         summary = stringResource(R.string.artist_split_settings_summary),
                         onClick = { navigator.navigate(ArtistSplitSettingsDestination()) }
                     )
                     Action(
-                        icon = LucideIcons.SlidersHorizontal, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.SlidersHorizontal, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.edit_field_settings_title),
                         summary = stringResource(R.string.edit_field_settings_summary),
                         onClick = { navigator.navigate(EditFieldSettingsDestination()) }
@@ -547,7 +545,7 @@ fun SettingsScreen(
                 SectionTitle(text = stringResource(R.string.section_backup))
                 Group {
                     Action(
-                        icon = LucideIcons.FileUp, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.FileUp, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.export_config),
                         summary = stringResource(R.string.export_config_hint),
                         onClick = {
@@ -570,19 +568,19 @@ fun SettingsScreen(
                 SectionTitle(text = stringResource(R.string.section_other))
                 Group {
                     Action(
-                        icon = LucideIcons.ClipboardList, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.ClipboardList, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.batch_task_list_title),
                         onClick = { navigator.navigate(BatchTaskListDestination()) }
                     )
                     Action(
-                        icon = LucideIcons.Logs, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.Logs, tone = PreferenceIconTone.Lyrics,
                         title = stringResource(R.string.app_log_title),
                         summary = stringResource(R.string.app_log_summary),
                         onClick = { navigator.navigate(AppLogsDestination()) }
                     )
                     if (BuildConfig.DEBUG) {
                         Action(
-                            icon = LucideIcons.Terminal, tone = PreferenceIconTone.Tools,
+                            icon = LucideIcons.Terminal, tone = PreferenceIconTone.Pink,
                             title = stringResource(R.string.quickjs_test_title),
                             summary = stringResource(R.string.quickjs_test_description_summary),
                             onClick = { navigator.navigate(QuickjsTestDestination()) }
@@ -594,7 +592,7 @@ fun SettingsScreen(
                         Formatter.formatFileSize(context, settingsUiState.totalCacheSize)
                     )
                     Action(
-                        icon = LucideIcons.Eraser, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.Eraser, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.clear_cache),
                         summary = cacheSummary,
                         onClick = { showClearCacheDialog.value = true },
@@ -623,7 +621,7 @@ fun SettingsScreen(
                         )
                     }
                     Action(
-                        icon = LucideIcons.Info, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.Info, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.about_title),
                         onClick = { navigator.navigate(AboutDestination()) }
                     )
@@ -682,7 +680,7 @@ private fun ReplayGainTargetLoudnessSheet(
     var invalid by remember(show) { mutableStateOf(false) }
 
     if (LocalUiEngine.current == UiEngine.SALT) {
-        com.lonx.lyrico.ui.components.base.SaltConfirmDialog(
+        com.lonx.lyrico.ui.components.salt.SaltConfirmDialog(
             show = show, dismissOnConfirm = false,
             title = stringResource(R.string.settings_replay_gain_target_loudness),
             cancelText = stringResource(R.string.cancel),
@@ -709,7 +707,7 @@ private fun ReplayGainTargetLoudnessSheet(
                         state = customSelected,
                         onChange = { customSelected = true; invalid = false },
                     )
-                    if (customSelected) com.moriafly.salt.ui.ItemEdit(
+                    if (customSelected) SaltTextInput(
                         text = customText, hint = stringResource(R.string.replay_gain_target_custom_hint),
                         onChange = { customText = it; invalid = false },
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(

@@ -68,7 +68,7 @@ import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.ui.components.library.LibraryDetailPage
@@ -1278,7 +1278,7 @@ private fun FolderListItem(
     val actionItems = buildList {
         add(
             DropdownItem(
-                icon = { modifier -> PreferenceIcon(if (folder.isIgnored) LucideIcons.Eye else LucideIcons.EyeOff, PreferenceIconTone.Tools, modifier = modifier) },
+                icon = { modifier -> PreferenceIcon(if (folder.isIgnored) LucideIcons.Eye else LucideIcons.EyeOff, PreferenceIconTone.Appearance, modifier = modifier) },
                 text = if (folder.isIgnored) {
                     stringResource(R.string.folder_action_show)
                 } else {
@@ -1305,7 +1305,7 @@ private fun FolderListItem(
         if (canRemove) {
             add(
                 DropdownItem(
-                    icon = { modifier -> PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Tools, modifier = modifier) },
+                    icon = { modifier -> PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Library, modifier = modifier) },
                     text = stringResource(R.string.folder_action_remove),
                     onClick = {
                         if (!isBusy) {

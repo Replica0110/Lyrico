@@ -2,6 +2,10 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
+import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -42,7 +46,6 @@ import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonAppearance
 import com.moriafly.salt.ui.ItemButton
-import com.moriafly.salt.ui.ItemEdit
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -149,7 +152,8 @@ fun LyricsCleanupRulesScreen(
                                 addingRule = true
                             },
                             text = stringResource(R.string.add_non_lyrics_cleanup_rule),
-                            iconPainter = rememberVectorPainter(LucideIcons.Plus)
+                            iconPainter = rememberVectorPainter(LucideIcons.Plus),
+                            iconColor = PreferenceIconTone.Appearance.color(),
                         )
                         ItemButton(
                             onClick = viewModel::resetNonLyricsContentRules,
@@ -315,13 +319,13 @@ private fun CleanupRuleInputDialog(
     val salt = LocalUiEngine.current == UiEngine.SALT
 
     if (salt) {
-        com.lonx.lyrico.ui.components.base.SaltConfirmDialog(
+        com.lonx.lyrico.ui.components.salt.SaltConfirmDialog(
             show = show, title = title, onDismissRequest = onDismiss, onConfirm = { onSave(text) },
             cancelText = stringResource(R.string.cancel), confirmText = stringResource(R.string.confirm),
             dismissOnConfirm = false,
         ) {
             RoundedColumn(paddingValues = PaddingValues(0.dp)) {
-                ItemEdit(text = text, onChange = { text = it })
+                SaltTextInput(text = text, onChange = { text = it })
             }
             Spacer(modifier = Modifier.height(6.dp))
             SaltText(

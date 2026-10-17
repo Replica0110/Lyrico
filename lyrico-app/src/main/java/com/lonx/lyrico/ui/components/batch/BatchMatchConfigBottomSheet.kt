@@ -310,7 +310,7 @@ fun BatchMatchConfigBottomSheet(
                         insideMargin = PaddingValues(12.dp)
                     )
                     ArrowPreference(
-                        startAction = { PreferenceIcon(LucideIcons.Parallel, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.Parallel, PreferenceIconTone.Appearance) },
                         title = stringResource(R.string.batch_match_config_concurrency),
                         endActions = {
                             Text(

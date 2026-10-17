@@ -46,7 +46,7 @@ fun FolderManagementItem(
                     arrowType = com.moriafly.salt.ui.ItemArrowType.None,
                 )
                 Box(Modifier.padding(end = 8.dp)) {
-                    com.lonx.lyrico.ui.components.base.SaltIconButton(
+                    com.lonx.lyrico.ui.components.salt.SaltIconButton(
                         LucideIcons.EllipsisVertical, stringResource(R.string.cd_more_actions),
                         enabled = enabled && actions.enabled, onClick = popup::expend,
                     )

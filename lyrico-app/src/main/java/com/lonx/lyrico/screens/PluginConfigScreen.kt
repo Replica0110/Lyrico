@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.overscroll
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -28,6 +30,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.lonx.lyrico.ui.components.blur.BlurredTopBar
+import com.lonx.lyrico.ui.components.blur.blurSource
+import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
+import com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -40,7 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
@@ -48,7 +56,6 @@ import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
 import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.utils.isSatisfied
 import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
@@ -56,8 +63,6 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.moriafly.salt.ui.ItemDropdown
-import com.moriafly.salt.ui.ItemEdit
-import com.moriafly.salt.ui.ItemEditPassword
 import com.moriafly.salt.ui.ItemOuterTip
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemSwitcher
@@ -97,6 +102,7 @@ fun PluginConfigScreen(
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val salt = LocalUiEngine.current == UiEngine.SALT
+    val barBackdrop = rememberBarBlurBackdrop(enabled = !salt && rememberBarBlurEnabled())
 
     val requiredMessage = stringResource(R.string.source_config_required_error)
 
@@ -130,30 +136,34 @@ fun PluginConfigScreen(
                 onClick = { viewModel.save(requiredMessage) })
         },
         miuixTopBar = {
-            SmallTopAppBar(
-                title = title,
-                navigationIcon = {
-                    IconButton(onClick = { navigator.navigateUp() }) {
-                        Icon(
-                            imageVector = LucideIcons.ArrowLeft,
-                            contentDescription = stringResource(R.string.action_back)
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            viewModel.save(requiredMessage)
+            BlurredTopBar(barBackdrop) {
+                SmallTopAppBar(
+                    color = Color.Transparent,
+                    defaultWindowInsetsPadding = false,
+                    title = title,
+                    navigationIcon = {
+                        IconButton(onClick = { navigator.navigateUp() }) {
+                            Icon(
+                                imageVector = LucideIcons.ArrowLeft,
+                                contentDescription = stringResource(R.string.action_back)
+                            )
                         }
-                    ) {
-                        Icon(
-                            imageVector = LucideIcons.Check,
-                            contentDescription = stringResource(R.string.source_config_save)
-                        )
-                    }
-                },
-                scrollBehavior = topAppBarScrollBehavior
-            )
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                viewModel.save(requiredMessage)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = LucideIcons.Check,
+                                contentDescription = stringResource(R.string.source_config_save)
+                            )
+                        }
+                    },
+                    scrollBehavior = topAppBarScrollBehavior
+                )
+            }
         }
     ) { paddingValues ->
         // Salt 的 verticalScroll 默认没有过度滚动，短内容时拖不动；挂上 Cupertino 效果对齐列表页。
@@ -165,10 +175,10 @@ fun PluginConfigScreen(
                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection))
                 .then(if (salt && overscrollEffect != null) Modifier.overscroll(overscrollEffect) else Modifier)
                 .fillMaxSize()
+                .blurSource(barBackdrop)
                 .then(if (salt) Modifier else Modifier.imePadding())
-                .padding(if (salt) com.lonx.lyrico.ui.components.scaffoldContentPadding(paddingValues)
-                    else scaffoldTopHorizontalPadding(paddingValues))
                 .verticalScroll(rememberScrollState())
+                .padding(com.lonx.lyrico.ui.components.scaffoldContentPadding(paddingValues, bottomExtra = 12.dp))
         ) {
             if (uiState.errorMessage != null) {
                 if (salt) com.moriafly.salt.ui.Text(
@@ -456,39 +466,35 @@ private fun PluginConfigFormItem(
             }
 
             if (salt) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    com.moriafly.salt.ui.Text(
-                        text = field.title,
-                        style = SaltTheme.textStyles.sub,
-                        color = SaltTheme.colors.subText,
-                        modifier = Modifier.innerPadding(vertical = false)
-                    )
-                    if (isPassword) {
-                        ItemEditPassword(
-                            text = value,
-                            onChange = { onValueChange(sanitize(it)) },
-                            hint = field.summary
-                        )
-                    } else {
-                        ItemEdit(
-                            text = value,
-                            onChange = { onValueChange(sanitize(it)) },
-                            hint = field.summary,
-                            keyboardOptions = keyboardOptions
-                        )
-                    }
-                    error?.let {
-                        com.moriafly.salt.ui.Text(
-                            text = it,
-                            style = SaltTheme.textStyles.sub,
-                            color = SaltTheme.colors.error,
-                            modifier = Modifier.innerPadding(vertical = false)
-                        )
-                    }
-                }
+                SaltTextInput(
+                    text = value,
+                    onChange = onValueChange,
+                    label = field.title,
+                    summary = field.summary,
+                    error = error,
+                    keyboardOptions = keyboardOptions,
+                    lineLimits = if (field.type == PluginConfigFieldType.TEXTAREA) {
+                        TextFieldLineLimits.MultiLine(minHeightInLines = 2, maxHeightInLines = 8)
+                    } else TextFieldLineLimits.SingleLine,
+                    secure = isPassword,
+                    passwordVisible = passwordVisible,
+                    inputTransformation = if (field.type == PluginConfigFieldType.NUMBER) {
+                        InputTransformation {
+                            val digits = asCharSequence().filter(Char::isDigit)
+                            if (digits.length != length) replace(0, length, digits)
+                        }
+                    } else null,
+                    actionContent = if (isPassword) {
+                        {
+                            SaltIconButton(
+                                icon = if (passwordVisible) LucideIcons.EyeOff else LucideIcons.Eye,
+                                label = stringResource(if (passwordVisible) R.string.password_hide else R.string.password_show),
+                                onClick = { passwordVisible = !passwordVisible },
+                                size = 32.dp, iconSize = 18.dp,
+                            )
+                        }
+                    } else null,
+                )
             } else {
                 Column(
                     modifier = Modifier

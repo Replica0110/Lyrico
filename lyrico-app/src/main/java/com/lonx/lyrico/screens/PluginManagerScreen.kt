@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,7 +70,7 @@ import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.model.entity.capabilities
@@ -478,29 +479,30 @@ fun PluginManagerScreen(
     }
 
     if (salt) {
-        // SaltUI 自带输入弹窗：自动聚焦输入框，确认不自动关闭。
-        if (showRenameDialog) com.lonx.lyrico.ui.components.base.SaltInputDialog(
-            title = stringResource(R.string.plugin_custom_name),
-            text = customNameInput,
-            hint = stringResource(
-                R.string.plugin_custom_name_hint,
-                pendingRenamePlugin?.name.orEmpty()
-            ),
-            onChange = { customNameInput = it },
-            onDismissRequest = {
-                showRenameDialog = false
-                pendingRenamePluginId = null
-            },
-            onConfirm = {
-                pendingRenamePluginId?.let { id ->
-                    viewModel.setCustomName(id, customNameInput)
-                }
-                showRenameDialog = false
-                pendingRenamePluginId = null
-            },
-            cancelText = stringResource(R.string.cancel),
-            confirmText = stringResource(R.string.confirm),
-        )
+        if (showRenameDialog) {
+            val nameState = rememberTextFieldState(initialText = customNameInput)
+            com.lonx.lyrico.ui.components.salt.SaltInputDialog(
+                title = stringResource(R.string.plugin_custom_name),
+                state = nameState,
+                hint = stringResource(
+                    R.string.plugin_custom_name_hint,
+                    pendingRenamePlugin?.name.orEmpty()
+                ),
+                onDismissRequest = {
+                    showRenameDialog = false
+                    pendingRenamePluginId = null
+                },
+                onConfirm = {
+                    pendingRenamePluginId?.let { id ->
+                        viewModel.setCustomName(id, nameState.text.toString())
+                    }
+                    showRenameDialog = false
+                    pendingRenamePluginId = null
+                },
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm),
+            )
+        }
     } else WindowDialog(
         title = stringResource(R.string.plugin_custom_name),
         show = showRenameDialog,
@@ -1135,22 +1137,28 @@ fun PluginItem(
                 // 分割线和上面的描述拉开距离，否则贴着文字。
                 ItemDivider(modifier = Modifier.padding(top = 8.dp))
 
-                // 用 FlowRow：长语言下按钮换行，而不是把文字挤到显示不全。
-                FlowRow(
+                Row(
                     modifier = Modifier.fillMaxWidth().innerPadding(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SaltPluginActionButton(
-                        text = stringResource(R.string.plugin_config),
-                        icon = LucideIcons.Settings,
-                        onClick = onConfig
-                    )
-                    SaltPluginActionButton(
-                        text = stringResource(R.string.plugin_custom_name),
-                        icon = LucideIcons.Pencil,
-                        onClick = onRename
-                    )
+                    // 左侧操作可换行，卸载始终靠右。
+                    FlowRow(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        SaltPluginActionButton(
+                            text = stringResource(R.string.plugin_config),
+                            icon = LucideIcons.Settings,
+                            onClick = onConfig
+                        )
+                        SaltPluginActionButton(
+                            text = stringResource(R.string.plugin_custom_name),
+                            icon = LucideIcons.Pencil,
+                            onClick = onRename
+                        )
+                    }
                     SaltPluginActionButton(
                         text = stringResource(R.string.plugin_uninstall),
                         icon = LucideIcons.Trash,
@@ -1377,7 +1385,7 @@ private fun CompactPluginItem(
             }
 
             Row(
-                // 底部留出与卡片边缘的距离，图标不再贴着底边；尺寸对齐标题行的 36dp 插件图标。
+                // 底部留出与卡片边缘的距离，操作按钮保持紧凑。
                 modifier = Modifier.fillMaxWidth().innerPadding(vertical = false)
                     .padding(top = 4.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1388,23 +1396,26 @@ private fun CompactPluginItem(
                     icon = LucideIcons.Settings,
                     label = stringResource(R.string.plugin_config),
                     onClick = onConfig,
-                    size = 36.dp,
-                    iconSize = 22.dp
+                    size = 30.dp,
+                    iconSize = 18.dp,
+                    backgroundColor = SaltTheme.colors.text.copy(alpha = 0.08f)
                 )
                 SaltIconButton(
                     icon = LucideIcons.Pencil,
                     label = stringResource(R.string.plugin_custom_name),
                     onClick = onRename,
-                    size = 36.dp,
-                    iconSize = 22.dp
+                    size = 30.dp,
+                    iconSize = 18.dp,
+                    backgroundColor = SaltTheme.colors.text.copy(alpha = 0.08f)
                 )
                 SaltIconButton(
                     icon = LucideIcons.Trash,
                     label = stringResource(R.string.plugin_uninstall),
                     onClick = onUninstall,
                     tint = SaltTheme.colors.error,
-                    size = 36.dp,
-                    iconSize = 22.dp
+                    size = 30.dp,
+                    iconSize = 18.dp,
+                    backgroundColor = SaltTheme.colors.error.copy(alpha = 0.12f)
                 )
             }
         }
@@ -1641,18 +1652,21 @@ private fun SaltPluginActionButton(
     danger: Boolean = false,
     onClick: () -> Unit
 ) {
-    // 用应用胶囊密度（Small 28dp / 12sp）：Salt 原生 Small 是 40dp + 正文字号，行内偏大。
     val contentColor = if (danger) SaltTheme.colors.error else SaltTheme.colors.text
     PillButton(
         text = text,
         onClick = onClick,
-        style = PillButtonDefaults.style(PillButtonSize.Small),
-        colors = PillButtonDefaults.colors(contentColor = contentColor),
+        style = PillButtonDefaults.style(PillButtonSize.Medium),
+        colors = PillButtonDefaults.colors(
+            contentColor = contentColor,
+            containerColor = if (danger) SaltTheme.colors.error.copy(alpha = 0.12f)
+                else SaltTheme.colors.text.copy(alpha = 0.08f),
+        ),
         leading = {
             com.moriafly.salt.ui.Icon(
                 painter = rememberVectorPainter(icon),
                 contentDescription = null,
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(18.dp),
                 tint = contentColor
             )
         },

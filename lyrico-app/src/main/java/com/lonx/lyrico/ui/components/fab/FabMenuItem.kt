@@ -22,7 +22,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.SaltTheme
 
 @Composable
@@ -40,7 +40,7 @@ fun FabMenuItem(
         style.itemDisabledContentColor
     }
 
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
         Row(
             modifier = modifier.fillMaxWidth().height(style.itemHeight)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)

@@ -1,5 +1,7 @@
 package com.lonx.lyrico.ui.components.library
 
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,7 +43,7 @@ internal fun LibraryItemText(
     overflow: TextOverflow = TextOverflow.Clip,
     style: TextStyle = MiuixTheme.textStyles.main,
 ) {
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
         val miuixColors = MiuixTheme.colorScheme
         val saltColors = SaltTheme.colors
         // Tiny cover badges are graphic labels, rather than regular list typography.

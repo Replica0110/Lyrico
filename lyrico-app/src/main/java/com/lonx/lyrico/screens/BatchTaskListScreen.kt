@@ -36,8 +36,8 @@ import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.base.SaltDropdownRow
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltDropdownRow
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
@@ -325,6 +325,7 @@ fun BatchTaskListScreen(
                     ScreenCard {
                         SaltDropdownRow(
                             title = stringResource(R.string.batch_task_filter_type),
+                            icon = LucideIcons.ListFilter, tone = PreferenceIconTone.Appearance,
                             labels = typeLabels,
                             selectedIndex = selectedTypeIndex,
                         ) { index ->
@@ -334,6 +335,7 @@ fun BatchTaskListScreen(
                         }
                         SaltDropdownRow(
                             title = stringResource(R.string.batch_task_filter_status),
+                            icon = LucideIcons.ListChecks, tone = PreferenceIconTone.Tools,
                             labels = statusLabels,
                             selectedIndex = selectedStatusIndex,
                         ) { index ->
@@ -344,7 +346,7 @@ fun BatchTaskListScreen(
                     }
                 } else Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(LucideIcons.ListFilter, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.ListFilter, PreferenceIconTone.Appearance) },
                         title = stringResource(R.string.batch_task_filter_type),
                         items = typeLabels,
                         selectedIndex = selectedTypeIndex,

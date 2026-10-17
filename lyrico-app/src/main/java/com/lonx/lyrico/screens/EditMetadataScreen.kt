@@ -10,13 +10,14 @@ import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.library.LibraryDetailPage
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
 import com.lonx.lyrico.ui.components.library.libraryDetailScroll
+import com.lonx.lyrico.ui.components.editor.rememberEditorTextFieldState
 import com.lonx.lyrico.ui.components.editor.SaltEditorField
+import com.lonx.lyrico.ui.components.editor.SaltEditorUndoAction
 import com.lonx.lyrico.ui.components.editor.EditorSheet
-import com.lonx.lyrico.ui.components.base.SaltIconButton
-import com.lonx.lyrico.ui.components.base.SaltBasicDialog
-import com.lonx.lyrico.ui.components.base.SaltConfirmDialog
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltBasicDialog
+import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
 import com.lonx.lyrico.ui.components.base.ItemMenuAction
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
@@ -88,9 +89,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -172,8 +171,6 @@ import com.ramcosta.composedestinations.result.onResult
 import java.net.URL
 import kotlin.apply
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
@@ -847,459 +844,457 @@ fun EditMetadataScreen(
     val fieldBlocks = remember(visibleFields) { visibleFields.toEditFieldBlocks() }
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val topBarBackdrop = rememberBarBlurBackdrop()
-    CompositionLocalProvider(LocalLibraryUiEngine provides LocalUiEngine.current) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        LibraryDetailPage(
-            title = uiState.songInfo?.tagData?.title ?: uiState.songInfo?.tagData?.fileName
-                ?: stringResource(R.string.edit_metadata_default_title),
-            onBack = { if (externalEditRequestId == null || !uiState.isSaving) closeEditor(saved = uiState.saveSuccess == true) },
-            actions = {
-                if (uiState.isSaving) androidx.compose.material3.CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp), color = SaltTheme.colors.highlight)
-                else SaltIconButton(LucideIcons.Check, stringResource(R.string.confirm), { viewModel.saveMetadata() })
-            },
-            miuixTopBar = {
-                val titleText = uiState.songInfo?.tagData?.title
-                    ?: uiState.songInfo?.tagData?.fileName
-                    ?: stringResource(R.string.edit_metadata_default_title)
+Box(modifier = Modifier.fillMaxSize()) {
+    LibraryDetailPage(
+        title = uiState.songInfo?.tagData?.title ?: uiState.songInfo?.tagData?.fileName
+            ?: stringResource(R.string.edit_metadata_default_title),
+        onBack = { if (externalEditRequestId == null || !uiState.isSaving) closeEditor(saved = uiState.saveSuccess == true) },
+        actions = {
+            if (uiState.isSaving) androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.size(24.dp), color = SaltTheme.colors.highlight)
+            else SaltIconButton(LucideIcons.Check, stringResource(R.string.confirm), { viewModel.saveMetadata() })
+        },
+        miuixTopBar = {
+            val titleText = uiState.songInfo?.tagData?.title
+                ?: uiState.songInfo?.tagData?.fileName
+                ?: stringResource(R.string.edit_metadata_default_title)
 
-                BlurredTopBar(backdrop = topBarBackdrop) {
-                    SmallTopAppBar(
-                        title = titleText,
-                        color = Color.Transparent,
-                        defaultWindowInsetsPadding = false,
-                        navigationIcon = {
-                            IconButton(
-                                onClick = {
-                                    if (externalEditRequestId == null || !uiState.isSaving) {
-                                        closeEditor(saved = uiState.saveSuccess == true)
+            BlurredTopBar(backdrop = topBarBackdrop) {
+                SmallTopAppBar(
+                    title = titleText,
+                    color = Color.Transparent,
+                    defaultWindowInsetsPadding = false,
+                    navigationIcon = {
+                        IconButton(
+                            onClick = {
+                                if (externalEditRequestId == null || !uiState.isSaving) {
+                                    closeEditor(saved = uiState.saveSuccess == true)
+                                }
+                            }
+                        ) { Icon(imageVector = LucideIcons.ArrowLeft, contentDescription = null) }
+                    },
+                    actions = {
+                        // 保存按钮
+                        IconButton(
+                            onClick = { viewModel.saveMetadata() },
+                            enabled = !uiState.isSaving
+                        ) {
+                            if (uiState.isSaving) CircularProgressIndicator(
+                                modifier = Modifier.size(
+                                    24.dp
+                                )
+                            )
+                            else Icon(imageVector = LucideIcons.Check, contentDescription = null)
+                        }
+                    },
+                    scrollBehavior = topAppBarScrollBehavior
+                )
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .then(if (salt) Modifier else Modifier.blurSource(topBarBackdrop).imePadding())
+                .libraryDetailScroll(topAppBarScrollBehavior),
+            // 用 contentPadding 而不是 padding，表单才会从毛玻璃顶栏下面滚过
+            contentPadding = if (salt) scaffoldContentPadding(paddingValues, bottomExtra = 132.dp) else scaffoldTopHorizontalPadding(paddingValues),
+        ) {
+            fieldBlocks.forEach { block ->
+                val definition = block.fields.first()
+                item(key = block.key) {
+                    Column {
+                        if (salt && block.kind == EditFieldKind.ReplayGain) {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                com.moriafly.salt.ui.Text(
+                                    if (uiState.isReplayGainCalculating) "${((replayGainCalculateProgress ?: 0f) * 100).toInt()}%" else "",
+                                    Modifier.weight(1f), style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText)
+                                // 行内小胶囊：用应用密度映射，避免 Salt 原生 Small 的 40dp + 正文字号。
+                                PillButton(
+                                    text = stringResource(if (uiState.isReplayGainCalculating) R.string.replay_gain_calculate_in_progress else R.string.action_calculate_replay_gain),
+                                    onClick = { if (uiState.isReplayGainCalculating) viewModel.cancelScan() else viewModel.calculateReplayGain() },
+                                    style = PillButtonDefaults.style(PillButtonSize.Small))
+                            }
+                        }
+                        if (!salt && block.kind == EditFieldKind.ReplayGain) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(start = 4.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = uiState.isReplayGainCalculating,
+                                        enter = fadeIn(),
+                                        exit = fadeOut()
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            androidx.compose.material3.CircularProgressIndicator(
+                                                progress = { replayGainCalculateProgress ?: 0f },
+                                                modifier = Modifier.size(20.dp),
+                                                color = MiuixTheme.colorScheme.primary,
+                                                strokeWidth = 2.5.dp,
+                                                trackColor = MiuixTheme.colorScheme.primary.copy(
+                                                    alpha = 0.2f
+                                                )
+                                            )
+
+                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                            Text(
+                                                text = "${((replayGainCalculateProgress ?: 0f) * 100).toInt()}%",
+                                                fontSize = 12.sp,
+                                                color = MiuixTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
                                     }
                                 }
-                            ) { Icon(imageVector = LucideIcons.ArrowLeft, contentDescription = null) }
-                        },
-                        actions = {
-                            // 保存按钮
-                            IconButton(
-                                onClick = { viewModel.saveMetadata() },
-                                enabled = !uiState.isSaving
-                            ) {
-                                if (uiState.isSaving) CircularProgressIndicator(
-                                    modifier = Modifier.size(
-                                        24.dp
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(MiuixTheme.colorScheme.primary)
+                                        .clickable {
+                                            if (!uiState.isReplayGainCalculating) {
+                                                viewModel.calculateReplayGain()
+                                            } else {
+                                                viewModel.cancelScan()
+                                            }
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (uiState.isReplayGainCalculating) {
+                                            stringResource(R.string.replay_gain_calculate_in_progress)
+                                        } else {
+                                            stringResource(R.string.action_calculate_replay_gain)
+                                        },
+                                        fontSize = 11.sp,
+                                        color = MiuixTheme.colorScheme.onPrimary,
+                                        fontWeight = FontWeight.Medium
                                     )
-                                )
-                                else Icon(imageVector = LucideIcons.Check, contentDescription = null)
-                            }
-                        },
-                        scrollBehavior = topAppBarScrollBehavior
-                    )
-                }
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { paddingValues ->
-            LazyColumn(
-                modifier = Modifier
-                    .then(if (salt) Modifier else Modifier.blurSource(topBarBackdrop).imePadding())
-                    .libraryDetailScroll(topAppBarScrollBehavior),
-                // 用 contentPadding 而不是 padding，表单才会从毛玻璃顶栏下面滚过
-                contentPadding = if (salt) scaffoldContentPadding(paddingValues, bottomExtra = 132.dp) else scaffoldTopHorizontalPadding(paddingValues),
-            ) {
-                fieldBlocks.forEach { block ->
-                    val definition = block.fields.first()
-                    item(key = block.key) {
-                        Column {
-                            if (salt && block.kind == EditFieldKind.ReplayGain) {
-                                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically) {
-                                    com.moriafly.salt.ui.Text(
-                                        if (uiState.isReplayGainCalculating) "${((replayGainCalculateProgress ?: 0f) * 100).toInt()}%" else "",
-                                        Modifier.weight(1f), style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText)
-                                    // 行内小胶囊：用应用密度映射，避免 Salt 原生 Small 的 40dp + 正文字号。
-                                    PillButton(
-                                        text = stringResource(if (uiState.isReplayGainCalculating) R.string.replay_gain_calculate_in_progress else R.string.action_calculate_replay_gain),
-                                        onClick = { if (uiState.isReplayGainCalculating) viewModel.cancelScan() else viewModel.calculateReplayGain() },
-                                        style = PillButtonDefaults.style(PillButtonSize.Small))
                                 }
                             }
-                            if (!salt && block.kind == EditFieldKind.ReplayGain) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(start = 4.dp),
-                                        contentAlignment = Alignment.CenterStart
-                                    ) {
-                                        androidx.compose.animation.AnimatedVisibility(
-                                            visible = uiState.isReplayGainCalculating,
-                                            enter = fadeIn(),
-                                            exit = fadeOut()
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                androidx.compose.material3.CircularProgressIndicator(
-                                                    progress = { replayGainCalculateProgress ?: 0f },
-                                                    modifier = Modifier.size(20.dp),
-                                                    color = MiuixTheme.colorScheme.primary,
-                                                    strokeWidth = 2.5.dp,
-                                                    trackColor = MiuixTheme.colorScheme.primary.copy(
-                                                        alpha = 0.2f
-                                                    )
+                        }
+                        when {
+                            definition.custom -> {
+                                val key = requireNotNull(EditFieldRegistry.customTagKeyOf(definition.code))
+                                val field = editingTagData?.customFields
+                                    .orEmpty()
+                                    .firstOrNull { it.key.equals(key, ignoreCase = true) }
+                                    ?.copy(key = key)
+                                    ?: CustomTagField(
+                                        key = key,
+                                        value = "",
+                                    )
+                                val originalField = originalTagData?.customFields
+                                    .orEmpty()
+                                    .firstOrNull { it.key.equals(key, ignoreCase = true) }
+                                    ?.copy(key = key)
+                                CustomMetadataFieldEditor(
+                                    field = field,
+                                    isModified = originalField
+                                        ?.let { field != it }
+                                        ?: field.value.isNotEmpty(),
+                                    onValueChange = { newValue ->
+                                        viewModel.updateCustomFieldValue(key, newValue)
+                                    },
+                                    onRemove = {
+                                        viewModel.removeCustomFieldValue(key)
+                                    },
+                                    onRevert = {
+                                        val previousField = editingTagData?.customFields
+                                            .orEmpty()
+                                            .firstOrNull { it.key.equals(key, ignoreCase = true) }
+                                            ?.copy(key = key)
+                                        viewModel.revertCustomField(key)
+                                        showCancelUndoSnackbar(key) {
+                                            if (previousField != null) {
+                                                viewModel.updateCustomFieldValue(
+                                                    key = key,
+                                                    value = previousField.value
                                                 )
-
-                                                Spacer(modifier = Modifier.width(8.dp))
-
+                                            } else {
+                                                viewModel.removeCustomFieldValue(key)
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                            block.kind == EditFieldKind.Cover -> {
+                                CoverSection(
+                                    coverUri = uiState.coverUri,
+                                    title = editingTagData?.title
+                                        ?: uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".")
+                                        ?: "",
+                                    artist = editingTagData?.artist ?: "",
+                                    pages = picturePages,
+                                    pagerState = coverPagerState,
+                                )
+                            }
+                            definition.code == "rating" -> {
+                                RatingField(
+                                    rating = editingTagData?.rating,
+                                    onRatingChange = { value -> viewModel.updateTag { copy(rating = value) } },
+                                )
+                            }
+                            definition.code == "lyrics" -> {
+                                MetadataInputField(
+                                    label = stringResource(R.string.label_lyrics),
+                                    state = lyricsState,
+                                    isModified = !editingTagData?.lyrics.isEqualIgnoringBlank(
+                                        originalTagData?.lyrics
+                                    ),
+                                    onRevert = {
+                                        revertField(
+                                            fieldLabel = context.getString(R.string.label_lyrics),
+                                            currentValue = editingTagData?.lyrics ?: "",
+                                            originalValue = originalTagData?.lyrics ?: ""
+                                        ) { copy(lyrics = it) }
+                                    },
+                                    actionButtons = {
+                                        if (salt) SaltIconButton(LucideIcons.EllipsisVertical,
+                                            stringResource(R.string.action_lyrics_options), { showLyricsActionBottomSheet = true }, size = 32.dp, iconSize = 20.dp)
+                                        else
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                6.dp,
+                                                Alignment.End
+                                            )
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(CircleShape)
+                                                    .background(MiuixTheme.colorScheme.primary)
+                                                    .clickable {
+                                                        showLyricsActionBottomSheet = true
+                                                    }
+                                                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
                                                 Text(
-                                                    text = "${((replayGainCalculateProgress ?: 0f) * 100).toInt()}%",
-                                                    fontSize = 12.sp,
-                                                    color = MiuixTheme.colorScheme.primary,
+                                                    text = stringResource(R.string.action_lyrics_options),
+                                                    fontSize = 11.sp,
+                                                    color = MiuixTheme.colorScheme.onPrimary,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
                                         }
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(CircleShape)
-                                            .background(MiuixTheme.colorScheme.primary)
-                                            .clickable {
-                                                if (!uiState.isReplayGainCalculating) {
-                                                    viewModel.calculateReplayGain()
-                                                } else {
-                                                    viewModel.cancelScan()
-                                                }
-                                            }
-                                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = if (uiState.isReplayGainCalculating) {
-                                                stringResource(R.string.replay_gain_calculate_in_progress)
-                                            } else {
-                                                stringResource(R.string.action_calculate_replay_gain)
-                                            },
-                                            fontSize = 11.sp,
-                                            color = MiuixTheme.colorScheme.onPrimary,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
+                                    },
+                                    isMultiline = true,
+                                    limitMultilineLines = limitLyricsInputLines
+                                )
                             }
-                            when {
-                                definition.custom -> {
-                                    val key = requireNotNull(EditFieldRegistry.customTagKeyOf(definition.code))
-                                    val field = editingTagData?.customFields
-                                        .orEmpty()
-                                        .firstOrNull { it.key.equals(key, ignoreCase = true) }
-                                        ?.copy(key = key)
-                                        ?: CustomTagField(
-                                            key = key,
-                                            value = "",
-                                        )
-                                    val originalField = originalTagData?.customFields
-                                        .orEmpty()
-                                        .firstOrNull { it.key.equals(key, ignoreCase = true) }
-                                        ?.copy(key = key)
-                                    CustomMetadataFieldEditor(
-                                        field = field,
-                                        isModified = originalField
-                                            ?.let { field != it }
-                                            ?: field.value.isNotEmpty(),
-                                        onValueChange = { newValue ->
-                                            viewModel.updateCustomFieldValue(key, newValue)
-                                        },
-                                        onRemove = {
-                                            viewModel.removeCustomFieldValue(key)
-                                        },
-                                        onRevert = {
-                                            val previousField = editingTagData?.customFields
-                                                .orEmpty()
-                                                .firstOrNull { it.key.equals(key, ignoreCase = true) }
-                                                ?.copy(key = key)
-                                            viewModel.revertCustomField(key)
-                                            showCancelUndoSnackbar(key) {
-                                                if (previousField != null) {
-                                                    viewModel.updateCustomFieldValue(
-                                                        key = key,
-                                                        value = previousField.value
-                                                    )
-                                                } else {
-                                                    viewModel.removeCustomFieldValue(key)
-                                                }
-                                            }
-                                        }
-                                    )
-                                }
-                                block.kind == EditFieldKind.Cover -> {
-                                    CoverSection(
-                                        coverUri = uiState.coverUri,
-                                        title = editingTagData?.title
-                                            ?: uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".")
-                                            ?: "",
-                                        artist = editingTagData?.artist ?: "",
-                                        pages = picturePages,
-                                        pagerState = coverPagerState,
-                                    )
-                                }
-                                definition.code == "rating" -> {
-                                    RatingField(
-                                        rating = editingTagData?.rating,
-                                        onRatingChange = { value -> viewModel.updateTag { copy(rating = value) } },
-                                    )
-                                }
-                                definition.code == "lyrics" -> {
-                                    MetadataInputField(
-                                        label = stringResource(R.string.label_lyrics),
-                                        state = lyricsState,
-                                        isModified = !editingTagData?.lyrics.isEqualIgnoringBlank(
-                                            originalTagData?.lyrics
-                                        ),
-                                        onRevert = {
-                                            revertField(
-                                                fieldLabel = context.getString(R.string.label_lyrics),
-                                                currentValue = editingTagData?.lyrics ?: "",
-                                                originalValue = originalTagData?.lyrics ?: ""
-                                            ) { copy(lyrics = it) }
-                                        },
-                                        actionButtons = {
-                                            if (salt) SaltIconButton(LucideIcons.EllipsisVertical,
-                                                stringResource(R.string.action_lyrics_options), { showLyricsActionBottomSheet = true }, size = 32.dp, iconSize = 20.dp)
-                                            else
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(
-                                                    6.dp,
-                                                    Alignment.End
-                                                )
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(CircleShape)
-                                                        .background(MiuixTheme.colorScheme.primary)
-                                                        .clickable {
-                                                            showLyricsActionBottomSheet = true
-                                                        }
-                                                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.action_lyrics_options),
-                                                        fontSize = 11.sp,
-                                                        color = MiuixTheme.colorScheme.onPrimary,
-                                                        fontWeight = FontWeight.Medium
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        isMultiline = true,
-                                        limitMultilineLines = limitLyricsInputLines
-                                    )
-                                }
-                                definition.code == "track_number" -> {
-                                    MetadataInputField(
-                                        label = stringResource(R.string.label_track_number),
-                                        state = trackNumberState,
-                                        isModified = !editingTagData?.trackNumber.isEqualIgnoringBlank(
-                                            originalTagData?.trackNumber
-                                        ),
-                                        onRevert = {
-                                            revertField(
-                                                fieldLabel = context.getString(R.string.label_track_number),
-                                                currentValue = editingTagData?.trackNumber ?: "",
-                                                originalValue = originalTagData?.trackNumber ?: ""
-                                            ) { copy(trackNumber = it) }
-                                        }
-                                    )
-                                }
-                                definition.code == "disc_number" -> {
-                                    MetadataInputField(
-                                        label = stringResource(R.string.label_disc_number),
-                                        state = discNumberState,
-                                        isModified = editingTagData?.discNumber != originalTagData?.discNumber,
-                                        onRevert = {
-                                            revertField(
-                                                fieldLabel = context.getString(R.string.label_disc_number),
-                                                currentValue = editingTagData?.discNumber,
-                                                originalValue = originalTagData?.discNumber
-                                            ) { copy(discNumber = it) }
-                                        }
-                                    )
-                                }
-                                definition.simpleTextInput -> {
-                                    block.fields.forEach { textDefinition ->
-                                        val field = simpleTextFields.getValue(textDefinition.code)
-                                        MetadataInputField(
-                                            label = stringResource(textDefinition.titleRes),
-                                            state = field.state,
-                                            isModified = !editedValue(editingTagData, field)
-                                                .isEqualIgnoringBlank(editedValue(originalTagData, field)),
-                                            onRevert = {
-                                                revertSimpleTextField(textDefinition, field, originalTagData, editingTagData)
-                                            },
-                                        )
+                            definition.code == "track_number" -> {
+                                MetadataInputField(
+                                    label = stringResource(R.string.label_track_number),
+                                    state = trackNumberState,
+                                    isModified = !editingTagData?.trackNumber.isEqualIgnoringBlank(
+                                        originalTagData?.trackNumber
+                                    ),
+                                    onRevert = {
+                                        revertField(
+                                            fieldLabel = context.getString(R.string.label_track_number),
+                                            currentValue = editingTagData?.trackNumber ?: "",
+                                            originalValue = originalTagData?.trackNumber ?: ""
+                                        ) { copy(trackNumber = it) }
                                     }
+                                )
+                            }
+                            definition.code == "disc_number" -> {
+                                MetadataInputField(
+                                    label = stringResource(R.string.label_disc_number),
+                                    state = discNumberState,
+                                    isModified = editingTagData?.discNumber != originalTagData?.discNumber,
+                                    onRevert = {
+                                        revertField(
+                                            fieldLabel = context.getString(R.string.label_disc_number),
+                                            currentValue = editingTagData?.discNumber,
+                                            originalValue = originalTagData?.discNumber
+                                        ) { copy(discNumber = it) }
+                                    }
+                                )
+                            }
+                            definition.simpleTextInput -> {
+                                block.fields.forEach { textDefinition ->
+                                    val field = simpleTextFields.getValue(textDefinition.code)
+                                    MetadataInputField(
+                                        label = stringResource(textDefinition.titleRes),
+                                        state = field.state,
+                                        isModified = !editedValue(editingTagData, field)
+                                            .isEqualIgnoringBlank(editedValue(originalTagData, field)),
+                                        onRevert = {
+                                            revertSimpleTextField(textDefinition, field, originalTagData, editingTagData)
+                                        },
+                                    )
                                 }
                             }
                         }
                     }
                 }
-
-            }
-        }
-        val fabMenuItemCount = remember(editingTagData) {
-            var count = 3 // 固定项：添加自定义标签、播放、字段显示设置
-
-            if (editingTagData != null) {
-                count += 3 // 歌词操作、封面操作、艺术家图片操作
             }
 
-            count
         }
-        val searchMenuItemCount = remember(mainSearchSources, lyricsSearchSources, coverSearchSources) {
-            listOf(mainSearchSources, lyricsSearchSources, coverSearchSources).count { it.isNotEmpty() }
+    }
+    val fabMenuItemCount = remember(editingTagData) {
+        var count = 3 // 固定项：添加自定义标签、播放、字段显示设置
+
+        if (editingTagData != null) {
+            count += 3 // 歌词操作、封面操作、艺术家图片操作
         }
-        if (searchMenuItemCount > 0) {
-            ExpandableFabMenu(
-                modifier = Modifier.padding(bottom = 116.dp),
-                visible = isFloatingToolbarVisible,
-                expanded = isSearchFabMenuExpanded,
-                enabled = true,
-                itemCount = searchMenuItemCount,
-                style = ExpandableFabMenuStyle.default().copy(mainIcon = LucideIcons.Search),
-                onExpandedChange = { expanded ->
-                    if (expanded) isFabMenuExpanded = false
-                    isSearchFabMenuExpanded = expanded
-                }
-            ) {
-                if (mainSearchSources.isNotEmpty()) {
-                    FabMenuItem(
-                        label = stringResource(R.string.action_main_search),
-                        icon = LucideIcons.Search,
-                        onClick = {
-                            isSearchFabMenuExpanded = false
-                            val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
-                                if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
-                                else "${editingTagData.title} ${editingTagData.artist}"
-                            } else {
-                                uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
-                            }
-                            navigator.navigate(SearchResultsDestination(keyword))
-                        }
-                    )
-                }
-                if (lyricsSearchSources.isNotEmpty()) {
-                    FabMenuItem(
-                        label = stringResource(R.string.action_search_lyrics),
-                        icon = LucideIcons.Captions,
-                        onClick = {
-                            isSearchFabMenuExpanded = false
-                            navigator.navigate(
-                                SearchLyricsDestination(
-                                    title = editingTagData?.title.orEmpty(),
-                                    artist = editingTagData?.artist.orEmpty(),
-                                    album = editingTagData?.album.orEmpty(),
-                                    date = editingTagData?.date.orEmpty()
-                                )
-                            )
-                        }
-                    )
-                }
-                if (coverSearchSources.isNotEmpty()) {
-                    FabMenuItem(
-                        label = stringResource(R.string.action_search_cover),
-                        icon = LucideIcons.ImageSearch,
-                        onClick = {
-                            isSearchFabMenuExpanded = false
-                            val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
-                                if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
-                                else "${editingTagData.title} ${editingTagData.artist}"
-                            } else {
-                                uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
-                            }
-                            navigator.navigate(SearchCoverDestination(keyword))
-                        }
-                    )
-                }
-            }
-        }
+
+        count
+    }
+    val searchMenuItemCount = remember(mainSearchSources, lyricsSearchSources, coverSearchSources) {
+        listOf(mainSearchSources, lyricsSearchSources, coverSearchSources).count { it.isNotEmpty() }
+    }
+    if (searchMenuItemCount > 0) {
         ExpandableFabMenu(
-            modifier = Modifier
-                .padding(bottom = 48.dp),
+            modifier = Modifier.padding(bottom = 116.dp),
             visible = isFloatingToolbarVisible,
-            expanded = isFabMenuExpanded,
+            expanded = isSearchFabMenuExpanded,
             enabled = true,
-            itemCount = fabMenuItemCount,
+            itemCount = searchMenuItemCount,
+            style = ExpandableFabMenuStyle.default().copy(mainIcon = LucideIcons.Search),
             onExpandedChange = { expanded ->
-                if (expanded) isSearchFabMenuExpanded = false
-                isFabMenuExpanded = expanded
+                if (expanded) isFabMenuExpanded = false
+                isSearchFabMenuExpanded = expanded
             }
         ) {
-            FabMenuItem(
-                label = stringResource(R.string.action_add_custom_tag),
-                icon = LucideIcons.Plus,
-                onClick = {
-                    isFabMenuExpanded = false
-                    showAddCustomTagDialog = true
-                }
-            )
-
-            if (editingTagData != null) {
+            if (mainSearchSources.isNotEmpty()) {
                 FabMenuItem(
-                    label = stringResource(R.string.action_lyrics_options),
+                    label = stringResource(R.string.action_main_search),
+                    icon = LucideIcons.Search,
+                    onClick = {
+                        isSearchFabMenuExpanded = false
+                        val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
+                            if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
+                            else "${editingTagData.title} ${editingTagData.artist}"
+                        } else {
+                            uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
+                        }
+                        navigator.navigate(SearchResultsDestination(keyword))
+                    }
+                )
+            }
+            if (lyricsSearchSources.isNotEmpty()) {
+                FabMenuItem(
+                    label = stringResource(R.string.action_search_lyrics),
                     icon = LucideIcons.Captions,
                     onClick = {
-                        isFabMenuExpanded = false
-                        showLyricsActionBottomSheet = true
+                        isSearchFabMenuExpanded = false
+                        navigator.navigate(
+                            SearchLyricsDestination(
+                                title = editingTagData?.title.orEmpty(),
+                                artist = editingTagData?.artist.orEmpty(),
+                                album = editingTagData?.album.orEmpty(),
+                                date = editingTagData?.date.orEmpty()
+                            )
+                        )
                     }
                 )
             }
-
-            if (editingTagData != null) {
+            if (coverSearchSources.isNotEmpty()) {
                 FabMenuItem(
-                    label = stringResource(R.string.label_cover_options),
-                    icon = LucideIcons.Image,
+                    label = stringResource(R.string.action_search_cover),
+                    icon = LucideIcons.ImageSearch,
                     onClick = {
-                        isFabMenuExpanded = false
-                        showCoverOptionsSheet = true
-                    }
-                )
-                FabMenuItem(
-                    label = stringResource(R.string.label_artist_image_options),
-                    icon = LucideIcons.Users,
-                    onClick = {
-                        isFabMenuExpanded = false
-                        // 从菜单进来时没有指定海报，多张时需要用户自己选
-                        artistPosterMenu.open()
+                        isSearchFabMenuExpanded = false
+                        val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
+                            if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
+                            else "${editingTagData.title} ${editingTagData.artist}"
+                        } else {
+                            uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
+                        }
+                        navigator.navigate(SearchCoverDestination(keyword))
                     }
                 )
             }
+        }
+    }
+    ExpandableFabMenu(
+        modifier = Modifier
+            .padding(bottom = 48.dp),
+        visible = isFloatingToolbarVisible,
+        expanded = isFabMenuExpanded,
+        enabled = true,
+        itemCount = fabMenuItemCount,
+        onExpandedChange = { expanded ->
+            if (expanded) isSearchFabMenuExpanded = false
+            isFabMenuExpanded = expanded
+        }
+    ) {
+        FabMenuItem(
+            label = stringResource(R.string.action_add_custom_tag),
+            icon = LucideIcons.Plus,
+            onClick = {
+                isFabMenuExpanded = false
+                showAddCustomTagDialog = true
+            }
+        )
 
+        if (editingTagData != null) {
             FabMenuItem(
-                label = stringResource(R.string.menu_play_music),
-                icon = LucideIcons.Play,
+                label = stringResource(R.string.action_lyrics_options),
+                icon = LucideIcons.Captions,
                 onClick = {
                     isFabMenuExpanded = false
-                    showPlayerPicker = true
-                }
-            )
-
-            FabMenuItem(
-                label = stringResource(R.string.edit_field_settings_title),
-                icon = LucideIcons.Settings,
-                onClick = {
-                    isFabMenuExpanded = false
-                    navigator.navigate(EditFieldSettingsDestination())
+                    showLyricsActionBottomSheet = true
                 }
             )
         }
+
+        if (editingTagData != null) {
+            FabMenuItem(
+                label = stringResource(R.string.label_cover_options),
+                icon = LucideIcons.Image,
+                onClick = {
+                    isFabMenuExpanded = false
+                    showCoverOptionsSheet = true
+                }
+            )
+            FabMenuItem(
+                label = stringResource(R.string.label_artist_image_options),
+                icon = LucideIcons.Users,
+                onClick = {
+                    isFabMenuExpanded = false
+                    // 从菜单进来时没有指定海报，多张时需要用户自己选
+                    artistPosterMenu.open()
+                }
+            )
+        }
+
+        FabMenuItem(
+            label = stringResource(R.string.menu_play_music),
+            icon = LucideIcons.Play,
+            onClick = {
+                isFabMenuExpanded = false
+                showPlayerPicker = true
+            }
+        )
+
+        FabMenuItem(
+            label = stringResource(R.string.edit_field_settings_title),
+            icon = LucideIcons.Settings,
+            onClick = {
+                isFabMenuExpanded = false
+                navigator.navigate(EditFieldSettingsDestination())
+            }
+        )
     }
-    }
+}
     PlayerPickerBottomSheet(
         show = showPlayerPicker,
         uri = songFileUri.toUri(),
@@ -1321,7 +1316,7 @@ fun EditMetadataScreen(
             EditorMenuGroup {
                 if (lyricsSearchSources.isNotEmpty()) {
                     ItemMenuAction(
-                        icon = LucideIcons.Search, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Search, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.action_search_lyrics),
                         onClick = {
                             showLyricsActionBottomSheet = false
@@ -1337,7 +1332,7 @@ fun EditMetadataScreen(
                     )
                 }
                 ItemMenuAction(
-                        icon = LucideIcons.FileDown, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.FileDown, tone = PreferenceIconTone.Tools,
                     title = stringResource(R.string.action_import_lyrics),
                     onClick = {
                         showLyricsActionBottomSheet = false
@@ -1346,7 +1341,7 @@ fun EditMetadataScreen(
                 )
                 editingTagData?.lyrics?.let {
                     ItemMenuAction(
-                        icon = LucideIcons.FileUp, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.FileUp, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.action_export_lyrics),
                         onClick = {
                             showLyricsActionBottomSheet = false
@@ -1362,7 +1357,7 @@ fun EditMetadataScreen(
                         }
                     )
                     ItemMenuAction(
-                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Pink,
                         title = stringResource(R.string.chinese_conversion_mode_traditional_to_simplified),
                         onClick = {
                             showLyricsActionBottomSheet = false
@@ -1371,7 +1366,7 @@ fun EditMetadataScreen(
                     )
 
                     ItemMenuAction(
-                        icon = LucideIcons.Timing, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Timing, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.offset_adjust_hint),
                         onClick = {
                             showLyricsActionBottomSheet = false
@@ -1380,7 +1375,7 @@ fun EditMetadataScreen(
                         }
                     )
                     ItemMenuAction(
-                        icon = LucideIcons.Convert, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Convert, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.lyrics_convert),
                         onClick = {
                             showLyricsActionBottomSheet = false
@@ -1394,11 +1389,11 @@ fun EditMetadataScreen(
                         showLyricsProcessingSheet = true
                     }) { open ->
                         ItemMenuAction(
-                        icon = LucideIcons.Sort, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Sort, tone = PreferenceIconTone.Appearance,
                             title = stringResource(R.string.lyrics_organize), onClick = open)
                     }
                     ItemMenuAction(
-                        icon = LucideIcons.Captions, tone = PreferenceIconTone.Lyrics,
+                        icon = LucideIcons.Captions, tone = PreferenceIconTone.Tools,
                         title = stringResource(R.string.action_view_plain_lyrics),
                         onClick = {
                             showLyricsActionBottomSheet = false
@@ -1547,7 +1542,7 @@ fun EditMetadataScreen(
                     )
                 }
                 ItemMenuAction(
-                        icon = LucideIcons.ImageAdd, tone = PreferenceIconTone.Library,
+                        icon = LucideIcons.ImageAdd, tone = PreferenceIconTone.Lyrics,
                     title = stringResource(R.string.label_change_cover),
                     onClick = {
                         showCoverOptionsSheet = false
@@ -1559,7 +1554,7 @@ fun EditMetadataScreen(
                     }
                 )
                 ItemMenuAction(
-                        icon = LucideIcons.Disc, tone = PreferenceIconTone.Library,
+                        icon = LucideIcons.Disc, tone = PreferenceIconTone.Pink,
                     title = stringResource(R.string.label_select_same_album_cover),
                     onClick = {
                         showCoverOptionsSheet = false
@@ -1576,7 +1571,7 @@ fun EditMetadataScreen(
                 )
                 if (uiState.coverUri != null || uiState.originalCover != null) {
                     ItemMenuAction(
-                        icon = LucideIcons.Download, tone = PreferenceIconTone.Tools,
+                        icon = LucideIcons.Download, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.label_save_cover),
                         onClick = {
                             showCoverOptionsSheet = false
@@ -1584,7 +1579,7 @@ fun EditMetadataScreen(
                         }
                     )
                     ItemMenuAction(
-                        icon = LucideIcons.Crop, tone = PreferenceIconTone.Library,
+                        icon = LucideIcons.Crop, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.label_crop_cover),
                         onClick = {
                             showCoverOptionsSheet = false
@@ -2452,8 +2447,7 @@ private fun MetadataInputField(
                 maxHeightInLines = if (limitMultilineLines) LIMITED_LYRICS_INPUT_MAX_LINES else Int.MAX_VALUE
             ) else TextFieldLineLimits.SingleLine,
             actions = {
-                if (isModified) SaltIconButton(LucideIcons.Undo, stringResource(R.string.action_undo_changes),
-                    onRevert, size = 32.dp, iconSize = 18.dp)
+                SaltEditorUndoAction(visible = isModified, onUndo = onRevert)
                 actionButtons()
             })
         return
@@ -2561,7 +2555,7 @@ private fun CustomMetadataFieldEditor(
 
     if (LocalUiEngine.current == UiEngine.SALT) {
         SaltEditorField(label = field.key, state = fieldState, actions = {
-            if (isModified) SaltIconButton(LucideIcons.Undo, stringResource(R.string.action_undo_changes), onRevert, size = 32.dp, iconSize = 18.dp)
+            SaltEditorUndoAction(visible = isModified, onUndo = onRevert)
             SaltIconButton(LucideIcons.Trash, stringResource(R.string.action_delete), onRemove,
                 tint = SaltTheme.colors.error, size = 32.dp, iconSize = 18.dp)
         })
@@ -2634,36 +2628,7 @@ private fun CustomMetadataFieldEditor(
 private fun rememberMetadataTextFieldState(
     value: String,
     onValueChange: (String) -> Unit
-): TextFieldState {
-    val state = rememberTextFieldState(initialText = value)
-    val latestOnValueChange by rememberUpdatedState(onValueChange)
-    val textSyncState = remember(state) { MetadataTextSyncState(value) }
-
-    LaunchedEffect(value, state) {
-        if (value != textSyncState.lastTextSentToModel && state.text.toString() != value) {
-            textSyncState.lastTextSentToModel = value
-            state.edit {
-                replace(0, length, value)
-            }
-        }
-    }
-
-    LaunchedEffect(state) {
-        snapshotFlow { state.text.toString() }
-            .distinctUntilChanged()
-            .collectLatest { text ->
-                if (text != textSyncState.lastTextSentToModel) {
-                    textSyncState.lastTextSentToModel = text
-                    latestOnValueChange(text)
-                }
-            }
-    }
-    return state
-}
-
-private class MetadataTextSyncState(
-    var lastTextSentToModel: String
-)
+): TextFieldState = rememberEditorTextFieldState(value, onValueChange)
 
 private data class SimpleTextField(
     val state: TextFieldState,

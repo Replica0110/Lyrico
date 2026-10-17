@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.ui.components.song
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
 
 import android.content.Intent
 import android.net.Uri
@@ -157,7 +159,7 @@ private fun RenameSongDialog(
                 com.moriafly.salt.ui.RoundedColumn(
                     paddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)
                 ) {
-                    com.moriafly.salt.ui.ItemEdit(text = newName, onChange = { newName = it },
+                    SaltTextInput(text = newName, onChange = { newName = it },
                         hint = oldName)
                 }
                 if (extensionDot.isNotEmpty()) com.moriafly.salt.ui.Text(

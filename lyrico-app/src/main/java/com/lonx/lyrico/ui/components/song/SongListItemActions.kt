@@ -14,7 +14,7 @@ fun SongListItemActions(
     onToggleSelection: () -> Unit,
     onShowMenu: () -> Unit,
 ) {
-    if (com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
         com.lonx.lyrico.ui.components.library.SaltLibraryItemActions(
             isSelectionMode, isSelected, onToggleSelection, onShowMenu,
         )

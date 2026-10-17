@@ -26,7 +26,7 @@ internal fun ItemMenuAction(
     if (LocalUiEngine.current == UiEngine.SALT) {
         val color = if (tone == PreferenceIconTone.Danger) SaltTheme.colors.error else SaltTheme.colors.text
         Item(text = title, sub = summary, iconPainter = rememberVectorPainter(icon),
-            textColor = color, iconColor = color, enabled = enabled, onClick = onClick)
+            textColor = color, iconColor = tone.color(), enabled = enabled, onClick = onClick)
     } else {
         ArrowPreference(title = title, summary = summary, enabled = enabled,
             startAction = { PreferenceIcon(icon, tone, enabled = enabled) },

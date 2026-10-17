@@ -13,6 +13,18 @@ import androidx.compose.ui.unit.dp
  * ISC / MIT; see assets/licenses/lucide.txt.
  */
 internal object LucideIcons {
+    // Lucide 1.58.0, icons/swatch-book.svg; same license as the existing icons.
+    // Archive SHA-256: b8ef0e89a3a26d96ef43fabb3c55ace846236cd09439b15c2dac6ea450524e55
+    val SwatchBook: ImageVector by lazy {
+        lucideIcon("swatch-book",
+            "M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z",
+            "M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7",
+            "M 7 17h.01",
+            "m11 8 2.3-2.3a2.4 2.4 0 0 1 3.404.004L18.6 7.6a2.4 2.4 0 0 1 .026 3.434L9.9 19.8",
+        )
+    }
+
+
     val ALargeSmall: ImageVector by lazy {
         lucideIcon("a-large-small",
             "m15 16 2.536-7.328a1.02 1.02 1 0 1 1.928 0L22 16",

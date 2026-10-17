@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.scale
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.base.SaltDropdownRow
+import com.lonx.lyrico.ui.components.salt.SaltDropdownRow
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.RoundedColumn
 import top.yukonga.miuix.kmp.basic.Card

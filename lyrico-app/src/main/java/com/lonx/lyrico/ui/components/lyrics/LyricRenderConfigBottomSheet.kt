@@ -14,8 +14,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.base.SaltBottomSheet
-import com.lonx.lyrico.ui.components.base.SaltDropdownRow
+import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltDropdownRow
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.LucideIcons
@@ -146,7 +146,7 @@ fun LyricRenderConfigBottomSheet(
                         .coerceAtLeast(0)
 
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(LucideIcons.FileMusic, PreferenceIconTone.Lyrics) },
+                        startAction = { PreferenceIcon(LucideIcons.FileMusic, PreferenceIconTone.Appearance) },
                         title = stringResource(R.string.lyric_mode),
                         items = lyricFormatItems,
                         selectedIndex = selectedLyricFormatIndex,
@@ -155,14 +155,14 @@ fun LyricRenderConfigBottomSheet(
                         }
                     )
                     SwitchPreference(
-                        startAction = { PreferenceIcon(LucideIcons.Type, PreferenceIconTone.Lyrics) },
+                        startAction = { PreferenceIcon(LucideIcons.Type, PreferenceIconTone.Tools) },
                         title = stringResource(R.string.roma),
                         summary = stringResource(R.string.roma_hint),
                         checked = lyricConfig.showRomanization,
                         onCheckedChange = onRomaEnabledChange
                     )
                     SwitchPreference(
-                        startAction = { PreferenceIcon(LucideIcons.Languages, PreferenceIconTone.Lyrics) },
+                        startAction = { PreferenceIcon(LucideIcons.Languages, PreferenceIconTone.Library) },
                         title = stringResource(R.string.translation),
                         summary = stringResource(R.string.translation_hint),
                         checked = lyricConfig.showTranslation,
@@ -181,14 +181,14 @@ fun LyricRenderConfigBottomSheet(
                         )
                     }
                     SwitchPreference(
-                        startAction = { PreferenceIcon(LucideIcons.RemoveLines, PreferenceIconTone.Lyrics) },
+                        startAction = { PreferenceIcon(LucideIcons.RemoveLines, PreferenceIconTone.Pink) },
                         title = stringResource(R.string.remove_empty_lines),
                         summary = stringResource(R.string.remove_empty_lines_hint),
                         checked = lyricConfig.removeEmptyLines,
                         onCheckedChange = onRemoveEmptyLinesChange
                     )
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(LucideIcons.ALargeSmall, PreferenceIconTone.Lyrics) },
+                        startAction = { PreferenceIcon(LucideIcons.ALargeSmall, PreferenceIconTone.Teal) },
                         title = stringResource(R.string.conversion_mode),
                         items = conversionModeItems,
                         selectedIndex = selectedConversionModeIndex,

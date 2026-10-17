@@ -36,8 +36,8 @@ import com.lonx.lyrico.data.player.FriendlyPlayerRegistry
 import com.lonx.lyrico.data.player.FriendlyPlayerUiState
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.repository.PlaybackRepository
-import com.lonx.lyrico.ui.components.base.SaltBottomSheet
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.platform.player.InstalledAppChecker
 import com.moriafly.salt.ui.Item
@@ -203,7 +203,7 @@ fun PlayerPickerBottomSheet(
                 )
             ) {
                 ArrowPreference(
-                    startAction = { PreferenceIcon(LucideIcons.OpenInNew, PreferenceIconTone.Tools) },
+                    startAction = { PreferenceIcon(LucideIcons.OpenInNew, PreferenceIconTone.Appearance) },
                     title = stringResource(R.string.open_with_system_picker),
                     onClick = {
                         val playUri = uri ?: return@ArrowPreference

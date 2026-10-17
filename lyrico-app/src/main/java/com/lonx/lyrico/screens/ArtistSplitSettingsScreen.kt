@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberOverscrollEffect
@@ -52,7 +54,7 @@ import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.ui.components.library.libraryDetailScroll
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.ItemOuterTitle
@@ -186,7 +188,8 @@ fun ArtistSplitSettingsScreen(
                             sub = stringResource(R.string.artist_split_enabled_summary),
                             state = uiState.config.enabled,
                             onChange = viewModel::setEnabled,
-                            iconPainter = rememberVectorPainter(LucideIcons.Split)
+                            iconPainter = rememberVectorPainter(LucideIcons.Split),
+                            iconColor = PreferenceIconTone.Appearance.color(),
                         )
                         Item(
                             text = stringResource(if (uiState.hasPendingIndexRebuild) R.string.rebuild_artist_index_now else R.string.rebuild_artist_index),
@@ -196,6 +199,7 @@ fun ArtistSplitSettingsScreen(
                                 else -> stringResource(R.string.artist_index_current)
                             },
                             iconPainter = rememberVectorPainter(LucideIcons.RefreshCw),
+                            iconColor = PreferenceIconTone.Tools.color(),
                             onClick = viewModel::rebuildArtistIndex
                         )
                     }
@@ -223,11 +227,13 @@ fun ArtistSplitSettingsScreen(
                         Item(
                             text = stringResource(R.string.add_custom_separator),
                             iconPainter = rememberVectorPainter(LucideIcons.Plus),
+                            iconColor = PreferenceIconTone.Library.color(),
                             onClick = { addingSeparator = true }
                         )
                         Item(
                             text = stringResource(R.string.reset_to_default),
                             iconPainter = rememberVectorPainter(LucideIcons.RotateCcw),
+                            iconColor = PreferenceIconTone.Lyrics.color(),
                             onClick = viewModel::resetSeparators
                         )
                     }
@@ -247,6 +253,7 @@ fun ArtistSplitSettingsScreen(
                         Item(
                             text = stringResource(R.string.add_no_split_artist),
                             iconPainter = rememberVectorPainter(LucideIcons.UserPlus),
+                            iconColor = PreferenceIconTone.Library.color(),
                             onClick = { addingNoSplitArtist = true }
                         )
                     }
@@ -256,14 +263,14 @@ fun ArtistSplitSettingsScreen(
                     SmallTitle(text = stringResource(R.string.artist_split_general_section))
                     Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                         SwitchPreference(
-                            startAction = { PreferenceIcon(LucideIcons.Split, PreferenceIconTone.Library) },
+                            startAction = { PreferenceIcon(LucideIcons.Split, PreferenceIconTone.Appearance) },
                             title = stringResource(R.string.artist_split_enabled),
                             summary = stringResource(R.string.artist_split_enabled_summary),
                             checked = uiState.config.enabled,
                             onCheckedChange = viewModel::setEnabled
                         )
                         ArrowPreference(
-                            startAction = { PreferenceIcon(LucideIcons.RefreshCw, PreferenceIconTone.Library) },
+                            startAction = { PreferenceIcon(LucideIcons.RefreshCw, PreferenceIconTone.Tools) },
                             title = stringResource(
                                 if (uiState.hasPendingIndexRebuild) {
                                     R.string.rebuild_artist_index_now
@@ -565,13 +572,13 @@ private fun ArtistSplitInputDialog(
     var text by remember(show, initialValue) { mutableStateOf(initialValue) }
 
     if (LocalUiEngine.current == UiEngine.SALT) {
-        if (show) com.lonx.lyrico.ui.components.base.SaltBasicDialog(onDismissRequest = onDismiss) {
+        if (show) com.lonx.lyrico.ui.components.salt.SaltBasicDialog(onDismissRequest = onDismiss) {
             val focusRequester = remember { FocusRequester() }
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
             Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 com.moriafly.salt.ui.dialog.DialogTitle(title)
                 com.moriafly.salt.ui.RoundedColumn(paddingValues = PaddingValues(0.dp)) {
-                    com.moriafly.salt.ui.ItemEdit(
+                    SaltTextInput(
                         text = text, onChange = { text = it }, hint = hint,
                         modifier = Modifier.focusRequester(focusRequester)
                     )

@@ -2,6 +2,10 @@
 
 package com.lonx.lyrico.ui.components.base
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
+import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -365,7 +369,7 @@ fun LyricsOffsetInputDialog(
                         text = if (negative) "−" else "+", onClick = { negative = !negative },
                         appearance = com.moriafly.salt.ui.ButtonAppearance.Plain,
                     )
-                    com.moriafly.salt.ui.ItemEdit(
+                    SaltTextInput(
                         text = magnitudeInput, onChange = { magnitudeInput = it },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

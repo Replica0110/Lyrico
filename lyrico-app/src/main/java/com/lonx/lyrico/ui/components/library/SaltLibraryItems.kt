@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.ui.components.library
 
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.clip
@@ -30,8 +32,10 @@ internal fun LibraryAlbumSurface(modifier: Modifier, onClick: () -> Unit,
     val onLongPress = onLongClick?.let { action ->
         { view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); action() }
     }
-    if (LocalLibraryUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
-        Card(modifier = modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongPress)) {
+    if (LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+        val shape = CardDefaults.shape
+        Card(shape = shape, modifier = modifier.fillMaxWidth().clip(shape)
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress)) {
             Column(Modifier.fillMaxWidth().padding(8.dp)) { content() }
         }
     } else top.yukonga.miuix.kmp.basic.Card(

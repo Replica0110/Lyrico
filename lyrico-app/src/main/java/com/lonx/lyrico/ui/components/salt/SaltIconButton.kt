@@ -1,6 +1,7 @@
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.salt
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -28,10 +29,16 @@ internal fun SaltIconButton(
     tint: Color = SaltTheme.colors.text,
     size: Dp = 40.dp,
     iconSize: Dp = 24.dp,
+    backgroundColor: Color = Color.Transparent,
 ) {
-    Box(Modifier.size(size).enabledAlpha(enabled).clip(CircleShape)
-        .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.size(size)
+            .enabledAlpha(enabled)
+            .clip(CircleShape)
+            .background(backgroundColor)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
         Icon(rememberVectorPainter(icon), label, modifier = Modifier.size(iconSize), tint = tint)
     }
 }

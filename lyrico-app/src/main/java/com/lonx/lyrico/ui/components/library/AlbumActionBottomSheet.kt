@@ -33,7 +33,7 @@ fun AlbumActionBottomSheet(
 ) {
     val actions: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         ItemMenuAction(
-            icon = LucideIcons.Volume2, tone = PreferenceIconTone.Library,
+            icon = LucideIcons.Volume2, tone = PreferenceIconTone.Appearance,
             title = stringResource(R.string.menu_action_calculate_album_replay_gain),
             enabled = !isCalculatingReplayGain,
             onClick = {

@@ -33,7 +33,7 @@ fun ArtistPosterActionsSheet(
         enableNestedScroll = false, onDismissRequest = onDismissRequest
     ) {
         ItemMenuAction(
-            icon = LucideIcons.Image, tone = PreferenceIconTone.Library,
+            icon = LucideIcons.Image, tone = PreferenceIconTone.Appearance,
             title = stringResource(R.string.poster_view_artwork),
             summary = if (posterError) stringResource(R.string.artist_poster_read_error)
                 else if (!posterLoading && !canViewPoster) stringResource(R.string.artist_poster_missing_title) else null,
@@ -57,7 +57,7 @@ fun ArtistPosterActionsSheet(
             }
         }
         ItemMenuAction(
-            icon = LucideIcons.ImageAdd, tone = PreferenceIconTone.Library,
+            icon = LucideIcons.ImageAdd, tone = PreferenceIconTone.Tools,
             title = stringResource(R.string.label_change_artist_image),
             summary = stringResource(R.string.artist_poster_add_local_summary),
             enabled = enabled,
@@ -71,7 +71,7 @@ fun ArtistPosterActionsSheet(
             onClick = onRemoveFromSongs
         )
         ItemMenuAction(
-            icon = LucideIcons.FileUp, tone = PreferenceIconTone.Tools,
+            icon = LucideIcons.FileUp, tone = PreferenceIconTone.Library,
             title = stringResource(R.string.poster_export_embedded),
             summary = stringResource(R.string.artist_poster_export_summary),
             enabled = enabled,
@@ -88,14 +88,14 @@ fun ArtistPosterDestinationPreferences(
     onSaveToFolder: () -> Unit
 ) {
     ItemMenuAction(
-        icon = LucideIcons.FileMusic, tone = PreferenceIconTone.Library,
+        icon = LucideIcons.FileMusic, tone = PreferenceIconTone.Lyrics,
         title = stringResource(R.string.label_artist_poster_embed_to_songs),
         summary = stringResource(R.string.artist_poster_embed_summary),
         enabled = enabled,
         onClick = onEmbedToSongs
     )
     ItemMenuAction(
-        icon = LucideIcons.FolderPlus, tone = PreferenceIconTone.Library,
+        icon = LucideIcons.FolderPlus, tone = PreferenceIconTone.Pink,
         title = stringResource(R.string.label_artist_poster_add_to_folder),
         enabled = enabled,
         summary = stringResource(if (hasPosterFolder) R.string.artist_poster_save_folder_summary else R.string.artist_poster_select_folder_summary),

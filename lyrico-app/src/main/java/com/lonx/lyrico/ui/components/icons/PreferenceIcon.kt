@@ -15,7 +15,15 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 internal enum class PreferenceIconTone {
-    Appearance, Library, Lyrics, Tools, Danger;
+    Appearance, Library, Lyrics, Tools, Teal, Orange, Pink, Danger;
+
+    fun forItem(index: Int): PreferenceIconTone = if (this == Danger) Danger else at(index)
+
+    companion object {
+        private val itemTones = listOf(Appearance, Tools, Library, Lyrics, Pink, Teal, Orange)
+
+        fun at(index: Int): PreferenceIconTone = itemTones[index.mod(itemTones.size)]
+    }
 
     @Composable
     fun color(): Color {
@@ -24,11 +32,14 @@ internal enum class PreferenceIconTone {
         val dark = if (salt) SaltTheme.colors.background.luminance() < 0.5f
         else MiuixTheme.colorScheme.surface.luminance() < 0.5f
         return when (this) {
-            // 三个品牌色是应用级标识，两种引擎下保持一致。
+            // 固定色板在两种引擎中保持一致，相邻条目按各自指定的色调显示。
             Appearance -> if (dark) Color(0xFFC4A7FF) else Color(0xFF7952B3)
             Library -> if (dark) Color(0xFFF3BF75) else Color(0xFF99600C)
             Lyrics -> if (dark) Color(0xFF7DD6AB) else Color(0xFF23784F)
-            Tools -> if (salt) SaltTheme.colors.highlight else MiuixTheme.colorScheme.primary
+            Tools -> if (dark) Color(0xFF91BEFF) else Color(0xFF3264B4)
+            Teal -> if (dark) Color(0xFF75D5CE) else Color(0xFF16776F)
+            Orange -> if (dark) Color(0xFFFFB78A) else Color(0xFFAC571E)
+            Pink -> if (dark) Color(0xFFF3A6CF) else Color(0xFFA64278)
             Danger -> if (salt) SaltTheme.colors.error else MiuixTheme.colorScheme.error
         }
     }
@@ -39,7 +50,7 @@ internal enum class PreferenceIconTone {
 internal fun PreferenceIcon(
     imageVector: ImageVector,
     tone: PreferenceIconTone = PreferenceIconTone.Tools,
-    modifier: Modifier = Modifier.padding(horizontal = 8.dp),
+    modifier: Modifier = Modifier.padding(end = 6.dp),
     enabled: Boolean = true,
 ) {
     Icon(

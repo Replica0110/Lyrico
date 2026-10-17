@@ -1,14 +1,12 @@
 @file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.salt
 
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import com.moriafly.salt.ui.ItemOuterTitle
 
-/**
- * Salt 的 Item 菜单弹层：标题加卡片分组，外壳与生命周期由 [SaltBottomSheet] 统一提供。
- */
+/** Salt 的 Item 菜单弹层：标题加卡片分组，外壳与生命周期由 [SaltBottomSheet] 统一提供。 */
 @Composable
 internal fun SaltMenuBottomSheet(
     show: Boolean,

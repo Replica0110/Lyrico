@@ -30,7 +30,7 @@ import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.poster.PosterPreviewMenuAction
 import com.lonx.lyrico.viewmodel.ArtistPosterFile
 import com.lonx.lyrico.viewmodel.ArtistPosterFolder
@@ -61,7 +61,7 @@ internal fun ArtistPosterFolderContents(
     padding: PaddingValues,
     scrollBehavior: ScrollBehavior
 ) {
-    val salt = LocalLibraryUiEngine.current == UiEngine.SALT
+    val salt = LocalUiEngine.current == UiEngine.SALT
     val files = folder.posters.orEmpty()
     val scrollModifier = (if (salt) Modifier else Modifier
         .scrollEndHaptic()
@@ -211,7 +211,7 @@ private fun ArtistPosterDirectoryCard(
     folder: ArtistPosterFolder,
     modifier: Modifier = Modifier
 ) {
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
         // 用 Card 而不是 ScreenCard：后者自带 16/8 外边距，和网格的 contentPadding 叠加会多出一圈。
         com.moriafly.salt.ui.Card(modifier = modifier.fillMaxWidth()) {
             ItemValue(text = folder.name, sub = folder.path)
@@ -238,7 +238,7 @@ private fun ArtistPosterDirectoryCard(
 
 @Composable
 private fun PosterImage(file: ArtistPosterFile, revision: Long, modifier: Modifier, scale: ContentScale) {
-    val salt = LocalLibraryUiEngine.current == UiEngine.SALT
+    val salt = LocalUiEngine.current == UiEngine.SALT
     val context = LocalContext.current
     val request = remember(file, revision, context) {
         ImageRequest.Builder(context)
@@ -292,10 +292,10 @@ private fun PosterPreview(files: List<ArtistPosterFile>, initialPage: Int, revis
             val file = files[index]
             listOf(
                 PosterPreviewMenuAction(
-                    title = renameLabel, icon = LucideIcons.Pencil, tone = PreferenceIconTone.Tools,
+                    title = renameLabel, icon = LucideIcons.Pencil, tone = PreferenceIconTone.Appearance,
                     enabled = enabled, onClick = { onRename(file) }),
                 PosterPreviewMenuAction(
-                    title = detailsLabel, icon = LucideIcons.Users, tone = PreferenceIconTone.Library,
+                    title = detailsLabel, icon = LucideIcons.Users, tone = PreferenceIconTone.Tools,
                     enabled = enabled && file.artistId != null,
                     summary = if (file.artistId == null) unmatchedLabel else null,
                     onClick = { onArtistDetails(file) }),

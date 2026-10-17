@@ -56,11 +56,10 @@ import com.lonx.lyrico.ui.components.library.LibraryDetailTabs
 import com.lonx.lyrico.ui.components.library.LibraryDetailIconButton
 import com.lonx.lyrico.ui.components.library.LibraryDetailText
 import com.lonx.lyrico.ui.components.library.LibraryDetailTextTone
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.library.libraryDetailScroll
 import com.lonx.lyrico.screens.library.LibrarySelectionState
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.SaltTheme
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
@@ -181,274 +180,272 @@ fun ArtistDetailScreen(
         }
     ) else null
 
-    CompositionLocalProvider(LocalLibraryUiEngine provides LocalUiEngine.current) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            LibraryDetailPage(
-                title = artistName.ifBlank { stringResource(R.string.artist_detail_title) },
-                onBack = { navigator.popBackStack() },
-                selection = selection,
-                miuixTopBar = {
-                    AnimatedContent(
-                        targetState = isSelectionMode,
-                        label = "ArtistDetailTopBarAnimation",
-                        transitionSpec = {
-                            val animationDuration = 300
-                            val enter = fadeIn(tween(animationDuration)) +
-                                    slideInVertically(
-                                        animationSpec = tween(
-                                            animationDuration,
-                                            easing = FastOutSlowInEasing
-                                        ),
-                                        initialOffsetY = { -it / 3 }
-                                    )
-                            val exit = fadeOut(tween(animationDuration)) +
-                                    slideOutVertically(
-                                        animationSpec = tween(
-                                            animationDuration,
-                                            easing = FastOutSlowInEasing
-                                        ),
-                                        targetOffsetY = { -it / 3 }
-                                    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        LibraryDetailPage(
+            title = artistName.ifBlank { stringResource(R.string.artist_detail_title) },
+            onBack = { navigator.popBackStack() },
+            selection = selection,
+            miuixTopBar = {
+                AnimatedContent(
+                    targetState = isSelectionMode,
+                    label = "ArtistDetailTopBarAnimation",
+                    transitionSpec = {
+                        val animationDuration = 300
+                        val enter = fadeIn(tween(animationDuration)) +
+                                slideInVertically(
+                                    animationSpec = tween(
+                                        animationDuration,
+                                        easing = FastOutSlowInEasing
+                                    ),
+                                    initialOffsetY = { -it / 3 }
+                                )
+                        val exit = fadeOut(tween(animationDuration)) +
+                                slideOutVertically(
+                                    animationSpec = tween(
+                                        animationDuration,
+                                        easing = FastOutSlowInEasing
+                                    ),
+                                    targetOffsetY = { -it / 3 }
+                                )
 
-                            (enter togetherWith exit).using(null)
+                        (enter togetherWith exit).using(null)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { selectionMode ->
+                    if (selectionMode) {
+                        SongSelectionTopAppBar(
+                            songs = songs,
+                            selectedSongUris = selectedSongUris,
+                            scrollBehavior = topAppBarScrollBehavior,
+                            onSelectAll = selectionViewModel::selectAll,
+                            onDeselectAll = selectionViewModel::deselectAll,
+                            onClose = selectionViewModel::exitSelectionMode
+                        )
+                    } else {
+                        SmallTopAppBar(
+                            title = artistName.ifBlank { stringResource(R.string.artist_detail_title) },
+                            navigationIcon = {
+                                IconButton(onClick = { navigator.popBackStack() }) {
+                                    Icon(
+                                        imageVector = LucideIcons.ArrowLeft,
+                                        contentDescription = stringResource(R.string.action_back)
+                                    )
+                                }
+                            },
+                            scrollBehavior = topAppBarScrollBehavior
+                        )
+                    }
+                }
+            }
+        ) { paddingValues ->
+            Box {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(scaffoldTopHorizontalPadding(paddingValues))
+                ) {
+                    ArtistDetailHeader(
+                        artist = artistName,
+                        songCount = songs.size,
+                        albums = albums,
+                        coverUri = artist?.coverSongUri,
+                        coverLastModified = artist?.coverSongLastModified ?: 0L,
+                        coverCandidates = songs.map { song ->
+                            CoverCandidate(
+                                uri = song.uri.toUri(),
+                                lastUpdate = song.fileLastModified
+                            )
+                        },
+                        onAvatarClick = { showArtistPosterSheet = true }
+                    )
+
+                    LibraryDetailTabs(
+                        tabs = listOf(
+                            stringResource(R.string.artist_tab_songs),
+                            stringResource(R.string.artist_tab_albums)
+                        ),
+                        selectedIndex = pagerState.currentPage,
+                        onSelected = { index ->
+                            scope.launch { pagerState.animateScrollToPage(index) }
                         },
                         modifier = Modifier.fillMaxWidth()
-                    ) { selectionMode ->
-                        if (selectionMode) {
-                            SongSelectionTopAppBar(
+                    )
+
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = false,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) { page ->
+                        if (page == 0) {
+                            ArtistSongsPage(
                                 songs = songs,
+                                isSelectionMode = isSelectionMode,
                                 selectedSongUris = selectedSongUris,
-                                scrollBehavior = topAppBarScrollBehavior,
-                                onSelectAll = selectionViewModel::selectAll,
-                                onDeselectAll = selectionViewModel::deselectAll,
-                                onClose = selectionViewModel::exitSelectionMode
+                                swipeSelectionLabel = swipeSelectionLabel,
+                                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
+                                topAppBarScrollBehavior = topAppBarScrollBehavior,
+                                bottomPadding = paddingValues.calculateBottomPadding(),
+                                onSongClick = { song ->
+                                    selectionViewModel.exitSelectionMode()
+                                    navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                                },
+                                onToggleSelection = { song ->
+                                    selectionViewModel.toggleSelection(song.uri)
+                                },
+                                onSwipeSelection = { song ->
+                                    selectionViewModel.swipeSelect(song, songs)
+                                },
+                                onShowSongMenu = { song ->
+                                    selectedSong = song
+                                    showMenuSheet = true
+                                }
                             )
                         } else {
-                            SmallTopAppBar(
-                                title = artistName.ifBlank { stringResource(R.string.artist_detail_title) },
-                                navigationIcon = {
-                                    IconButton(onClick = { navigator.popBackStack() }) {
-                                        Icon(
-                                            imageVector = LucideIcons.ArrowLeft,
-                                            contentDescription = stringResource(R.string.action_back)
-                                        )
-                                    }
+                            ArtistAlbumsPage(
+                                albums = albums,
+                                topAppBarScrollBehavior = topAppBarScrollBehavior,
+                                bottomPadding = paddingValues.calculateBottomPadding(),
+                                onAlbumClick = { album ->
+                                    selectionViewModel.exitSelectionMode()
+                                    navigator.navigate(
+                                        AlbumDetailDestination(albumId = album.id)
+                                    )
                                 },
-                                scrollBehavior = topAppBarScrollBehavior
+                                onAlbumActionClick = { album ->
+                                    selectedAlbum = album
+                                    showAlbumActionSheet = true
+                                }
                             )
                         }
                     }
                 }
-            ) { paddingValues ->
-                Box {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(scaffoldTopHorizontalPadding(paddingValues))
-                    ) {
-                        ArtistDetailHeader(
-                            artist = artistName,
-                            songCount = songs.size,
-                            albums = albums,
-                            coverUri = artist?.coverSongUri,
-                            coverLastModified = artist?.coverSongLastModified ?: 0L,
-                            coverCandidates = songs.map { song ->
-                                CoverCandidate(
-                                    uri = song.uri.toUri(),
-                                    lastUpdate = song.fileLastModified
-                                )
-                            },
-                            onAvatarClick = { showArtistPosterSheet = true }
-                        )
 
-                        LibraryDetailTabs(
-                            tabs = listOf(
-                                stringResource(R.string.artist_tab_songs),
-                                stringResource(R.string.artist_tab_albums)
-                            ),
-                            selectedIndex = pagerState.currentPage,
-                            onSelected = { index ->
-                                scope.launch { pagerState.animateScrollToPage(index) }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        HorizontalPager(
-                            state = pagerState,
-                            userScrollEnabled = false,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        ) { page ->
-                            if (page == 0) {
-                                ArtistSongsPage(
-                                    songs = songs,
-                                    isSelectionMode = isSelectionMode,
-                                    selectedSongUris = selectedSongUris,
-                                    swipeSelectionLabel = swipeSelectionLabel,
-                                    swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                                    topAppBarScrollBehavior = topAppBarScrollBehavior,
-                                    bottomPadding = paddingValues.calculateBottomPadding(),
-                                    onSongClick = { song ->
-                                        selectionViewModel.exitSelectionMode()
-                                        navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
-                                    },
-                                    onToggleSelection = { song ->
-                                        selectionViewModel.toggleSelection(song.uri)
-                                    },
-                                    onSwipeSelection = { song ->
-                                        selectionViewModel.swipeSelect(song, songs)
-                                    },
-                                    onShowSongMenu = { song ->
-                                        selectedSong = song
-                                        showMenuSheet = true
-                                    }
-                                )
-                            } else {
-                                ArtistAlbumsPage(
-                                    albums = albums,
-                                    topAppBarScrollBehavior = topAppBarScrollBehavior,
-                                    bottomPadding = paddingValues.calculateBottomPadding(),
-                                    onAlbumClick = { album ->
-                                        selectionViewModel.exitSelectionMode()
-                                        navigator.navigate(
-                                            AlbumDetailDestination(albumId = album.id)
-                                        )
-                                    },
-                                    onAlbumActionClick = { album ->
-                                        selectedAlbum = album
-                                        showAlbumActionSheet = true
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    SongActionSheets(
-                        selectedSong = selectedSong,
-                        showMenuSheet = showMenuSheet,
-                        showDetailSheet = showDetailSheet,
-                        showDeleteDialog = showDeleteDialog,
-                        showRenameDialog = showRenameDialog,
-                        onDismissMenu = { showMenuSheet = false },
-                        onDismissMenuFinished = {
-                            if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) {
-                                selectedSong = null
-                            }
-                        },
-                        onDismissDetail = { showDetailSheet = false },
-                        onDismissDelete = { showDeleteDialog = false },
-                        onDismissRename = { showRenameDialog = false },
-                        onShowDetail = { showDetailSheet = true },
-                        onShowDelete = { showDeleteDialog = true },
-                        onShowRename = { showRenameDialog = true },
-                        onPlay = { song -> selectionViewModel.play(context, song) },
-                        onDelete = { song -> selectionViewModel.delete(song) },
-                        onRename = { song, newFileName ->
-                            selectionViewModel.renameSong(song, newFileName)
-                        }
-                    )
-                }
-            }
-            selectedAlbum?.let { album ->
-                AlbumActionBottomSheet(
-                    show = showAlbumActionSheet,
-                    albumName = album.name,
-                    isCalculatingReplayGain = albumActionsUiState.isCalculatingAlbumReplayGain,
-                    onDismissRequest = { showAlbumActionSheet = false },
-                    onDismissFinished = {
-                        if (!showAlbumActionSheet && !showDeleteAlbumDialog) {
-                            selectedAlbum = null
+                SongActionSheets(
+                    selectedSong = selectedSong,
+                    showMenuSheet = showMenuSheet,
+                    showDetailSheet = showDetailSheet,
+                    showDeleteDialog = showDeleteDialog,
+                    showRenameDialog = showRenameDialog,
+                    onDismissMenu = { showMenuSheet = false },
+                    onDismissMenuFinished = {
+                        if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) {
+                            selectedSong = null
                         }
                     },
-                    onShare = {
-                        showAlbumActionSheet = false
-                        albumActionsViewModel.shareAlbum(context, album.id)
-                    },
-                    onDelete = {
-                        showAlbumActionSheet = false
-                        showDeleteAlbumDialog = true
-                    },
-                    onCalculateReplayGain = {
-                        showAlbumActionSheet = false
-                        albumActionsViewModel.calculateAlbumReplayGain(album.id)
+                    onDismissDetail = { showDetailSheet = false },
+                    onDismissDelete = { showDeleteDialog = false },
+                    onDismissRename = { showRenameDialog = false },
+                    onShowDetail = { showDetailSheet = true },
+                    onShowDelete = { showDeleteDialog = true },
+                    onShowRename = { showRenameDialog = true },
+                    onPlay = { song -> selectionViewModel.play(context, song) },
+                    onDelete = { song -> selectionViewModel.delete(song) },
+                    onRename = { song, newFileName ->
+                        selectionViewModel.renameSong(song, newFileName)
                     }
                 )
-
-                YesNoDialog(
-                    title = stringResource(R.string.dialog_delete_album_title),
-                    show = showDeleteAlbumDialog,
-                    summary = stringResource(
-                        R.string.dialog_delete_album_content,
-                        album.songCount,
-                        album.name
-                    ),
-                    onConfirm = {
-                        showDeleteAlbumDialog = false
-                        albumActionsViewModel.deleteAlbum(album.id)
-                        selectedAlbum = null
-                    },
-                    onDismissRequest = {
-                        showDeleteAlbumDialog = false
+            }
+        }
+        selectedAlbum?.let { album ->
+            AlbumActionBottomSheet(
+                show = showAlbumActionSheet,
+                albumName = album.name,
+                isCalculatingReplayGain = albumActionsUiState.isCalculatingAlbumReplayGain,
+                onDismissRequest = { showAlbumActionSheet = false },
+                onDismissFinished = {
+                    if (!showAlbumActionSheet && !showDeleteAlbumDialog) {
                         selectedAlbum = null
                     }
-                )
-            }
-            SongBatchSelectionActions(
-                navigator = navigator,
-                songs = songs,
-                show = isSelectionMode,
-                expanded = isFabMenuExpanded,
-                selectedSongUris = selectedSongUris,
-                onExpandedChange = { isFabMenuExpanded = it },
-                onSetSelectionUris = selectionViewModel::setSelectionUris,
-                onBatchDelete = selectionViewModel::batchDelete,
-                onBatchShare = selectionViewModel::batchShare
-            )
-
-            // Both local image destinations share the picker and write workflow.
-            ArtistPosterActionsSheet(
-                show = showArtistPosterSheet,
-                canViewPoster = !posterMenu.loading && posterMenu.source?.artistName == artistName,
-                posterLoading = posterMenu.loading,
-                posterError = posterMenu.error,
-                onViewPoster = { previewPoster = posterMenu.source; showArtistPosterSheet = false },
-                onAddLocalPoster = {
-                    showArtistPosterSheet = false
-                    showArtistPosterDestination = true
                 },
-                onDismissRequest = { showArtistPosterSheet = false },
-                enabled = !artistPosterState.isRunning && !removalState.isRunning,
-                onRemoveFromSongs = {
-                    showArtistPosterSheet = false
-                    pendingPosterRemoval = setOf(artistId)
+                onShare = {
+                    showAlbumActionSheet = false
+                    albumActionsViewModel.shareAlbum(context, album.id)
                 },
-                onExportEmbedded = {
-                    showArtistPosterSheet = false
-                    pendingPosterExport = setOf(artistId)
+                onDelete = {
+                    showAlbumActionSheet = false
+                    showDeleteAlbumDialog = true
+                },
+                onCalculateReplayGain = {
+                    showAlbumActionSheet = false
+                    albumActionsViewModel.calculateAlbumReplayGain(album.id)
                 }
             )
-            previewPoster?.let { source ->
-                com.lonx.lyrico.ui.components.poster.ArtistPosterPreview(
-                    items = listOf(source.previewMedia()), title = { source.artistName }, editingEnabled = !removalState.isRunning && !artistPosterState.isRunning,
-                    onCrop = { _, bitmap -> removalViewModel.cropPoster(source, bitmap) },
-                    onDismiss = { previewPoster = null }
-                )
-            }
-            com.lonx.lyrico.ui.components.poster.ArtistPosterAddHost(
-                viewModel = viewModel,
-                show = showArtistPosterDestination,
-                onDismissRequest = { showArtistPosterDestination = false },
-                enabled = !removalState.isRunning
-            )
 
-            com.lonx.lyrico.ui.components.poster.ArtistPosterRemovalHost(
-                removalViewModel, pendingPosterRemoval, { pendingPosterRemoval = emptySet() }
-            )
-            com.lonx.lyrico.ui.components.poster.ArtistPosterExportHost(
-                removalViewModel, pendingPosterExport, { pendingPosterExport = emptySet() }
+            YesNoDialog(
+                title = stringResource(R.string.dialog_delete_album_title),
+                show = showDeleteAlbumDialog,
+                summary = stringResource(
+                    R.string.dialog_delete_album_content,
+                    album.songCount,
+                    album.name
+                ),
+                onConfirm = {
+                    showDeleteAlbumDialog = false
+                    albumActionsViewModel.deleteAlbum(album.id)
+                    selectedAlbum = null
+                },
+                onDismissRequest = {
+                    showDeleteAlbumDialog = false
+                    selectedAlbum = null
+                }
             )
         }
+        SongBatchSelectionActions(
+            navigator = navigator,
+            songs = songs,
+            show = isSelectionMode,
+            expanded = isFabMenuExpanded,
+            selectedSongUris = selectedSongUris,
+            onExpandedChange = { isFabMenuExpanded = it },
+            onSetSelectionUris = selectionViewModel::setSelectionUris,
+            onBatchDelete = selectionViewModel::batchDelete,
+            onBatchShare = selectionViewModel::batchShare
+        )
+
+        // Both local image destinations share the picker and write workflow.
+        ArtistPosterActionsSheet(
+            show = showArtistPosterSheet,
+            canViewPoster = !posterMenu.loading && posterMenu.source?.artistName == artistName,
+            posterLoading = posterMenu.loading,
+            posterError = posterMenu.error,
+            onViewPoster = { previewPoster = posterMenu.source; showArtistPosterSheet = false },
+            onAddLocalPoster = {
+                showArtistPosterSheet = false
+                showArtistPosterDestination = true
+            },
+            onDismissRequest = { showArtistPosterSheet = false },
+            enabled = !artistPosterState.isRunning && !removalState.isRunning,
+            onRemoveFromSongs = {
+                showArtistPosterSheet = false
+                pendingPosterRemoval = setOf(artistId)
+            },
+            onExportEmbedded = {
+                showArtistPosterSheet = false
+                pendingPosterExport = setOf(artistId)
+            }
+        )
+        previewPoster?.let { source ->
+            com.lonx.lyrico.ui.components.poster.ArtistPosterPreview(
+                items = listOf(source.previewMedia()), title = { source.artistName }, editingEnabled = !removalState.isRunning && !artistPosterState.isRunning,
+                onCrop = { _, bitmap -> removalViewModel.cropPoster(source, bitmap) },
+                onDismiss = { previewPoster = null }
+            )
+        }
+        com.lonx.lyrico.ui.components.poster.ArtistPosterAddHost(
+            viewModel = viewModel,
+            show = showArtistPosterDestination,
+            onDismissRequest = { showArtistPosterDestination = false },
+            enabled = !removalState.isRunning
+        )
+
+        com.lonx.lyrico.ui.components.poster.ArtistPosterRemovalHost(
+            removalViewModel, pendingPosterRemoval, { pendingPosterRemoval = emptySet() }
+        )
+        com.lonx.lyrico.ui.components.poster.ArtistPosterExportHost(
+            removalViewModel, pendingPosterExport, { pendingPosterExport = emptySet() }
+        )
     }
 }
 
@@ -474,7 +471,7 @@ private fun ArtistSongsPage(
             .fillMaxHeight(),
         state = listState,
         contentPadding = PaddingValues(bottom = bottomPadding + 12.dp),
-        overscrollEffect = if (LocalLibraryUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
+        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
     ) {
         if (songs.isEmpty()) {
             item("empty") {
@@ -531,7 +528,7 @@ private fun ArtistAlbumsPage(
             .libraryDetailScroll(topAppBarScrollBehavior)
             .fillMaxHeight(),
         contentPadding = PaddingValues(bottom = bottomPadding + 12.dp),
-        overscrollEffect = if (LocalLibraryUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
+        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
     ) {
         if (albums.isEmpty()) {
             item("empty") {
@@ -573,7 +570,7 @@ private fun ArtistDetailHeader(
     coverCandidates: List<CoverCandidate>,
     onAvatarClick: () -> Unit
 ) {
-    val salt = LocalLibraryUiEngine.current == UiEngine.SALT
+    val salt = LocalUiEngine.current == UiEngine.SALT
     Row(
         modifier = Modifier
             .fillMaxWidth()

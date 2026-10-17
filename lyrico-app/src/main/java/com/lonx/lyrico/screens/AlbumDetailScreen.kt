@@ -56,9 +56,8 @@ import com.lonx.lyrico.ui.components.library.LibraryDetailIconButton
 import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.ui.components.library.LibraryDetailText
 import com.lonx.lyrico.ui.components.library.LibraryDetailTextTone
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
-import com.lonx.lyrico.ui.components.library.libraryDetailScroll
 import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.components.library.libraryDetailScroll
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.popup.PopupMenu
 import com.moriafly.salt.ui.popup.PopupMenuItem
@@ -155,245 +154,243 @@ fun AlbumDetailScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLibraryUiEngine provides LocalUiEngine.current) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            LibraryDetailPage(
-                title = albumName.ifBlank { stringResource(R.string.album_detail_title) },
-                onBack = { navigator.popBackStack() },
-                selection = if (isSelectionMode) {
-                    val allSelected = songs.isNotEmpty() && songs.all { it.uri in selectedSongUris }
-                    LibrarySelectionState(
-                        title = stringResource(R.string.selection_mode_selected_count, selectedSongUris.size),
-                        allSelected = allSelected,
-                        onClose = selectionViewModel::exitSelectionMode,
-                        onToggleAll = {
-                            if (allSelected) selectionViewModel.deselectAll()
-                            else selectionViewModel.selectAll(songs)
-                        }
-                    )
-                } else null,
-                actions = {
-                    SaltAlbumActionsMenu(
-                        isCalculatingReplayGain = albumActionsUiState.isCalculatingAlbumReplayGain,
-                        onShare = { albumActionsViewModel.shareAlbum(context, songs) },
-                        onDelete = { showDeleteAlbumDialog = true },
-                        onCalculateReplayGain = { albumActionsViewModel.calculateAlbumReplayGain(songs) }
-                    )
-                },
-                miuixTopBar = {
-                    AnimatedContent(
-                        targetState = isSelectionMode,
-                        label = "AlbumDetailTopBarAnimation",
-                        transitionSpec = {
-                            val animationDuration = 300
-                            val enter = fadeIn(tween(animationDuration)) +
-                                    slideInVertically(
-                                        animationSpec = tween(
-                                            animationDuration,
-                                            easing = FastOutSlowInEasing
-                                        ),
-                                        initialOffsetY = { -it / 3 }
-                                    )
-                            val exit = fadeOut(tween(animationDuration)) +
-                                    slideOutVertically(
-                                        animationSpec = tween(
-                                            animationDuration,
-                                            easing = FastOutSlowInEasing
-                                        ),
-                                        targetOffsetY = { -it / 3 }
-                                    )
-
-                            (enter togetherWith exit).using(null)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { selectionMode ->
-                        if (selectionMode) {
-                            SongSelectionTopAppBar(
-                                songs = songs,
-                                selectedSongUris = selectedSongUris,
-                                scrollBehavior = topAppBarScrollBehavior,
-                                onSelectAll = selectionViewModel::selectAll,
-                                onDeselectAll = selectionViewModel::deselectAll,
-                                onClose = selectionViewModel::exitSelectionMode
-                            )
-                        } else {
-                            SmallTopAppBar(
-                                title = albumName.ifBlank { stringResource(R.string.album_detail_title) },
-                                navigationIcon = {
-                                    IconButton(onClick = { navigator.popBackStack() }) {
-                                        Icon(
-                                            imageVector = LucideIcons.ArrowLeft,
-                                            contentDescription = stringResource(R.string.action_back)
-                                        )
-                                    }
-                                },
-                                actions = {
-                                    OverlayIconDropdownMenu(
-                                        entries = listOf(
-                                            albumActionsDropdownEntry(
-                                                isCalculatingReplayGain = albumActionsUiState.isCalculatingAlbumReplayGain,
-                                                onShare = {
-                                                    albumActionsViewModel.shareAlbum(context, songs)
-                                                },
-                                                onDelete = {
-                                                    showDeleteAlbumDialog = true
-                                                },
-                                                onCalculateReplayGain = {
-                                                    albumActionsViewModel.calculateAlbumReplayGain(songs)
-                                                }
-                                            )
-                                        )
-                                    ) {
-                                        Icon(
-                                            imageVector = LucideIcons.EllipsisVertical,
-                                            contentDescription = stringResource(R.string.album_action_more)
-                                        )
-                                    }
-                                },
-                                scrollBehavior = topAppBarScrollBehavior
-                            )
-                        }
+    Box(modifier = Modifier.fillMaxSize()) {
+        LibraryDetailPage(
+            title = albumName.ifBlank { stringResource(R.string.album_detail_title) },
+            onBack = { navigator.popBackStack() },
+            selection = if (isSelectionMode) {
+                val allSelected = songs.isNotEmpty() && songs.all { it.uri in selectedSongUris }
+                LibrarySelectionState(
+                    title = stringResource(R.string.selection_mode_selected_count, selectedSongUris.size),
+                    allSelected = allSelected,
+                    onClose = selectionViewModel::exitSelectionMode,
+                    onToggleAll = {
+                        if (allSelected) selectionViewModel.deselectAll()
+                        else selectionViewModel.selectAll(songs)
                     }
-                }
-            ) { paddingValues ->
-                Box {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(scaffoldTopHorizontalPadding(paddingValues))
-                    ) {
-                        AlbumDetailHeader(
-                            album = albumName,
-                            albumArtist = albumArtist,
-                            songCount = songs.size,
-                            coverSong = songs.firstOrNull()
+                )
+            } else null,
+            actions = {
+                SaltAlbumActionsMenu(
+                    isCalculatingReplayGain = albumActionsUiState.isCalculatingAlbumReplayGain,
+                    onShare = { albumActionsViewModel.shareAlbum(context, songs) },
+                    onDelete = { showDeleteAlbumDialog = true },
+                    onCalculateReplayGain = { albumActionsViewModel.calculateAlbumReplayGain(songs) }
+                )
+            },
+            miuixTopBar = {
+                AnimatedContent(
+                    targetState = isSelectionMode,
+                    label = "AlbumDetailTopBarAnimation",
+                    transitionSpec = {
+                        val animationDuration = 300
+                        val enter = fadeIn(tween(animationDuration)) +
+                                slideInVertically(
+                                    animationSpec = tween(
+                                        animationDuration,
+                                        easing = FastOutSlowInEasing
+                                    ),
+                                    initialOffsetY = { -it / 3 }
+                                )
+                        val exit = fadeOut(tween(animationDuration)) +
+                                slideOutVertically(
+                                    animationSpec = tween(
+                                        animationDuration,
+                                        easing = FastOutSlowInEasing
+                                    ),
+                                    targetOffsetY = { -it / 3 }
+                                )
+
+                        (enter togetherWith exit).using(null)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { selectionMode ->
+                    if (selectionMode) {
+                        SongSelectionTopAppBar(
+                            songs = songs,
+                            selectedSongUris = selectedSongUris,
+                            scrollBehavior = topAppBarScrollBehavior,
+                            onSelectAll = selectionViewModel::selectAll,
+                            onDeselectAll = selectionViewModel::deselectAll,
+                            onClose = selectionViewModel::exitSelectionMode
                         )
-
-                        LazyColumn(
-                            modifier = Modifier
-                                .libraryDetailScroll(topAppBarScrollBehavior)
-                                .weight(1f),
-                            state = listState,
-                            contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding() + 12.dp),
-                            overscrollEffect = if (LocalLibraryUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
-                        ) {
-                            if (songs.isEmpty()) {
-                                item("empty") {
-                                    IllustratedEmptyState(
-                                        kind = EmptyStateKind.Songs,
-                                        title = stringResource(R.string.empty_songs_title),
-                                        modifier = Modifier.fillMaxWidth(),
+                    } else {
+                        SmallTopAppBar(
+                            title = albumName.ifBlank { stringResource(R.string.album_detail_title) },
+                            navigationIcon = {
+                                IconButton(onClick = { navigator.popBackStack() }) {
+                                    Icon(
+                                        imageVector = LucideIcons.ArrowLeft,
+                                        contentDescription = stringResource(R.string.action_back)
                                     )
                                 }
-                            }
-                            items(
-                                items = songs,
-                                key = { song ->
-                                    song.uri.takeIf { it.isNotBlank() && it != "0" } ?: "song-${song.id}"
-                                }
-                            ) { song ->
-                                SelectableLibraryItem(
-                                    itemKey = song.uri,
-                                    isSelectionMode = isSelectionMode,
-                                    isSelected = selectedSongUris.contains(song.uri),
-                                    swipeSelectionLabel = swipeSelectionLabel,
-                                    swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                                    onClick = {
-                                        navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
-                                    },
-                                    onToggleSelection = {
-                                        selectionViewModel.toggleSelection(song.uri)
-                                    },
-                                    onSwipeSelection = {
-                                        selectionViewModel.swipeSelect(song, songs)
-                                    }
-                                ) {
-                                    SongListItemContent(
-                                        song = song,
-                                        showTrackNumbers = true,
-                                        trailingContent = {
-                                            Box(modifier = Modifier.padding(end = 8.dp)) {
-                                                SongListItemActions(
-                                                    isSelectionMode = isSelectionMode,
-                                                    isSelected = selectedSongUris.contains(song.uri),
-                                                    onToggleSelection = {
-                                                        selectionViewModel.toggleSelection(song.uri)
-                                                    },
-                                                    onShowMenu = {
-                                                        selectedSong = song
-                                                        showMenuSheet = true
-                                                    }
-                                                )
+                            },
+                            actions = {
+                                OverlayIconDropdownMenu(
+                                    entries = listOf(
+                                        albumActionsDropdownEntry(
+                                            isCalculatingReplayGain = albumActionsUiState.isCalculatingAlbumReplayGain,
+                                            onShare = {
+                                                albumActionsViewModel.shareAlbum(context, songs)
+                                            },
+                                            onDelete = {
+                                                showDeleteAlbumDialog = true
+                                            },
+                                            onCalculateReplayGain = {
+                                                albumActionsViewModel.calculateAlbumReplayGain(songs)
                                             }
-                                        }
+                                        )
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = LucideIcons.EllipsisVertical,
+                                        contentDescription = stringResource(R.string.album_action_more)
                                     )
                                 }
-                            }
-                        }
+                            },
+                            scrollBehavior = topAppBarScrollBehavior
+                        )
                     }
-
-                    SongActionSheets(
-                        selectedSong = selectedSong,
-                        showMenuSheet = showMenuSheet,
-                        showDetailSheet = showDetailSheet,
-                        showDeleteDialog = showDeleteDialog,
-                        showRenameDialog = showRenameDialog,
-                        onDismissMenu = { showMenuSheet = false },
-                        onDismissMenuFinished = {
-                            if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) {
-                                selectedSong = null
-                            }
-                        },
-                        onDismissDetail = { showDetailSheet = false },
-                        onDismissDelete = { showDeleteDialog = false },
-                        onDismissRename = { showRenameDialog = false },
-                        onShowDetail = { showDetailSheet = true },
-                        onShowDelete = { showDeleteDialog = true },
-                        onShowRename = { showRenameDialog = true },
-                        onPlay = { song -> selectionViewModel.play(context, song) },
-                        onDelete = { song -> selectionViewModel.delete(song) },
-                        onRename = { song, newFileName ->
-                            selectionViewModel.renameSong(song, newFileName)
-                        }
-                    )
                 }
             }
+        ) { paddingValues ->
+            Box {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(scaffoldTopHorizontalPadding(paddingValues))
+                ) {
+                    AlbumDetailHeader(
+                        album = albumName,
+                        albumArtist = albumArtist,
+                        songCount = songs.size,
+                        coverSong = songs.firstOrNull()
+                    )
 
-            YesNoDialog(
-                title = stringResource(R.string.dialog_delete_album_title),
-                show = showDeleteAlbumDialog,
-                summary = stringResource(
-                    R.string.dialog_delete_album_content,
-                    songs.size,
-                    albumName.ifBlank { stringResource(R.string.album_detail_title) }
-                ),
-                onConfirm = {
-                    showDeleteAlbumDialog = false
-                    albumActionsViewModel.deleteAlbum(songs)
-                    navigator.popBackStack()
-                },
-                onDismissRequest = { showDeleteAlbumDialog = false }
-            )
+                    LazyColumn(
+                        modifier = Modifier
+                            .libraryDetailScroll(topAppBarScrollBehavior)
+                            .weight(1f),
+                        state = listState,
+                        contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding() + 12.dp),
+                        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
+                    ) {
+                        if (songs.isEmpty()) {
+                            item("empty") {
+                                IllustratedEmptyState(
+                                    kind = EmptyStateKind.Songs,
+                                    title = stringResource(R.string.empty_songs_title),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
+                        items(
+                            items = songs,
+                            key = { song ->
+                                song.uri.takeIf { it.isNotBlank() && it != "0" } ?: "song-${song.id}"
+                            }
+                        ) { song ->
+                            SelectableLibraryItem(
+                                itemKey = song.uri,
+                                isSelectionMode = isSelectionMode,
+                                isSelected = selectedSongUris.contains(song.uri),
+                                swipeSelectionLabel = swipeSelectionLabel,
+                                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
+                                onClick = {
+                                    navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                                },
+                                onToggleSelection = {
+                                    selectionViewModel.toggleSelection(song.uri)
+                                },
+                                onSwipeSelection = {
+                                    selectionViewModel.swipeSelect(song, songs)
+                                }
+                            ) {
+                                SongListItemContent(
+                                    song = song,
+                                    showTrackNumbers = true,
+                                    trailingContent = {
+                                        Box(modifier = Modifier.padding(end = 8.dp)) {
+                                            SongListItemActions(
+                                                isSelectionMode = isSelectionMode,
+                                                isSelected = selectedSongUris.contains(song.uri),
+                                                onToggleSelection = {
+                                                    selectionViewModel.toggleSelection(song.uri)
+                                                },
+                                                onShowMenu = {
+                                                    selectedSong = song
+                                                    showMenuSheet = true
+                                                }
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
 
-            AlbumReplayGainProgressBottomSheet(
-                uiState = albumActionsUiState,
-                onDismissRequest = albumActionsViewModel::closeAlbumReplayGainProgressDialog,
-                onDismissFinished = albumActionsViewModel::clearAlbumReplayGainProgressDialog,
-                onAbort = albumActionsViewModel::cancelAlbumReplayGain
-            )
-
-            SongBatchSelectionActions(
-                navigator = navigator,
-                songs = songs,
-                show = isSelectionMode,
-                expanded = isFabMenuExpanded,
-                selectedSongUris = selectedSongUris,
-                onExpandedChange = { isFabMenuExpanded = it },
-                onSetSelectionUris = selectionViewModel::setSelectionUris,
-                onBatchDelete = selectionViewModel::batchDelete,
-                onBatchShare = selectionViewModel::batchShare
-            )
+                SongActionSheets(
+                    selectedSong = selectedSong,
+                    showMenuSheet = showMenuSheet,
+                    showDetailSheet = showDetailSheet,
+                    showDeleteDialog = showDeleteDialog,
+                    showRenameDialog = showRenameDialog,
+                    onDismissMenu = { showMenuSheet = false },
+                    onDismissMenuFinished = {
+                        if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) {
+                            selectedSong = null
+                        }
+                    },
+                    onDismissDetail = { showDetailSheet = false },
+                    onDismissDelete = { showDeleteDialog = false },
+                    onDismissRename = { showRenameDialog = false },
+                    onShowDetail = { showDetailSheet = true },
+                    onShowDelete = { showDeleteDialog = true },
+                    onShowRename = { showRenameDialog = true },
+                    onPlay = { song -> selectionViewModel.play(context, song) },
+                    onDelete = { song -> selectionViewModel.delete(song) },
+                    onRename = { song, newFileName ->
+                        selectionViewModel.renameSong(song, newFileName)
+                    }
+                )
+            }
         }
+
+        YesNoDialog(
+            title = stringResource(R.string.dialog_delete_album_title),
+            show = showDeleteAlbumDialog,
+            summary = stringResource(
+                R.string.dialog_delete_album_content,
+                songs.size,
+                albumName.ifBlank { stringResource(R.string.album_detail_title) }
+            ),
+            onConfirm = {
+                showDeleteAlbumDialog = false
+                albumActionsViewModel.deleteAlbum(songs)
+                navigator.popBackStack()
+            },
+            onDismissRequest = { showDeleteAlbumDialog = false }
+        )
+
+        AlbumReplayGainProgressBottomSheet(
+            uiState = albumActionsUiState,
+            onDismissRequest = albumActionsViewModel::closeAlbumReplayGainProgressDialog,
+            onDismissFinished = albumActionsViewModel::clearAlbumReplayGainProgressDialog,
+            onAbort = albumActionsViewModel::cancelAlbumReplayGain
+        )
+
+        SongBatchSelectionActions(
+            navigator = navigator,
+            songs = songs,
+            show = isSelectionMode,
+            expanded = isFabMenuExpanded,
+            selectedSongUris = selectedSongUris,
+            onExpandedChange = { isFabMenuExpanded = it },
+            onSetSelectionUris = selectionViewModel::setSelectionUris,
+            onBatchDelete = selectionViewModel::batchDelete,
+            onBatchShare = selectionViewModel::batchShare
+        )
     }
 }
 
@@ -419,6 +416,7 @@ private fun SaltAlbumActionsMenu(
                     modifier = Modifier.widthIn(min = 180.dp, max = 280.dp),
                     enabled = false,
                     iconPainter = rememberVectorPainter(LucideIcons.Volume2),
+                    iconColor = PreferenceIconTone.Appearance.color(),
                     arrowType = com.moriafly.salt.ui.ItemArrowType.None,
                     onClick = {}
                 )
@@ -426,6 +424,7 @@ private fun SaltAlbumActionsMenu(
                 PopupMenuItem(
                     text = stringResource(R.string.menu_action_calculate_album_replay_gain),
                     iconPainter = rememberVectorPainter(LucideIcons.Volume2),
+                    iconColor = PreferenceIconTone.Appearance.color(),
                     onClick = {
                         popup.dismiss()
                         onCalculateReplayGain()
@@ -435,6 +434,7 @@ private fun SaltAlbumActionsMenu(
             PopupMenuItem(
                 text = stringResource(R.string.menu_action_share_album),
                 iconPainter = rememberVectorPainter(LucideIcons.Share2),
+                iconColor = PreferenceIconTone.Tools.color(),
                 onClick = {
                     popup.dismiss()
                     onShare()
@@ -463,7 +463,7 @@ private fun albumActionsDropdownEntry(
     return DropdownEntry(
         items = listOf(
             DropdownItem(
-                icon = { modifier -> PreferenceIcon(LucideIcons.Volume2, PreferenceIconTone.Library, modifier = modifier, enabled = !isCalculatingReplayGain) },
+                icon = { modifier -> PreferenceIcon(LucideIcons.Volume2, PreferenceIconTone.Appearance, modifier = modifier, enabled = !isCalculatingReplayGain) },
                 text = stringResource(R.string.menu_action_calculate_album_replay_gain),
                 enabled = !isCalculatingReplayGain,
                 onClick = {
@@ -507,7 +507,7 @@ private fun AlbumDetailHeader(
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+            if (LocalUiEngine.current == UiEngine.SALT) {
                 LibraryDetailText(
                     text = album.ifBlank { stringResource(R.string.album_detail_title) },
                     tone = LibraryDetailTextTone.Title,

@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,8 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.base.SaltBottomSheet
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
@@ -74,7 +76,6 @@ import com.lonx.lyrico.viewmodel.CustomTagKeyError
 import com.lonx.lyrico.viewmodel.EditFieldSettingsViewModel
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonAppearance
-import com.moriafly.salt.ui.ItemEdit
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -281,6 +282,7 @@ fun EditFieldSettingsScreen(
                     if (item != null) {
                         EditFieldRow(
                             item = item,
+                            iconTone = PreferenceIconTone.at(displayCodes.indexOf(code)),
                             component = block?.takeIf { it.isComposite },
                             checked = if (block?.isComposite == true) uiState.componentOverrides[block.key] ?: true else item.enabled,
                             onManageComponent = {
@@ -429,6 +431,7 @@ private fun EditFieldRow(
     checked: Boolean = item.enabled,
     onManageComponent: () -> Unit = {},
     inSheet: Boolean = false,
+    iconTone: PreferenceIconTone = PreferenceIconTone.Tools,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val menuItems = buildList<Triple<String, ImageVector, () -> Unit>> {
@@ -450,8 +453,7 @@ private fun EditFieldRow(
                     ),
                     contentDescription = null,
                     modifier = Modifier.size(SaltTheme.dimens.itemIcon),
-                    tint = if (item.field.groupCode == EditFieldRegistry.GROUP_LYRICS) SaltTheme.colors.highlight
-                    else SaltTheme.colors.text,
+                    tint = iconTone.color(),
                 )
                 Row(
                     modifier = Modifier.weight(1f),
@@ -482,12 +484,12 @@ private fun EditFieldRow(
                         iconSize = 20.dp,
                     )
                     PopupMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        menuItems.forEach { (label, icon, action) ->
+                        menuItems.forEachIndexed { index, (label, icon, action) ->
                             PopupMenuItem(
                                 text = label,
                                 iconPainter = rememberVectorPainter(icon),
                                 iconColor = if (icon == LucideIcons.Trash) SaltTheme.colors.error
-                                else SaltTheme.colors.text,
+                                else PreferenceIconTone.at(index).color(),
                                 onClick = {
                                     showMenu = false
                                     action()
@@ -513,7 +515,7 @@ private fun EditFieldRow(
         ) {
             PreferenceIcon(
                 imageVector = if (component?.isComposite == true) LucideIcons.Volume2 else item.field.settingsIcon(),
-                tone = if (item.field.groupCode == EditFieldRegistry.GROUP_LYRICS) PreferenceIconTone.Lyrics else PreferenceIconTone.Library,
+                tone = iconTone,
                 modifier = Modifier,
             )
             Row(
@@ -555,7 +557,7 @@ private fun EditFieldRow(
                                     text = label,
                                     icon = { modifier ->
                                         PreferenceIcon(icon,
-                                            if (icon == LucideIcons.Trash) PreferenceIconTone.Danger else PreferenceIconTone.Tools,
+                                            if (icon == LucideIcons.Trash) PreferenceIconTone.Danger else PreferenceIconTone.at(index),
                                             modifier = modifier)
                                     },
                                 ),
@@ -704,6 +706,7 @@ private fun ComponentFieldsSheetContent(
                     ReorderableItem(reorderState, key = code) {
                         if (item != null) EditFieldRow(
                             item = item,
+                            iconTone = PreferenceIconTone.at(displayCodes.indexOf(code)),
                             inSheet = true,
                             onCheckedChange = { onEnabledChange(code, it) },
                             onDelete = {},
@@ -783,7 +786,7 @@ private fun AddCustomTagDialog(
             CustomTagKeyError.INVALID -> stringResource(R.string.custom_tag_key_invalid)
             CustomTagKeyError.DUPLICATE -> stringResource(R.string.duplicate_item)
         }
-        com.lonx.lyrico.ui.components.base.SaltConfirmDialog(
+        com.lonx.lyrico.ui.components.salt.SaltConfirmDialog(
             show = show, title = stringResource(R.string.custom_tag_add_key),
             onDismissRequest = onDismiss, onConfirm = { onConfirm(typed) },
             cancelText = stringResource(R.string.cancel), confirmText = stringResource(R.string.confirm),
@@ -820,7 +823,7 @@ private fun AddCustomTagDialog(
 
             Spacer(Modifier.height(16.dp))
             RoundedColumn(paddingValues = PaddingValues(0.dp)) {
-                ItemEdit(
+                SaltTextInput(
                     text = typed,
                     onChange = { typed = it },
                     hint = stringResource(R.string.custom_tag_key),

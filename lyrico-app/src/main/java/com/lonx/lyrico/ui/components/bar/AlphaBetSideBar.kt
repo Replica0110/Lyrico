@@ -292,7 +292,10 @@ private fun AlphabetSideBarIndicator(
                         if (isSalt) {
                             SaltText(
                                 text = item.value,
-                                style = SaltTheme.textStyles.main,
+                                style = SaltTheme.textStyles.main.copy(
+                                    fontSize = 30.sp,
+                                    lineHeight = 36.sp
+                                ),
                                 color = SaltTheme.colors.onHighlight,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,

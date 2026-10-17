@@ -226,7 +226,7 @@ fun SearchResultsScreen(
                 }
                 if (selectedSourceSupportsLyrics) {
                     if (salt) {
-                        com.lonx.lyrico.ui.components.base.SaltIconButton(
+                        com.lonx.lyrico.ui.components.salt.SaltIconButton(
                             icon = LucideIcons.Settings,
                             label = stringResource(R.string.search_settings),
                             onClick = { showLyricRenderConfigBottomSheet.value = true }
@@ -1178,7 +1178,7 @@ private fun SearchResultApplyBottomSheet(
         }
     }
     if (salt) {
-        com.lonx.lyrico.ui.components.base.SaltBottomSheet(
+        com.lonx.lyrico.ui.components.salt.SaltBottomSheet(
             show = show, onDismissRequest = onDismissRequest, onDismissFinished = onDismissFinished,
             header = {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -1403,13 +1403,13 @@ private fun SearchResultApplyLyricsPage(
                     enabled = option?.enabled == true, onChange = onSelectedChange,
                     modifier = Modifier.weight(1f),
                 )
-                com.lonx.lyrico.ui.components.base.SaltIconButton(
+                com.lonx.lyrico.ui.components.salt.SaltIconButton(
                     icon = LucideIcons.Copy, label = stringResource(R.string.action_copy_lyrics),
                     onClick = onCopyLyrics, enabled = !lyricsText.isNullOrBlank(),
                     size = 32.dp, iconSize = 18.dp,
                 )
                 Box(Modifier.padding(end = 8.dp)) {
-                    com.lonx.lyrico.ui.components.base.SaltIconButton(
+                    com.lonx.lyrico.ui.components.salt.SaltIconButton(
                         icon = LucideIcons.Settings, label = stringResource(R.string.search_settings),
                         onClick = onOpenLyricsConfig, size = 32.dp, iconSize = 18.dp,
                     )
@@ -1471,7 +1471,7 @@ private fun SearchResultApplyLyricsPage(
                 }
             }
             if (salt) {
-                com.lonx.lyrico.ui.components.base.SaltIconButton(
+                com.lonx.lyrico.ui.components.salt.SaltIconButton(
                     icon = LucideIcons.Settings,
                     label = "",
                     onClick = onOpenLyricsConfig,

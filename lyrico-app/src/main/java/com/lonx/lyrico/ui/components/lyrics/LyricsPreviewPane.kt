@@ -129,7 +129,7 @@ fun LyricsPreviewPane(
                             shape = CircleShape
                         )
                 ) {
-                    com.lonx.lyrico.ui.components.base.SaltIconButton(
+                    com.lonx.lyrico.ui.components.salt.SaltIconButton(
                         icon = LucideIcons.Copy,
                         label = "",
                         onClick = onCopyLyrics,

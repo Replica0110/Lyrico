@@ -69,14 +69,14 @@ fun ExportDestinationBottomSheet(
                     )
                 ) {
                     RadioButtonPreference(
-                        startAction = { PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Library) },
+                        startAction = { PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Appearance) },
                         title = stringResource(R.string.export_destination_selected_folder),
                         summary = stringResource(R.string.export_destination_selected_folder_summary),
                         selected = destination == ExportDestination.SELECTED_DIRECTORY,
                         onClick = { destination = ExportDestination.SELECTED_DIRECTORY }
                     )
                     RadioButtonPreference(
-                        startAction = { PreferenceIcon(LucideIcons.FileMusic, PreferenceIconTone.Library) },
+                        startAction = { PreferenceIcon(LucideIcons.FileMusic, PreferenceIconTone.Tools) },
                         title = stringResource(R.string.export_destination_audio_folder),
                         summary = stringResource(R.string.export_destination_audio_folder_summary),
                         selected = destination == ExportDestination.AUDIO_DIRECTORY,

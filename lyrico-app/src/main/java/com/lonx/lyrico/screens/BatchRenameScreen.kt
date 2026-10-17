@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
@@ -45,8 +47,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
-import com.lonx.lyrico.ui.components.base.SaltBottomSheet
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.base.SheetProgressAction
 import com.lonx.lyrico.ui.components.base.SheetStatisticsRow
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
@@ -65,7 +67,6 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import com.moriafly.salt.ui.Button
-import com.moriafly.salt.ui.ItemEdit
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.SaltTheme
@@ -421,7 +422,7 @@ private fun BatchRenameConfigTab(
                 ItemOuterTitle(text = stringResource(id = R.string.rename_format))
                 ScreenCard(modifier = Modifier.padding(bottom = 6.dp)) {
                     Box(Modifier.fillMaxWidth()) {
-                        ItemEdit(
+                        SaltTextInput(
                             text = renameFormat,
                             onChange = onFormatChange,
                             actionContent = {

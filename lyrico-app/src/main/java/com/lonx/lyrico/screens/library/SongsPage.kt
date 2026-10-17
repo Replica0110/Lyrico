@@ -1,7 +1,7 @@
 package com.lonx.lyrico.screens.library
 
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
 
 import android.content.Intent
@@ -63,7 +63,6 @@ import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
 import com.lonx.lyrico.ui.components.song.SongActionSheets
 import com.lonx.lyrico.ui.components.song.SongListItemContent
 import com.lonx.lyrico.ui.components.song.SongListItemActions
-import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.utils.UriUtils
 import com.moriafly.salt.ui.SaltTheme
 import com.lonx.lyrico.viewmodel.SongListViewModel
@@ -180,9 +179,9 @@ fun SongsPage(
     val enableIndex = sections.isNotEmpty() && sortInfo.sortBy.supportsIndex
 
     val topAppBarScrollBehavior = MiuixScrollBehavior()
-    // 引擎判定统一走全局作用域；LocalLibraryUiEngine 只决定 SaltLibraryPage 入口。
+    // 使用应用级 UI 引擎，页面与共享列表组件保持一致。
     val isSaltEngine = LocalUiEngine.current == UiEngine.SALT
-    val topBarBackdrop = rememberBarBlurBackdrop(enabled = LocalLibraryUiEngine.current == UiEngine.MIUIX && com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled())
+    val topBarBackdrop = rememberBarBlurBackdrop(enabled = LocalUiEngine.current == UiEngine.MIUIX && com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled())
     val refreshTexts = listOf(
         stringResource(R.string.pull_to_refresh),
         stringResource(R.string.release_to_refresh),
@@ -340,7 +339,7 @@ fun SongsPage(
         }
 
     }
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
         SaltLibraryPage(
             selection = if (isSelectionMode) LibrarySelectionState(
             allSelected = allSongsSelected,

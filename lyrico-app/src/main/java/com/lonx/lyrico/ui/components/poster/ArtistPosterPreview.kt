@@ -221,12 +221,13 @@ internal fun ArtistPosterPreview(
                                 com.moriafly.salt.ui.popup.PopupMenu(
                                     expanded = previewMenuExpanded,
                                     onDismissRequest = { previewMenuExpanded = false }) {
-                                    actions.forEach { action ->
+                                    actions.forEachIndexed { index, action ->
                                         // Keep disabled actions visible and inert; the summary explains why.
                                         Box(Modifier.enabledAlpha(action.enabled)) {
                                             com.moriafly.salt.ui.popup.PopupMenuItem(
                                                 text = action.title, sub = action.summary,
                                                 iconPainter = rememberVectorPainter(action.icon),
+                                                iconColor = action.tone.forItem(index).color(),
                                                 onClick = {
                                                     previewMenuExpanded = false
                                                     if (action.enabled) action.onClick()
@@ -237,10 +238,10 @@ internal fun ArtistPosterPreview(
                             }
                         } else {
                             val actions = provideActions(currentPage)
-                            val entry = DropdownEntry(items = actions.map { action ->
+                            val entry = DropdownEntry(items = actions.mapIndexed { index, action ->
                                 DropdownItem(
                                     icon = { modifier ->
-                                        PreferenceIcon(action.icon, action.tone, modifier = modifier, enabled = action.enabled)
+                                        PreferenceIcon(action.icon, action.tone.forItem(index), modifier = modifier, enabled = action.enabled)
                                     },
                                     text = action.title, summary = action.summary, enabled = action.enabled,
                                     onClick = action.onClick)

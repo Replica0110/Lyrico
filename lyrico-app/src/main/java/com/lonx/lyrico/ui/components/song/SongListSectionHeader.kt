@@ -29,7 +29,7 @@ fun SongListSectionHeader(
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            val salt = com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine.current ==
+            val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
                     com.lonx.lyrico.data.model.UiEngine.SALT
             if (salt) {
                 com.moriafly.salt.ui.Text(

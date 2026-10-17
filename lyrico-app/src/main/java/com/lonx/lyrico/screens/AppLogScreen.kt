@@ -52,9 +52,9 @@ import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.base.SaltBottomSheet
-import com.lonx.lyrico.ui.components.base.SaltDropdownRow
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltDropdownRow
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
@@ -267,6 +267,7 @@ fun AppLogScreen(
                     ScreenCard {
                         SaltDropdownRow(
                             title = stringResource(R.string.app_log_filter_level),
+                            icon = LucideIcons.ListFilter, tone = PreferenceIconTone.Appearance,
                             labels = levelLabels,
                             selectedIndex = selectedLevelIndex,
                         ) { index ->
@@ -274,6 +275,7 @@ fun AppLogScreen(
                         }
                         SaltDropdownRow(
                             title = stringResource(R.string.app_log_filter_type),
+                            icon = LucideIcons.Logs, tone = PreferenceIconTone.Tools,
                             labels = typeLabels,
                             selectedIndex = selectedTypeIndex,
                         ) { index ->
@@ -281,6 +283,7 @@ fun AppLogScreen(
                         }
                         SaltDropdownRow(
                             title = stringResource(R.string.log_retention_title),
+                            icon = LucideIcons.Calendar, tone = PreferenceIconTone.Library,
                             labels = logRetentionItems,
                             selectedIndex = selectedLogRetentionIndex,
                         ) { index ->
@@ -289,7 +292,7 @@ fun AppLogScreen(
                     }
                 } else Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(LucideIcons.ListFilter, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.ListFilter, PreferenceIconTone.Appearance) },
                         title = stringResource(R.string.app_log_filter_level),
                         items = levelLabels,
                         selectedIndex = selectedLevelIndex,
@@ -307,7 +310,7 @@ fun AppLogScreen(
                         }
                     )
                     WindowDropdownPreference(
-                        startAction = { PreferenceIcon(LucideIcons.Calendar, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.Calendar, PreferenceIconTone.Library) },
                         title = stringResource(R.string.log_retention_title),
                         summary = stringResource(R.string.log_retention_summary),
                         items = logRetentionItems,

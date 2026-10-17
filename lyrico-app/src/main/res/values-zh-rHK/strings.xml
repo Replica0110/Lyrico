@@ -57,7 +57,7 @@
     <string name="theme_mode">主題模式</string>
 
     <string name="lyric_index_title">歌詞索引</string>
-    <string name="lyric_index_summary">掃描時建立歌詞索引，用於本機歌詞搜尋，會增加掃描耗時。開啟後，已有歌曲需重新掃描</string>
+    <string name="lyric_index_summary">用於本機歌詞搜尋，開啟後需重新掃描已有歌曲</string>
     <!-- 掃描 -->
     <string name="folder_manager">資料夾管理</string>
     <string name="folder_manage_hint">管理 Lyrico 掃描的音樂資料夾</string>
@@ -67,7 +67,7 @@
 
     <!-- 搜尋 -->
     <string name="search_limit">單次載入數量</string>
-    <string name="search_limit_tip">每個搜尋來源每次載入的結果數量，設定更大的值會消耗更多流量，同時產生更多圖片快取</string>
+    <string name="search_limit_tip">每個搜尋來源每次載入的結果數量</string>
     <string name="search_loading_more">正在載入更多…</string>
     <string name="search_load_more">載入更多</string>
     <string name="search_load_more_failed">載入失敗，點擊重試</string>
@@ -832,6 +832,5 @@
     <string name="poster_export_confirm">匯出 %1$d 位藝術家的內嵌海報到資料夾，同名海報將取代</string>
     <string name="poster_pick_folder">先選擇海報資料夾</string>
     <string name="ui_engine">介面風格</string>
-    <string name="ui_engine_pilot_summary">SaltUI 目前支援部分頁面</string>
     <string name="common_edit">編輯</string>
 </resources>

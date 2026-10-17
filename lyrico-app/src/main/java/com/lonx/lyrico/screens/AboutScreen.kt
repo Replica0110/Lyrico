@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import android.content.ClipData
+import android.widget.Toast
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.graphics.Color
@@ -23,6 +26,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,6 +60,7 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.OpensourceLicenceDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
+import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -147,7 +153,7 @@ fun AboutScreen(
                         modifier = Modifier.padding(horizontal = 12.dp)
                     ) {
                         BasicComponent(
-                            startAction = { PreferenceIcon(LucideIcons.Info, PreferenceIconTone.Tools) },
+                            startAction = { PreferenceIcon(LucideIcons.Info, PreferenceIconTone.Appearance) },
                             title = stringResource(R.string.about_app_version),
                             summary = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
                         )
@@ -170,7 +176,7 @@ fun AboutScreen(
                             }
                         )
                         ArrowPreference(
-                            startAction = { PreferenceIcon(LucideIcons.Send, PreferenceIconTone.Tools) },
+                            startAction = { PreferenceIcon(LucideIcons.Send, PreferenceIconTone.Library) },
                             title = "Telegram",
                             summary = TELEGRAM_GROUP_LINK,
                             endActions = {
@@ -185,21 +191,21 @@ fun AboutScreen(
                             }
                         )
                         ArrowPreference(
-                            startAction = { PreferenceIcon(LucideIcons.Scale, PreferenceIconTone.Tools) },
+                            startAction = { PreferenceIcon(LucideIcons.Scale, PreferenceIconTone.Lyrics) },
                             title = stringResource(R.string.title_opensource_licence),
                             onClick = {
                                 navigator.navigate(OpensourceLicenceDestination())
                             }
                         )
                         SwitchPreference(
-                            startAction = { PreferenceIcon(LucideIcons.CloudDownload, PreferenceIconTone.Tools) },
+                            startAction = { PreferenceIcon(LucideIcons.CloudDownload, PreferenceIconTone.Pink) },
                             title = stringResource(R.string.about_auto_check_update),
                             summary = stringResource(R.string.about_auto_check_update_sub),
                             checked = checkUpdateEnabled,
                             onCheckedChange = viewModel::setCheckUpdateEnabled
                         )
                         ArrowPreference(
-                            startAction = { PreferenceIcon(LucideIcons.Download, PreferenceIconTone.Tools) },
+                            startAction = { PreferenceIcon(LucideIcons.Download, PreferenceIconTone.Teal) },
                             title = stringResource(R.string.about_check_update),
                             summary = stringResource(
                                 updateEffect.messageRes,
@@ -346,15 +352,30 @@ private fun SaltAboutAppInfo(
     onCheckUpdateEnabled: (Boolean) -> Unit,
     onCheckUpdate: () -> Unit,
 ) {
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val versionLabel = stringResource(R.string.about_app_version)
+    val version = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
     ScreenCard(header = stringResource(R.string.about_app_info)) {
-        com.moriafly.salt.ui.ItemValue(
-            text = stringResource(R.string.about_app_version),
-            sub = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})"
+        com.moriafly.salt.ui.Item(
+            text = versionLabel,
+            sub = version,
+            iconPainter = rememberVectorPainter(LucideIcons.Info),
+            iconColor = PreferenceIconTone.Appearance.color(),
+            arrowType = com.moriafly.salt.ui.ItemArrowType.None,
+            onClick = {
+                scope.launch {
+                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(versionLabel, version)))
+                    Toast.makeText(context, R.string.msg_copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                }
+            },
         )
         com.moriafly.salt.ui.Item(
             text = stringResource(R.string.about_project_url),
             sub = stringResource(R.string.about_project_url_sub),
             iconPainter = rememberVectorPainter(LucideIcons.CodeXml),
+            iconColor = PreferenceIconTone.Tools.color(),
             tag = "GitHub",
             onClick = onProject
         )
@@ -362,17 +383,20 @@ private fun SaltAboutAppInfo(
             text = "Telegram",
             sub = TELEGRAM_GROUP_LINK,
             iconPainter = rememberVectorPainter(LucideIcons.Send),
+            iconColor = PreferenceIconTone.Library.color(),
             onClick = onTelegram
         )
         com.moriafly.salt.ui.Item(
             text = stringResource(R.string.title_opensource_licence),
             iconPainter = rememberVectorPainter(LucideIcons.Scale),
+            iconColor = PreferenceIconTone.Lyrics.color(),
             onClick = onLicences
         )
         com.moriafly.salt.ui.ItemSwitcher(
             text = stringResource(R.string.about_auto_check_update),
             sub = stringResource(R.string.about_auto_check_update_sub),
             iconPainter = rememberVectorPainter(LucideIcons.CloudDownload),
+            iconColor = PreferenceIconTone.Pink.color(),
             state = checkUpdateEnabled,
             onChange = onCheckUpdateEnabled
         )
@@ -380,6 +404,7 @@ private fun SaltAboutAppInfo(
             text = stringResource(R.string.about_check_update),
             sub = updateSummary,
             iconPainter = rememberVectorPainter(LucideIcons.Download),
+            iconColor = PreferenceIconTone.Teal.color(),
             onClick = onCheckUpdate
         )
     }

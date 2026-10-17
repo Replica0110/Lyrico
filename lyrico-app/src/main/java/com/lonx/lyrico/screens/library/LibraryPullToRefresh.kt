@@ -1,6 +1,6 @@
 package com.lonx.lyrico.screens.library
 
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.rememberOverscrollEffect
@@ -26,7 +26,7 @@ internal fun LibraryPullToRefresh(
     contentPadding: PaddingValues, topAppBarScrollBehavior: ScrollBehavior,
     refreshTexts: List<String>, content: @Composable () -> Unit,
 ) {
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
         val state = rememberPullToRefreshState()
         PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, state = state,
             modifier = modifier,
@@ -47,10 +47,10 @@ internal fun LibraryPullToRefresh(
 
 @Composable
 internal fun Modifier.libraryScrollFeedback(behavior: ScrollBehavior): Modifier =
-    if (LocalLibraryUiEngine.current == UiEngine.MIUIX) {
+    if (LocalUiEngine.current == UiEngine.MIUIX) {
         scrollEndHaptic().overScrollVertical().nestedScroll(behavior.nestedScrollConnection)
     } else this
 
 @Composable
 internal fun rememberLibraryOverscrollEffect(): OverscrollEffect? =
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) rememberOverscrollEffect() else null
+    if (LocalUiEngine.current == UiEngine.SALT) rememberOverscrollEffect() else null

@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,8 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.base.SaltConfirmDialog
-import com.lonx.lyrico.ui.components.base.SaltIconButton
+import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
@@ -102,27 +104,32 @@ fun ArtistPosterFoldersScreen(navigator: DestinationsNavigator) {
                     com.moriafly.salt.ui.popup.PopupMenuItem(
                         text = stringResource(R.string.artist_poster_naming),
                         iconPainter = rememberVectorPainter(LucideIcons.Info),
+                        iconColor = PreferenceIconTone.Appearance.color(),
                         onClick = { topMenu.dismiss(); showHelp = true }
                     )
                     if (state.folder != null) {
                         com.moriafly.salt.ui.popup.PopupMenuItem(
                             text = stringResource(R.string.artist_poster_folder_details),
                             iconPainter = rememberVectorPainter(LucideIcons.Info),
+                            iconColor = PreferenceIconTone.Appearance.color(),
                             onClick = { topMenu.dismiss(); showFolderDetails = true }
                         )
                         com.moriafly.salt.ui.popup.PopupMenuItem(
                             text = stringResource(R.string.action_refresh_folder),
                             iconPainter = rememberVectorPainter(LucideIcons.RefreshCw),
+                            iconColor = PreferenceIconTone.Library.color(),
                             onClick = { topMenu.dismiss(); viewModel.refresh() }
                         )
                         com.moriafly.salt.ui.popup.PopupMenuItem(
                             text = stringResource(R.string.artist_poster_folder_change),
                             iconPainter = rememberVectorPainter(LucideIcons.FolderPlus),
+                            iconColor = PreferenceIconTone.Lyrics.color(),
                             onClick = { topMenu.dismiss(); picker.launch(null) }
                         )
                         com.moriafly.salt.ui.popup.PopupMenuItem(
                             text = stringResource(R.string.folder_action_remove),
                             iconPainter = rememberVectorPainter(LucideIcons.Folder),
+                            iconColor = PreferenceIconTone.Pink.color(),
                             onClick = { topMenu.dismiss(); showRemoveDialog = true }
                         )
                     }
@@ -145,7 +152,7 @@ fun ArtistPosterFoldersScreen(navigator: DestinationsNavigator) {
                             entry = DropdownEntry(
                                 items = buildList {
                                     add(DropdownItem(
-                                        icon = { modifier -> PreferenceIcon(LucideIcons.Info, PreferenceIconTone.Tools, modifier = modifier) },
+                                        icon = { modifier -> PreferenceIcon(LucideIcons.Info, PreferenceIconTone.Appearance, modifier = modifier) },
                                         text = stringResource(R.string.artist_poster_naming),
                                         onClick = { showHelp = true }
                                     ))
@@ -156,17 +163,17 @@ fun ArtistPosterFoldersScreen(navigator: DestinationsNavigator) {
                                             onClick = { showFolderDetails = true }
                                         ))
                                         add(DropdownItem(
-                                            icon = { modifier -> PreferenceIcon(LucideIcons.RefreshCw, PreferenceIconTone.Tools, modifier = modifier) },
+                                            icon = { modifier -> PreferenceIcon(LucideIcons.RefreshCw, PreferenceIconTone.Library, modifier = modifier) },
                                             text = stringResource(R.string.action_refresh_folder),
                                             onClick = viewModel::refresh
                                         ))
                                         add(DropdownItem(
-                                            icon = { modifier -> PreferenceIcon(LucideIcons.FolderPlus, PreferenceIconTone.Library, modifier = modifier) },
+                                            icon = { modifier -> PreferenceIcon(LucideIcons.FolderPlus, PreferenceIconTone.Lyrics, modifier = modifier) },
                                             text = stringResource(R.string.artist_poster_folder_change),
                                             onClick = { picker.launch(null) }
                                         ))
                                         add(DropdownItem(
-                                            icon = { modifier -> PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Tools, modifier = modifier) },
+                                            icon = { modifier -> PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Pink, modifier = modifier) },
                                             text = stringResource(R.string.folder_action_remove),
                                             onClick = { showRemoveDialog = true }
                                         ))
@@ -237,13 +244,13 @@ fun ArtistPosterFoldersScreen(navigator: DestinationsNavigator) {
             onDismissRequest = { showFileMenu = false }
         ) {
             ItemMenuAction(
-                icon = LucideIcons.Image, tone = PreferenceIconTone.Library,
+                icon = LucideIcons.Image, tone = PreferenceIconTone.Teal,
                 title = stringResource(R.string.poster_view_artwork),
                 enabled = file != null && !state.isEditing,
                 onClick = { showFileMenu = false; previewUri = file?.uri }
             )
             ItemMenuAction(
-                icon = LucideIcons.Users, tone = PreferenceIconTone.Library,
+                icon = LucideIcons.Users, tone = PreferenceIconTone.Orange,
                 title = stringResource(R.string.poster_artist_details),
                 summary = if (file?.artistId == null) stringResource(R.string.poster_artist_unmatched) else null,
                 enabled = file?.artistId != null && !state.isLoading && !state.isEditing,
@@ -255,14 +262,14 @@ fun ArtistPosterFoldersScreen(navigator: DestinationsNavigator) {
                 }
             )
             ItemMenuAction(
-                icon = LucideIcons.Pencil, tone = PreferenceIconTone.Tools,
+                icon = LucideIcons.Pencil, tone = PreferenceIconTone.Appearance,
                 title = stringResource(R.string.action_rename), enabled = !state.isEditing, onClick = {
                 renameStem = file?.name?.substringBeforeLast('.').orEmpty()
                 showFileMenu = false; showRenameFile = true
             })
             if (file?.name?.substringAfterLast('.')?.lowercase() in listOf("jpg", "jpeg", "png", "webp")) {
                 ItemMenuAction(
-                    icon = LucideIcons.Crop, tone = PreferenceIconTone.Library,
+                    icon = LucideIcons.Crop, tone = PreferenceIconTone.Tools,
                     title = stringResource(R.string.label_crop_artist_image), enabled = !state.isEditing, onClick = {
                     showFileMenu = false
                     cropFile = file
@@ -312,7 +319,7 @@ fun ArtistPosterFoldersScreen(navigator: DestinationsNavigator) {
                 com.moriafly.salt.ui.RoundedColumn(paddingValues = PaddingValues(0.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.weight(1f)) {
-                            com.moriafly.salt.ui.ItemEdit(text = renameStem, onChange = { renameStem = it })
+                            SaltTextInput(text = renameStem, onChange = { renameStem = it })
                         }
                         if (fileExtension.isNotEmpty()) com.moriafly.salt.ui.Text(
                             "." + fileExtension, style = com.moriafly.salt.ui.SaltTheme.textStyles.main,

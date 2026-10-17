@@ -57,7 +57,7 @@
     <string name="theme_mode">主题模式</string>
 
     <string name="lyric_index_title">歌词索引</string>
-    <string name="lyric_index_summary">扫描时建立歌词索引，用于本地歌词搜索，会增加扫描耗时。开启后，已有歌曲需重新扫描</string>
+    <string name="lyric_index_summary">用于本地歌词搜索，开启后需重新扫描已有歌曲</string>
     <!-- 扫描 -->
     <string name="folder_manager">文件夹管理</string>
     <string name="folder_manage_hint">管理 Lyrico 扫描的音乐文件夹</string>
@@ -67,7 +67,7 @@
 
     <!-- 搜索 -->
     <string name="search_limit">单次加载数量</string>
-    <string name="search_limit_tip">每个搜索源每次加载的结果数量，设置更大的值会消耗更多流量，同时产生更多图片缓存</string>
+    <string name="search_limit_tip">每个搜索源每次加载的结果数量</string>
     <string name="search_loading_more">正在加载更多…</string>
     <string name="search_load_more">加载更多</string>
     <string name="search_load_more_failed">加载失败，点击重试</string>
@@ -836,6 +836,5 @@
     <string name="poster_preview_dimensions">尺寸</string>
     <string name="poster_preview_format">格式</string>
     <string name="ui_engine">界面风格</string>
-    <string name="ui_engine_pilot_summary">SaltUI 目前支持部分页面</string>
     <string name="common_edit">编辑</string>
 </resources>

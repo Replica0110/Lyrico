@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.Icon
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.library.LocalLibraryUiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 
 enum class ExpandableFabMenuPosition {
     BottomEnd,
@@ -200,7 +200,7 @@ private fun MorphExpandableFabMenu(
 private fun CollapsedFabIcon(
     style: ExpandableFabMenuStyle
 ) {
-    if (LocalLibraryUiEngine.current == UiEngine.SALT) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
         com.moriafly.salt.ui.Icon(
             painter = rememberVectorPainter(style.mainIcon),
             contentDescription = "Actions",

@@ -46,4 +46,5 @@
     <string name="artist_poster_embed_summary">写入这位艺术家的全部歌曲，海报随音频文件保存</string>
     <string name="artist_poster_save_folder_summary">按艺术家名称保存图片，不修改歌曲文件</string>
     <string name="artist_poster_select_folder_summary">先选择海报文件夹，再按艺术家名称保存图片</string>
+    <string name="msg_artist_poster_embed_result">已嵌入：%1$d，跳过不支持的格式：%2$d，失败：%3$d</string>
 </resources>

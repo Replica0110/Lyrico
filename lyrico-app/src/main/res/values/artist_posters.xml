@@ -46,4 +46,5 @@
     <string name="artist_poster_embed_summary">Write to all songs by this artist so the poster stays with the audio files</string>
     <string name="artist_poster_save_folder_summary">Save an image named after the artist without changing song files</string>
     <string name="artist_poster_select_folder_summary">Select a poster folder first, then save an image named after the artist</string>
+    <string name="msg_artist_poster_embed_result">Embedded: %1$d, skipped (unsupported format): %2$d, failed: %3$d</string>
 </resources>

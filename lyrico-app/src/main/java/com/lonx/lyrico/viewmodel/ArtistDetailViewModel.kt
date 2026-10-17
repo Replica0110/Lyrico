@@ -56,6 +56,7 @@ data class ArtistPosterEmbedUiState(
     val isRunning: Boolean = false,
     val total: Int = 0,
     val done: Int = 0,
+    val skipped: Int = 0,
     /** 正在写的那首歌，进行中给用户一个「确实在动」的凭据。 */
     val activeSong: String? = null,
     val failures: List<String> = emptyList(),
@@ -207,6 +208,7 @@ class ArtistDetailViewModel(
         artistPosterJob = viewModelScope.launch {
             val failures = mutableListOf<String>()
             var done = 0
+            var skipped = 0
             var needsPermission = false
 
             try {
@@ -216,11 +218,13 @@ class ArtistDetailViewModel(
                     }
 
                     when (val result = writeArtistPicture(song, artistName = name, source = source.picture)) {
+                        null -> skipped++
                         is SaveAudioTagsResult.PermissionRequired -> {
                             needsPermission = true
                             _artistPosterEmbedState.update {
                                 it.copy(
                                     done = index,
+                                    skipped = skipped,
                                     isRunning = false,
                                     activeSong = null,
                                     failures = failures.toList(),
@@ -237,7 +241,7 @@ class ArtistDetailViewModel(
 
                     done = index + 1
                     _artistPosterEmbedState.update {
-                        it.copy(done = done, failures = failures.toList())
+                        it.copy(done = done, skipped = skipped, failures = failures.toList())
                     }
                 }
             } catch (e: CancellationException) {
@@ -263,7 +267,9 @@ class ArtistDetailViewModel(
                     done = done,
                     activeSong = null,
                     failures = failures.toList(),
-                    message = if (failures.isEmpty()) {
+                    message = if (skipped > 0) {
+                        resolvedMessage(R.string.msg_artist_poster_embed_result, done - skipped - failures.size, skipped, failures.size)
+                    } else if (failures.isEmpty()) {
                         resolvedMessage(R.string.msg_artist_poster_embedded, done)
                     } else {
                         resolvedMessage(
@@ -395,11 +401,10 @@ class ArtistDetailViewModel(
         song: SongEntity,
         artistName: String,
         source: AudioPicture
-    ): SaveAudioTagsResult {
+    ): SaveAudioTagsResult? {
         val current = audioTagRepository.read(song.uri, com.lonx.lyrico.data.song.tag.AudioTagReadOptions(strict = true))
-        if (!current.supportsTypedPictures) return SaveAudioTagsResult.Failed(
-            IllegalArgumentException("Artist posters are unsupported by this format")
-        )
+        // MP4/M4A cannot retain an artist type or owner description. Leave its covers intact.
+        if (!current.supportsTypedPictures) return null
         val artistNames = ArtistNameSplitter.splitArtists(current.artist, artistSplitConfig.value)
         val nextPictures = com.lonx.lyrico.domain.poster.ArtistPosterBatchEdit.apply(
             current.pictures, artistNames, setOf(artistName), source

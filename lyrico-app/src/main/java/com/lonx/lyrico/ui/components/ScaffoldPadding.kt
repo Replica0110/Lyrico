@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.union
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
@@ -16,6 +17,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 val LocalScaffoldIncludesStartPadding = compositionLocalOf { true }
+val LocalScaffoldIncludesBottomPadding = compositionLocalOf { true }
+
+/** Safe area remaining after the surrounding rail or bottom navigation has taken its share. */
+@Composable
+fun scaffoldPageWindowInsets(): WindowInsets {
+    val topAndSides = scaffoldTopAppBarWindowInsets()
+    return if (LocalScaffoldIncludesBottomPadding.current) {
+        topAndSides.union(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+    } else topAndSides
+}
 
 @Composable
 fun scaffoldTopAppBarWindowInsets(): WindowInsets {

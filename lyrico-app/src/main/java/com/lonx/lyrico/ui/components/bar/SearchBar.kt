@@ -1,9 +1,11 @@
 package com.lonx.lyrico.ui.components.bar
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -31,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -39,9 +42,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.Search
-import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -58,9 +58,13 @@ fun InputField(
     val interactionSource = remember { MutableInteractionSource() }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
+            com.lonx.lyrico.data.model.UiEngine.SALT
 
-    val textColor = MiuixTheme.colorScheme.onSurface
-    val textStyle = MiuixTheme.textStyles.paragraph.copy(color = textColor)
+    val textColor = if (salt) com.moriafly.salt.ui.SaltTheme.colors.text
+    else MiuixTheme.colorScheme.onSurface
+    val textStyle = if (salt) com.moriafly.salt.ui.SaltTheme.textStyles.main.copy(color = textColor)
+    else MiuixTheme.textStyles.paragraph.copy(color = textColor)
 
     // 仅处理自动聚焦，不操作光标
     LaunchedEffect(autoFocus) {
@@ -72,9 +76,16 @@ fun InputField(
     }
 
     val defaultLeadingIcon: @Composable () -> Unit = {
-        Icon(
+        if (salt) {
+            com.moriafly.salt.ui.Icon(
+                modifier = Modifier.padding(start = 16.dp, end = 8.dp),
+                painter = rememberVectorPainter(LucideIcons.Search),
+                tint = com.moriafly.salt.ui.SaltTheme.colors.subText,
+                contentDescription = null
+            )
+        } else Icon(
             modifier = Modifier.padding(start = 16.dp, end = 8.dp),
-            imageVector = MiuixIcons.Basic.Search,
+            imageVector = LucideIcons.Search,
             tint = MiuixTheme.colorScheme.onSurfaceContainerHigh,
             contentDescription = null
         )
@@ -90,17 +101,25 @@ fun InputField(
                 modifier = Modifier.padding(start = 8.dp, end = 16.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Icon(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .clickable(
-                            indication = null,
-                            interactionSource = interactionSource
-                        ) {
-                            // clearText() 内部会正确处理光标
-                            state.clearText()
-                        },
-                    imageVector = MiuixIcons.Basic.SearchCleanup,
+                val clearModifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable(
+                        indication = null,
+                        interactionSource = interactionSource
+                    ) {
+                        // clearText() 内部会正确处理光标
+                        state.clearText()
+                    }
+                if (salt) {
+                    com.moriafly.salt.ui.Icon(
+                        modifier = clearModifier,
+                        painter = rememberVectorPainter(LucideIcons.Close),
+                        tint = com.moriafly.salt.ui.SaltTheme.colors.subText,
+                        contentDescription = "Clear"
+                    )
+                } else Icon(
+                    modifier = clearModifier,
+                    imageVector = LucideIcons.Close,
                     tint = MiuixTheme.colorScheme.onSurfaceContainerHighest,
                     contentDescription = "Clear"
                 )
@@ -112,7 +131,10 @@ fun InputField(
         state = state,
         enabled = enabled,
         textStyle = textStyle,
-        cursorBrush = SolidColor(MiuixTheme.colorScheme.primary),
+        cursorBrush = SolidColor(
+            if (salt) com.moriafly.salt.ui.SaltTheme.colors.highlight
+            else MiuixTheme.colorScheme.primary
+        ),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         onKeyboardAction = {
             onSearch?.invoke(state.text.toString())
@@ -121,11 +143,21 @@ fun InputField(
         interactionSource = interactionSource,
         modifier = modifier.focusRequester(focusRequester),
         decorator = { innerTextField ->
+            val pillShape = RoundedCornerShape(50)
             Box(
-                modifier = Modifier.background(
-                    color = MiuixTheme.colorScheme.surfaceContainerHigh,
-                    shape = RoundedCornerShape(50),
-                ),
+                modifier = Modifier
+                    .background(
+                        color = if (salt) com.moriafly.salt.ui.SaltTheme.colors.subBackground
+                        else MiuixTheme.colorScheme.surfaceContainerHigh,
+                        shape = pillShape,
+                    )
+                    .then(
+                        if (salt) Modifier.border(
+                            1.dp,
+                            com.moriafly.salt.ui.SaltTheme.colors.stroke,
+                            pillShape
+                        ) else Modifier
+                    ),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Row(
@@ -141,7 +173,14 @@ fun InputField(
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         if (state.text.isEmpty() && placeholder.isNotEmpty()) {
-                            Text(
+                            if (salt) {
+                                com.moriafly.salt.ui.Text(
+                                    text = placeholder,
+                                    style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
+                                    color = com.moriafly.salt.ui.SaltTheme.colors.subText,
+                                    maxLines = 1
+                                )
+                            } else Text(
                                 text = placeholder,
                                 style = MiuixTheme.textStyles.main.copy(
                                     fontWeight = FontWeight.Bold,

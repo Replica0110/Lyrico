@@ -5,6 +5,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.UiEngine
+import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.Dark
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.Light
@@ -37,7 +39,11 @@ object LyricoColors {
      */
     val coverPlaceholder: Color
         @Composable
-        get() = MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+        get() = if (LocalUiEngine.current == UiEngine.SALT) {
+            SaltTheme.colors.subBackground
+        } else {
+            MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+        }
 
 
     /**
@@ -91,7 +97,11 @@ object LyricoColors {
      */
     val coverPlaceholderIcon: Color
         @Composable
-        get() = MiuixTheme.colorScheme.onSurfaceVariantActions.copy(alpha = 0.5f)
+        get() = if (LocalUiEngine.current == UiEngine.SALT) {
+            SaltTheme.colors.subText.copy(alpha = 0.5f)
+        } else {
+            MiuixTheme.colorScheme.onSurfaceVariantActions.copy(alpha = 0.5f)
+        }
 }
 
 data class KeyColor(

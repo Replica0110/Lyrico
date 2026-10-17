@@ -137,6 +137,10 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
             LaunchedEffect(configuration) {
                 com.lonx.lyrico.plugin.i18n.PluginLocales.update(configuration)
             }
+            val uiEngine by settingsRepository.uiEngine.collectAsStateWithLifecycle(
+                initialValue = null
+            )
+            val resolvedUiEngine = uiEngine ?: return@setContent
             val themeMode by settingsRepository.themeMode.collectAsStateWithLifecycle(
                 initialValue = ThemeMode.AUTO
             )
@@ -176,6 +180,7 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
             val context = this
 
             LyricoTheme(
+                uiEngine = resolvedUiEngine,
                 colorMode = themeMode,
                 monetEnabled = monetEnable,
                 keyColor = keyColor.color

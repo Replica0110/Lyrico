@@ -21,8 +21,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.BatchTaskType
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.base.SheetStatisticsRow
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.BatchExportUiState
+import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -34,17 +39,26 @@ fun BatchExportBottomSheet(
     onDismissFinished: () -> Unit,
     onAbort: () -> Unit
 ) {
+    val salt = LocalUiEngine.current == UiEngine.SALT
     val title = when (batchExportUiState.taskType) {
         BatchTaskType.EXPORT_COVER -> stringResource(R.string.action_batch_export_cover)
         else -> stringResource(R.string.action_batch_export_lyrics)
     }
 
     ActionBottomSheet(
+        saltFooter = {
+            com.lonx.lyrico.ui.components.base.SheetProgressAction(
+                running = batchExportUiState.isRunning, onAbort = onAbort, onClose = onDismissRequest,
+            )
+        },
         show = batchExportUiState.showProgressDialog,
         onDismissRequest = onDismissRequest,
         onDismissFinished = onDismissFinished,
         allowDismiss = !batchExportUiState.isRunning,
         title = title,
+        groupContent = true,
+        // 内容自带 verticalScroll，外壳不再提供滚动出口。
+        saltScrollContent = false,
         content = {
             Column(
                 modifier = Modifier
@@ -64,7 +78,21 @@ fun BatchExportBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
+                            if (salt) com.moriafly.salt.ui.Text(
+                                text = if (batchExportUiState.isRunning) {
+                                    stringResource(R.string.batch_export_running)
+                                } else {
+                                    stringResource(
+                                        R.string.batch_replay_gain_total_time,
+                                        batchExportUiState.totalTimeMillis / 1000.0
+                                    )
+                                },
+                                style = SaltTheme.textStyles.sub,
+                                color = SaltTheme.colors.subText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            ) else Text(
                                 text = if (batchExportUiState.isRunning) {
                                     stringResource(R.string.batch_export_running)
                                 } else {
@@ -81,52 +109,91 @@ fun BatchExportBottomSheet(
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            Text(
+                            if (salt) com.moriafly.salt.ui.Text(
+                                text = "$current / $total",
+                                style = SaltTheme.textStyles.main,
+                                color = SaltTheme.colors.text,
+                                textAlign = TextAlign.End
+                            ) else Text(
                                 text = "$current / $total",
                                 style = MiuixTheme.textStyles.main,
                                 textAlign = TextAlign.End
                             )
                         }
 
-                        LinearProgressIndicator(
+                        AppLinearProgressIndicator(
                             progress = progress,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                SheetStatisticsRow(
+                    modifier = Modifier.fillMaxWidth()
+                        .then(if (salt) Modifier else Modifier.padding(bottom = 12.dp))
                 ) {
-                    Text(
-                        text = stringResource(
-                            R.string.batch_replay_gain_success,
-                            batchExportUiState.successCount
-                        ),
-                        style = MiuixTheme.textStyles.main
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.batch_replay_gain_skipped,
-                            batchExportUiState.skippedCount
-                        ),
-                        style = MiuixTheme.textStyles.main
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.batch_replay_gain_failure,
-                            batchExportUiState.failureCount
-                        ),
-                        style = MiuixTheme.textStyles.main
-                    )
+                    if (salt) {
+                        com.moriafly.salt.ui.Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_success,
+                                batchExportUiState.successCount
+                            ),
+                            style = SaltTheme.textStyles.main,
+                            color = SaltTheme.colors.text
+                        )
+                        com.moriafly.salt.ui.Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_skipped,
+                                batchExportUiState.skippedCount
+                            ),
+                            style = SaltTheme.textStyles.main,
+                            color = SaltTheme.colors.text
+                        )
+                        com.moriafly.salt.ui.Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_failure,
+                                batchExportUiState.failureCount
+                            ),
+                            style = SaltTheme.textStyles.main,
+                            color = SaltTheme.colors.text
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_success,
+                                batchExportUiState.successCount
+                            ),
+                            style = MiuixTheme.textStyles.main
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_skipped,
+                                batchExportUiState.skippedCount
+                            ),
+                            style = MiuixTheme.textStyles.main
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_failure,
+                                batchExportUiState.failureCount
+                            ),
+                            style = MiuixTheme.textStyles.main
+                        )
+                    }
                 }
             }
-            Spacer(modifier = Modifier.padding(vertical = 12.dp))
+            if (!salt) Spacer(modifier = Modifier.padding(vertical = 12.dp))
         },
         endAction = {
+            val actionLabel = if (batchExportUiState.isRunning) stringResource(R.string.action_abort)
+            else stringResource(R.string.action_close)
+            val onAction = {
+                if (batchExportUiState.isRunning) {
+                    onAbort()
+                } else {
+                    onDismissRequest()
+                }
+            }
             TextButton(
                 colors = ButtonColors(
                     containerColor = Color.Transparent,
@@ -134,20 +201,10 @@ fun BatchExportBottomSheet(
                     disabledContainerColor = Color.Transparent,
                     disabledContentColor = MiuixTheme.colorScheme.disabledPrimary
                 ),
-                onClick = {
-                    if (batchExportUiState.isRunning) {
-                        onAbort()
-                    } else {
-                        onDismissRequest()
-                    }
-                }
+                onClick = onAction
             ) {
                 Text(
-                    text = if (batchExportUiState.isRunning) {
-                        stringResource(R.string.action_abort)
-                    } else {
-                        stringResource(R.string.action_close)
-                    },
+                    text = actionLabel,
                     color = if (batchExportUiState.isRunning) {
                         MiuixTheme.colorScheme.error
                     } else {

@@ -1,3 +1,5 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.ui.components.crop
 
 import android.graphics.Bitmap
@@ -6,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.scale
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.salt.SaltDropdownRow
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.moriafly.salt.ui.RoundedColumn
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownItem
@@ -181,6 +188,7 @@ fun ImageCropper(
     val aspectRatioRef = rememberUpdatedState(state.aspectRatio)
     var activeHandle by remember { mutableStateOf(DragHandle.NONE) }
 
+    val salt = LocalUiEngine.current == UiEngine.SALT
     val freeRatio = stringResource(id = R.string.option_free_ratio)
     Column(modifier = modifier.fillMaxWidth()) {
         if (showRatioBar) {
@@ -193,30 +201,45 @@ fun ImageCropper(
                 )
             }
 
-            val spinnerItems = remember {
-                ratioOptions.map { (_, label) ->
-                    DropdownItem(title = label)
-                }
-            }
-
             val selectedIndex = remember(state.aspectRatio) {
                 ratioOptions.indexOfFirst { it.first == state.aspectRatio }.coerceAtLeast(0)
             }
+            val onRatioSelected: (Int) -> Unit = { index ->
+                state.aspectRatio = ratioOptions[index].first
+            }
 
-            Card(
-                modifier = Modifier.padding(bottom = 8.dp),
-                colors = CardDefaults.defaultColors(
-                    color = MiuixTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                WindowSpinnerPreference(
-                    items = spinnerItems,
-                    selectedIndex = selectedIndex,
-                    title = stringResource(R.string.label_image_ratio),
-                    onSelectedIndexChange = { index ->
-                        state.aspectRatio = ratioOptions[index].first
+            if (salt) {
+                // 原生分组 + 原生下拉；画布已由调用方让开外壳边缘，这里不再叠一层水平外边距。
+                RoundedColumn(
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    paddingValues = PaddingValues(0.dp),
+                ) {
+                    SaltDropdownRow(
+                        title = stringResource(R.string.label_image_ratio),
+                        labels = ratioOptions.map { it.second },
+                        selectedIndex = selectedIndex,
+                        onSelectedIndexChange = onRatioSelected,
+                    )
+                }
+            } else {
+                val spinnerItems = remember {
+                    ratioOptions.map { (_, label) ->
+                        DropdownItem(title = label)
                     }
-                )
+                }
+                Card(
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    WindowSpinnerPreference(
+                        items = spinnerItems,
+                        selectedIndex = selectedIndex,
+                        title = stringResource(R.string.label_image_ratio),
+                        onSelectedIndexChange = onRatioSelected
+                    )
+                }
             }
         }
 

@@ -24,6 +24,7 @@ class AudioTagMutationResolver(
             ),
             pictures = pictureResolver.resolve(
                 currentPictures = current.pictures,
+                supportsTypedPictures = current.supportsTypedPictures,
                 update = mutation.pictureUpdate
             )
         )

@@ -1,5 +1,13 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.screens.settings.*
+import kotlin.math.roundToInt
 import android.annotation.SuppressLint
 import android.text.format.Formatter
 import android.widget.Toast
@@ -8,35 +16,23 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -45,8 +41,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.FilledIcons
-import com.lonx.lyrico.ui.components.icons.PreferenceIcon
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.data.model.AppLanguage
 import com.lonx.lyrico.data.model.ArtistSeparator
@@ -57,13 +52,8 @@ import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.ui.components.RoundedRectanglePainter
 import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
-import com.lonx.lyrico.ui.components.blur.BlurredTopBar
-import com.lonx.lyrico.ui.components.blur.blurSource
-import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.ui.components.getSystemWallpaperColor
-import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.SettingsEvent
@@ -81,38 +71,15 @@ import com.ramcosta.composedestinations.generated.destinations.LyricsCleanupRule
 import com.ramcosta.composedestinations.generated.destinations.PluginManagerDestination
 import com.ramcosta.composedestinations.generated.destinations.QuickjsTestDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
-import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.DropdownItem
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.Slider
-import top.yukonga.miuix.kmp.basic.SliderDefaults
-import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
-import top.yukonga.miuix.kmp.preference.SliderPreference
-import top.yukonga.miuix.kmp.preference.SwitchPreference
-import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
-import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
-import top.yukonga.miuix.kmp.window.WindowDialog
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
@@ -127,6 +94,7 @@ fun SettingsScreen(
     val settingsRepository: SettingsRepository = koinInject()
     val artistPosterFolder by settingsRepository.artistPosterFolder.collectAsStateWithLifecycle(initialValue = null)
 
+    val uiEngine = LocalUiEngine.current
     val lyricFormat = settingsUiState.lyricFormat
     val artistSeparator = settingsUiState.separator
     val romaEnabled = settingsUiState.romaEnabled
@@ -152,9 +120,7 @@ fun SettingsScreen(
 
     val minSearchSize = 1
     val maxSearchSize = 20
-    val tempSearchPageSize = remember(searchPageSize) {
-        mutableIntStateOf(searchPageSize)
-    }
+    val tempSearchPageSize = remember(searchPageSize) { mutableIntStateOf(searchPageSize) }
     val showClearCacheDialog = remember { mutableStateOf(false) }
     val showRgTargetDialog = remember { mutableStateOf(false) }
     val monetVisibilityState = remember(settingsUiState.isInitialized) {
@@ -262,114 +228,32 @@ fun SettingsScreen(
             }
         }
     }
-    val topAppBarScrollBehavior = MiuixScrollBehavior()
-    val topBarBackdrop = rememberBarBlurBackdrop(enabled = barBlurEnabled)
-    Scaffold(
-        topBar = {
-            BlurredTopBar(backdrop = topBarBackdrop) {
-                SmallTopAppBar(
-                    title = stringResource(R.string.settings_title),
-                    color = Color.Transparent,
-                    defaultWindowInsetsPadding = false,
-                    navigationIcon = {
-                        IconButton(
-                            onClick = { navigator.popBackStack() }
-                        ) {
-                            Icon(
-                                FilledIcons.ArrowLeft,
-                                contentDescription = stringResource(R.string.action_back)
-                            )
-                        }
-                    },
-                    scrollBehavior = topAppBarScrollBehavior,
-                )
-            }
-        }
-    ) { paddingValues ->
-        if (!settingsUiState.isInitialized) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(size = 32.dp)
-            }
-            return@Scaffold
-        }
-
-        WindowDialog(
-            title = stringResource(R.string.clear_cache),
-            show = showClearCacheDialog.value,
-            onDismissRequest = { showClearCacheDialog.value = false }
-        ) {
-            Column {
-                Text(
-                    text = cacheContent,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 220.dp)
-                        .verticalScroll(rememberScrollState()),
-                    color = MiuixTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    TextButton(
-                        text = stringResource(R.string.cancel),
-                        onClick = {
-                            showClearCacheDialog.value = false
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(20.dp))
-                    TextButton(
-                        text = stringResource(R.string.confirm),
-                        onClick = {
-                            settingsViewModel.clearCache(context)
-                            showClearCacheDialog.value = false
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
-            }
-        }
-        ReplayGainTargetLoudnessSheet(
-            show = showRgTargetDialog.value,
-            currentLoudness = settingsUiState.replayGainTargetLoudness,
-            onDismiss = { showRgTargetDialog.value = false },
-            onSave = { settingsViewModel.setReplayGainTargetLoudness(it) }
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .blurSource(topBarBackdrop),
-        ) {
-        LazyColumn(
-            modifier = Modifier
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                .fillMaxHeight(),
-            contentPadding = scaffoldContentPadding(
-                paddingValues = paddingValues,
-                bottomExtra = 12.dp
-            ),
-            overscrollEffect = null,
-        ) {
+    SettingsPage(
+        engine = uiEngine,
+        initialized = settingsUiState.isInitialized,
+        onBack = { navigator.popBackStack() },
+    ) {
             item(key = "appearance"){
-                SmallTitle(text = stringResource(R.string.section_appearance))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                SectionTitle(text = stringResource(R.string.section_appearance))
+                Group {
+                    Choice(
+                        icon = LucideIcons.SwatchBook, tone = PreferenceIconTone.Appearance,
+                        title = stringResource(R.string.ui_engine),
+                        items = listOf(stringResource(R.string.ui_engine_miuix), stringResource(R.string.ui_engine_salt)),
+                        selectedIndex = uiEngine.ordinal,
+                        onSelectedIndexChange = { index ->
+                            scope.launch { settingsRepository.saveUiEngine(UiEngine.entries[index]) }
+                        },
+                    )
+
                     val configuration = LocalConfiguration.current
                     var selectedLanguageTag by remember(configuration) {
                         mutableStateOf(
                             AppCompatDelegate.getApplicationLocales()[0]?.toLanguageTag().orEmpty()
                         )
                     }
-                    WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Languages, PreferenceIconTone.Appearance) },
+                    Choice(
+                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Tools,
                         title = stringResource(R.string.app_language),
                         items = AppLanguage.entries.map { stringResource(it.labelRes) },
                         selectedIndex = AppLanguage.entries.indexOfFirst {
@@ -382,8 +266,8 @@ fun SettingsScreen(
                             )
                         }
                     )
-                    WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Moon, PreferenceIconTone.Appearance) },
+                    Choice(
+                        icon = LucideIcons.Moon, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.theme_mode),
                         items = themeModeItems,
                         selectedIndex = selectedThemeModeIndex,
@@ -391,35 +275,37 @@ fun SettingsScreen(
                             settingsViewModel.setThemeMode(ThemeMode.entries[index])
                         }
                     )
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Blend, PreferenceIconTone.Appearance) },
-                        title = stringResource(R.string.bar_blur),
-                        summary = stringResource(R.string.bar_blur_summary),
-                        checked = barBlurEnabled,
-                        onCheckedChange = settingsViewModel::setBarBlurEnabled,
-                    )
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.PanelBottom, PreferenceIconTone.Appearance) },
-                        title = stringResource(R.string.floating_bottom_bar),
-                        summary = stringResource(R.string.floating_bottom_bar_summary),
-                        checked = floatingBottomBarEnabled,
-                        onCheckedChange = { settingsViewModel.setFloatingBottomBarEnabled(it) }
-                    )
-                    AnimatedVisibility(visible = floatingBottomBarEnabled) {
-                        WindowDropdownPreference(
-                            startAction = { PreferenceIcon(FilledIcons.Layers, PreferenceIconTone.Appearance) },
-                            title = stringResource(R.string.floating_bar_effect),
-                            items = floatingBarEffectItems,
-                            selectedIndex = floatingBarEffect.ordinal,
-                            onSelectedIndexChange = { index ->
-                                settingsViewModel.setFloatingBarEffect(
-                                    FloatingBarEffect.entries[index]
-                                )
-                            },
+                    if (uiEngine == UiEngine.MIUIX) {
+                        Toggle(
+                            icon = LucideIcons.Blend, tone = PreferenceIconTone.Lyrics,
+                            title = stringResource(R.string.bar_blur),
+                            summary = stringResource(R.string.bar_blur_summary),
+                            checked = barBlurEnabled,
+                            onCheckedChange = settingsViewModel::setBarBlurEnabled,
                         )
+                        Toggle(
+                            icon = LucideIcons.PanelBottom, tone = PreferenceIconTone.Pink,
+                            title = stringResource(R.string.floating_bottom_bar),
+                            summary = stringResource(R.string.floating_bottom_bar_summary),
+                            checked = floatingBottomBarEnabled,
+                            onCheckedChange = { settingsViewModel.setFloatingBottomBarEnabled(it) }
+                        )
+                        AnimatedVisibility(visible = floatingBottomBarEnabled) {
+                            Choice(
+                                icon = LucideIcons.Layers, tone = PreferenceIconTone.Teal,
+                                title = stringResource(R.string.floating_bar_effect),
+                                items = floatingBarEffectItems,
+                                selectedIndex = floatingBarEffect.ordinal,
+                                onSelectedIndexChange = { index ->
+                                    settingsViewModel.setFloatingBarEffect(
+                                        FloatingBarEffect.entries[index]
+                                    )
+                                },
+                            )
+                        }
                     }
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Palette, PreferenceIconTone.Appearance) },
+                    Toggle(
+                        icon = LucideIcons.Palette, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.monet),
                         checked = monetEnable,
                         onCheckedChange = {
@@ -431,26 +317,16 @@ fun SettingsScreen(
                             if (it == -1) 0 else it
                         }
                         val options = KeyColors.map { keyColor ->
-                            DropdownItem(
+                            PaletteOption(
                                 title = stringResource(keyColor.nameResId),
-                                icon = {
-                                    val tintColor =
-                                        keyColor.color ?: getSystemWallpaperColor(context)
-
-                                    Icon(
-                                        painter = RoundedRectanglePainter(),
-                                        contentDescription = stringResource(keyColor.nameResId),
-                                        modifier = Modifier.padding(end = 12.dp),
-                                        tint = tintColor
-                                    )
-                                }
+                                color = keyColor.color ?: getSystemWallpaperColor(context),
                             )
                         }
 
-                        WindowSpinnerPreference(
+                        Spinner(
                             items = options,
                             selectedIndex = currentSelectedIndex,
-                            startAction = { PreferenceIcon(FilledIcons.Palette, PreferenceIconTone.Appearance) },
+                            icon = LucideIcons.Palette, tone = PreferenceIconTone.Appearance,
                             title = stringResource(R.string.key_color),
                             onSelectedIndexChange = {
                                 val selectedKeyColor = KeyColors[it]
@@ -462,8 +338,8 @@ fun SettingsScreen(
             }
 
             item(key = "scan"){
-                SmallTitle(text = stringResource(R.string.section_scan))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                SectionTitle(text = stringResource(R.string.section_scan))
+                Group {
                     val folderSummary = if (totalFolders > 0) {
                         buildString {
                             append(stringResource(R.string.folder_found, totalFolders))
@@ -474,14 +350,14 @@ fun SettingsScreen(
                     } else {
                         stringResource(R.string.folder_manage_hint)
                     }
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Folder, PreferenceIconTone.Library) },
+                    Action(
+                        icon = LucideIcons.Folder, tone = PreferenceIconTone.Tools,
                         title = stringResource(R.string.folder_manager),
                         summary = folderSummary,
                         onClick = { navigator.navigate(FolderManagerDestination()) }
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Image, PreferenceIconTone.Library) },
+                    Action(
+                        icon = LucideIcons.Image, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.artist_poster_folders),
                         summary = stringResource(
                             if (artistPosterFolder == null) {
@@ -492,21 +368,21 @@ fun SettingsScreen(
                         ),
                         onClick = { navigator.navigate(ArtistPosterFoldersDestination()) }
                     )
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.AudioLines, PreferenceIconTone.Library) },
+                    Toggle(
+                        icon = LucideIcons.AudioLines, tone = PreferenceIconTone.Lyrics,
                         title = stringResource(R.string.ignore_short_audio),
                         checked = ignoreShortAudio,
                         onCheckedChange = { settingsViewModel.setIgnoreShortAudio(it) }
                     )
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Database, PreferenceIconTone.Lyrics) },
+                    Toggle(
+                        icon = LucideIcons.Database, tone = PreferenceIconTone.Pink,
                         title = stringResource(R.string.lyric_index_title),
                         summary = stringResource(R.string.lyric_index_summary),
                         checked = settingsUiState.lyricIndexEnabled,
                         onCheckedChange = { settingsViewModel.setLyricIndexEnabled(it) }
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Volume2, PreferenceIconTone.Library) },
+                    Action(
+                        icon = LucideIcons.Volume2, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.settings_replay_gain_target_loudness),
                         summary = stringResource(R.string.settings_replay_gain_target_loudness_summary),
                         endActions = {
@@ -519,8 +395,8 @@ fun SettingsScreen(
                         onClick = { showRgTargetDialog.value = true },
                         holdDownState = showRgTargetDialog.value
                     )
-                    WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Activity, PreferenceIconTone.Library) },
+                    Choice(
+                        icon = LucideIcons.Activity, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.settings_replay_gain_peak_mode),
                         items = replayGainPeakModeItems,
                         selectedIndex = selectedReplayGainPeakModeIndex,
@@ -534,15 +410,15 @@ fun SettingsScreen(
             }
 
             item(key = "search"){
-                SmallTitle(text = stringResource(R.string.section_search))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Plug, PreferenceIconTone.Tools) },
+                SectionTitle(text = stringResource(R.string.section_search))
+                Group {
+                    Action(
+                        icon = LucideIcons.Plug, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.plugin_manager_title),
                         onClick = { navigator.navigate(PluginManagerDestination()) }
                     )
-                    WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.PanelsTopLeft, PreferenceIconTone.Tools) },
+                    Choice(
+                        icon = LucideIcons.PanelsTopLeft, tone = PreferenceIconTone.Tools,
                         title = stringResource(R.string.search_source_tab_style),
                         items = searchSourceTabStyleItems,
                         selectedIndex = selectedSearchSourceTabStyleIndex,
@@ -552,25 +428,21 @@ fun SettingsScreen(
                             )
                         }
                     )
-                    SliderPreference(
-                        startAction = { PreferenceIcon(FilledIcons.ListFilter, PreferenceIconTone.Tools) },
+                    Range(
+                        icon = LucideIcons.ListFilter, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.search_limit),
-                        showKeyPoints = true,
                         valueText = tempSearchPageSize.intValue.toString(),
                         summary = stringResource(R.string.search_limit_tip),
                         valueRange = minSearchSize.toFloat()..maxSearchSize.toFloat(),
                         steps = maxSearchSize - minSearchSize - 1,
                         value = tempSearchPageSize.intValue.toFloat(),
-                        hapticEffect = SliderDefaults.SliderHapticEffect.Step,
-                        onValueChange = {
-                            tempSearchPageSize.intValue = it.roundToInt()
-                        },
+                        onValueChange = { tempSearchPageSize.intValue = it.roundToInt() },
                         onValueChangeFinished = {
                             settingsViewModel.setSearchPageSize(tempSearchPageSize.intValue)
                         }
                     )
-                    WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Split, PreferenceIconTone.Tools) },
+                    Choice(
+                        icon = LucideIcons.Split, tone = PreferenceIconTone.Lyrics,
                         title = stringResource(R.string.artist_separator),
                         summary = stringResource(R.string.artist_separator_hint),
                         items = artistSeparatorItems,
@@ -579,8 +451,8 @@ fun SettingsScreen(
                             settingsViewModel.setSeparator(artistSeparators[index])
                         }
                     )
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.TextSearch, PreferenceIconTone.Tools) },
+                    Toggle(
+                        icon = LucideIcons.TextSearch, tone = PreferenceIconTone.Pink,
                         title = stringResource(R.string.show_all_search_result_fields),
                         summary = stringResource(R.string.show_all_search_result_fields_summary),
                         checked = showAllSearchResultFields,
@@ -590,10 +462,10 @@ fun SettingsScreen(
             }
 
             item(key = "lyrics"){
-                SmallTitle(text = stringResource(R.string.section_lyrics))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.FileMusic, PreferenceIconTone.Lyrics) },
+                SectionTitle(text = stringResource(R.string.section_lyrics))
+                Group {
+                    Choice(
+                        icon = LucideIcons.FileMusic, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.lyric_mode),
                         items = lyricFormatItems,
                         selectedIndex = selectedLyricFormatIndex,
@@ -601,23 +473,23 @@ fun SettingsScreen(
                             settingsViewModel.setLyricFormat(LyricFormat.entries[index])
                         }
                     )
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Type, PreferenceIconTone.Lyrics) },
+                    Toggle(
+                        icon = LucideIcons.Type, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.roma),
                         summary = stringResource(R.string.roma_hint),
                         checked = romaEnabled,
                         onCheckedChange = { settingsViewModel.setRomaEnabled(it) }
                     )
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Languages, PreferenceIconTone.Lyrics) },
+                    Toggle(
+                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.translation),
                         summary = stringResource(R.string.translation_hint),
                         checked = translationEnabled,
                         onCheckedChange = { settingsViewModel.setTranslationEnabled(it) }
                     )
                     AnimatedVisibility(visible = translationEnabled) {
-                        SwitchPreference(
-                            startAction = { PreferenceIcon(FilledIcons.Captions, PreferenceIconTone.Lyrics) },
+                        Toggle(
+                            icon = LucideIcons.Captions, tone = PreferenceIconTone.Tools,
                             title = stringResource(R.string.only_translation_if_available),
                             summary = stringResource(R.string.only_translation_if_available_hint),
                             enabled = translationEnabled,
@@ -629,10 +501,10 @@ fun SettingsScreen(
             }
 
             item(key = "text_processing"){
-                SmallTitle(text = stringResource(R.string.section_text_processing))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    WindowDropdownPreference(
-                        startAction = { PreferenceIcon(FilledIcons.ALargeSmall, PreferenceIconTone.Lyrics) },
+                SectionTitle(text = stringResource(R.string.section_text_processing))
+                Group {
+                    Choice(
+                        icon = LucideIcons.ALargeSmall, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.conversion_mode),
                         summary = stringResource(R.string.conversion_mode_hint),
                         items = conversionModeItems,
@@ -641,27 +513,27 @@ fun SettingsScreen(
                             settingsViewModel.setConversionMode(ConversionMode.entries[it])
                         },
                     )
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.RemoveLines, PreferenceIconTone.Lyrics) },
+                    Toggle(
+                        icon = LucideIcons.RemoveLines, tone = PreferenceIconTone.Lyrics,
                         title = stringResource(R.string.remove_empty_lines),
                         summary = stringResource(R.string.remove_empty_lines_hint),
                         checked = removeEmptyLines,
                         onCheckedChange = { settingsViewModel.setRemoveEmptyLines(it) }
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.FilterLyrics, PreferenceIconTone.Lyrics) },
+                    Action(
+                        icon = LucideIcons.FilterLyrics, tone = PreferenceIconTone.Pink,
                         title = stringResource(R.string.non_lyrics_cleanup_rules_title),
                         summary = stringResource(R.string.non_lyrics_cleanup_rules_summary),
                         onClick = { navigator.navigate(LyricsCleanupRulesDestination()) }
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Users, PreferenceIconTone.Library) },
+                    Action(
+                        icon = LucideIcons.Users, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.artist_split_settings_title),
                         summary = stringResource(R.string.artist_split_settings_summary),
                         onClick = { navigator.navigate(ArtistSplitSettingsDestination()) }
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.SlidersHorizontal, PreferenceIconTone.Tools) },
+                    Action(
+                        icon = LucideIcons.SlidersHorizontal, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.edit_field_settings_title),
                         summary = stringResource(R.string.edit_field_settings_summary),
                         onClick = { navigator.navigate(EditFieldSettingsDestination()) }
@@ -670,10 +542,10 @@ fun SettingsScreen(
             }
 
             item(key = "backup"){
-                SmallTitle(text = stringResource(R.string.section_backup))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.FileUp, PreferenceIconTone.Tools) },
+                SectionTitle(text = stringResource(R.string.section_backup))
+                Group {
+                    Action(
+                        icon = LucideIcons.FileUp, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.export_config),
                         summary = stringResource(R.string.export_config_hint),
                         onClick = {
@@ -681,8 +553,8 @@ fun SettingsScreen(
                             exportLauncher.launch("lyrico_settings_backup_${currentTime}.json")
                         }
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.FileDown, PreferenceIconTone.Tools) },
+                    Action(
+                        icon = LucideIcons.FileDown, tone = PreferenceIconTone.Tools,
                         title = stringResource(R.string.import_config),
                         summary = stringResource(R.string.import_config_hint),
                         onClick = {
@@ -693,22 +565,22 @@ fun SettingsScreen(
             }
 
             item(key = "other"){
-                SmallTitle(text = stringResource(R.string.section_other))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.ClipboardList, PreferenceIconTone.Tools) },
+                SectionTitle(text = stringResource(R.string.section_other))
+                Group {
+                    Action(
+                        icon = LucideIcons.ClipboardList, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.batch_task_list_title),
                         onClick = { navigator.navigate(BatchTaskListDestination()) }
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Logs, PreferenceIconTone.Tools) },
+                    Action(
+                        icon = LucideIcons.Logs, tone = PreferenceIconTone.Lyrics,
                         title = stringResource(R.string.app_log_title),
                         summary = stringResource(R.string.app_log_summary),
                         onClick = { navigator.navigate(AppLogsDestination()) }
                     )
                     if (BuildConfig.DEBUG) {
-                        ArrowPreference(
-                            startAction = { PreferenceIcon(FilledIcons.Terminal, PreferenceIconTone.Tools) },
+                        Action(
+                            icon = LucideIcons.Terminal, tone = PreferenceIconTone.Pink,
                             title = stringResource(R.string.quickjs_test_title),
                             summary = stringResource(R.string.quickjs_test_description_summary),
                             onClick = { navigator.navigate(QuickjsTestDestination()) }
@@ -719,16 +591,16 @@ fun SettingsScreen(
                         R.string.cache_size_label,
                         Formatter.formatFileSize(context, settingsUiState.totalCacheSize)
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Eraser, PreferenceIconTone.Tools) },
+                    Action(
+                        icon = LucideIcons.Eraser, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.clear_cache),
                         summary = cacheSummary,
                         onClick = { showClearCacheDialog.value = true },
                         holdDownState = showClearCacheDialog.value
                     )
                     if (BuildConfig.DEBUG) {
-                        ArrowPreference(
-                            startAction = { PreferenceIcon(FilledIcons.Database, PreferenceIconTone.Danger) },
+                        Action(
+                            icon = LucideIcons.Database, tone = PreferenceIconTone.Danger,
                             title = stringResource(R.string.clear_songs),
                             onClick = {
                                 scope.launch {
@@ -748,16 +620,29 @@ fun SettingsScreen(
                             }
                         )
                     }
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Info, PreferenceIconTone.Tools) },
+                    Action(
+                        icon = LucideIcons.Info, tone = PreferenceIconTone.Orange,
                         title = stringResource(R.string.about_title),
                         onClick = { navigator.navigate(AboutDestination()) }
                     )
                 }
             }
-        }
-        }
     }
+    SettingsCacheDialog(
+        show = showClearCacheDialog.value,
+        text = cacheContent,
+        onDismiss = { showClearCacheDialog.value = false },
+        onConfirm = {
+            settingsViewModel.clearCache(context)
+            showClearCacheDialog.value = false
+        },
+    )
+    ReplayGainTargetLoudnessSheet(
+        show = showRgTargetDialog.value,
+        currentLoudness = settingsUiState.replayGainTargetLoudness,
+        onDismiss = { showRgTargetDialog.value = false },
+        onSave = settingsViewModel::setReplayGainTargetLoudness,
+    )
 }
 
 private fun formatLoudnessNumber(value: Double): String {
@@ -793,6 +678,47 @@ private fun ReplayGainTargetLoudnessSheet(
         mutableStateOf(if (currentLoudness in presets) "" else formatLoudnessNumber(currentLoudness))
     }
     var invalid by remember(show) { mutableStateOf(false) }
+
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        com.lonx.lyrico.ui.components.salt.SaltConfirmDialog(
+            show = show, dismissOnConfirm = false,
+            title = stringResource(R.string.settings_replay_gain_target_loudness),
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.confirm),
+            onDismissRequest = onDismiss,
+            onConfirm = {
+                val value = if (customSelected) customText.trim().toDoubleOrNull() else selectedPreset
+                if (value != null && value in -60.0..0.0) {
+                    onSave(value)
+                    onDismiss()
+                } else invalid = true
+            },
+            content = {
+                com.moriafly.salt.ui.RoundedColumn(paddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
+                    presets.forEachIndexed { index, preset ->
+                        com.moriafly.salt.ui.ItemCheck(
+                            text = stringResource(presetLabels[index]),
+                            state = !customSelected && selectedPreset == preset,
+                            onChange = { selectedPreset = preset; customSelected = false; invalid = false },
+                        )
+                    }
+                    com.moriafly.salt.ui.ItemCheck(
+                        text = stringResource(R.string.replay_gain_target_preset_custom),
+                        state = customSelected,
+                        onChange = { customSelected = true; invalid = false },
+                    )
+                    if (customSelected) SaltTextInput(
+                        text = customText, hint = stringResource(R.string.replay_gain_target_custom_hint),
+                        onChange = { customText = it; invalid = false },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                    )
+                    if (invalid) com.moriafly.salt.ui.ItemTip(stringResource(R.string.replay_gain_target_invalid))
+                }
+            },
+        )
+        return
+    }
 
     YesNoBottomSheet(
         show = show,

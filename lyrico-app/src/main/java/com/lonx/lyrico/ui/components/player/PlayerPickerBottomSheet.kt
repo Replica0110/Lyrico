@@ -6,10 +6,13 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -27,12 +30,22 @@ import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.data.player.FriendlyPlayer
 import com.lonx.lyrico.data.player.FriendlyPlayerRegistry
 import com.lonx.lyrico.data.player.FriendlyPlayerUiState
+import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.repository.PlaybackRepository
+import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.platform.player.InstalledAppChecker
+import com.moriafly.salt.ui.Item
+import com.moriafly.salt.ui.ItemArrowType
+import com.moriafly.salt.ui.ItemOuterTitle
+import com.moriafly.salt.ui.RoundedColumn
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.innerPadding
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
@@ -41,9 +54,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Link
-import top.yukonga.miuix.kmp.icon.extended.Music
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import androidx.core.net.toUri
@@ -70,6 +80,67 @@ fun PlayerPickerBottomSheet(
         }
     }
 
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val openSystemPicker = {
+        val playUri = uri
+        if (playUri != null) {
+            onDismissRequest()
+            playbackRepository.openSystemChooser(context, playUri)
+        }
+    }
+    if (salt) {
+        SaltBottomSheet(
+            show = show,
+            onDismissRequest = onDismissRequest,
+            onDismissFinished = {},
+            header = { ItemOuterTitle(text = stringResource(R.string.play_with)) },
+            scrollContent = true,
+        ) {
+            RoundedColumn {
+                playerStates.forEach { item ->
+                    FriendlyPlayerItem(
+                        item = item,
+                        onOpenInfo = { openPlayerInfo(context, item.player) },
+                        onClick = {
+                            val playUri = uri ?: return@FriendlyPlayerItem
+                            if (item.installed) {
+                                onDismissRequest()
+                                val launched = playbackRepository.openWithPackage(
+                                    context = context,
+                                    uri = playUri,
+                                    packageName = item.installedPackageName.orEmpty()
+                                )
+                                if (!launched) {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.player_open_failed),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    playbackRepository.openSystemChooser(context, playUri)
+                                }
+                            } else {
+                                onDismissRequest()
+                                openPlayerInfo(context, item.player)
+                            }
+                        }
+                    )
+                }
+            }
+
+            ItemOuterTitle(text = stringResource(R.string.other_playback_methods))
+            RoundedColumn {
+                Item(
+                    onClick = openSystemPicker,
+                    text = stringResource(R.string.open_with_system_picker),
+                    iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(LucideIcons.OpenInNew),
+                    iconColor = SaltTheme.colors.highlight,
+                    arrowType = ItemArrowType.None,
+                )
+            }
+        }
+        return
+    }
+
     WindowBottomSheet(
         show = show,
         enableNestedScroll = true,
@@ -82,10 +153,6 @@ fun PlayerPickerBottomSheet(
                 .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            SmallTitle(
-                text = stringResource(R.string.recommended_players),
-                insideMargin = PaddingValues(4.dp)
-            )
 
             Card(
                 modifier = Modifier.padding(bottom = 12.dp),
@@ -136,7 +203,7 @@ fun PlayerPickerBottomSheet(
                 )
             ) {
                 ArrowPreference(
-                    startAction = { PreferenceIcon(FilledIcons.OpenInNew, PreferenceIconTone.Tools) },
+                    startAction = { PreferenceIcon(LucideIcons.OpenInNew, PreferenceIconTone.Appearance) },
                     title = stringResource(R.string.open_with_system_picker),
                     onClick = {
                         val playUri = uri ?: return@ArrowPreference
@@ -164,6 +231,64 @@ private fun FriendlyPlayerItem(
         }
     }
 
+    val nameText = if (item.installed) {
+        displayName
+    } else {
+        stringResource(R.string.player_name_not_installed_format, displayName)
+    }
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = SaltTheme.dimens.item)
+                .clickable(onClick = onClick)
+                .innerPadding(vertical = false)
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SaltTheme.colors.subBackground),
+                contentAlignment = Alignment.Center
+            ) {
+                if (icon != null) {
+                    AsyncImage(
+                        model = icon,
+                        contentDescription = displayName,
+                        modifier = Modifier.size(36.dp)
+                    )
+                } else {
+                    com.moriafly.salt.ui.Icon(
+                        painter = androidx.compose.ui.graphics.vector.rememberVectorPainter(LucideIcons.Music),
+                        contentDescription = displayName,
+                        modifier = Modifier.size(20.dp),
+                        tint = SaltTheme.colors.subText
+                    )
+                }
+            }
+            com.moriafly.salt.ui.Text(
+                text = nameText,
+                style = SaltTheme.textStyles.main,
+                color = SaltTheme.colors.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            )
+            SaltIconButton(
+                icon = LucideIcons.Link,
+                label = stringResource(R.string.learn_more),
+                onClick = onOpenInfo,
+                size = 32.dp,
+                iconSize = 16.dp
+            )
+        }
+        return
+    }
+
     BasicComponent(
         modifier = Modifier.fillMaxWidth(),
         insideMargin = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
@@ -183,7 +308,7 @@ private fun FriendlyPlayerItem(
                     )
                 } else {
                     Icon(
-                        imageVector = MiuixIcons.Music,
+                        imageVector = LucideIcons.Music,
                         contentDescription = displayName,
                         modifier = Modifier.size(24.dp),
                         tint = MiuixTheme.colorScheme.onSecondaryContainer
@@ -196,7 +321,7 @@ private fun FriendlyPlayerItem(
                 onClick = onOpenInfo
             ) {
                 Icon(
-                    imageVector = MiuixIcons.Link,
+                    imageVector = LucideIcons.Link,
                     contentDescription = stringResource(R.string.learn_more),
                     tint = MiuixTheme.colorScheme.onSecondaryContainer
                 )
@@ -208,11 +333,7 @@ private fun FriendlyPlayerItem(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = if (item.installed) {
-                    displayName
-                } else {
-                    stringResource(R.string.player_name_not_installed_format, displayName)
-                },
+                text = nameText,
                 style = MiuixTheme.textStyles.main,
                 color = MiuixTheme.colorScheme.onSurfaceContainer,
                 maxLines = 1,

@@ -1,5 +1,7 @@
 package com.lonx.lyrico.ui.components.base
 
+import com.lonx.lyrico.ui.components.salt.SaltMenuBottomSheet
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +23,16 @@ fun ItemMenuBottomSheet(
     enableNestedScroll: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+        SaltMenuBottomSheet(
+            show = show,
+            label = label,
+            onDismissRequest = onDismissRequest,
+            onDismissFinished = onDismissFinished,
+            content = content,
+        )
+        return
+    }
     WindowBottomSheet(show = show, title = label, enableNestedScroll = enableNestedScroll,
         onDismissRequest = onDismissRequest, onDismissFinished = onDismissFinished) {
         Column(Modifier.fillMaxWidth().padding(bottom = 32.dp).verticalScroll(rememberScrollState())) {

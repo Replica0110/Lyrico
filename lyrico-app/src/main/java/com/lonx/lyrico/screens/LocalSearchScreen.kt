@@ -1,5 +1,6 @@
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -30,6 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.LaunchedEffect
@@ -47,7 +49,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.ui.components.library.SelectableLibraryItem
+import com.lonx.lyrico.screens.library.LibrarySelectionState
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
@@ -78,6 +84,7 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AlbumDetailDestination
 import com.ramcosta.composedestinations.generated.destinations.ArtistDetailDestination
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
+import com.moriafly.salt.ui.SaltTheme
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -91,8 +98,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -139,6 +144,7 @@ fun LocalSearchScreen(
     var showDetailSheet by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    val salt = LocalUiEngine.current == UiEngine.SALT
     val currentTab = searchTabs.getOrElse(pagerState.targetPage) { LocalSearchTab.All }
     val visibleSongs = visibleSongsForTab(
         tab = currentTab,
@@ -167,8 +173,67 @@ fun LocalSearchScreen(
         }
     }
 
+    val allVisibleSongsSelected =
+        visibleSongs.isNotEmpty() && selectedSongUris.containsAll(visibleSongs.map { it.uri })
+    val saltSelectionState = if (salt && isSelectionMode) {
+        LibrarySelectionState(
+            title = stringResource(R.string.selection_mode_selected_count, selectedSongUris.size),
+            allSelected = allVisibleSongsSelected,
+            onClose = { selectionViewModel.exitSelectionMode() },
+            onToggleAll = {
+                if (allVisibleSongsSelected) selectionViewModel.deselectAll()
+                else selectionViewModel.selectAll(visibleSongs)
+            },
+        )
+    } else null
+
     Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
+        if (salt) {
+            LocalSearchSaltShell(
+                title = stringResource(R.string.local_search_title),
+                selection = saltSelectionState,
+                onBack = { navigator.popBackStack() },
+                isSelectionMode = isSelectionMode,
+                searchState = searchState,
+                onSearch = { keyword -> viewModel.onQueryChange(keyword) },
+                searchTabs = searchTabs,
+                pagerState = pagerState,
+                onTabSelected = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
+                pages = {
+                    LocalSearchPages(
+                        pagerState = pagerState,
+                        searchTabs = searchTabs,
+                        uiState = uiState,
+                        searchQuery = searchQuery,
+                        isSelectionMode = isSelectionMode,
+                        selectedSongUris = selectedSongUris,
+                        swipeSelectionLabel = swipeSelectionLabel,
+                        swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
+                        topAppBarScrollBehavior = topAppBarScrollBehavior,
+                        contentPaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                        salt = true,
+                        onArtistClick = { artist ->
+                            selectionViewModel.exitSelectionMode()
+                            navigator.navigate(ArtistDetailDestination(artistId = artist.id))
+                        },
+                        onAlbumClick = { album ->
+                            selectionViewModel.exitSelectionMode()
+                            navigator.navigate(AlbumDetailDestination(albumId = album.id))
+                        },
+                        onSongClick = { song ->
+                            selectionViewModel.exitSelectionMode()
+                            navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                        },
+                        onToggleSelection = { song -> selectionViewModel.toggleSelection(song.uri) },
+                        onSwipeSelection = { song, pageSongs -> selectionViewModel.swipeSelect(song, pageSongs) },
+                        onShowSongMenu = { song ->
+                            selectedSong = song
+                            showMenuSheet = true
+                        }
+                    )
+                }
+            )
+        } else Scaffold(
             topBar = {
                 Column(
                     modifier = Modifier
@@ -216,7 +281,7 @@ fun LocalSearchScreen(
                                 navigationIcon = {
                                     IconButton(onClick = { navigator.popBackStack() }) {
                                         Icon(
-                                            imageVector = MiuixIcons.Back,
+                                            imageVector = LucideIcons.ArrowLeft,
                                             contentDescription = stringResource(R.string.action_back)
                                         )
                                     }
@@ -279,45 +344,41 @@ fun LocalSearchScreen(
                 }
             }
         ) { paddingValues ->
-            HorizontalPager(
-                state = pagerState,
-                userScrollEnabled = false,
-                modifier = Modifier.fillMaxSize()
-            ) { page ->
-                LocalSearchResultsPage(
-                    tab = searchTabs.getOrElse(page) { LocalSearchTab.All },
-                    uiState = uiState,
-                    searchQuery = searchQuery,
-                    isSelectionMode = isSelectionMode,
-                    selectedSongUris = selectedSongUris,
-                    swipeSelectionLabel = swipeSelectionLabel,
-                    swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                    topAppBarScrollBehavior = topAppBarScrollBehavior,
-                    contentPaddingValues = paddingValues,
-                    onArtistClick = { artist ->
-                        selectionViewModel.exitSelectionMode()
-                        navigator.navigate(ArtistDetailDestination(artistId = artist.id))
-                    },
-                    onAlbumClick = { album ->
-                        selectionViewModel.exitSelectionMode()
-                        navigator.navigate(AlbumDetailDestination(albumId = album.id))
-                    },
-                    onSongClick = { song ->
-                        selectionViewModel.exitSelectionMode()
-                        navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
-                    },
-                    onToggleSelection = { song ->
-                        selectionViewModel.toggleSelection(song.uri)
-                    },
-                    onSwipeSelection = { song, pageSongs ->
-                        selectionViewModel.swipeSelect(song, pageSongs)
-                    },
-                    onShowSongMenu = { song ->
-                        selectedSong = song
-                        showMenuSheet = true
-                    }
-                )
-            }
+            LocalSearchPages(
+                pagerState = pagerState,
+                searchTabs = searchTabs,
+                uiState = uiState,
+                searchQuery = searchQuery,
+                isSelectionMode = isSelectionMode,
+                selectedSongUris = selectedSongUris,
+                swipeSelectionLabel = swipeSelectionLabel,
+                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
+                topAppBarScrollBehavior = topAppBarScrollBehavior,
+                contentPaddingValues = paddingValues,
+                salt = false,
+                onArtistClick = { artist ->
+                    selectionViewModel.exitSelectionMode()
+                    navigator.navigate(ArtistDetailDestination(artistId = artist.id))
+                },
+                onAlbumClick = { album ->
+                    selectionViewModel.exitSelectionMode()
+                    navigator.navigate(AlbumDetailDestination(albumId = album.id))
+                },
+                onSongClick = { song ->
+                    selectionViewModel.exitSelectionMode()
+                    navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                },
+                onToggleSelection = { song ->
+                    selectionViewModel.toggleSelection(song.uri)
+                },
+                onSwipeSelection = { song, pageSongs ->
+                    selectionViewModel.swipeSelect(song, pageSongs)
+                },
+                onShowSongMenu = { song ->
+                    selectedSong = song
+                    showMenuSheet = true
+                }
+            )
         }
 
         SongBatchSelectionActions(
@@ -339,7 +400,11 @@ fun LocalSearchScreen(
             showDeleteDialog = showDeleteDialog,
             showRenameDialog = showRenameDialog,
             onDismissMenu = { showMenuSheet = false },
-            onDismissMenuFinished = { selectedSong = null },
+            onDismissMenuFinished = {
+                if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) {
+                    selectedSong = null
+                }
+            },
             onDismissDetail = { showDetailSheet = false },
             onDismissDelete = { showDeleteDialog = false },
             onDismissRename = { showRenameDialog = false },
@@ -391,12 +456,13 @@ private fun LocalSearchPillTabRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val salt = LocalUiEngine.current == UiEngine.SALT
         tabs.forEachIndexed { index, tab ->
             PillButton(
                 text = stringResource(tab.labelRes),
                 selected = index == selectedTabIndex,
                 style = PillButtonDefaults.style(PillButtonSize.Medium),
-                colors = PillButtonDefaults.colors(
+                colors = if (salt) PillButtonDefaults.colors() else PillButtonDefaults.colors(
                     containerColor = MiuixTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
                 ),
                 onClick = { onTabSelected(index) }
@@ -416,6 +482,7 @@ private fun LocalSearchResultsPage(
     swipeSelectionSecondaryLabel: String?,
     topAppBarScrollBehavior: ScrollBehavior,
     contentPaddingValues: PaddingValues,
+    salt: Boolean,
     onArtistClick: (ArtistEntity) -> Unit,
     onAlbumClick: (AlbumEntity) -> Unit,
     onSongClick: (SongEntity) -> Unit,
@@ -428,17 +495,17 @@ private fun LocalSearchResultsPage(
     val hasResults = hasResultsForTab(tab, uiState, searchQuery)
 
     LazyColumn(
-        modifier = Modifier
+        modifier = (if (salt) Modifier else Modifier
             .scrollEndHaptic()
             .overScrollVertical()
-            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection))
             .fillMaxHeight(),
         state = listState,
         contentPadding = scaffoldContentPadding(
             paddingValues = contentPaddingValues,
             bottomExtra = 12.dp
         ),
-        overscrollEffect = null
+        overscrollEffect = if (salt) rememberOverscrollEffect() else null
     ) {
         if (searchQuery.isNotBlank() && !hasResults) {
             item {
@@ -762,4 +829,98 @@ private fun LocalSearchSongItem(
 private fun localSearchSongKey(song: SongEntity): String {
     val stableId = song.uri.takeIf { it.isNotBlank() && it != "0" } ?: song.id.toString()
     return "local-search-song-$stableId"
+}
+
+/** Salt 外壳：原生顶栏（含选择态槽位）、固定搜索与标签行，内容由 [pages] 提供。 */
+@Composable
+private fun LocalSearchSaltShell(
+    title: String,
+    selection: LibrarySelectionState?,
+    onBack: () -> Unit,
+    isSelectionMode: Boolean,
+    searchState: androidx.compose.foundation.text.input.TextFieldState,
+    onSearch: (String) -> Unit,
+    searchTabs: List<LocalSearchTab>,
+    pagerState: androidx.compose.foundation.pager.PagerState,
+    onTabSelected: (Int) -> Unit,
+    pages: @Composable () -> Unit,
+) {
+    LibraryDetailPage(
+        title = title,
+        onBack = onBack,
+        selection = selection,
+        miuixTopBar = {},
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (!isSelectionMode) {
+                SearchBar(
+                    state = searchState,
+                    placeholder = stringResource(R.string.local_search_hint),
+                    onSearch = onSearch,
+                    autoFocus = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+                LocalSearchPillTabRow(
+                    tabs = searchTabs,
+                    selectedTabIndex = pagerState.targetPage,
+                    onTabSelected = onTabSelected,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            pages()
+        }
+    }
+}
+
+/** 结果分页：两引擎共用同一套分页与分组逻辑。 */
+@Composable
+private fun LocalSearchPages(
+    pagerState: androidx.compose.foundation.pager.PagerState,
+    searchTabs: List<LocalSearchTab>,
+    uiState: LocalSearchUiState,
+    searchQuery: String,
+    isSelectionMode: Boolean,
+    selectedSongUris: Set<String>,
+    swipeSelectionLabel: String,
+    swipeSelectionSecondaryLabel: String?,
+    topAppBarScrollBehavior: ScrollBehavior,
+    contentPaddingValues: PaddingValues,
+    salt: Boolean,
+    onArtistClick: (ArtistEntity) -> Unit,
+    onAlbumClick: (AlbumEntity) -> Unit,
+    onSongClick: (SongEntity) -> Unit,
+    onToggleSelection: (SongEntity) -> Unit,
+    onSwipeSelection: (SongEntity, List<SongEntity>) -> Unit,
+    onShowSongMenu: (SongEntity) -> Unit,
+) {
+    HorizontalPager(
+        state = pagerState,
+        userScrollEnabled = false,
+        modifier = Modifier.fillMaxSize()
+    ) { page ->
+        LocalSearchResultsPage(
+            tab = searchTabs.getOrElse(page) { LocalSearchTab.All },
+            uiState = uiState,
+            searchQuery = searchQuery,
+            isSelectionMode = isSelectionMode,
+            selectedSongUris = selectedSongUris,
+            swipeSelectionLabel = swipeSelectionLabel,
+            swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
+            topAppBarScrollBehavior = topAppBarScrollBehavior,
+            contentPaddingValues = contentPaddingValues,
+            salt = salt,
+            onArtistClick = onArtistClick,
+            onAlbumClick = onAlbumClick,
+            onSongClick = onSongClick,
+            onToggleSelection = onToggleSelection,
+            onSwipeSelection = onSwipeSelection,
+            onShowSongMenu = onShowSongMenu
+        )
+    }
 }

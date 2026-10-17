@@ -1,3 +1,5 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
 import android.content.Intent
@@ -15,6 +17,10 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberOverscrollEffect
+import com.lonx.lyrico.ui.components.library.libraryDetailScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -57,9 +63,22 @@ import com.lonx.lyrico.ui.components.library.SelectableLibraryItem
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.base.PillButton
+import com.lonx.lyrico.ui.components.base.PillButtonDefaults
+import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
+import com.lonx.lyrico.ui.components.library.LibraryDetailTabs
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.screens.library.LibrarySelectionState
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.popup.PopupMenuItem
+import com.moriafly.salt.ui.popup.rememberPopupState
+import com.moriafly.salt.ui.dialog.YesNoDialog as SaltYesNoDialog
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
@@ -241,9 +260,90 @@ fun FolderManagerScreen(
         }
     }
 
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val folderTitle = if (currentFolderId == ROOT_FOLDER_ID) {
+        stringResource(R.string.folder_manager_title)
+    } else {
+        currentFolder?.path
+            ?.substringAfterLast("/")
+            ?.ifBlank { currentFolder.path }
+            ?: stringResource(R.string.folder_manager_title)
+    }
+    val navigateUpAction: () -> Unit = {
+        if (currentFolder != null) {
+            navigateToFolder(parentFolder?.id ?: ROOT_FOLDER_ID, forward = false)
+        } else {
+            navigator.navigateUp()
+        }
+    }
+    val allCurrentSongsSelected =
+        currentSongs.isNotEmpty() && selectedSongUris.containsAll(currentSongs.map { it.uri })
+    val saltSelectionState = if (salt && isSelectionMode) {
+        LibrarySelectionState(
+            title = stringResource(R.string.selection_mode_selected_count, selectedSongUris.size),
+            allSelected = allCurrentSongsSelected,
+            onClose = { selectionViewModel.exitSelectionMode() },
+            onToggleAll = {
+                if (allCurrentSongsSelected) selectionViewModel.deselectAll()
+                else selectionViewModel.selectAll(currentSongs)
+            },
+        )
+    } else null
+    val sortPopupState = rememberPopupState()
+
     Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
+        LibraryDetailPage(
+            title = folderTitle,
+            onBack = navigateUpAction,
+            selection = saltSelectionState,
+            actions = {
+                // Salt 顶栏槽位：根目录可新增文件夹，歌曲页可切换排序。
+                if (currentFolderId == ROOT_FOLDER_ID) {
+                    SaltIconButton(
+                        icon = LucideIcons.FolderPlus,
+                        label = stringResource(R.string.folder_manager_title),
+                        onClick = { folderPickerLauncher.launch(null) }
+                    )
+                }
+                if (currentFolder != null && pagerState.currentPage == 1 && currentSongs.isNotEmpty()) {
+                    val sortTypes = SortBy.entries.toList()
+                    SaltIconButton(
+                        icon = LucideIcons.Sort,
+                        label = stringResource(R.string.cd_sort),
+                        onClick = { sortPopupState.expend() }
+                    )
+                    com.moriafly.salt.ui.popup.PopupMenu(
+                        expanded = sortPopupState.expend,
+                        onDismissRequest = sortPopupState::dismiss
+                    ) {
+                        sortTypes.forEach { sortType ->
+                            val isSelected = sortInfo.sortBy == sortType
+                            val newOrder = if (isSelected) {
+                                if (sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC
+                            } else {
+                                SortOrder.ASC
+                            }
+                            PopupMenuItem(
+                                text = stringResource(sortType.labelRes),
+                                selected = isSelected,
+                                sub = if (isSelected) {
+                                    stringResource(
+                                        when (sortInfo.order) {
+                                            SortOrder.ASC -> R.string.sort_ascending
+                                            SortOrder.DESC -> R.string.sort_descending
+                                        }
+                                    )
+                                } else null,
+                                onClick = {
+                                    sortPopupState.dismiss()
+                                    viewModel.onSortChange(SortInfo(sortBy = sortType, order = newOrder))
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            miuixTopBar = {
                 AnimatedContent(
                     targetState = isSelectionMode,
                     label = "FolderManagerTopBarAnimation",
@@ -291,19 +391,10 @@ fun FolderManagerScreen(
                             },
                             navigationIcon = {
                                 IconButton(
-                                    onClick = {
-                                        if (currentFolder != null) {
-                                            navigateToFolder(
-                                                parentFolder?.id ?: ROOT_FOLDER_ID,
-                                                forward = false
-                                            )
-                                        } else {
-                                            navigator.navigateUp()
-                                        }
-                                    }
+                                    onClick = navigateUpAction
                                 ) {
                                     Icon(
-                                        imageVector = FilledIcons.ArrowLeft,
+                                        imageVector = LucideIcons.ArrowLeft,
                                         contentDescription = null
                                     )
                                 }
@@ -314,7 +405,7 @@ fun FolderManagerScreen(
                                         onClick = { folderPickerLauncher.launch(null) }
                                     ) {
                                         Icon(
-                                            imageVector = FilledIcons.FolderPlus,
+                                            imageVector = LucideIcons.FolderPlus,
                                             contentDescription = null
                                         )
                                     }
@@ -369,7 +460,7 @@ fun FolderManagerScreen(
                                         entries = listOf(sortEntries)
                                     ) {
                                         Icon(
-                                            imageVector = FilledIcons.ArrowDownUp,
+                                            imageVector = LucideIcons.Sort,
                                             contentDescription = stringResource(R.string.cd_sort)
                                         )
                                     }
@@ -382,7 +473,19 @@ fun FolderManagerScreen(
             }
         ) { paddingValues ->
             selectedFolder?.let { folder ->
-                WindowDialog(
+                if (salt) com.lonx.lyrico.ui.components.base.YesNoDialog(
+                    show = showConfirmDialog.value,
+                    title = stringResource(R.string.dialog_remove_folder_title),
+                    summary = folder.path + "\n\n" + stringResource(R.string.dialog_remove_folder_content_tip),
+                    onDismissRequest = { showConfirmDialog.value = false },
+                    onConfirm = {
+                        viewModel.deleteFolder(folder)
+                        selectedFolderId = ROOT_FOLDER_ID
+                        if (folder.id == currentFolderId) {
+                            navigateToFolder(parentFolder?.id ?: ROOT_FOLDER_ID, forward = false)
+                        }
+                    },
+                ) else WindowDialog(
                     title = stringResource(R.string.dialog_remove_folder_title),
                     show = showConfirmDialog.value,
                     onDismissRequest = { showConfirmDialog.value = false }
@@ -441,7 +544,8 @@ fun FolderManagerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(scaffoldTopHorizontalPadding(paddingValues))
+                    .padding(if (salt) com.lonx.lyrico.ui.components.scaffoldContentPadding(paddingValues)
+                        else scaffoldTopHorizontalPadding(paddingValues))
             ) {
                 FolderPathHeader(
                     breadcrumbs = currentBreadcrumbs,
@@ -453,7 +557,9 @@ fun FolderManagerScreen(
                 )
 
                 uiState.error?.let { error ->
-                    Text(
+                    if (salt) com.moriafly.salt.ui.ItemTip(
+                        stringResource(R.string.folder_scan_failed, error)
+                    ) else Text(
                         text = stringResource(R.string.folder_scan_failed, error),
                         fontSize = MiuixTheme.textStyles.footnote1.fontSize,
                         color = MiuixTheme.colorScheme.error,
@@ -461,7 +567,13 @@ fun FolderManagerScreen(
                     )
                 }
 
-                Card(
+                if (salt) LibraryDetailTabs(
+                    tabs = listOf(
+                        "${stringResource(R.string.folder_tab_folders)} (${currentChildFolders.size})",
+                        "${stringResource(R.string.folder_tab_songs)} (${currentSongs.size})",
+                    ), selectedIndex = pagerState.currentPage,
+                    onSelected = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
+                ) else Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
@@ -526,7 +638,11 @@ fun FolderManagerScreen(
                 showDeleteDialog = showDeleteDialog,
                 showRenameDialog = showRenameDialog,
                 onDismissMenu = { showMenuSheet = false },
-                onDismissMenuFinished = { selectedSong = null },
+                onDismissMenuFinished = {
+                    if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) {
+                        selectedSong = null
+                    }
+                },
                 onDismissDetail = { showDetailSheet = false },
                 onDismissDelete = { showDeleteDialog = false },
                 onDismissRename = { showRenameDialog = false },
@@ -932,12 +1048,10 @@ private fun FolderChildrenPage(
 ) {
     LazyColumn(
         modifier = modifier
-            .scrollEndHaptic()
-            .overScrollVertical()
-            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            .libraryDetailScroll(topAppBarScrollBehavior)
             .fillMaxHeight(),
         contentPadding = PaddingValues(bottom = 12.dp),
-        overscrollEffect = null
+        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) rememberOverscrollEffect() else null
     ) {
         if (folders.isEmpty()) {
             item("empty") {
@@ -996,13 +1110,11 @@ private fun FolderCurrentSongsPage(
 
     LazyColumn(
         modifier = modifier
-            .scrollEndHaptic()
-            .overScrollVertical()
-            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            .libraryDetailScroll(topAppBarScrollBehavior)
             .fillMaxHeight(),
         state = listState,
         contentPadding = PaddingValues(bottom = 12.dp),
-        overscrollEffect = null
+        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) rememberOverscrollEffect() else null
     ) {
         if (songs.isEmpty()) {
             item("empty") {
@@ -1065,6 +1177,31 @@ private fun FolderPathHeader(
     songCount: Int,
     onBreadcrumbClick: (Long) -> Unit
 ) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        com.moriafly.salt.ui.RoundedColumn {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
+                breadcrumbs.forEachIndexed { index, breadcrumb ->
+                    // 面包屑是紧凑的行内链接：Salt 原生 Plain 按钮最小 48dp，会撑高整条面包屑。
+                    PillButton(
+                        text = breadcrumb.label,
+                        style = PillButtonDefaults.style(PillButtonSize.Medium),
+                        colors = PillButtonDefaults.plainColors(),
+                        onClick = { if (index != breadcrumbs.lastIndex) onBreadcrumbClick(breadcrumb.folderId) },
+                    )
+                    if (index != breadcrumbs.lastIndex) com.moriafly.salt.ui.Text(
+                        "›", modifier = Modifier.align(androidx.compose.ui.Alignment.CenterVertically),
+                        color = SaltTheme.colors.subText,
+                    )
+                }
+            }
+            com.moriafly.salt.ui.Text(
+                stringResource(R.string.folder_browser_count_format, folderCount, songCount),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText,
+            )
+        }
+        return
+    }
     Card(
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
@@ -1141,7 +1278,7 @@ private fun FolderListItem(
     val actionItems = buildList {
         add(
             DropdownItem(
-                icon = { modifier -> PreferenceIcon(if (folder.isIgnored) FilledIcons.Eye else FilledIcons.EyeOff, PreferenceIconTone.Tools, modifier = modifier) },
+                icon = { modifier -> PreferenceIcon(if (folder.isIgnored) LucideIcons.Eye else LucideIcons.EyeOff, PreferenceIconTone.Appearance, modifier = modifier) },
                 text = if (folder.isIgnored) {
                     stringResource(R.string.folder_action_show)
                 } else {
@@ -1155,7 +1292,7 @@ private fun FolderListItem(
 
         add(
             DropdownItem(
-                icon = { modifier -> PreferenceIcon(FilledIcons.RefreshCw, PreferenceIconTone.Tools, modifier = modifier) },
+                icon = { modifier -> PreferenceIcon(LucideIcons.RefreshCw, PreferenceIconTone.Tools, modifier = modifier) },
                 text = stringResource(R.string.action_refresh_folder),
                 onClick = {
                     if (!isBusy) {
@@ -1168,7 +1305,7 @@ private fun FolderListItem(
         if (canRemove) {
             add(
                 DropdownItem(
-                    icon = { modifier -> PreferenceIcon(FilledIcons.Folder, PreferenceIconTone.Tools, modifier = modifier) },
+                    icon = { modifier -> PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Library, modifier = modifier) },
                     text = stringResource(R.string.folder_action_remove),
                     onClick = {
                         if (!isBusy) {

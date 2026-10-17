@@ -29,22 +29,45 @@ fun SongListSectionHeader(
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            Text(
-                text = title,
-                style = MiuixTheme.textStyles.subtitle,
-                color = MiuixTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
+                    com.lonx.lyrico.data.model.UiEngine.SALT
+            if (salt) {
+                com.moriafly.salt.ui.Text(
+                    text = title,
+                    style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
+                    color = com.moriafly.salt.ui.SaltTheme.colors.text,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                if (!subtitle.isNullOrBlank()) {
+                    com.moriafly.salt.ui.Text(
+                        text = subtitle,
+                        style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
+                        color = com.moriafly.salt.ui.SaltTheme.colors.subText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            } else {
+                Text(
+                    text = title,
+                    style = MiuixTheme.textStyles.subtitle,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
 

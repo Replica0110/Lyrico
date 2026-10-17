@@ -14,6 +14,19 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // SaltUI's HiddenApiBypass dependency can receive HTTP 403 from Maven Central.
+        // Route only this group through the mirror, including its POM and AAR.
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "HiddenApiBypassMirror"
+                    url = uri("https://maven.aliyun.com/repository/central")
+                }
+            }
+            filter {
+                includeGroup("org.lsposed.hiddenapibypass")
+            }
+        }
         google()
         mavenCentral()
         maven {

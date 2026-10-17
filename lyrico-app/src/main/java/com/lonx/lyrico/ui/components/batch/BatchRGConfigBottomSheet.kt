@@ -1,3 +1,5 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.ui.components.batch
 
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -33,21 +35,39 @@ fun BatchRGConfigBottomSheet(
     onConfirm: (Int) -> Unit
 ) {
     var concurrency by remember { mutableIntStateOf(initialConcurrency) }
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
+            com.lonx.lyrico.data.model.UiEngine.SALT
+    val tempConcurrency = remember(initialConcurrency) {
+        mutableIntStateOf(initialConcurrency)
+    }
 
     YesNoBottomSheet(
         show = show,
         title = stringResource(R.string.action_batch_replay_gain),
         content = {
-            Card(
+            if (salt) {
+                com.moriafly.salt.ui.RoundedColumn {
+                // 原生行负责内容边距，共享壳负责安全区与滚动。
+                com.moriafly.salt.ui.ItemSlider(
+                    value = tempConcurrency.intValue.toFloat(),
+                    onValueChange = { tempConcurrency.intValue = it.roundToInt() },
+                    text = stringResource(R.string.batch_replay_gain_concurrency),
+                    sub = tempConcurrency.intValue.toString(),
+                    valueRange = 1f..5f,
+                    steps = 3,
+                    onValueChangeFinished = { concurrency = tempConcurrency.intValue },
+                )
+                com.moriafly.salt.ui.ItemTip(
+                    text = stringResource(R.string.batch_replay_gain_concurrency_tip)
+                )
+                }
+            } else Card(
                 colors = CardDefaults.defaultColors(
                     color = MiuixTheme.colorScheme.secondaryContainer,
                 )
             ) {
-                val tempConcurrency = remember(initialConcurrency) {
-                    mutableIntStateOf(initialConcurrency)
-                }
                 ArrowPreference(
-                    startAction = { PreferenceIcon(FilledIcons.Parallel, PreferenceIconTone.Tools) },
+                    startAction = { PreferenceIcon(LucideIcons.Parallel, PreferenceIconTone.Appearance) },
                     title = stringResource(R.string.batch_replay_gain_concurrency),
                     endActions = {
                         Text(
@@ -80,7 +100,7 @@ fun BatchRGConfigBottomSheet(
                     }
                 )
             }
-            Spacer(modifier = Modifier.padding(vertical = 12.dp))
+            if (!salt) Spacer(modifier = Modifier.padding(vertical = 12.dp))
         },
         onDismissRequest = { onDismissRequest(concurrency) },
         onConfirm = {

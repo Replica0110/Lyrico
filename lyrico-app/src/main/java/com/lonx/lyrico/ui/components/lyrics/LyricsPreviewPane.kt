@@ -1,11 +1,12 @@
 package com.lonx.lyrico.ui.components.lyrics
 
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,8 +37,16 @@ fun LyricsPreviewPane(
     failedText: String,
     emptyText: String,
     onCopyLyrics: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showCopyAction: Boolean = true,
+    /**
+     * 正文自带的内边距。放进 RoundedColumn / groupContent 卡片时由调用方指定与相邻 Item
+     * 对齐的值，避免和外壳的内边距叠加。
+     */
+    contentPadding: PaddingValues = PaddingValues(12.dp),
 ) {
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
+            com.lonx.lyrico.data.model.UiEngine.SALT
     Box(modifier = modifier.fillMaxWidth()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             when {
@@ -52,8 +61,17 @@ fun LyricsPreviewPane(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                            Text(
+                            // SaltUI 没有加载指示器，回退控件使用 Salt 颜色。
+                            if (salt) androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = com.moriafly.salt.ui.SaltTheme.colors.highlight,
+                                trackColor = com.moriafly.salt.ui.SaltTheme.colors.stroke,
+                            ) else CircularProgressIndicator(size = 32.dp)
+                            if (salt) com.moriafly.salt.ui.Text(
+                                text = loadingText,
+                                style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
+                                color = com.moriafly.salt.ui.SaltTheme.colors.subText
+                            ) else Text(
                                 text = loadingText,
                                 style = MiuixTheme.textStyles.body2,
                                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant
@@ -63,8 +81,13 @@ fun LyricsPreviewPane(
                 }
 
                 error != null -> item("error") {
-                    Text(
-                        modifier = Modifier.padding(12.dp),
+                    if (salt) com.moriafly.salt.ui.Text(
+                        modifier = Modifier.padding(contentPadding),
+                        text = error.asString() ?: failedText,
+                        style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
+                        color = com.moriafly.salt.ui.SaltTheme.colors.text,
+                    ) else Text(
+                        modifier = Modifier.padding(contentPadding),
                         text = error.asString() ?: failedText,
                         style = MiuixTheme.textStyles.body2
                     )
@@ -79,8 +102,14 @@ fun LyricsPreviewPane(
                 }
 
                 else -> item("lyrics") {
-                    Text(
-                        modifier = Modifier.padding(12.dp),
+                    if (salt) com.moriafly.salt.ui.Text(
+                        modifier = Modifier.padding(contentPadding),
+                        text = lyricsText,
+                        style = saltLyricsReadingStyle(),
+                        color = com.moriafly.salt.ui.SaltTheme.colors.text,
+                        overflow = TextOverflow.Clip
+                    ) else Text(
+                        modifier = Modifier.padding(contentPadding),
                         text = lyricsText,
                         style = MiuixTheme.textStyles.body2,
                         overflow = TextOverflow.Clip
@@ -89,8 +118,26 @@ fun LyricsPreviewPane(
             }
         }
 
-        if (!lyricsText.isNullOrBlank()) {
-            IconButton(
+        if (showCopyAction && !lyricsText.isNullOrBlank()) {
+            if (salt) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(
+                            color = com.moriafly.salt.ui.SaltTheme.colors.subBackground.copy(alpha = 0.7f),
+                            shape = CircleShape
+                        )
+                ) {
+                    com.lonx.lyrico.ui.components.salt.SaltIconButton(
+                        icon = LucideIcons.Copy,
+                        label = "",
+                        onClick = onCopyLyrics,
+                        size = 36.dp,
+                        iconSize = 20.dp
+                    )
+                }
+            } else IconButton(
                 onClick = onCopyLyrics,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -101,7 +148,7 @@ fun LyricsPreviewPane(
                     )
             ) {
                 Icon(
-                    imageVector = FilledIcons.Copy,
+                    imageVector = LucideIcons.Copy,
                     contentDescription = null
                 )
             }

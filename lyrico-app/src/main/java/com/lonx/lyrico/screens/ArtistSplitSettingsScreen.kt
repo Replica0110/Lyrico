@@ -1,7 +1,16 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.lonx.lyrico.screens
+
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberOverscrollEffect
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -29,9 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,7 +50,17 @@ import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
+import com.lonx.lyrico.ui.components.library.libraryDetailScroll
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
+import com.moriafly.salt.ui.Item
+import com.moriafly.salt.ui.ItemSwitcher
+import com.moriafly.salt.ui.ItemOuterTitle
+import com.moriafly.salt.ui.ItemTip
+import com.moriafly.salt.ui.screen.ScreenCard
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.data.model.artist.ArtistSplitDefaults
@@ -61,7 +80,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Switch
@@ -71,8 +89,6 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 @Composable
@@ -112,10 +128,32 @@ fun ArtistSplitSettingsScreen(
         }
     }
 
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val separatorChips = ArtistSplitDefaults.BUILTIN_SEPARATORS
+        .filterNot { it.id in uiState.config.hiddenBuiltinSeparatorIds }
+        .map { separator ->
+            ArtistSplitChipItem(
+                id = separator.id,
+                text = separator.displayName,
+                checked = uiState.config.builtinSeparatorOverrides[separator.id]
+                    ?: separator.defaultEnabled,
+                isBuiltin = true
+            )
+        } + uiState.config.customSeparators.map { separator ->
+            ArtistSplitChipItem(
+                id = separator.id,
+                text = separator.value,
+                checked = separator.enabled,
+                isBuiltin = false
+            )
+        }
+
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val topBarBackdrop = rememberBarBlurBackdrop()
-    Scaffold(
-        topBar = {
+    LibraryDetailPage(
+        title = stringResource(R.string.artist_split_settings_title),
+        onBack = { navigator.popBackStack() },
+        miuixTopBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
                 SmallTopAppBar(
                     color = Color.Transparent,
@@ -123,7 +161,7 @@ fun ArtistSplitSettingsScreen(
                     title = stringResource(R.string.artist_split_settings_title),
                     navigationIcon = {
                         IconButton(onClick = { navigator.popBackStack() }) {
-                            Icon(FilledIcons.ArrowLeft, contentDescription = stringResource(R.string.action_back))
+                            Icon(LucideIcons.ArrowLeft, contentDescription = stringResource(R.string.action_back))
                         }
                     },
                     scrollBehavior = topAppBarScrollBehavior
@@ -132,145 +170,204 @@ fun ArtistSplitSettingsScreen(
         }
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
-                .blurSource(topBarBackdrop)
-                .scrollEndHaptic()
-                .overScrollVertical()
-                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            modifier = (if (salt) Modifier else Modifier.blurSource(topBarBackdrop))
+                .libraryDetailScroll(topAppBarScrollBehavior)
                 .fillMaxHeight(),
             contentPadding = scaffoldContentPadding(
                 paddingValues = paddingValues,
                 bottomExtra = 12.dp
             ),
-            overscrollEffect = null
+            overscrollEffect = if (salt) rememberOverscrollEffect() else null
         ) {
-            item(key = "config") {
-                SmallTitle(text = stringResource(R.string.artist_split_general_section))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    SwitchPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Split, PreferenceIconTone.Library) },
-                        title = stringResource(R.string.artist_split_enabled),
-                        summary = stringResource(R.string.artist_split_enabled_summary),
-                        checked = uiState.config.enabled,
-                        onCheckedChange = viewModel::setEnabled
-                    )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.RefreshCw, PreferenceIconTone.Library) },
-                        title = stringResource(
-                            if (uiState.hasPendingIndexRebuild) {
-                                R.string.rebuild_artist_index_now
-                            } else {
-                                R.string.rebuild_artist_index
-                            }
-                        ),
-                        onClick = viewModel::rebuildArtistIndex,
-                        summary = when {
-                            uiState.isRebuildingIndex -> stringResource(R.string.artist_index_rebuilding)
-                            uiState.hasPendingIndexRebuild -> stringResource(R.string.artist_index_rebuild_pending)
-                            else -> stringResource(R.string.artist_index_current)
-                        }
-                    )
-                }
-            }
-
-            item(key = "separators") {
-                SmallTitle(text = stringResource(R.string.section_artist_separators))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    val separatorChips = ArtistSplitDefaults.BUILTIN_SEPARATORS
-                        .filterNot { it.id in uiState.config.hiddenBuiltinSeparatorIds }
-                        .map { separator ->
-                            ArtistSplitChipItem(
-                                id = separator.id,
-                                text = separator.displayName,
-                                checked = uiState.config.builtinSeparatorOverrides[separator.id]
-                                    ?: separator.defaultEnabled,
-                                isBuiltin = true
-                            )
-                        } + uiState.config.customSeparators.map { separator ->
-                            ArtistSplitChipItem(
-                                id = separator.id,
-                                text = separator.value,
-                                checked = separator.enabled,
-                                isBuiltin = false
-                            )
-                        }
-
-                    ChipGrid(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
-                    ) {
-                        separatorChips.forEach { chip ->
-                            RuleChip(
-                                text = chip.text,
-                                checked = chip.checked,
-                                onCheckedChange = {
-                                    if (chip.isBuiltin) {
-                                        viewModel.setBuiltinSeparatorEnabled(chip.id, it)
-                                    } else {
-                                        viewModel.setCustomSeparatorEnabled(chip.id, it)
-                                    }
-                                },
-                                onDelete = {
-                                    pendingDelete = PendingRuleDelete.Separator(chip.id, chip.text, chip.isBuiltin)
-                                }
-                            )
-                        }
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = { addingSeparator = true },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColorsPrimary()
-                        ) {
-                            Icon(FilledIcons.Plus, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onPrimary)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.add_custom_separator), color = MiuixTheme.colorScheme.onPrimary,
-                                style = MiuixTheme.textStyles.button)
-                        }
-                        Button(
-                            onClick = viewModel::resetSeparators,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(FilledIcons.RotateCcw, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onSecondaryContainer)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.reset_to_default), color = MiuixTheme.colorScheme.onSecondaryContainer,
-                                style = MiuixTheme.textStyles.button)
-                        }
+            if (salt) {
+                item(key = "config") {
+                    ItemOuterTitle(stringResource(R.string.artist_split_general_section))
+                    ScreenCard {
+                        ItemSwitcher(
+                            text = stringResource(R.string.artist_split_enabled),
+                            sub = stringResource(R.string.artist_split_enabled_summary),
+                            state = uiState.config.enabled,
+                            onChange = viewModel::setEnabled,
+                            iconPainter = rememberVectorPainter(LucideIcons.Split),
+                            iconColor = PreferenceIconTone.Appearance.color(),
+                        )
+                        Item(
+                            text = stringResource(if (uiState.hasPendingIndexRebuild) R.string.rebuild_artist_index_now else R.string.rebuild_artist_index),
+                            sub = when {
+                                uiState.isRebuildingIndex -> stringResource(R.string.artist_index_rebuilding)
+                                uiState.hasPendingIndexRebuild -> stringResource(R.string.artist_index_rebuild_pending)
+                                else -> stringResource(R.string.artist_index_current)
+                            },
+                            iconPainter = rememberVectorPainter(LucideIcons.RefreshCw),
+                            iconColor = PreferenceIconTone.Tools.color(),
+                            onClick = viewModel::rebuildArtistIndex
+                        )
                     }
                 }
-            }
-
-            item(key = "custom_no_split") {
-                SmallTitle(text = stringResource(R.string.section_no_split_artists))
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                    if (uiState.config.customNoSplitArtists.isNotEmpty()) {
-                        ChipGrid(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
-                        ) {
-                            uiState.config.customNoSplitArtists.forEach { artist ->
-                                RuleChip(
-                                    text = artist.name,
-                                    checked = artist.enabled,
-                                    onCheckedChange = {
-                                        viewModel.setCustomNoSplitArtistEnabled(artist.id, it)
+                item(key = "separators") {
+                    ItemOuterTitle(stringResource(R.string.section_artist_separators))
+                    ScreenCard {
+                        ChipGrid(Modifier.padding(12.dp)) {
+                            separatorChips.forEach { chip ->
+                                com.lonx.lyrico.ui.components.ManagedChip(
+                                    text = chip.text, checked = chip.checked,
+                                    onClick = {
+                                        val enabled = !chip.checked
+                                        if (chip.isBuiltin) viewModel.setBuiltinSeparatorEnabled(chip.id, enabled)
+                                        else viewModel.setCustomSeparatorEnabled(chip.id, enabled)
                                     },
-                                    onDelete = {
-                                        pendingDelete =
-                                            PendingRuleDelete.NoSplitArtist(artist.id, artist.name)
+                                    onDelete = { pendingDelete = PendingRuleDelete.Separator(chip.id, chip.text, chip.isBuiltin) },
+                                    editDescription = stringResource(R.string.edit_custom_separator),
+                                    onEdit = if (chip.isBuiltin) null else {
+                                        { editingSeparator = uiState.config.customSeparators.firstOrNull { it.id == chip.id } }
                                     }
                                 )
                             }
                         }
+                        Item(
+                            text = stringResource(R.string.add_custom_separator),
+                            iconPainter = rememberVectorPainter(LucideIcons.Plus),
+                            iconColor = PreferenceIconTone.Library.color(),
+                            onClick = { addingSeparator = true }
+                        )
+                        Item(
+                            text = stringResource(R.string.reset_to_default),
+                            iconPainter = rememberVectorPainter(LucideIcons.RotateCcw),
+                            iconColor = PreferenceIconTone.Lyrics.color(),
+                            onClick = viewModel::resetSeparators
+                        )
                     }
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.UserPlus, PreferenceIconTone.Library) },
-                        title = stringResource(R.string.add_no_split_artist),
-                        onClick = { addingNoSplitArtist = true }
-                    )
+                }
+                item(key = "custom_no_split") {
+                    ItemOuterTitle(stringResource(R.string.section_no_split_artists))
+                    ScreenCard {
+                        uiState.config.customNoSplitArtists.forEach { artist ->
+                            SaltRuleRow(
+                                text = artist.name, checked = artist.enabled,
+                                onCheckedChange = { viewModel.setCustomNoSplitArtistEnabled(artist.id, it) },
+                                onDelete = { pendingDelete = PendingRuleDelete.NoSplitArtist(artist.id, artist.name) },
+                                onEdit = { editingNoSplitArtist = artist },
+                                editDescription = stringResource(R.string.edit_no_split_artist)
+                            )
+                        }
+                        Item(
+                            text = stringResource(R.string.add_no_split_artist),
+                            iconPainter = rememberVectorPainter(LucideIcons.UserPlus),
+                            iconColor = PreferenceIconTone.Library.color(),
+                            onClick = { addingNoSplitArtist = true }
+                        )
+                    }
+                }
+            } else {
+                item(key = "config") {
+                    SmallTitle(text = stringResource(R.string.artist_split_general_section))
+                    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                        SwitchPreference(
+                            startAction = { PreferenceIcon(LucideIcons.Split, PreferenceIconTone.Appearance) },
+                            title = stringResource(R.string.artist_split_enabled),
+                            summary = stringResource(R.string.artist_split_enabled_summary),
+                            checked = uiState.config.enabled,
+                            onCheckedChange = viewModel::setEnabled
+                        )
+                        ArrowPreference(
+                            startAction = { PreferenceIcon(LucideIcons.RefreshCw, PreferenceIconTone.Tools) },
+                            title = stringResource(
+                                if (uiState.hasPendingIndexRebuild) {
+                                    R.string.rebuild_artist_index_now
+                                } else {
+                                    R.string.rebuild_artist_index
+                                }
+                            ),
+                            onClick = viewModel::rebuildArtistIndex,
+                            summary = when {
+                                uiState.isRebuildingIndex -> stringResource(R.string.artist_index_rebuilding)
+                                uiState.hasPendingIndexRebuild -> stringResource(R.string.artist_index_rebuild_pending)
+                                else -> stringResource(R.string.artist_index_current)
+                            }
+                        )
+                    }
+                }
+
+                item(key = "separators") {
+                    SmallTitle(text = stringResource(R.string.section_artist_separators))
+                    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                        ChipGrid(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
+                        ) {
+                            separatorChips.forEach { chip ->
+                                RuleChip(
+                                    text = chip.text,
+                                    checked = chip.checked,
+                                    onCheckedChange = {
+                                        if (chip.isBuiltin) {
+                                            viewModel.setBuiltinSeparatorEnabled(chip.id, it)
+                                        } else {
+                                            viewModel.setCustomSeparatorEnabled(chip.id, it)
+                                        }
+                                    },
+                                    onDelete = {
+                                        pendingDelete = PendingRuleDelete.Separator(chip.id, chip.text, chip.isBuiltin)
+                                    }
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = { addingSeparator = true },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColorsPrimary()
+                            ) {
+                                Icon(LucideIcons.Plus, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onPrimary)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.add_custom_separator), color = MiuixTheme.colorScheme.onPrimary,
+                                    style = MiuixTheme.textStyles.button)
+                            }
+                            Button(
+                                onClick = viewModel::resetSeparators,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(LucideIcons.RotateCcw, null, Modifier.size(18.dp), tint = MiuixTheme.colorScheme.onSecondaryContainer)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.reset_to_default), color = MiuixTheme.colorScheme.onSecondaryContainer,
+                                    style = MiuixTheme.textStyles.button)
+                            }
+                        }
+                    }
+                }
+
+                item(key = "custom_no_split") {
+                    SmallTitle(text = stringResource(R.string.section_no_split_artists))
+                    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                        if (uiState.config.customNoSplitArtists.isNotEmpty()) {
+                            ChipGrid(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
+                            ) {
+                                uiState.config.customNoSplitArtists.forEach { artist ->
+                                    RuleChip(
+                                        text = artist.name,
+                                        checked = artist.enabled,
+                                        onCheckedChange = {
+                                            viewModel.setCustomNoSplitArtistEnabled(artist.id, it)
+                                        },
+                                        onDelete = {
+                                            pendingDelete =
+                                                PendingRuleDelete.NoSplitArtist(artist.id, artist.name)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        ArrowPreference(
+                            startAction = { PreferenceIcon(LucideIcons.UserPlus, PreferenceIconTone.Library) },
+                            title = stringResource(R.string.add_no_split_artist),
+                            onClick = { addingNoSplitArtist = true }
+                        )
+                    }
                 }
             }
         }
@@ -450,7 +547,7 @@ private fun RuleChip(
             overflow = TextOverflow.Ellipsis
         )
         Icon(
-            imageVector = FilledIcons.Trash,
+            imageVector = LucideIcons.Trash,
             contentDescription = stringResource(R.string.common_delete),
             modifier = Modifier
                 .size(18.dp)
@@ -473,6 +570,42 @@ private fun ArtistSplitInputDialog(
     onDelete: () -> Unit = {}
 ) {
     var text by remember(show, initialValue) { mutableStateOf(initialValue) }
+
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        if (show) com.lonx.lyrico.ui.components.salt.SaltBasicDialog(onDismissRequest = onDismiss) {
+            val focusRequester = remember { FocusRequester() }
+            LaunchedEffect(Unit) { focusRequester.requestFocus() }
+            Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                com.moriafly.salt.ui.dialog.DialogTitle(title)
+                com.moriafly.salt.ui.RoundedColumn(paddingValues = PaddingValues(0.dp)) {
+                    SaltTextInput(
+                        text = text, onChange = { text = it }, hint = hint,
+                        modifier = Modifier.focusRequester(focusRequester)
+                    )
+                }
+                ItemTip(hint)
+            }
+            Spacer(Modifier.height(12.dp))
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (showDelete) {
+                    com.moriafly.salt.ui.Button(
+                        text = stringResource(R.string.common_delete), onClick = onDelete,
+                        appearance = com.moriafly.salt.ui.ButtonAppearance.Plain,
+                        intent = com.moriafly.salt.ui.ButtonIntent.Destructive
+                    )
+                }
+                com.moriafly.salt.ui.Button(
+                    text = stringResource(R.string.cancel), onClick = onDismiss,
+                    appearance = com.moriafly.salt.ui.ButtonAppearance.Subtle
+                )
+                com.moriafly.salt.ui.Button(
+                    text = stringResource(R.string.confirm), onClick = { onSave(text) },
+                )
+            }
+        }
+        return
+    }
 
     WindowDialog(
         show = show,
@@ -524,6 +657,20 @@ private fun ConfirmRuleDeleteDialog(
     onDismiss: () -> Unit,
     onConfirm: (PendingRuleDelete) -> Unit
 ) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        pendingDelete?.let { rule ->
+            com.moriafly.salt.ui.dialog.YesNoDialog(
+                title = stringResource(R.string.artist_split_delete_rule_title),
+                content = stringResource(R.string.artist_split_delete_rule_message, rule.label),
+                onDismissRequest = onDismiss,
+                onConfirm = { onConfirm(rule) },
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.common_delete)
+            )
+        }
+        return
+    }
+
     WindowDialog(
         show = pendingDelete != null,
         title = stringResource(R.string.artist_split_delete_rule_title),
@@ -555,5 +702,23 @@ private fun ConfirmRuleDeleteDialog(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SaltRuleRow(
+    text: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+    editDescription: String
+) {
+    Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        ItemSwitcher(text = text, state = checked, onChange = onCheckedChange, modifier = Modifier.weight(1f))
+        onEdit?.let { edit ->
+            SaltIconButton(LucideIcons.Pencil, editDescription, edit)
+        }
+        SaltIconButton(LucideIcons.Trash, stringResource(R.string.common_delete), onDelete)
     }
 }

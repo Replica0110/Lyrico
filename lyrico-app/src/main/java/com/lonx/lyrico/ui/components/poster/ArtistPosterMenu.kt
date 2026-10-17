@@ -20,7 +20,7 @@ import com.lonx.audiotag.model.AudioPicture
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.domain.poster.ArtistPictureEntry
 import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
 import top.yukonga.miuix.kmp.basic.Card
@@ -186,6 +186,55 @@ fun ArtistPosterMenu(
         if (request != null) runEntryAction(request, entry)
     }
 
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+        com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+            show = state.showOptions,
+            label = stringResource(R.string.label_artist_image_options),
+            onDismissRequest = state::closeOptions,
+        ) {
+            com.lonx.lyrico.ui.components.base.ItemMenuAction(
+                title = stringResource(R.string.label_change_artist_image), icon = LucideIcons.ImageAdd,
+                onClick = { state.closeOptions(); chooseLocalImage() })
+            if (canActOnEmbedded) {
+                com.lonx.lyrico.ui.components.base.ItemMenuAction(
+                    title = stringResource(R.string.label_remove_artist_image), icon = LucideIcons.Trash,
+                    tone = PreferenceIconTone.Danger,
+                    onClick = { state.closeOptions(); requestEntryAction(PosterPickerRequest.Remove) })
+                com.lonx.lyrico.ui.components.base.ItemMenuAction(
+                    title = stringResource(R.string.label_save_artist_image), icon = LucideIcons.Download,
+                    onClick = { state.closeOptions(); requestEntryAction(PosterPickerRequest.Export) })
+                com.lonx.lyrico.ui.components.base.ItemMenuAction(
+                    title = stringResource(R.string.label_crop_artist_image), icon = LucideIcons.Crop,
+                    onClick = { state.closeOptions(); requestEntryAction(PosterPickerRequest.Crop) })
+            }
+            currentEntry?.let { entry ->
+                com.lonx.lyrico.ui.components.base.ItemMenuAction(
+                    title = stringResource(R.string.label_reassign_artist_image, entry.displayName(untaggedLabel)),
+                    icon = LucideIcons.UserSwitch,
+                    onClick = { state.closeOptions(); reassign(entry.picture) })
+            }
+        }
+        val request = state.pickerRequest
+        com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+            show = request != null,
+            label = stringResource(if (request?.picksArtist == true) R.string.label_select_artist
+                else R.string.label_select_artist_image),
+            onDismissRequest = state::dismissPicker,
+        ) {
+            if (request?.picksArtist == true) artists.forEach { name ->
+                val count = ArtistPosterGrouping.countFor(entries, name)
+                com.lonx.lyrico.ui.components.base.ItemMenuAction(
+                    title = name, icon = LucideIcons.UserSwitch,
+                    summary = when {
+                        count > 1 -> stringResource(R.string.label_artist_image_count, count)
+                        count == 1 -> stringResource(R.string.label_artist_image_exists)
+                        else -> null
+                    }, onClick = { onArtistPicked(name) })
+            } else ArtistPicturePickerItems(entries, untaggedLabel, ::onEntryPicked)
+        }
+        return
+    }
+
     WindowBottomSheet(
         show = state.showOptions,
         enableNestedScroll = false,
@@ -203,7 +252,7 @@ fun ArtistPosterMenu(
             ) {
                 // 一个艺术家只有一张海报，所以「从本地选择」同时就是新增和替换
                 ArrowPreference(
-                    startAction = { PreferenceIcon(FilledIcons.ImageAdd, PreferenceIconTone.Library) },
+                    startAction = { PreferenceIcon(LucideIcons.ImageAdd, PreferenceIconTone.Appearance) },
                     title = stringResource(R.string.label_change_artist_image),
                     onClick = {
                         state.closeOptions()
@@ -212,7 +261,7 @@ fun ArtistPosterMenu(
                 )
                 if (canActOnEmbedded) {
                     ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Trash, PreferenceIconTone.Danger) },
+                        startAction = { PreferenceIcon(LucideIcons.Trash, PreferenceIconTone.Danger) },
                         title = stringResource(R.string.label_remove_artist_image),
                         onClick = {
                             state.closeOptions()
@@ -220,7 +269,7 @@ fun ArtistPosterMenu(
                         }
                     )
                     ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Download, PreferenceIconTone.Tools) },
+                        startAction = { PreferenceIcon(LucideIcons.Download, PreferenceIconTone.Tools) },
                         title = stringResource(R.string.label_save_artist_image),
                         onClick = {
                             state.closeOptions()
@@ -228,7 +277,7 @@ fun ArtistPosterMenu(
                         }
                     )
                     ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.Crop, PreferenceIconTone.Library) },
+                        startAction = { PreferenceIcon(LucideIcons.Crop, PreferenceIconTone.Library) },
                         title = stringResource(R.string.label_crop_artist_image),
                         onClick = {
                             state.closeOptions()
@@ -246,7 +295,7 @@ fun ArtistPosterMenu(
                     colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)
                 ) {
                     ArrowPreference(
-                        startAction = { PreferenceIcon(FilledIcons.UserSwitch, PreferenceIconTone.Library) },
+                        startAction = { PreferenceIcon(LucideIcons.UserSwitch, PreferenceIconTone.Lyrics) },
                         title = stringResource(
                             R.string.label_reassign_artist_image,
                             currentEntry.displayName(untaggedLabel)
@@ -331,12 +380,16 @@ private fun ArtistPicturePickerItems(
         seen[entry.ownerKey] = position
         val name = entry.displayName(untaggedLabel)
 
-        ArrowPreference(
-            title = if (total > 1) {
+        val title = if (total > 1) {
                 stringResource(R.string.label_artist_image_duplicate, name, position, total)
             } else {
                 name
-            },
+            }
+        if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+            com.lonx.lyrico.ui.components.base.ItemMenuAction(
+                title = title, icon = LucideIcons.Image, onClick = { onPick(entry) })
+        } else ArrowPreference(
+            title = title,
             onClick = { onPick(entry) }
         )
     }

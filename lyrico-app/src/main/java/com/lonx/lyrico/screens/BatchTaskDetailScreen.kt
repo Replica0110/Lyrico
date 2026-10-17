@@ -1,5 +1,8 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -10,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,12 +25,21 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
+import com.lonx.lyrico.ui.components.library.LibraryDetailTabs
 import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.BatchTaskDetailViewModel
+import com.moriafly.salt.ui.Item
+import com.moriafly.salt.ui.ItemValue
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
@@ -39,11 +52,8 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -66,12 +76,27 @@ fun BatchTaskDetailScreen(
     val items by viewModel.items.collectAsState()
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val scope = rememberCoroutineScope()
+    val salt = LocalUiEngine.current == UiEngine.SALT
 
     val tabs = remember { TaskDetailTab.entries }
     val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val tabLabels = tabs.map { stringResource(it.labelRes) }
 
-    Scaffold(
-        topBar = {
+    LibraryDetailPage(
+        title = stringResource(R.string.batch_task_detail_title),
+        onBack = { navigator.popBackStack() },
+        actions = {
+            val t = task
+            if (t != null && (t.status == BatchTaskStatus.RUNNING || t.status == BatchTaskStatus.QUEUED)) {
+                SaltIconButton(
+                    icon = LucideIcons.Close,
+                    label = stringResource(R.string.action_close),
+                    onClick = { viewModel.cancelTask() },
+                    tint = SaltTheme.colors.error
+                )
+            }
+        },
+        miuixTopBar = {
             SmallTopAppBar(
                 title = stringResource(R.string.batch_task_detail_title),
                 navigationIcon = {
@@ -79,7 +104,7 @@ fun BatchTaskDetailScreen(
                         onClick = { navigator.popBackStack() }
                     ) {
                         Icon(
-                            imageVector = MiuixIcons.Back,
+                            imageVector = LucideIcons.ArrowLeft,
                             contentDescription = stringResource(R.string.action_back)
                         )
                     }
@@ -105,71 +130,89 @@ fun BatchTaskDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(scaffoldTopHorizontalPadding(paddingValues))
+                .padding(if (salt) com.lonx.lyrico.ui.components.scaffoldContentPadding(paddingValues)
+                    else scaffoldTopHorizontalPadding(paddingValues))
         ) {
             val t = task
             if (t != null) {
+                val typeLabel = stringResource(t.type.labelRes)
+                val statusLabel = stringResource(t.status.labelRes)
+                val startedAt = t.startedAt
+                val finishedAt = t.finishedAt
+                val durationSecs = if (startedAt != null && finishedAt != null) {
+                    (finishedAt - startedAt) / 1000.0
+                } else null
+
+                val summary = buildString {
+                    // 第一行：任务类型和状态
+                    append("$typeLabel / $statusLabel")
+
+                    // 第二行：统计信息
+                    append("\n")
+                    append(
+                        stringResource(
+                            R.string.batch_match_stat_format,
+                            t.successCount,
+                            t.failureCount,
+                            t.skippedCount
+                        )
+                    )
+
+                    // 第三行：耗时（如果有）
+                    if (durationSecs != null) {
+                        append("\n")
+                        append(
+                            stringResource(
+                                R.string.batch_match_duration_format,
+                                durationSecs
+                            )
+                        )
+                    }
+                }
+                val progressTitle = stringResource(R.string.batch_task_detail_progress, t.current, t.total)
+
+                if (salt) {
+                    ScreenCard(modifier = Modifier.padding(bottom = 12.dp)) {
+                        ItemValue(text = progressTitle, sub = summary)
+                    }
+                } else {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                            .padding(bottom = 12.dp)
+                    ) {
+                        BasicComponent(
+                            title = progressTitle,
+                            summary = summary
+                        )
+                    }
+                }
+            }
+
+            if (salt) {
+                LibraryDetailTabs(
+                    tabs = tabLabels,
+                    selectedIndex = pagerState.currentPage,
+                    onSelected = { index ->
+                        scope.launch { pagerState.animateScrollToPage(index) }
+                    }
+                )
+            } else {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
                         .padding(bottom = 12.dp)
                 ) {
-                    val typeLabel = stringResource(t.type.labelRes)
-                    val statusLabel = stringResource(t.status.labelRes)
-                    val startedAt = t.startedAt
-                    val finishedAt = t.finishedAt
-                    val durationSecs = if (startedAt != null && finishedAt != null) {
-                        (finishedAt - startedAt) / 1000.0
-                    } else null
-                    
-                    val summary = buildString {
-                        // 第一行：任务类型和状态
-                        append("$typeLabel / $statusLabel")
-                        
-                        // 第二行：统计信息
-                        append("\n")
-                        append(
-                            stringResource(
-                                R.string.batch_match_stat_format,
-                                t.successCount,
-                                t.failureCount,
-                                t.skippedCount
-                            )
-                        )
-                        
-                        // 第三行：耗时（如果有）
-                        if (durationSecs != null) {
-                            append("\n")
-                            append(
-                                stringResource(
-                                    R.string.batch_match_duration_format,
-                                    durationSecs
-                                )
-                            )
+                    TabRowWithContour(
+                        tabs = tabLabels,
+                        selectedTabIndex = pagerState.currentPage,
+                        onTabSelected = { index ->
+                            scope.launch { pagerState.animateScrollToPage(index) }
                         }
-                    }
-                    
-                    BasicComponent(
-                        title = stringResource(R.string.batch_task_detail_progress, t.current, t.total),
-                        summary = summary
                     )
                 }
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-                    .padding(bottom = 12.dp)
-            ) {
-                TabRowWithContour(
-                    tabs = tabs.map { stringResource(it.labelRes) },
-                    selectedTabIndex = pagerState.currentPage,
-                    onTabSelected = { index ->
-                        scope.launch { pagerState.animateScrollToPage(index) }
-                    }
-                )
             }
 
             HorizontalPager(
@@ -188,13 +231,13 @@ fun BatchTaskDetailScreen(
                 }
 
                 LazyColumn(
-                    modifier = Modifier
+                    modifier = (if (salt) Modifier else Modifier
                         .scrollEndHaptic()
                         .overScrollVertical()
-                        .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                        .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection))
                         .fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    overscrollEffect = null,
+                    overscrollEffect = if (salt) rememberOverscrollEffect() else null,
                 ) {
                     if (filteredItems.isEmpty()) {
                         item {
@@ -234,6 +277,16 @@ private fun BatchTaskItemCard(
             append("\n")
             append(item.errorMessage)
         }
+    }
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        com.moriafly.salt.ui.Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+            Item(
+                onClick = onClick,
+                text = item.fileName,
+                sub = summary,
+            )
+        }
+        return
     }
     Card(modifier = Modifier.padding(horizontal = 12.dp)) {
         ArrowPreference(

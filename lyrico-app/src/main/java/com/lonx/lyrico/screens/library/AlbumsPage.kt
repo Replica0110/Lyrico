@@ -1,6 +1,9 @@
 package com.lonx.lyrico.screens.library
 
-import top.yukonga.miuix.kmp.icon.extended.Refresh
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.data.model.UiEngine
+
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,6 +53,7 @@ import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.viewmodel.AlbumActionsViewModel
 import com.lonx.lyrico.viewmodel.AlbumLibraryViewModel
 import com.lonx.lyrico.viewmodel.SortOrder
+import com.moriafly.salt.ui.SaltTheme
 import com.ramcosta.composedestinations.generated.destinations.AlbumDetailDestination
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination
@@ -68,10 +72,6 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Search
-import top.yukonga.miuix.kmp.icon.extended.Settings
-import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -95,7 +95,9 @@ fun AlbumsPage(
     val albumGridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
     val albumTextStyle = rememberAlbumGridTextStyle(albumGridColumns)
     val topAppBarScrollBehavior = MiuixScrollBehavior()
-    val topBarBackdrop = rememberBarBlurBackdrop()
+    // 使用应用级 UI 引擎，页面与共享列表组件保持一致。
+    val isSaltEngine = LocalUiEngine.current == UiEngine.SALT
+    val topBarBackdrop = rememberBarBlurBackdrop(enabled = LocalUiEngine.current == UiEngine.MIUIX && com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled())
     val gridState = rememberLazyGridState()
     val alphabetScrollController = rememberAlphabetSideBarScrollController(gridState)
     val context = LocalContext.current
@@ -135,54 +137,12 @@ fun AlbumsPage(
         stringResource(R.string.refreshing),
         stringResource(R.string.refresh_success)
     )
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            BlurredTopBar(backdrop = topBarBackdrop) {
-                SmallTopAppBar(
-                    title = stringResource(R.string.album_list_title, albums.size),
-                    color = Color.Transparent,
-                    modifier = Modifier,
-                    scrollBehavior = topAppBarScrollBehavior,
-                    defaultWindowInsetsPadding = false,
-                    navigationIcon = {
-                        IconButton(onClick = { navigator.navigate(SettingsDestination()) }) {
-                            Icon(
-                                imageVector = MiuixIcons.Settings,
-                                contentDescription = null
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { navigator.navigate(LocalSearchDestination) }) {
-                            Icon(
-                                imageVector = MiuixIcons.Search,
-                                contentDescription = stringResource(R.string.cd_search)
-                            )
-                        }
-                        OverlayIconDropdownMenu(
-                            entries = listOf(
-                                albumGridColumnsDropdownEntry(
-                                    columns = albumGridColumns,
-                                    onColumnsChange = viewModel::setGridColumns
-                                ),
-                                albumSortDropdownEntry(sortInfo, viewModel::onSortChange),
-                            )
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Sort,
-                                contentDescription = stringResource(R.string.cd_sort)
-                            )
-                        }
-                    }
-                )
-            }
-        }
-    ) { paddingValues ->
+    val pageContent: @Composable (PaddingValues) -> Unit = { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .blurSource(topBarBackdrop)
+                // Salt 顶栏用 BasicScreen 自带的 backdrop，这里不再叠第二层模糊
+                .then(if (isSaltEngine) Modifier else Modifier.blurSource(topBarBackdrop))
         ) {
             if (albums.isEmpty()) {
                 Box(
@@ -194,13 +154,13 @@ fun AlbumsPage(
                         kind = EmptyStateKind.Albums,
                         title = stringResource(R.string.empty_albums_title),
                         modifier = Modifier.align(Alignment.Center),
-                        icon = MiuixIcons.Refresh,
+                        icon = LucideIcons.RefreshCw,
                         actionText = stringResource(R.string.refresh),
                         onAction = { viewModel.refreshSongs() },
                     )
                 }
             } else {
-                PullToRefresh(
+                LibraryPullToRefresh(
                     isRefreshing = scanState.isScanning,
                     onRefresh = { viewModel.refreshSongs() },
                     modifier = Modifier.fillMaxSize(),
@@ -214,9 +174,7 @@ fun AlbumsPage(
                         columns = GridCells.Fixed(albumGridColumns),
                         state = gridState,
                         modifier = Modifier
-                            .scrollEndHaptic()
-                            .overScrollVertical()
-                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                            .libraryScrollFeedback(topAppBarScrollBehavior)
                             .fillMaxSize(),
                         contentPadding = scaffoldContentPadding(
                             paddingValues = paddingValues,
@@ -226,7 +184,7 @@ fun AlbumsPage(
                         ),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        overscrollEffect = null
+                        overscrollEffect = rememberLibraryOverscrollEffect()
                     ) {
                         items(
                             items = albums,
@@ -270,8 +228,16 @@ fun AlbumsPage(
                         settings = ScrollbarSettings.Default.copy(
                             alwaysShowScrollbar = true,
                             selectionMode = ScrollbarSelectionMode.Full,
-                            thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            thumbUnselectedColor = if (isSaltEngine) {
+                                SaltTheme.colors.subText
+                            } else {
+                                MiuixTheme.colorScheme.onSurfaceVariantActions
+                            },
+                            thumbSelectedColor = if (isSaltEngine) {
+                                SaltTheme.colors.subText
+                            } else {
+                                MiuixTheme.colorScheme.onSurfaceVariantActions
+                            },
                         ),
                     )
                 }
@@ -293,7 +259,71 @@ fun AlbumsPage(
                 }
             }
         }
+
     }
+    if (LocalUiEngine.current == UiEngine.SALT) SaltLibraryPage(
+        title = stringResource(R.string.album_list_title, albums.size),
+        onSettings = { navigator.navigate(SettingsDestination()) },
+        onSearch = { navigator.navigate(LocalSearchDestination) },
+        menu = listOf(2, 3, 4).map { count ->
+            LibraryMenuAction(stringResource(R.string.album_grid_columns_format, count), albumGridColumns == count) { viewModel.setGridColumns(count) }
+        } + AlbumSortBy.entries.map { sortBy ->
+            val selected = sortInfo.sortBy == sortBy
+            LibraryMenuAction(
+                title = stringResource(sortBy.labelRes),
+                selected = selected,
+                summary = if (selected) stringResource(
+                    if (sortInfo.order == SortOrder.ASC) R.string.sort_ascending else R.string.sort_descending
+                ) else null,
+            ) {
+                viewModel.onSortChange(AlbumSortInfo(sortBy, if (selected && sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC))
+            }
+        }, content = pageContent,
+    ) else Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            BlurredTopBar(backdrop = topBarBackdrop) {
+                SmallTopAppBar(
+                    title = stringResource(R.string.album_list_title, albums.size),
+                    color = Color.Transparent,
+                    modifier = Modifier,
+                    scrollBehavior = topAppBarScrollBehavior,
+                    defaultWindowInsetsPadding = false,
+                    navigationIcon = {
+                        IconButton(onClick = { navigator.navigate(SettingsDestination()) }) {
+                            Icon(
+                                imageVector = LucideIcons.Settings,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { navigator.navigate(LocalSearchDestination) }) {
+                            Icon(
+                                imageVector = LucideIcons.Search,
+                                contentDescription = stringResource(R.string.cd_search)
+                            )
+                        }
+                        OverlayIconDropdownMenu(
+                            entries = listOf(
+                                albumGridColumnsDropdownEntry(
+                                    columns = albumGridColumns,
+                                    onColumnsChange = viewModel::setGridColumns
+                                ),
+                                albumSortDropdownEntry(sortInfo, viewModel::onSortChange),
+                            )
+                        ) {
+                            Icon(
+                                imageVector = LucideIcons.Sort,
+                                contentDescription = stringResource(R.string.cd_sort)
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    ) { paddingValues -> pageContent(paddingValues) }
+
 
     selectedAlbum?.let { album ->
         AlbumActionBottomSheet(

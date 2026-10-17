@@ -38,7 +38,7 @@ import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.components.CoverRequest
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
-import top.yukonga.miuix.kmp.basic.Text
+import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @SuppressLint("DefaultLocale")
@@ -105,7 +105,7 @@ fun SongListItemContent(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                MiuixTheme.colorScheme.secondary
+                                Color.Black.copy(alpha = 0.65f)
                             ),
                         )
                     )
@@ -114,7 +114,7 @@ fun SongListItemContent(
                     text = song.fileName.substringAfterLast('.', "").uppercase(),
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MiuixTheme.colorScheme.onSecondary,
+                    color = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier
                         .align(Alignment.Center)
                         .padding(bottom = 1.dp)

@@ -20,8 +20,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.base.SheetStatisticsRow
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.BatchLyricsFormatUiState
+import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -33,7 +38,13 @@ fun BatchLyricsFormatBottomSheet(
     onDismissFinished: () -> Unit,
     onAbort: () -> Unit
 ) {
+    val salt = LocalUiEngine.current == UiEngine.SALT
     ActionBottomSheet(
+        saltFooter = {
+            com.lonx.lyrico.ui.components.base.SheetProgressAction(
+                running = batchLyricsFormatUiState.isRunning, onAbort = onAbort, onClose = onDismissRequest,
+            )
+        },
         show = batchLyricsFormatUiState.showProgressDialog,
         onDismissRequest = {
             onDismissRequest()
@@ -43,6 +54,9 @@ fun BatchLyricsFormatBottomSheet(
         },
         allowDismiss = !batchLyricsFormatUiState.isRunning,
         title = stringResource(batchLyricsFormatUiState.operation.titleRes),
+        groupContent = true,
+        // 内容自带 verticalScroll，外壳不再提供滚动出口。
+        saltScrollContent = false,
         content = {
             Column(
                 modifier = Modifier
@@ -54,10 +68,19 @@ fun BatchLyricsFormatBottomSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (batchLyricsFormatUiState.operation == com.lonx.lyrico.data.model.lyrics.LyricsOperation.CONVERT) {
-                        Text(text = stringResource(R.string.current_target_format,
-                            batchLyricsFormatUiState.targetFormat?.let { stringResource(it.labelRes) }.orEmpty()),
+                        val targetFormatText = stringResource(
+                            R.string.current_target_format,
+                            batchLyricsFormatUiState.targetFormat?.let { stringResource(it.labelRes) }.orEmpty()
+                        )
+                        if (salt) com.moriafly.salt.ui.Text(
+                            text = targetFormatText,
+                            style = SaltTheme.textStyles.sub,
+                            color = SaltTheme.colors.subText
+                        ) else Text(
+                            text = targetFormatText,
                             style = MiuixTheme.textStyles.footnote1,
-                            color = MiuixTheme.colorScheme.onSurfaceContainerVariant)
+                            color = MiuixTheme.colorScheme.onSurfaceContainerVariant
+                        )
                     }
 
                     batchLyricsFormatUiState.progress?.let { (current, total) ->
@@ -69,7 +92,21 @@ fun BatchLyricsFormatBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
+                            if (salt) com.moriafly.salt.ui.Text(
+                                text = if (batchLyricsFormatUiState.isRunning) {
+                                    stringResource(R.string.batch_edit_processing)
+                                } else {
+                                    stringResource(
+                                        R.string.batch_replay_gain_total_time,
+                                        batchLyricsFormatUiState.totalTimeMillis / 1000.0
+                                    )
+                                },
+                                style = SaltTheme.textStyles.sub,
+                                color = SaltTheme.colors.subText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            ) else Text(
                                 text = if (batchLyricsFormatUiState.isRunning) {
                                     stringResource(R.string.batch_edit_processing)
                                 } else {
@@ -86,52 +123,91 @@ fun BatchLyricsFormatBottomSheet(
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            Text(
+                            if (salt) com.moriafly.salt.ui.Text(
+                                text = "$current / $total",
+                                style = SaltTheme.textStyles.main,
+                                color = SaltTheme.colors.text,
+                                textAlign = TextAlign.End
+                            ) else Text(
                                 text = "$current / $total",
                                 style = MiuixTheme.textStyles.main,
                                 textAlign = TextAlign.End
                             )
                         }
 
-                        LinearProgressIndicator(
+                        AppLinearProgressIndicator(
                             progress = progress,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                SheetStatisticsRow(
+                    modifier = Modifier.fillMaxWidth()
+                        .then(if (salt) Modifier else Modifier.padding(bottom = 12.dp))
                 ) {
-                    Text(
-                        text = stringResource(
-                            R.string.batch_replay_gain_success,
-                            batchLyricsFormatUiState.successCount
-                        ),
-                        style = MiuixTheme.textStyles.main
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.batch_replay_gain_skipped,
-                            batchLyricsFormatUiState.skippedCount
-                        ),
-                        style = MiuixTheme.textStyles.main
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.batch_replay_gain_failure,
-                            batchLyricsFormatUiState.failureCount
-                        ),
-                        style = MiuixTheme.textStyles.main
-                    )
+                    if (salt) {
+                        com.moriafly.salt.ui.Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_success,
+                                batchLyricsFormatUiState.successCount
+                            ),
+                            style = SaltTheme.textStyles.main,
+                            color = SaltTheme.colors.text
+                        )
+                        com.moriafly.salt.ui.Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_skipped,
+                                batchLyricsFormatUiState.skippedCount
+                            ),
+                            style = SaltTheme.textStyles.main,
+                            color = SaltTheme.colors.text
+                        )
+                        com.moriafly.salt.ui.Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_failure,
+                                batchLyricsFormatUiState.failureCount
+                            ),
+                            style = SaltTheme.textStyles.main,
+                            color = SaltTheme.colors.text
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_success,
+                                batchLyricsFormatUiState.successCount
+                            ),
+                            style = MiuixTheme.textStyles.main
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_skipped,
+                                batchLyricsFormatUiState.skippedCount
+                            ),
+                            style = MiuixTheme.textStyles.main
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.batch_replay_gain_failure,
+                                batchLyricsFormatUiState.failureCount
+                            ),
+                            style = MiuixTheme.textStyles.main
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.padding(vertical = 12.dp))
+                if (!salt) Spacer(modifier = Modifier.padding(vertical = 12.dp))
             }
         },
         endAction = {
+            val actionLabel = if (batchLyricsFormatUiState.isRunning) stringResource(R.string.action_abort)
+            else stringResource(R.string.action_close)
+            val onAction = {
+                if (batchLyricsFormatUiState.isRunning) {
+                    onAbort()
+                } else {
+                    onDismissRequest()
+                }
+            }
             TextButton(
                 colors = ButtonColors(
                     containerColor = Color.Transparent,
@@ -139,24 +215,15 @@ fun BatchLyricsFormatBottomSheet(
                     disabledContainerColor = Color.Transparent,
                     disabledContentColor = MiuixTheme.colorScheme.disabledPrimary
                 ),
-                onClick = {
-                    if (batchLyricsFormatUiState.isRunning) {
-                        onAbort()
-                    } else {
-                        onDismissRequest()
-                    }
-                }
+                onClick = onAction
             ) {
                 Text(
-                    text = if (batchLyricsFormatUiState.isRunning) {
-                        stringResource(R.string.action_abort)
-                    } else {
-                        stringResource(R.string.action_close)
-                    },
+                    text = actionLabel,
+                    // 修正取反：进行中应显示为破坏性（与 Miuix 分支外的其它进度弹层一致）。
                     color = if (batchLyricsFormatUiState.isRunning){
-                        MiuixTheme.colorScheme.primary
-                    } else {
                         MiuixTheme.colorScheme.error
+                    } else {
+                        MiuixTheme.colorScheme.primary
                     }
                 )
             }

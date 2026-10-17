@@ -1,9 +1,9 @@
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.poster.previewMedia
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -31,6 +31,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,15 +41,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.lyrico.ui.components.library.SelectableLibraryItem
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
+import com.lonx.lyrico.ui.components.library.LibraryDetailTabs
+import com.lonx.lyrico.ui.components.library.LibraryDetailIconButton
+import com.lonx.lyrico.ui.components.library.LibraryDetailText
+import com.lonx.lyrico.ui.components.library.LibraryDetailTextTone
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.components.library.libraryDetailScroll
+import com.lonx.lyrico.screens.library.LibrarySelectionState
+import com.lonx.lyrico.data.model.UiEngine
+import com.moriafly.salt.ui.SaltTheme
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
@@ -77,22 +89,13 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.Image
-import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
 @Destination<RootGraph>(route = "artist_detail")
@@ -167,9 +170,22 @@ fun ArtistDetailScreen(
         }
     }
 
+    val allSelected = songs.isNotEmpty() && selectedSongUris.containsAll(songs.map { it.uri })
+    val selection = if (isSelectionMode) LibrarySelectionState(
+        title = stringResource(R.string.selection_mode_selected_count, selectedSongUris.size),
+        allSelected = allSelected,
+        onClose = selectionViewModel::exitSelectionMode,
+        onToggleAll = {
+            if (allSelected) selectionViewModel.deselectAll() else selectionViewModel.selectAll(songs)
+        }
+    ) else null
+
     Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
+        LibraryDetailPage(
+            title = artistName.ifBlank { stringResource(R.string.artist_detail_title) },
+            onBack = { navigator.popBackStack() },
+            selection = selection,
+            miuixTopBar = {
                 AnimatedContent(
                     targetState = isSelectionMode,
                     label = "ArtistDetailTopBarAnimation",
@@ -192,7 +208,7 @@ fun ArtistDetailScreen(
                                     targetOffsetY = { -it / 3 }
                                 )
 
-                        (enter togetherWith exit).using(SizeTransform(clip = false))
+                        (enter togetherWith exit).using(null)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { selectionMode ->
@@ -211,7 +227,7 @@ fun ArtistDetailScreen(
                             navigationIcon = {
                                 IconButton(onClick = { navigator.popBackStack() }) {
                                     Icon(
-                                        imageVector = MiuixIcons.Back,
+                                        imageVector = LucideIcons.ArrowLeft,
                                         contentDescription = stringResource(R.string.action_back)
                                     )
                                 }
@@ -243,25 +259,17 @@ fun ArtistDetailScreen(
                         onAvatarClick = { showArtistPosterSheet = true }
                     )
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                            .padding(bottom = 8.dp)
-                    ) {
-                        TabRowWithContour(
-                            tabs = listOf(
-                                stringResource(R.string.artist_tab_songs),
-                                stringResource(R.string.artist_tab_albums)
-                            ),
-                            selectedTabIndex = pagerState.currentPage,
-                            onTabSelected = { index ->
-                                scope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            }
-                        )
-                    }
+                    LibraryDetailTabs(
+                        tabs = listOf(
+                            stringResource(R.string.artist_tab_songs),
+                            stringResource(R.string.artist_tab_albums)
+                        ),
+                        selectedIndex = pagerState.currentPage,
+                        onSelected = { index ->
+                            scope.launch { pagerState.animateScrollToPage(index) }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     HorizontalPager(
                         state = pagerState,
@@ -278,6 +286,7 @@ fun ArtistDetailScreen(
                                 swipeSelectionLabel = swipeSelectionLabel,
                                 swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
                                 topAppBarScrollBehavior = topAppBarScrollBehavior,
+                                bottomPadding = paddingValues.calculateBottomPadding(),
                                 onSongClick = { song ->
                                     selectionViewModel.exitSelectionMode()
                                     navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
@@ -297,6 +306,7 @@ fun ArtistDetailScreen(
                             ArtistAlbumsPage(
                                 albums = albums,
                                 topAppBarScrollBehavior = topAppBarScrollBehavior,
+                                bottomPadding = paddingValues.calculateBottomPadding(),
                                 onAlbumClick = { album ->
                                     selectionViewModel.exitSelectionMode()
                                     navigator.navigate(
@@ -319,7 +329,11 @@ fun ArtistDetailScreen(
                     showDeleteDialog = showDeleteDialog,
                     showRenameDialog = showRenameDialog,
                     onDismissMenu = { showMenuSheet = false },
-                    onDismissMenuFinished = { selectedSong = null },
+                    onDismissMenuFinished = {
+                        if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) {
+                            selectedSong = null
+                        }
+                    },
                     onDismissDetail = { showDetailSheet = false },
                     onDismissDelete = { showDeleteDialog = false },
                     onDismissRename = { showRenameDialog = false },
@@ -443,6 +457,7 @@ private fun ArtistSongsPage(
     swipeSelectionLabel: String,
     swipeSelectionSecondaryLabel: String?,
     topAppBarScrollBehavior: ScrollBehavior,
+    bottomPadding: Dp,
     onSongClick: (SongEntity) -> Unit,
     onToggleSelection: (SongEntity) -> Unit,
     onSwipeSelection: (SongEntity) -> Unit,
@@ -452,13 +467,11 @@ private fun ArtistSongsPage(
 
     LazyColumn(
         modifier = Modifier
-            .scrollEndHaptic()
-            .overScrollVertical()
-            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            .libraryDetailScroll(topAppBarScrollBehavior)
             .fillMaxHeight(),
         state = listState,
-        contentPadding = PaddingValues(bottom = 12.dp),
-        overscrollEffect = null
+        contentPadding = PaddingValues(bottom = bottomPadding + 12.dp),
+        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
     ) {
         if (songs.isEmpty()) {
             item("empty") {
@@ -506,17 +519,16 @@ private fun ArtistSongsPage(
 private fun ArtistAlbumsPage(
     albums: List<AlbumEntity>,
     topAppBarScrollBehavior: ScrollBehavior,
+    bottomPadding: Dp,
     onAlbumClick: (AlbumEntity) -> Unit,
     onAlbumActionClick: (AlbumEntity) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
-            .scrollEndHaptic()
-            .overScrollVertical()
-            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+            .libraryDetailScroll(topAppBarScrollBehavior)
             .fillMaxHeight(),
-        contentPadding = PaddingValues(bottom = 12.dp),
-        overscrollEffect = null
+        contentPadding = PaddingValues(bottom = bottomPadding + 12.dp),
+        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
     ) {
         if (albums.isEmpty()) {
             item("empty") {
@@ -536,16 +548,11 @@ private fun ArtistAlbumsPage(
                 onClick = { onAlbumClick(album) },
                 trailingContent = {
                     Box(modifier = Modifier.padding(end = 8.dp)) {
-                        IconButton(
-                            onClick = {
-                                onAlbumActionClick(album)
-                            }
-                        ) {
-                            Icon(
-                                MiuixIcons.More,
-                                contentDescription = "more"
-                            )
-                        }
+                        LibraryDetailIconButton(
+                            icon = LucideIcons.EllipsisVertical,
+                            description = stringResource(R.string.cd_more_actions),
+                            onClick = { onAlbumActionClick(album) }
+                        )
                     }
                 }
             )
@@ -563,6 +570,7 @@ private fun ArtistDetailHeader(
     coverCandidates: List<CoverCandidate>,
     onAvatarClick: () -> Unit
 ) {
+    val salt = LocalUiEngine.current == UiEngine.SALT
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -592,36 +600,59 @@ private fun ArtistDetailHeader(
                 candidates = coverCandidates,
                 artistName = artist
             )
-            Icon(
-                imageVector = MiuixIcons.Image,
-                contentDescription = null,
-                tint = MiuixTheme.colorScheme.primary,
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(MiuixTheme.colorScheme.secondaryContainer)
-                    .padding(5.dp)
-            )
+            val badgeModifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(if (salt) SaltTheme.colors.subBackground else MiuixTheme.colorScheme.secondaryContainer)
+                .padding(5.dp)
+            if (salt) {
+                com.moriafly.salt.ui.Icon(
+                    painter = rememberVectorPainter(LucideIcons.Image),
+                    contentDescription = null,
+                    tint = SaltTheme.colors.highlight,
+                    modifier = badgeModifier
+                )
+            } else {
+                Icon(
+                    imageVector = LucideIcons.Image,
+                    contentDescription = null,
+                    tint = MiuixTheme.colorScheme.primary,
+                    modifier = badgeModifier
+                )
+            }
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = artist.ifBlank { stringResource(R.string.artist_detail_title) },
-                style = MiuixTheme.textStyles.title3,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stringResource(
-                    R.string.album_song_count,
-                    albums.size,
-                    songCount
-                ),
-                style = MiuixTheme.textStyles.main,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            val title = artist.ifBlank { stringResource(R.string.artist_detail_title) }
+            val summary = stringResource(R.string.album_song_count, albums.size, songCount)
+            if (salt) {
+                LibraryDetailText(
+                    text = title,
+                    tone = LibraryDetailTextTone.Title,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                LibraryDetailText(
+                    text = summary,
+                    tone = LibraryDetailTextTone.Secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            } else {
+                Text(
+                    text = title,
+                    style = MiuixTheme.textStyles.title3,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = summary,
+                    style = MiuixTheme.textStyles.main,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

@@ -22,7 +22,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.ArtistEntity
 import com.lonx.lyrico.ui.components.CoverCandidate
 import com.lonx.lyrico.ui.components.cover.CoverImage
-import top.yukonga.miuix.kmp.basic.Text
+import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable

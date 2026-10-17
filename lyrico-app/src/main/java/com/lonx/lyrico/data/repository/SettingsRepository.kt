@@ -13,6 +13,7 @@ import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.SearchConfig
 import com.lonx.lyrico.data.model.SearchSourceTabStyle
 import com.lonx.lyrico.data.model.ThemeConfig
+import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.model.AlbumSortInfo
 import com.lonx.lyrico.data.model.ArtistSortInfo
@@ -56,6 +57,8 @@ interface SettingsRepository {
     val searchPageSize: Flow<Int>
     val searchSourceTabStyle: Flow<SearchSourceTabStyle>
     val showAllSearchResultFields: Flow<Boolean>
+    val uiEngine: Flow<UiEngine>
+    suspend fun saveUiEngine(engine: UiEngine)
     val themeMode: Flow<ThemeMode>
     val keyColor: Flow<KeyColor>
     val monetEnable: Flow<Boolean>

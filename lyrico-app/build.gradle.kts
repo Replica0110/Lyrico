@@ -136,6 +136,7 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 dependencies {
+    implementation(libs.salt.ui)
     // Project Modules
     implementation(project(":lyrico-audiotag"))
 
@@ -156,7 +157,6 @@ dependencies {
     implementation(libs.miuix.preference.android)
     implementation(libs.miuix.ui.android)
     implementation(libs.lottie.compose)
-    implementation(libs.miuix.icons.android)
     implementation(libs.miuix.blur.android)
     implementation(libs.coil.compose)
     implementation(libs.zoomable)

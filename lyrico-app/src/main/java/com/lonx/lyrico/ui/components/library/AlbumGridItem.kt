@@ -1,9 +1,6 @@
 package com.lonx.lyrico.ui.components.library
 
-import android.view.HapticFeedbackConstants
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,15 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.ui.components.cover.CoverImage
-import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.Text
+import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 
@@ -68,21 +62,7 @@ fun AlbumGridItem(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null
 ) {
-    val view = LocalView.current
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        onClick = onClick,
-        onLongPress = onLongClick?.let {
-            {
-                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                it()
-            }
-        }
-    ) {
-        BasicComponent(
-            modifier = Modifier.fillMaxWidth().background(MiuixTheme.colorScheme.surfaceVariant),
-            insideMargin = PaddingValues(8.dp)
-        ) {
+    LibraryAlbumSurface(modifier, onClick, onLongClick) {
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -113,6 +93,5 @@ fun AlbumGridItem(
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
-        }
     }
 }

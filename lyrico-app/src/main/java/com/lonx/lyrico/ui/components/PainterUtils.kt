@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.io.File
 import java.io.FileOutputStream
@@ -122,6 +125,11 @@ fun getSystemWallpaperColor(context: Context): Color {
         }
         dynamicScheme.primary
     } else {
-        MiuixTheme.colorScheme.primary
+        // API<31 无动态取色；Salt 下回退色也须用 Salt 语义色，避免混入 Miuix 主色
+        if (LocalUiEngine.current == UiEngine.SALT) {
+            SaltTheme.colors.highlight
+        } else {
+            MiuixTheme.colorScheme.primary
+        }
     }
 }

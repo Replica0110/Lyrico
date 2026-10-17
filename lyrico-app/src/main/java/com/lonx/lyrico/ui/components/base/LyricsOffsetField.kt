@@ -1,4 +1,10 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.ui.components.base
+
+import com.lonx.lyrico.ui.components.salt.SaltTextInput
+
+import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
@@ -44,6 +50,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.moriafly.salt.ui.ButtonAppearance
+import com.moriafly.salt.ui.ControlSize
+import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -120,7 +131,54 @@ fun LyricsOffsetField(
         onOffsetChange(next)
     }
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.moriafly.salt.ui.Button(
+                    text = "−${step}ms", onClick = { stepBy(-step) },
+                    enabled = canDecrease, modifier = Modifier.weight(1f),
+                    size = ControlSize.Small, appearance = ButtonAppearance.Subtle,
+                )
+                com.moriafly.salt.ui.Button(
+                    onClick = { showInputDialog = true }, enabled = enabled,
+                    modifier = Modifier.weight(1.2f), size = ControlSize.Small,
+                    appearance = ButtonAppearance.Plain,
+                ) {
+                    AnimatedContent(
+                        targetState = safeOffset,
+                        contentAlignment = Alignment.Center,
+                        transitionSpec = {
+                            val forward = targetState > initialState
+                            if (animated) ((slideInVertically { if (forward) it else -it } + fadeIn()) togetherWith
+                                (slideOutVertically { if (forward) -it else it } + fadeOut())).using(null)
+                            else (fadeIn() togetherWith fadeOut()).using(null)
+                        }, label = "saltLyricsOffsetValue",
+                    ) { value ->
+                        com.moriafly.salt.ui.Text(formatLyricsOffset(value),
+                            style = SaltTheme.textStyles.main, maxLines = 1)
+                    }
+                }
+                com.moriafly.salt.ui.Button(
+                    text = "+${step}ms", onClick = { stepBy(step) },
+                    enabled = canIncrease, modifier = Modifier.weight(1f),
+                    size = ControlSize.Small, appearance = ButtonAppearance.Subtle,
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.moriafly.salt.ui.Button(
+                    text = stringResource(R.string.action_reset), onClick = { onOffsetChange(0L) },
+                    enabled = enabled && safeOffset != 0L, modifier = Modifier.weight(1f),
+                    size = ControlSize.Small, appearance = ButtonAppearance.Plain,
+                )
+                com.moriafly.salt.ui.Button(
+                    text = stringResource(R.string.action_manual_input), onClick = { showInputDialog = true },
+                    enabled = enabled, modifier = Modifier.weight(1f),
+                    size = ControlSize.Small, appearance = ButtonAppearance.Plain,
+                )
+            }
+        }
+    } else Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // 分段步进器：一个容器里放两侧按钮与中间数值，避免三个控件各自为政。
         Row(
             modifier = Modifier
@@ -297,6 +355,40 @@ fun LyricsOffsetInputDialog(
     val value = magnitude?.let { if (negative) -it else it }
     val isValid = value != null && value in minOffset..maxOffset
     val rangeHint = stringResource(R.string.lyrics_offset_input_hint, minOffset, maxOffset)
+
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+        SaltConfirmDialog(
+            show = show, title = stringResource(R.string.label_lyrics_offset),
+            onDismissRequest = onDismiss, onConfirm = { value?.let(onConfirm) },
+            cancelText = stringResource(R.string.cancel), confirmText = stringResource(R.string.confirm),
+            confirmEnabled = isValid, dismissOnConfirm = false,
+        ) {
+            com.moriafly.salt.ui.RoundedColumn(paddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
+                Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    com.moriafly.salt.ui.Button(
+                        text = if (negative) "−" else "+", onClick = { negative = !negative },
+                        appearance = com.moriafly.salt.ui.ButtonAppearance.Plain,
+                    )
+                    SaltTextInput(
+                        text = magnitudeInput, onChange = { magnitudeInput = it },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                }
+            }
+            com.moriafly.salt.ui.Text(
+                text = when {
+                    magnitude == null -> stringResource(R.string.lyrics_offset_input_invalid)
+                    !isValid -> stringResource(R.string.lyrics_offset_input_out_of_range, rangeHint)
+                    else -> rangeHint
+                },
+                style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
+                color = if (isValid) com.moriafly.salt.ui.SaltTheme.colors.subText
+                    else com.moriafly.salt.ui.SaltTheme.colors.error,
+            )
+        }
+        return
+    }
 
     WindowDialog(
         show = show,

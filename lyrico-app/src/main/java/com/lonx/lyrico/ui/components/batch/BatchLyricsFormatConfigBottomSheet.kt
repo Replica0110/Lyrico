@@ -31,13 +31,21 @@ fun BatchLyricsFormatConfigBottomSheet(
     onConfirm: () -> Unit
 ) {
     ActionBottomSheet(
+        saltScrollContent = false,
         show = state.showConfigDialog,
         title = stringResource(state.operation.titleRes),
         onDismissRequest = onDismiss,
         startAction = { LyricsActionButton(stringResource(R.string.cancel), onClick = onDismiss) },
         endAction = { LyricsActionButton(stringResource(R.string.lyrics_process_action), primary = true, onClick = onConfirm) },
         content = {
-            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                    .then(
+                        if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
+                            com.lonx.lyrico.data.model.UiEngine.SALT) Modifier
+                        else Modifier.padding(bottom = 24.dp)
+                    )
+            ) {
                 if (state.operation == LyricsOperation.SORT) {
                     LyricsColumnOrderSettings(state.twoColumnMapping, state.threeColumnMapping,
                         onTwoColumnMapping, onThreeColumnMapping)

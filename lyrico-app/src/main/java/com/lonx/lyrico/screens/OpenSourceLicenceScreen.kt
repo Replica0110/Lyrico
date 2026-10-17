@@ -1,5 +1,12 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
+import androidx.compose.foundation.rememberOverscrollEffect
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
@@ -14,8 +21,13 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.screen.ScreenCard
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
@@ -31,7 +43,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -50,8 +61,11 @@ fun OpenSourceLicenceScreen(
     val uriHandler = LocalUriHandler.current
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val topBarBackdrop = rememberBarBlurBackdrop()
-    Scaffold(
-        topBar = {
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    LibraryDetailPage(
+        title = stringResource(R.string.title_opensource_licence),
+        onBack = { navigator.popBackStack() },
+        miuixTopBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
                 SmallTopAppBar(
                     color = Color.Transparent,
@@ -64,7 +78,7 @@ fun OpenSourceLicenceScreen(
                             }
                         ) {
                             Icon(
-                                imageVector = FilledIcons.ArrowLeft,
+                                imageVector = LucideIcons.ArrowLeft,
                                 contentDescription = null
                             )
                         }
@@ -78,51 +92,74 @@ fun OpenSourceLicenceScreen(
             state = listState,
             settings = ScrollbarSettings.Default.copy(
                 selectionMode = ScrollbarSelectionMode.Full,
-                thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                thumbUnselectedColor = if (salt) SaltTheme.colors.subText else MiuixTheme.colorScheme.onSurfaceVariantActions,
+                thumbSelectedColor = if (salt) SaltTheme.colors.highlight else MiuixTheme.colorScheme.onSurfaceVariantActions,
             )
         ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier
+                modifier = (if (salt) Modifier else Modifier
                     .blurSource(topBarBackdrop)
                     .scrollEndHaptic()
                     .overScrollVertical()
-                    .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                    .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection))
                     .fillMaxHeight(),
                 contentPadding = scaffoldContentPadding(
                     paddingValues = paddingValues,
                     bottomExtra = 12.dp
                 ),
-                overscrollEffect = null,
+                overscrollEffect = if (salt) rememberOverscrollEffect() else null,
             ) {
+                if (salt && libs == null) {
+                    item("loading") {
+                        Box(Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = SaltTheme.colors.highlight,
+                                trackColor = SaltTheme.colors.stroke
+                            )
+                        }
+                    }
+                }
                 libraries?.let { libs ->
                     items(libs, key = { it.uniqueId }) { library ->
-                        Card(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp)
-                                .padding(top = 12.dp),
-                        ) {
-                            ArrowPreference(
-                                title = library.name,
-                                summary = buildString {
-                                    append(library.artifactVersion)
-
-                                    val licenseNames = library.licenses
-                                        .map { it.name }
-                                        .filter { it.isNotBlank() }
-
-                                    if (licenseNames.isNotEmpty()) {
-                                        append("\n")
-                                        append(licenseNames.joinToString(", "))
-                                    }
-                                },
-                                onClick = {
-                                    library.website?.let {
-                                        uriHandler.openUri(it)
-                                    }
+                        val summary = buildString {
+                            append(library.artifactVersion)
+                            val licenseNames = library.licenses.map { it.name }.filter { it.isNotBlank() }
+                            if (licenseNames.isNotEmpty()) {
+                                append("\n")
+                                append(licenseNames.joinToString(", "))
+                            }
+                        }
+                        if (salt) {
+                            ScreenCard {
+                                val website = library.website
+                                if (website != null) {
+                                    com.moriafly.salt.ui.Item(
+                                        text = library.name,
+                                        sub = summary,
+                                        onClick = { uriHandler.openUri(website) }
+                                    )
+                                } else {
+                                    com.moriafly.salt.ui.ItemValue(text = library.name, sub = summary)
                                 }
-                            )
+                            }
+                        } else {
+                            Card(
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .padding(top = 12.dp),
+                            ) {
+                                ArrowPreference(
+                                    title = library.name,
+                                    summary = summary,
+                                    onClick = {
+                                        library.website?.let {
+                                            uriHandler.openUri(it)
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }

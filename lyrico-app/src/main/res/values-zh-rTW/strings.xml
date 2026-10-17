@@ -57,7 +57,7 @@
     <string name="theme_mode">主題模式</string>
 
     <string name="lyric_index_title">歌詞索引</string>
-    <string name="lyric_index_summary">掃描時建立歌詞索引，用於本機歌詞搜尋，會增加掃描耗時。開啟後，已有歌曲需重新掃描</string>
+    <string name="lyric_index_summary">用於本機歌詞搜尋，開啟後需重新掃描已有歌曲</string>
     <!-- 掃描 -->
     <string name="folder_manager">資料夾管理</string>
     <string name="folder_manage_hint">管理 Lyrico 掃描的音樂資料夾</string>
@@ -67,7 +67,7 @@
 
     <!-- 搜尋 -->
     <string name="search_limit">單次載入數量</string>
-    <string name="search_limit_tip">每個搜尋來源每次載入的結果數量，設定更大的值會消耗更多流量，同時產生更多圖片快取</string>
+    <string name="search_limit_tip">每個搜尋來源每次載入的結果數量</string>
     <string name="search_loading_more">正在載入更多…</string>
     <string name="search_load_more">載入更多</string>
     <string name="search_load_more_failed">載入失敗，點擊重試</string>
@@ -651,6 +651,7 @@
     <string name="app_log_summary">檢視當機、中繼資料和批次操作日誌</string>
     <string name="app_log_empty">尚無日誌</string>
     <string name="action_copy_log">複製日誌</string>
+    <string name="action_copy_lyrics">複製歌詞</string>
     <string name="action_export_logs">匯出</string>
     <string name="app_log_delete_title">刪除日誌？</string>
     <string name="app_log_delete_message">確認刪除 %d 筆日誌嗎？此操作無法復原</string>
@@ -834,4 +835,6 @@
     <string name="poster_preview_info">圖片資訊</string>
     <string name="poster_preview_dimensions">尺寸</string>
     <string name="poster_preview_format">格式</string>
+    <string name="ui_engine">介面風格</string>
+    <string name="common_edit">編輯</string>
 </resources>

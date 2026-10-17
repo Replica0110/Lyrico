@@ -1,7 +1,9 @@
 package com.lonx.lyrico.screens.library
 
-import top.yukonga.miuix.kmp.icon.extended.Refresh
-import top.yukonga.miuix.kmp.icon.extended.AddFolder
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.data.model.UiEngine
+
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -62,6 +64,7 @@ import com.lonx.lyrico.ui.components.song.SongActionSheets
 import com.lonx.lyrico.ui.components.song.SongListItemContent
 import com.lonx.lyrico.ui.components.song.SongListItemActions
 import com.lonx.lyrico.utils.UriUtils
+import com.moriafly.salt.ui.SaltTheme
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
 import com.lonx.lyrico.viewmodel.SortBy
@@ -86,10 +89,6 @@ import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Search
-import top.yukonga.miuix.kmp.icon.extended.Settings
-import top.yukonga.miuix.kmp.icon.extended.Sort
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -108,6 +107,7 @@ fun SongsPage(
     val songs by viewModel.songs.collectAsState()
     val isSelectionMode by selectionViewModel.isSelectionMode.collectAsState(initial = false)
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsState()
+    val allSongsSelected = songs.isNotEmpty() && selectedSongUris.containsAll(songs.map { it.uri })
     val swipeAnchorUri by selectionViewModel.swipeAnchorUri.collectAsState(initial = null)
     val swipeSelectionLabel = stringResource(
         if (!isSelectionMode) {
@@ -179,14 +179,191 @@ fun SongsPage(
     val enableIndex = sections.isNotEmpty() && sortInfo.sortBy.supportsIndex
 
     val topAppBarScrollBehavior = MiuixScrollBehavior()
-    val topBarBackdrop = rememberBarBlurBackdrop()
+    // 使用应用级 UI 引擎，页面与共享列表组件保持一致。
+    val isSaltEngine = LocalUiEngine.current == UiEngine.SALT
+    val topBarBackdrop = rememberBarBlurBackdrop(enabled = LocalUiEngine.current == UiEngine.MIUIX && com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled())
     val refreshTexts = listOf(
         stringResource(R.string.pull_to_refresh),
         stringResource(R.string.release_to_refresh),
         stringResource(R.string.refreshing),
         stringResource(R.string.refresh_success)
     )
-    Scaffold(
+    val pageContent: @Composable (PaddingValues) -> Unit = { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                // Salt 顶栏用 BasicScreen 自带的 backdrop，这里不再叠第二层模糊
+                .then(if (isSaltEngine) Modifier else Modifier.blurSource(topBarBackdrop))
+        ) {
+            if (songs.isEmpty()) {
+                val scanProgress = scanState.progress
+                Box(
+                    modifier = Modifier
+                        .padding(scaffoldTopHorizontalPadding(paddingValues))
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        scanProgress != null -> {
+                            LibraryScanProgressText(progress = scanProgress)
+                        }
+
+                        !hasFolders -> {
+                            IllustratedEmptyState(
+                                kind = EmptyStateKind.Songs,
+                                title = stringResource(R.string.song_list_empty_title),
+                                icon = LucideIcons.FolderPlus,
+                                actionText = stringResource(R.string.action_add_folder),
+                                onAction = { folderPickerLauncher.launch(null) },
+                            )
+                        }
+
+                        else -> {
+                            IllustratedEmptyState(
+                                kind = EmptyStateKind.Songs,
+                                title = stringResource(R.string.empty_songs_title),
+                                icon = LucideIcons.RefreshCw,
+                                actionText = stringResource(R.string.refresh),
+                                onAction = { viewModel.refreshSongs() },
+                            )
+                        }
+                    }
+                }
+            } else {
+                LibraryPullToRefresh(
+                    isRefreshing = scanState.isScanning,
+                    onRefresh = { viewModel.refreshSongs() },
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
+                    topAppBarScrollBehavior = topAppBarScrollBehavior,
+                    refreshTexts = refreshTexts
+                ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .libraryScrollFeedback(topAppBarScrollBehavior)
+                            .fillMaxHeight(),
+                        state = listState,
+                        overscrollEffect = rememberLibraryOverscrollEffect(),
+                        contentPadding = scaffoldContentPadding(
+                            paddingValues = paddingValues,
+                            bottomExtra = LocalLibraryBottomContentPadding.current,
+                        ),
+                    ) {
+                        items(
+                            items = songs,
+                            key = { song ->
+                                song.uri.takeIf { it.isNotBlank() && it != "0" }
+                                    ?: "song-${song.id}"
+                            }
+                        ) { song ->
+                            SelectableLibraryItem(
+                                itemKey = song.uri,
+                                modifier = Modifier.animateItem(),
+                                isSelectionMode = isSelectionMode,
+                                isSelected = selectedSongUris.contains(song.uri),
+                                swipeSelectionLabel = swipeSelectionLabel,
+                                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
+                                onClick = {
+                                    navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                                },
+                                onToggleSelection = {
+                                    selectionViewModel.toggleSelection(song.uri)
+                                },
+                                onSwipeSelection = {
+                                    selectionViewModel.swipeSelect(song, songs)
+                                }
+                            ) {
+                                SongListItemContent(
+                                    song = song,
+                                    trailingContent = {
+                                        Box(modifier = Modifier.padding(end = 8.dp)) {
+                                            SongListItemActions(
+                                                isSelectionMode = isSelectionMode,
+                                                isSelected = selectedSongUris.contains(song.uri),
+                                                onToggleSelection = {
+                                                    selectionViewModel.toggleSelection(song.uri)
+                                                },
+                                                onShowMenu = {
+                                                    showMenuSheet = true
+                                                    selectedSong = song
+                                                }
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (!enableIndex && songs.isNotEmpty()) {
+                InternalLazyColumnScrollbar(
+                    state = listState,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .libraryScrollbarOverlay(paddingValues = paddingValues),
+                    settings = ScrollbarSettings.Default.copy(
+                        alwaysShowScrollbar = true,
+                        selectionMode = ScrollbarSelectionMode.Full,
+                        thumbUnselectedColor = if (isSaltEngine) {
+                            SaltTheme.colors.subText
+                        } else {
+                            MiuixTheme.colorScheme.onSurfaceVariantActions
+                        },
+                        thumbSelectedColor = if (isSaltEngine) {
+                            SaltTheme.colors.subText
+                        } else {
+                            MiuixTheme.colorScheme.onSurfaceVariantActions
+                        },
+                    ),
+                )
+            }
+            if (enableIndex && songs.isNotEmpty()) {
+                AlphabetSideBar(
+                    sections = sections,
+                    sectionIndexMap = sectionIndexMap,
+                    order = sortInfo.order,
+                    scrollController = alphabetScrollController,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .libraryOverlayInsets(
+                            paddingValues = paddingValues,
+                            extraTop = 16.dp,
+                            extraBottom = 16.dp,
+                        )
+                        .fillMaxHeight()
+                )
+            }
+
+
+        }
+
+    }
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        SaltLibraryPage(
+            selection = if (isSelectionMode) LibrarySelectionState(
+            allSelected = allSongsSelected,
+            title = stringResource(R.string.selection_mode_selected_count, selectedSongUris.size),
+            onClose = selectionViewModel::exitSelectionMode,
+            onToggleAll = { if (allSongsSelected) selectionViewModel.deselectAll() else selectionViewModel.selectAll(songs) },
+            ) else null,
+            title = stringResource(R.string.song_list_title, songs.size),
+            onSettings = { navigator.navigate(SettingsDestination()) },
+            onSearch = { navigator.navigate(LocalSearchDestination) },
+            menu = SortBy.entries.map { sortBy ->
+                val selected = sortInfo.sortBy == sortBy
+                LibraryMenuAction(
+                    title = stringResource(sortBy.labelRes),
+                    selected = selected,
+                    summary = if (selected) stringResource(
+                        if (sortInfo.order == SortOrder.ASC) R.string.sort_ascending else R.string.sort_descending
+                    ) else null,
+                ) {
+                    viewModel.onSortChange(SortInfo(sortBy, if (selected && sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC))
+                }
+            }, content = pageContent,
+        )
+    } else Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
@@ -251,7 +428,7 @@ fun SongsPage(
                                         onClick = { navigator.navigate(SettingsDestination()) }
                                     ) {
                                         Icon(
-                                            imageVector = MiuixIcons.Settings,
+                                            imageVector = LucideIcons.Settings,
                                             contentDescription = null
                                         )
                                     }
@@ -261,7 +438,7 @@ fun SongsPage(
                                         navigator.navigate(LocalSearchDestination)
                                     }) {
                                         Icon(
-                                            imageVector = MiuixIcons.Search,
+                                            imageVector = LucideIcons.Search,
                                             contentDescription = stringResource(R.string.cd_search)
                                         )
                                     }
@@ -302,7 +479,7 @@ fun SongsPage(
                                         entries = listOf(sortEntries),
                                     ) {
                                         Icon(
-                                            imageVector = MiuixIcons.Sort,
+                                            imageVector = LucideIcons.Sort,
                                             contentDescription = stringResource(R.string.cd_sort)
                                         )
                                     }
@@ -313,146 +490,7 @@ fun SongsPage(
                 }
             }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .blurSource(topBarBackdrop)
-        ) {
-            if (songs.isEmpty()) {
-                val scanProgress = scanState.progress
-                Box(
-                    modifier = Modifier
-                        .padding(scaffoldTopHorizontalPadding(paddingValues))
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    when {
-                        scanProgress != null -> {
-                            LibraryScanProgressText(progress = scanProgress)
-                        }
-
-                        !hasFolders -> {
-                            IllustratedEmptyState(
-                                kind = EmptyStateKind.Songs,
-                                title = stringResource(R.string.song_list_empty_title),
-                                icon = MiuixIcons.AddFolder,
-                                actionText = stringResource(R.string.action_add_folder),
-                                onAction = { folderPickerLauncher.launch(null) },
-                            )
-                        }
-
-                        else -> {
-                            IllustratedEmptyState(
-                                kind = EmptyStateKind.Songs,
-                                title = stringResource(R.string.empty_songs_title),
-                                icon = MiuixIcons.Refresh,
-                                actionText = stringResource(R.string.refresh),
-                                onAction = { viewModel.refreshSongs() },
-                            )
-                        }
-                    }
-                }
-            } else {
-                PullToRefresh(
-                    isRefreshing = scanState.isScanning,
-                    onRefresh = { viewModel.refreshSongs() },
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = paddingValues.calculateTopPadding()),
-                    topAppBarScrollBehavior = topAppBarScrollBehavior,
-                    refreshTexts = refreshTexts
-                ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .scrollEndHaptic()
-                            .overScrollVertical()
-                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                            .fillMaxHeight(),
-                        state = listState,
-                        overscrollEffect = null,
-                        contentPadding = scaffoldContentPadding(
-                            paddingValues = paddingValues,
-                            bottomExtra = LocalLibraryBottomContentPadding.current,
-                        ),
-                    ) {
-                        items(
-                            items = songs,
-                            key = { song ->
-                                song.uri.takeIf { it.isNotBlank() && it != "0" }
-                                    ?: "song-${song.id}"
-                            }
-                        ) { song ->
-                            SelectableLibraryItem(
-                                itemKey = song.uri,
-                                modifier = Modifier.animateItem(),
-                                isSelectionMode = isSelectionMode,
-                                isSelected = selectedSongUris.contains(song.uri),
-                                swipeSelectionLabel = swipeSelectionLabel,
-                                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                                onClick = {
-                                    navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
-                                },
-                                onToggleSelection = {
-                                    selectionViewModel.toggleSelection(song.uri)
-                                },
-                                onSwipeSelection = {
-                                    selectionViewModel.swipeSelect(song, songs)
-                                }
-                            ) {
-                                SongListItemContent(
-                                    song = song,
-                                    trailingContent = {
-                                        Box(modifier = Modifier.padding(end = 8.dp)) {
-                                            SongListItemActions(
-                                                isSelectionMode = isSelectionMode,
-                                                isSelected = selectedSongUris.contains(song.uri),
-                                                onToggleSelection = {
-                                                    selectionViewModel.toggleSelection(song.uri)
-                                                },
-                                                onShowMenu = {
-                                                    showMenuSheet = true
-                                                    selectedSong = song
-                                                }
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            if (!enableIndex && songs.isNotEmpty()) {
-                InternalLazyColumnScrollbar(
-                    state = listState,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .libraryScrollbarOverlay(paddingValues = paddingValues),
-                    settings = ScrollbarSettings.Default.copy(
-                        alwaysShowScrollbar = true,
-                        selectionMode = ScrollbarSelectionMode.Full,
-                        thumbUnselectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                        thumbSelectedColor = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                    ),
-                )
-            }
-            if (enableIndex && songs.isNotEmpty()) {
-                AlphabetSideBar(
-                    sections = sections,
-                    sectionIndexMap = sectionIndexMap,
-                    order = sortInfo.order,
-                    scrollController = alphabetScrollController,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .libraryOverlayInsets(
-                            paddingValues = paddingValues,
-                            extraTop = 16.dp,
-                            extraBottom = 16.dp,
-                        )
-                        .fillMaxHeight()
-                )
-            }
-
+    ) { paddingValues -> pageContent(paddingValues) }
             SongActionSheets(
                 selectedSong = selectedSong,
                 showMenuSheet = showMenuSheet,
@@ -460,7 +498,7 @@ fun SongsPage(
                 showDeleteDialog = showDeleteDialog,
                 showRenameDialog = showRenameDialog,
                 onDismissMenu = { showMenuSheet = false },
-                onDismissMenuFinished = { selectedSong = null },
+                onDismissMenuFinished = { if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) selectedSong = null },
                 onDismissDetail = { showDetailSheet = false },
                 onDismissDelete = { showDeleteDialog = false },
                 onDismissRename = { showRenameDialog = false },
@@ -477,8 +515,6 @@ fun SongsPage(
                     selectionViewModel.renameSong(song, newFileName)
                 }
             )
-        }
-    }
 }
 
 private fun SongEntity.sectionKey(sortBy: SortBy): String {

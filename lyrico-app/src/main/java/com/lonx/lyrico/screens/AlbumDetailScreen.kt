@@ -1,9 +1,10 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.screens
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -21,11 +22,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,7 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,10 +46,22 @@ import com.lonx.lyrico.ui.components.library.SelectableLibraryItem
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.FilledIcons
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.screens.library.LibrarySelectionState
+import com.lonx.lyrico.ui.components.library.LibraryDetailIconButton
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
+import com.lonx.lyrico.ui.components.library.LibraryDetailText
+import com.lonx.lyrico.ui.components.library.LibraryDetailTextTone
+import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.components.library.libraryDetailScroll
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.popup.PopupMenu
+import com.moriafly.salt.ui.popup.PopupMenuItem
+import com.moriafly.salt.ui.popup.rememberPopupState
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.base.YesNoDialog
@@ -70,16 +85,10 @@ import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
 @Destination<RootGraph>(route = "album_detail")
@@ -146,8 +155,30 @@ fun AlbumDetailScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
+        LibraryDetailPage(
+            title = albumName.ifBlank { stringResource(R.string.album_detail_title) },
+            onBack = { navigator.popBackStack() },
+            selection = if (isSelectionMode) {
+                val allSelected = songs.isNotEmpty() && songs.all { it.uri in selectedSongUris }
+                LibrarySelectionState(
+                    title = stringResource(R.string.selection_mode_selected_count, selectedSongUris.size),
+                    allSelected = allSelected,
+                    onClose = selectionViewModel::exitSelectionMode,
+                    onToggleAll = {
+                        if (allSelected) selectionViewModel.deselectAll()
+                        else selectionViewModel.selectAll(songs)
+                    }
+                )
+            } else null,
+            actions = {
+                SaltAlbumActionsMenu(
+                    isCalculatingReplayGain = albumActionsUiState.isCalculatingAlbumReplayGain,
+                    onShare = { albumActionsViewModel.shareAlbum(context, songs) },
+                    onDelete = { showDeleteAlbumDialog = true },
+                    onCalculateReplayGain = { albumActionsViewModel.calculateAlbumReplayGain(songs) }
+                )
+            },
+            miuixTopBar = {
                 AnimatedContent(
                     targetState = isSelectionMode,
                     label = "AlbumDetailTopBarAnimation",
@@ -170,7 +201,7 @@ fun AlbumDetailScreen(
                                     targetOffsetY = { -it / 3 }
                                 )
 
-                        (enter togetherWith exit).using(SizeTransform(clip = false))
+                        (enter togetherWith exit).using(null)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { selectionMode ->
@@ -189,7 +220,7 @@ fun AlbumDetailScreen(
                             navigationIcon = {
                                 IconButton(onClick = { navigator.popBackStack() }) {
                                     Icon(
-                                        imageVector = MiuixIcons.Back,
+                                        imageVector = LucideIcons.ArrowLeft,
                                         contentDescription = stringResource(R.string.action_back)
                                     )
                                 }
@@ -212,7 +243,7 @@ fun AlbumDetailScreen(
                                     )
                                 ) {
                                     Icon(
-                                        imageVector = MiuixIcons.More,
+                                        imageVector = LucideIcons.EllipsisVertical,
                                         contentDescription = stringResource(R.string.album_action_more)
                                     )
                                 }
@@ -238,13 +269,11 @@ fun AlbumDetailScreen(
 
                     LazyColumn(
                         modifier = Modifier
-                            .scrollEndHaptic()
-                            .overScrollVertical()
-                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                            .libraryDetailScroll(topAppBarScrollBehavior)
                             .weight(1f),
                         state = listState,
-                        contentPadding = PaddingValues(bottom = 12.dp),
-                        overscrollEffect = null
+                        contentPadding = PaddingValues(bottom = paddingValues.calculateBottomPadding() + 12.dp),
+                        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) androidx.compose.foundation.rememberOverscrollEffect() else null
                     ) {
                         if (songs.isEmpty()) {
                             item("empty") {
@@ -308,7 +337,11 @@ fun AlbumDetailScreen(
                     showDeleteDialog = showDeleteDialog,
                     showRenameDialog = showRenameDialog,
                     onDismissMenu = { showMenuSheet = false },
-                    onDismissMenuFinished = { selectedSong = null },
+                    onDismissMenuFinished = {
+                        if (!showMenuSheet && !showDetailSheet && !showDeleteDialog && !showRenameDialog) {
+                            selectedSong = null
+                        }
+                    },
                     onDismissDetail = { showDetailSheet = false },
                     onDismissDelete = { showDeleteDialog = false },
                     onDismissRename = { showRenameDialog = false },
@@ -362,6 +395,65 @@ fun AlbumDetailScreen(
 }
 
 @Composable
+private fun SaltAlbumActionsMenu(
+    isCalculatingReplayGain: Boolean,
+    onShare: () -> Unit,
+    onDelete: () -> Unit,
+    onCalculateReplayGain: () -> Unit
+) {
+    val popup = rememberPopupState()
+    Box {
+        LibraryDetailIconButton(
+            icon = LucideIcons.EllipsisVertical,
+            description = stringResource(R.string.album_action_more),
+            onClick = popup::expend
+        )
+        PopupMenu(expanded = popup.expend, onDismissRequest = popup::dismiss) {
+            if (isCalculatingReplayGain) {
+                // This SaltUI version's popup row has no disabled API; Item supplies native disabled behavior.
+                com.moriafly.salt.ui.Item(
+                    text = stringResource(R.string.menu_action_calculate_album_replay_gain),
+                    modifier = Modifier.widthIn(min = 180.dp, max = 280.dp),
+                    enabled = false,
+                    iconPainter = rememberVectorPainter(LucideIcons.Volume2),
+                    iconColor = PreferenceIconTone.Appearance.color(),
+                    arrowType = com.moriafly.salt.ui.ItemArrowType.None,
+                    onClick = {}
+                )
+            } else {
+                PopupMenuItem(
+                    text = stringResource(R.string.menu_action_calculate_album_replay_gain),
+                    iconPainter = rememberVectorPainter(LucideIcons.Volume2),
+                    iconColor = PreferenceIconTone.Appearance.color(),
+                    onClick = {
+                        popup.dismiss()
+                        onCalculateReplayGain()
+                    }
+                )
+            }
+            PopupMenuItem(
+                text = stringResource(R.string.menu_action_share_album),
+                iconPainter = rememberVectorPainter(LucideIcons.Share2),
+                iconColor = PreferenceIconTone.Tools.color(),
+                onClick = {
+                    popup.dismiss()
+                    onShare()
+                }
+            )
+            PopupMenuItem(
+                text = stringResource(R.string.menu_action_delete_album),
+                iconPainter = rememberVectorPainter(LucideIcons.Trash),
+                iconColor = SaltTheme.colors.error,
+                onClick = {
+                    popup.dismiss()
+                    onDelete()
+                }
+            )
+        }
+    }
+}
+
+@Composable
 private fun albumActionsDropdownEntry(
     isCalculatingReplayGain: Boolean,
     onShare: () -> Unit,
@@ -371,7 +463,7 @@ private fun albumActionsDropdownEntry(
     return DropdownEntry(
         items = listOf(
             DropdownItem(
-                icon = { modifier -> PreferenceIcon(FilledIcons.Volume2, PreferenceIconTone.Library, modifier = modifier, enabled = !isCalculatingReplayGain) },
+                icon = { modifier -> PreferenceIcon(LucideIcons.Volume2, PreferenceIconTone.Appearance, modifier = modifier, enabled = !isCalculatingReplayGain) },
                 text = stringResource(R.string.menu_action_calculate_album_replay_gain),
                 enabled = !isCalculatingReplayGain,
                 onClick = {
@@ -381,12 +473,12 @@ private fun albumActionsDropdownEntry(
                 }
             ),
             DropdownItem(
-                icon = { modifier -> PreferenceIcon(FilledIcons.Share2, PreferenceIconTone.Tools, modifier = modifier) },
+                icon = { modifier -> PreferenceIcon(LucideIcons.Share2, PreferenceIconTone.Tools, modifier = modifier) },
                 text = stringResource(R.string.menu_action_share_album),
                 onClick = onShare
             ),
             DropdownItem(
-                icon = { modifier -> PreferenceIcon(FilledIcons.Trash, PreferenceIconTone.Danger, modifier = modifier) },
+                icon = { modifier -> PreferenceIcon(LucideIcons.Trash, PreferenceIconTone.Danger, modifier = modifier) },
                 text = stringResource(R.string.menu_action_delete_album),
                 onClick = onDelete
             )
@@ -415,25 +507,45 @@ private fun AlbumDetailHeader(
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = album.ifBlank { stringResource(R.string.album_detail_title) },
-                style = MiuixTheme.textStyles.title3,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = albumArtist?.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.unknown_album_artist),
-                style = MiuixTheme.textStyles.main,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stringResource(R.string.song_count, songCount),
-                style = MiuixTheme.textStyles.footnote1,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-            )
+            if (LocalUiEngine.current == UiEngine.SALT) {
+                LibraryDetailText(
+                    text = album.ifBlank { stringResource(R.string.album_detail_title) },
+                    tone = LibraryDetailTextTone.Title,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                LibraryDetailText(
+                    text = albumArtist?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.unknown_album_artist),
+                    tone = LibraryDetailTextTone.Secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                LibraryDetailText(
+                    text = stringResource(R.string.song_count, songCount),
+                    tone = LibraryDetailTextTone.Secondary
+                )
+            } else {
+                Text(
+                    text = album.ifBlank { stringResource(R.string.album_detail_title) },
+                    style = MiuixTheme.textStyles.title3,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = albumArtist?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.unknown_album_artist),
+                    style = MiuixTheme.textStyles.main,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = stringResource(R.string.song_count, songCount),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
+                )
+            }
         }
     }
 }

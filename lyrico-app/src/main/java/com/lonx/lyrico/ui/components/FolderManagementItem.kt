@@ -1,7 +1,14 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
 package com.lonx.lyrico.ui.components
 
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -16,8 +23,6 @@ import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -31,11 +36,43 @@ fun FolderManagementItem(
     isLoading: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+        val popup = com.moriafly.salt.ui.popup.rememberPopupState()
+        com.moriafly.salt.ui.RoundedColumn {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                com.moriafly.salt.ui.Item(
+                    text = name, sub = "$path\n$status", modifier = Modifier.weight(1f),
+                    enabled = enabled, onClick = { onClick?.invoke() },
+                    arrowType = com.moriafly.salt.ui.ItemArrowType.None,
+                )
+                Box(Modifier.padding(end = 8.dp)) {
+                    com.lonx.lyrico.ui.components.salt.SaltIconButton(
+                        LucideIcons.EllipsisVertical, stringResource(R.string.cd_more_actions),
+                        enabled = enabled && actions.enabled, onClick = popup::expend,
+                    )
+                    com.moriafly.salt.ui.popup.PopupMenu(
+                        expanded = popup.expend, onDismissRequest = popup::dismiss,
+                    ) {
+                        actions.items.forEach { item ->
+                            com.moriafly.salt.ui.popup.PopupMenuItem(
+                                text = item.text, sub = item.summary,
+                                onClick = { popup.dismiss(); item.onClick?.invoke() },
+                            )
+                        }
+                    }
+                }
+            }
+            AnimatedVisibility(isLoading) {
+                com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+        }
+        return
+    }
     Card(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
         BasicComponent(
             endActions = {
                 OverlayIconDropdownMenu(entry = actions, enabled = enabled) {
-                    Icon(MiuixIcons.More, stringResource(R.string.cd_more_actions))
+                    Icon(LucideIcons.EllipsisVertical, stringResource(R.string.cd_more_actions))
                 }
             },
             bottomAction = {

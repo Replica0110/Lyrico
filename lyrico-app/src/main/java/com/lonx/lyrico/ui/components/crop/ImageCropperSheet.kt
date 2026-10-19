@@ -13,13 +13,11 @@ import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.components.base.SheetConfirmActions
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.innerPadding
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 /** The crop workflow is shared; each engine keeps its own sheet chrome and confirm affordance. */
 @Composable
@@ -63,17 +61,23 @@ fun ImageCropperSheet(
         }
         return
     }
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = show, title = title, enableNestedScroll = false,
         onDismissRequest = onDismissRequest, onDismissFinished = onDismissFinished,
-        endAction = {
-            IconButton(enabled = state != null, onClick = {
-                state?.crop()?.let(onCrop)
-                onDismissRequest()
-            }) { Icon(LucideIcons.Check, stringResource(R.string.confirm)) }
+        footer = {
+            SheetConfirmActions(
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm),
+                onCancel = onDismissRequest,
+                confirmEnabled = state != null,
+                onConfirm = {
+                    state?.crop()?.let(onCrop)
+                    onDismissRequest()
+                },
+            )
         }
     ) {
-        Column(Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+        Column(Modifier.fillMaxWidth()) {
             if (state != null) ImageCropper(state, Modifier.fillMaxWidth())
             else Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()

@@ -21,25 +21,21 @@ import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.model.lyrics.*
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
-import com.lonx.lyrico.ui.components.salt.SaltSheetActions
+import com.lonx.lyrico.ui.components.base.ConcurrencyDropdown
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.base.SheetConfirmActions
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonAppearance
-import com.moriafly.salt.ui.Item
-import com.moriafly.salt.ui.ItemArrowType
 import com.moriafly.salt.ui.ItemCheck
-import com.moriafly.salt.ui.ItemSlider
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.innerPadding
 import com.moriafly.salt.ui.outerPadding
 import com.moriafly.salt.ui.popup.PopupMenu
 import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.moriafly.salt.ui.popup.rememberPopupState
-import kotlin.math.roundToInt
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -241,27 +237,21 @@ private fun LyricsColumnCountSettings(
 
 @Composable
 fun LyricsConcurrency(value: Int, onChange: (Int) -> Unit, header: (@Composable () -> Unit)? = null) {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        RoundedColumn(Modifier.padding(top = 12.dp)) {
-            header?.invoke()
-            ItemSlider(
-                value = (value - 1).toFloat(),
-                onValueChange = { onChange(it.roundToInt() + 1) },
-                text = stringResource(R.string.batch_replay_gain_concurrency),
-                sub = value.toString(),
-                valueRange = 0f..4f,
-                steps = 3,
-            )
-        }
-        return
-    }
-    Card(modifier = Modifier.padding(top = 12.dp),
-        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)) {
+    val field: @Composable () -> Unit = {
         header?.invoke()
-        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
-            startAction = { PreferenceIcon(LucideIcons.Parallel, PreferenceIconTone.Tools) },
-            title = stringResource(R.string.batch_replay_gain_concurrency), items = (1..5).map { it.toString() },
-            selectedIndex = value - 1, onSelectedIndexChange = { onChange(it + 1) })
+        ConcurrencyDropdown(
+            title = stringResource(R.string.batch_replay_gain_concurrency),
+            value = value,
+            onChange = onChange,
+        )
+    }
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        RoundedColumn(Modifier.padding(top = 12.dp)) { field() }
+    } else {
+        Card(
+            modifier = Modifier.padding(top = 12.dp),
+            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
+        ) { field() }
     }
 }
 
@@ -317,9 +307,9 @@ fun LyricsProcessingSheet(show: Boolean, raw: String, operation: LyricsOperation
     }
     ActionBottomSheet(show = show, title = stringResource(operation.titleRes), onDismissRequest = onDismiss,
         // 内容自带 verticalScroll（Salt 下同样），外壳不再提供第二个滚动出口。
-        saltScrollContent = false,
-        saltFooter = {
-            SaltSheetActions(
+        scrollContent = false,
+        footer = {
+            SheetConfirmActions(
                 cancelText = stringResource(R.string.cancel),
                 confirmText = stringResource(R.string.confirm),
                 onCancel = onDismiss,
@@ -327,15 +317,10 @@ fun LyricsProcessingSheet(show: Boolean, raw: String, operation: LyricsOperation
                 onConfirm = confirm,
             )
         },
-        startAction = if (LocalUiEngine.current == UiEngine.SALT) null else {
-            { LyricsActionButton(stringResource(R.string.cancel), onClick = onDismiss) }
-        },
-        endAction = {
-            LyricsActionButton(stringResource(R.string.confirm), canConfirm, primary = true, onClick = confirm)
-        }, content = {
+        content = {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                    .then(if (LocalUiEngine.current == UiEngine.SALT) Modifier else Modifier.padding(bottom = 24.dp))
+
             ) {
                 if (operation == LyricsOperation.SORT) LyricsColumnOrderSettings(
                     twoColumnMapping, threeColumnMapping, { twoColumnMapping = it }, { threeColumnMapping = it })

@@ -69,9 +69,9 @@ import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.AppLogEvent
 import com.lonx.lyrico.viewmodel.AppLogViewModel
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.innerPadding
 import com.moriafly.salt.ui.dialog.YesNoDialog as SaltYesNoDialog
 import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
@@ -94,7 +94,6 @@ import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowDialog
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -633,17 +632,13 @@ private fun AppLogDetailSheet(
         }
         return
     }
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = show,
         enableNestedScroll = false,
         title = stringResource(R.string.app_log_detail_title),
-        endAction = {
-            log?.let {
-                IconButton(
-                    onClick = {
-                        onCopy(it)
-                    }
-                ) {
+        tools = log?.let { current ->
+            {
+                IconButton(onClick = { onCopy(current) }) {
                     Icon(
                         imageVector = LucideIcons.Copy,
                         contentDescription = stringResource(R.string.action_copy_log)
@@ -654,11 +649,10 @@ private fun AppLogDetailSheet(
         onDismissRequest = onDismiss,
         onDismissFinished = onDismissFinished
     ) {
-        val current = log ?: return@WindowBottomSheet
+        val current = log ?: return@MiuixBottomSheet
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             AppLogDetailContent(current)

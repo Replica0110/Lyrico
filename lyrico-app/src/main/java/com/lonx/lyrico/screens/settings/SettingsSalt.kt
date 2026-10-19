@@ -75,7 +75,7 @@ internal object SaltSettingsItems : SettingsItemPresentation {
         summary: String?,
         icon: ImageVector?,
         tone: PreferenceIconTone,
-        endActions: @Composable (() -> Unit)?,
+        value: String?,
         holdDownState: Boolean,
         onClick: () -> Unit,
     ) {
@@ -83,7 +83,7 @@ internal object SaltSettingsItems : SettingsItemPresentation {
             text = title,
             sub = summary,
             onClick = onClick,
-            subContent = endActions,
+            tag = value,
             iconPainter = icon?.let { rememberVectorPainter(it) },
             iconColor = tone.color(),
         )

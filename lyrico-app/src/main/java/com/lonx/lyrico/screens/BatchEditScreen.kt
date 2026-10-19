@@ -37,7 +37,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.ColumnScope
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
@@ -104,6 +103,7 @@ import com.lonx.lyrico.viewmodel.BatchEditSelectableCover
 import com.lonx.lyrico.viewmodel.BatchEditSelectableValue
 import com.lonx.lyrico.viewmodel.BatchEditUiState
 import com.lonx.lyrico.viewmodel.BatchEditViewModel
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.EditFieldSettingsDestination
@@ -118,10 +118,8 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
@@ -129,7 +127,6 @@ import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowDialog
 import androidx.compose.foundation.lazy.grid.items as gridItems
 
@@ -544,14 +541,13 @@ Box(
     )
     } else {
     // 封面操作 BottomSheet
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = showCoverOptionsSheet,
         onDismissRequest = { showCoverOptionsSheet = false }
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp)
                 .scrollEndHaptic()
                 .overScrollVertical(),
             overscrollEffect = null
@@ -611,7 +607,7 @@ Box(
         }
     }
 
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = showSelectedValueSheet,
         enableNestedScroll = false,
         title = selectedValueField?.let { stringResource(it.labelResId) }
@@ -620,7 +616,6 @@ Box(
     ) {
         Column(
             modifier = Modifier
-                .padding(bottom = 32.dp)
                 .fillMaxWidth()
         ) {
 
@@ -670,7 +665,7 @@ Box(
         }
     }
 
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = showSelectedCoverSheet,
         enableNestedScroll = false,
         title = stringResource(R.string.batch_edit_select_cover_from_selected_songs),
@@ -679,7 +674,6 @@ Box(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 96.dp),
             modifier = Modifier
-                .padding(bottom = 32.dp)
                 .fillMaxWidth()
                 .scrollEndHaptic()
                 .overScrollVertical(),
@@ -753,7 +747,7 @@ Box(
     }
 
     // 保存进度对话框
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = uiState.saveProgressBottomSheet,
         onDismissRequest = {
             if (!uiState.isSaving) viewModel.closeSaveBottomSheet()
@@ -765,10 +759,25 @@ Box(
         },
         allowDismiss = !uiState.isSaving,
         title = stringResource(R.string.batch_edit_title),
+        footer = {
+            TextButton(
+                text = if (uiState.isSaving) stringResource(R.string.action_abort) else stringResource(
+                    R.string.confirm
+                ),
+                onClick = {
+                    if (uiState.isSaving) {
+                        viewModel.abortSave()
+                    } else {
+                        viewModel.closeSaveBottomSheet()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
+        },
     ) {
         Column(
             modifier = Modifier
-                .padding(bottom = 32.dp)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
@@ -812,9 +821,7 @@ Box(
             }
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
@@ -840,20 +847,7 @@ Box(
                 )
             }
 
-            TextButton(
-                text = if (uiState.isSaving) stringResource(R.string.action_abort) else stringResource(
-                    R.string.confirm
-                ),
-                onClick = {
-                    if (uiState.isSaving) {
-                        viewModel.abortSave()
-                    } else {
-                        viewModel.closeSaveBottomSheet()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.textButtonColorsPrimary(),
-            )
+
 
         }
     }

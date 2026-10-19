@@ -63,7 +63,6 @@ fun ExportDestinationBottomSheet(
                 }
             } else Column(modifier = Modifier.fillMaxWidth()) {
                 Card(
-                    modifier = Modifier.padding(bottom = 12.dp),
                     colors = CardDefaults.defaultColors(
                         color = MiuixTheme.colorScheme.secondaryContainer
                     )

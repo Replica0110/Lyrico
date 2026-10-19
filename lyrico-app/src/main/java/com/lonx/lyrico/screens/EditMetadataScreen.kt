@@ -2,7 +2,6 @@
 
 package com.lonx.lyrico.screens
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
@@ -25,8 +24,6 @@ import com.lonx.lyrico.ui.components.base.PillButtonSize
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.ItemSwitcher
-import com.moriafly.salt.ui.ItemOuterTitle
-
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
@@ -96,7 +93,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
@@ -122,7 +118,6 @@ import com.lonx.lyrico.ui.components.lyrics.saltLyricsReadingStyle
 import com.lonx.lyrico.ui.components.lyrics.LyricsOrganizationMenu
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.data.editfield.EditFieldDefinition
 import com.lonx.lyrico.data.editfield.EditFieldKind
@@ -182,7 +177,6 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.SnackbarDuration
 import top.yukonga.miuix.kmp.basic.SnackbarHost
@@ -192,12 +186,8 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
-import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.overScrollVertical
-import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 private const val LIMITED_LYRICS_INPUT_MAX_LINES = 30
@@ -1309,7 +1299,6 @@ Box(modifier = Modifier.fillMaxSize()) {
     ) {
         Column(
             modifier = Modifier
-                .then(if (salt) Modifier else Modifier.padding(bottom = 32.dp))
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         ) {
@@ -1427,7 +1416,7 @@ Box(modifier = Modifier.fillMaxSize()) {
     EditorSheet(
         show = showPlainLyricsSheet,
         enableNestedScroll = false,
-        endAction = {
+        tools = {
             if (salt) SaltIconButton(LucideIcons.Copy, stringResource(R.string.action_copy_lyrics), {
                 showPlainLyricsSheet = false
                 if (!plainLyrics.isNullOrEmpty()) scope.launch {
@@ -1457,7 +1446,6 @@ Box(modifier = Modifier.fillMaxSize()) {
     ) {
         Column(
             modifier = Modifier
-                .then(if (salt) Modifier else Modifier.padding(bottom = 32.dp))
                 .fillMaxWidth(),
         ) {
             val plainLyricsScrollState = rememberScrollState()
@@ -1520,7 +1508,6 @@ Box(modifier = Modifier.fillMaxSize()) {
     ) {
         Column(
             modifier = Modifier
-                .then(if (salt) Modifier else Modifier.padding(bottom = 32.dp))
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         ) {

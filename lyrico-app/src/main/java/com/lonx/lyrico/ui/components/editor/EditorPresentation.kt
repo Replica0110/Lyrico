@@ -7,8 +7,8 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.ItemOuterTitle
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 /** Single native window, with the existing Miuix content retained by the caller. */
 @Composable
@@ -17,7 +17,7 @@ internal fun EditorSheet(
     title: String,
     onDismissRequest: () -> Unit,
     enableNestedScroll: Boolean = false,
-    endAction: (@Composable () -> Unit)? = null,
+    tools: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (LocalUiEngine.current == UiEngine.SALT)
@@ -30,20 +30,19 @@ internal fun EditorSheet(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 ) {
                     Box(Modifier.weight(1f)) { ItemOuterTitle(title) }
-                    endAction?.invoke()
+                    tools?.invoke()
                     Spacer(Modifier.width(12.dp))
                 }
             },
             content = content,
         )
     else
-        WindowBottomSheet(
+        MiuixBottomSheet(
             show = show,
             title = title,
             enableNestedScroll = enableNestedScroll,
             onDismissRequest = onDismissRequest,
-            endAction = { endAction?.invoke() },
-        ) {
-            Column(Modifier.fillMaxWidth(), content = content)
-        }
+            tools = tools,
+            content = content,
+        )
 }

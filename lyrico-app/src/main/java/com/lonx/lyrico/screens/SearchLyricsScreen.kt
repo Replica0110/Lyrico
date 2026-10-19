@@ -49,7 +49,6 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -61,6 +60,7 @@ import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.search.LyricsSearchResult
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.base.SheetActionBar
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
@@ -317,58 +317,57 @@ fun SearchLyricsScreen(
         // 歌词正文交给外壳补 RoundedColumn 分组；卡片内不放按钮，复制与设置都在顶栏。
         groupContent = true,
         // 歌词预览自带滚动（与 enableNestedScroll=false 一致），Salt 下不再叠加外壳滚动。
-        saltScrollContent = false,
+        scrollContent = false,
         onDismissRequest = { showLyricsSheet = false },
         onDismissFinished = {
             pendingSourceId = null
             pendingSongId = null
         },
-        startAction = {
-            if (salt) Row(verticalAlignment = Alignment.CenterVertically) {
-                // 复制是独立于歌词正文的操作，跟随设置放在卡片外。
-                SaltIconButton(
-                    icon = LucideIcons.Copy,
-                    label = stringResource(R.string.action_copy_lyrics),
-                    onClick = copySelectedLyrics
-                )
-                SaltIconButton(
-                    icon = LucideIcons.Settings,
-                    label = stringResource(R.string.search_settings),
-                    onClick = { showLyricRenderConfig = true }
-                )
-            } else IconButton(onClick = { showLyricRenderConfig = true }) {
-                Icon(
-                    imageVector = LucideIcons.Settings,
-                    contentDescription = stringResource(R.string.search_settings)
-                )
-            }
-        },
-        endAction = {
-            PillButton(
-                text = stringResource(R.string.apply_lyrics_only_action),
-                enabled = selectedCandidate?.formattedLyrics?.isNotBlank() == true,
-                onClick = {
-                    selectedCandidate?.let { candidate ->
-                        val song = candidate.song
-                        showLyricsSheet = false
-                        resultNavigator.navigateBack(
-                            LyricsSearchResult(
-                                title = song.title,
-                                artist = song.artist,
-                                album = song.album,
-                                lyrics = candidate.formattedLyrics,
-                                date = song.date,
-                                trackerNumber = null,
-                                picUrl = null,
-                                pluginId = song.pluginId,
-                                pluginName = song.pluginName,
-                                applyTargets = setOf(MetadataFieldTarget.LYRICS),
-                                fields = emptyMap()
-                            )
+        tools = {
+            val buttonStyle = PillButtonDefaults.style(if (salt) PillButtonSize.Medium else PillButtonSize.Large)
+            SheetActionBar(
+                leading = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PillButton(
+                            text = stringResource(R.string.settings_title),
+                            onClick = { showLyricRenderConfig = true },
+                            style = buttonStyle,
+                        )
+                        if (salt) SaltIconButton(
+                            icon = LucideIcons.Copy,
+                            label = stringResource(R.string.action_copy_lyrics),
+                            onClick = copySelectedLyrics,
                         )
                     }
                 },
-                style = PillButtonDefaults.style(PillButtonSize.Large)
+                trailing = {
+                    PillButton(
+                        text = stringResource(R.string.apply_lyrics_only_action),
+                        enabled = selectedCandidate?.formattedLyrics?.isNotBlank() == true,
+                        onClick = {
+                            selectedCandidate?.let { candidate ->
+                                val song = candidate.song
+                                showLyricsSheet = false
+                                resultNavigator.navigateBack(
+                                    LyricsSearchResult(
+                                        title = song.title,
+                                        artist = song.artist,
+                                        album = song.album,
+                                        lyrics = candidate.formattedLyrics,
+                                        date = song.date,
+                                        trackerNumber = null,
+                                        picUrl = null,
+                                        pluginId = song.pluginId,
+                                        pluginName = song.pluginName,
+                                        applyTargets = setOf(MetadataFieldTarget.LYRICS),
+                                        fields = emptyMap()
+                                    )
+                                )
+                            }
+                        },
+                        style = buttonStyle
+                    )
+                },
             )
         },
         content = {

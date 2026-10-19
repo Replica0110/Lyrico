@@ -83,8 +83,8 @@ import com.moriafly.salt.ui.icons.Check
 import com.moriafly.salt.ui.icons.SaltIcons
 import com.moriafly.salt.ui.icons.Uncheck
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.base.SheetActionBar
 import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonColors
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
 import com.lonx.lyrico.ui.components.lyrics.LyricRenderConfigBottomSheet
@@ -1177,74 +1177,17 @@ private fun SearchResultApplyBottomSheet(
             )
         }
     }
-    if (salt) {
-        com.lonx.lyrico.ui.components.salt.SaltBottomSheet(
-            show = show, onDismissRequest = onDismissRequest, onDismissFinished = onDismissFinished,
-            header = {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        com.moriafly.salt.ui.Text(song?.title.orEmpty(), modifier = Modifier.weight(1f),
-                            style = com.moriafly.salt.ui.SaltTheme.textStyles.main,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        PillButton(
-                            text = stringResource(if (allSelected) R.string.action_deselect_all else R.string.action_select_all),
-                            onClick = toggleAll, style = PillButtonDefaults.style(PillButtonSize.Medium),
-                        )
-                    }
-                    if (supportsLyrics) ApplySheetPillTabs(
-                        selectedTabIndex = applyPagerState.targetPage,
-                        onTabSelected = { index -> scope.launch { applyPagerState.animateScrollToPage(index) } },
-                    )
-                }
+    val actions: @Composable () -> Unit = {
+        val buttonStyle = PillButtonDefaults.style(if (salt) PillButtonSize.Medium else PillButtonSize.Large)
+        SheetActionBar(
+            leading = {
+                PillButton(
+                    text = stringResource(if (allSelected) R.string.action_deselect_all else R.string.action_select_all),
+                    onClick = toggleAll,
+                    style = buttonStyle,
+                )
             },
-            footer = {
-                androidx.compose.foundation.layout.FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    maxItemsInEachRow = if (androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.3f) 1 else 2,
-                ) {
-                    if (supportsLyrics) com.moriafly.salt.ui.Button(
-                        text = stringResource(R.string.apply_lyrics_only_action), onClick = applyLyricsOnly,
-                        enabled = !lyricsState.isLoading && song != null,
-                        modifier = Modifier.weight(1f), size = com.moriafly.salt.ui.ControlSize.Small,
-                        appearance = com.moriafly.salt.ui.ButtonAppearance.Subtle,
-                    )
-                    com.moriafly.salt.ui.Button(
-                        text = stringResource(R.string.apply_action), onClick = applySelection,
-                        enabled = song != null && selectedTargets.isNotEmpty(),
-                        modifier = Modifier.weight(1f), size = com.moriafly.salt.ui.ControlSize.Small,
-                    )
-                }
-            },
-        ) {
-            HorizontalPager(state = applyPagerState,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) { renderPage(it) }
-        }
-        return
-    }
-
-    ActionBottomSheet(
-        show = show,
-        saltScrollContent = false,
-        onDismissRequest = onDismissRequest,
-        onDismissFinished = onDismissFinished,
-        enableNestedScroll = false,
-        startAction = {
-            PillButton(
-                text = stringResource(
-                    if (allSelected) R.string.action_deselect_all else R.string.action_select_all
-                ),
-                onClick = toggleAll,
-                style = PillButtonDefaults.style(PillButtonSize.Large),
-            )
-        },
-        endAction = {
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            trailing = {
                 if (supportsLyrics) {
                     PillButton(
                         text = stringResource(R.string.apply_lyrics_only_action),
@@ -1253,24 +1196,33 @@ private fun SearchResultApplyBottomSheet(
                             {
                                 MaterialCircularProgressIndicator(
                                     modifier = Modifier.size(14.dp),
-                                    color = MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                                    strokeWidth = 2.dp
+                                    color = if (salt) com.moriafly.salt.ui.SaltTheme.colors.highlight
+                                        else MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    strokeWidth = 2.dp,
                                 )
                             }
-                        } else {
-                            null
-                        },
+                        } else null,
                         onClick = applyLyricsOnly,
-                        style = PillButtonDefaults.style(PillButtonSize.Large)
+                        style = buttonStyle,
                     )
                 }
                 PillButton(
                     text = stringResource(R.string.apply_action),
+                    enabled = song != null && selectedTargets.isNotEmpty(),
                     onClick = applySelection,
-                    style = PillButtonDefaults.style(PillButtonSize.Large)
+                    style = buttonStyle,
                 )
-            }
-        },
+            },
+        )
+    }
+    ActionBottomSheet(
+        show = show,
+        title = song?.title,
+        scrollContent = false,
+        onDismissRequest = onDismissRequest,
+        onDismissFinished = onDismissFinished,
+        enableNestedScroll = false,
+        tools = actions,
         content = {
             Column(Modifier.fillMaxWidth()) {
                 if (supportsLyrics) {

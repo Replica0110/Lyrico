@@ -420,7 +420,6 @@
     <!-- 字符映射 -->
     <string name="configure_character_mapping">配置字符映射</string>
 
-    <string name="character_mapping_description">点击字符可修改其替换规则</string>
     <string name="character_to_replace">字符 %1$s</string>
     <string name="no_character_mappings">暂无字符映射</string>
     <string name="character_replacement_selector_subtitle">选择替换内容</string>
@@ -472,7 +471,7 @@
     <string name="chinese_conversion_mode_traditional_to_simplified">繁体转简体</string>
     <string name="chinese_conversion_mode_simplified_to_traditional">简体转繁体</string>
     <string name="conversion_mode">中文文本转换</string>
-    <string name="conversion_mode_hint">应用于搜索到的文本元数据和歌词；ID、日期、数字、URL、封面不会转换</string>
+    <string name="conversion_mode_hint">应用于搜索到的文本元数据和歌词</string>
     <string name="offset_adjust_hint">调整偏移</string>
     <string name="label_lyrics_offset">歌词偏移（毫秒）</string>
     <string name="action_manual_input">手动输入</string>
@@ -583,9 +582,9 @@
     <string name="lyrics_remove_tag_lines_settings_hint">使用设置中的“非歌词内容过滤规则”处理当前歌词</string>
     <string name="lyrics_remove_empty_lines_manual_hint">手动删除当前歌词中无内容或仅包含占位符的行</string>
     <string name="non_lyrics_cleanup_rules_title">非歌词内容过滤规则</string>
-    <string name="non_lyrics_cleanup_rules_summary">用于“格式化歌词”的“移除非歌词内容”操作</string>
+    <string name="non_lyrics_cleanup_rules_summary">用于单曲或批量“移除非歌词内容”操作</string>
     <string name="non_lyrics_cleanup_rules_section">过滤规则</string>
-    <string name="non_lyrics_cleanup_rules_hint">这些规则只会在单曲或批量“格式化歌词”中勾选“移除非歌词内容”时使用；规则按完整文本匹配原始歌词行，逐字歌词会先拼成整行后再判断</string>
+    <string name="non_lyrics_cleanup_rules_hint">这些规则用于单曲或批量“移除非歌词内容”操作；规则按完整文本匹配原始歌词行，逐字歌词会先拼成整行后再判断</string>
     <string name="add_non_lyrics_cleanup_rule">添加规则</string>
     <string name="edit_non_lyrics_cleanup_rule">编辑规则</string>
     <string name="non_lyrics_cleanup_rule_input_hint">输入要移除的标签或短语，例如 [by:、作词：</string>

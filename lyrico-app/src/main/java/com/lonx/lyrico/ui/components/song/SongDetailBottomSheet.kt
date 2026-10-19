@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -39,6 +38,8 @@ import com.lonx.lyrico.ui.components.CoverRequest
 import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
+import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemValue
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -50,7 +51,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -125,11 +125,11 @@ fun SongDetailBottomSheet(
             show = show,
             onDismissRequest = onDismissRequest,
             onDismissFinished = {},
-            // 标题与艺术家跟着封面走，不用顶栏的小号灰字标题。
+            header = { ItemOuterTitle(text = title) },
             // 明细行自己不滚动，由弹层提供唯一滚动出口，内容超窗时可滚到底部。
             scrollContent = true,
         ) {
-            // 封面 + 标题/艺术家也放进 RoundedColumn，和下面的字段分组保持同一种容器。
+            // 封面和艺术家信息保留在正文，歌名由标题槽显示。
             RoundedColumn {
                 Row(
                     modifier = Modifier.fillMaxWidth().innerPadding(),
@@ -151,13 +151,6 @@ fun SongDetailBottomSheet(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         com.moriafly.salt.ui.Text(
-                            text = title,
-                            style = SaltTheme.textStyles.largeTitle,
-                            color = SaltTheme.colors.text,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        com.moriafly.salt.ui.Text(
                             text = artist,
                             style = SaltTheme.textStyles.main,
                             color = SaltTheme.colors.highlight,
@@ -176,8 +169,9 @@ fun SongDetailBottomSheet(
         return
     }
 
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = show,
+        title = title,
         enableNestedScroll = false,
         onDismissRequest = {
             onDismissRequest()
@@ -186,7 +180,6 @@ fun SongDetailBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
             Row(
@@ -208,11 +201,6 @@ fun SongDetailBottomSheet(
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = title,
-                        style = MiuixTheme.textStyles.title3,
-                        fontWeight = FontWeight.Bold
-                    )
                     Text(
                         text = artist,
                         style = MiuixTheme.textStyles.footnote1,

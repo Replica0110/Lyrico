@@ -44,7 +44,7 @@ internal interface SettingsItemPresentation {
         summary: String? = null,
         icon: ImageVector? = null,
         tone: PreferenceIconTone = PreferenceIconTone.Tools,
-        endActions: @Composable (() -> Unit)? = null,
+        value: String? = null,
         holdDownState: Boolean = false,
         onClick: () -> Unit,
     )

@@ -23,13 +23,13 @@ import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.ItemSwitcher
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 @Composable
 fun LyricRenderConfigBottomSheet(
@@ -113,13 +113,12 @@ fun LyricRenderConfigBottomSheet(
         }
         return
     }
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest
     ) {
         Column(
             modifier = Modifier
-                .padding(bottom = 32.dp)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {

@@ -9,12 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,8 +25,9 @@ import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.BatchExportUiState
 import com.moriafly.salt.ui.SaltTheme
-import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -58,7 +56,7 @@ fun BatchExportBottomSheet(
         title = title,
         groupContent = true,
         // 内容自带 verticalScroll，外壳不再提供滚动出口。
-        saltScrollContent = false,
+        scrollContent = false,
         content = {
             Column(
                 modifier = Modifier
@@ -130,7 +128,6 @@ fun BatchExportBottomSheet(
 
                 SheetStatisticsRow(
                     modifier = Modifier.fillMaxWidth()
-                        .then(if (salt) Modifier else Modifier.padding(bottom = 12.dp))
                 ) {
                     if (salt) {
                         com.moriafly.salt.ui.Text(
@@ -182,9 +179,8 @@ fun BatchExportBottomSheet(
                     }
                 }
             }
-            if (!salt) Spacer(modifier = Modifier.padding(vertical = 12.dp))
         },
-        endAction = {
+        footer = {
             val actionLabel = if (batchExportUiState.isRunning) stringResource(R.string.action_abort)
             else stringResource(R.string.action_close)
             val onAction = {
@@ -195,23 +191,11 @@ fun BatchExportBottomSheet(
                 }
             }
             TextButton(
-                colors = ButtonColors(
-                    containerColor = Color.Transparent,
-                    contentColor = MiuixTheme.colorScheme.primary,
-                    disabledContainerColor = Color.Transparent,
-                    disabledContentColor = MiuixTheme.colorScheme.disabledPrimary
-                ),
-                onClick = onAction
-            ) {
-                Text(
-                    text = actionLabel,
-                    color = if (batchExportUiState.isRunning) {
-                        MiuixTheme.colorScheme.error
-                    } else {
-                        MiuixTheme.colorScheme.primary
-                    }
-                )
-            }
+                text = actionLabel,
+                onClick = onAction,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
         }
     )
 }

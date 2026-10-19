@@ -432,7 +432,6 @@
 
     <!-- Character Mapping -->
     <string name="configure_character_mapping">Configure Character Mapping</string>
-    <string name="character_mapping_description">Tap a character to change its replacement</string>
     <string name="character_to_replace">Character %1$s</string>
     <string name="no_character_mappings">No character mappings</string>
     <string name="character_replacement_selector_subtitle">Select a replacement</string>
@@ -484,7 +483,7 @@
     <string name="chinese_conversion_mode_traditional_to_simplified">CHT -> CHS</string>
     <string name="chinese_conversion_mode_simplified_to_traditional">CHS -> CHT</string>
     <string name="conversion_mode">Chinese Text Conversion</string>
-    <string name="conversion_mode_hint">Applies to searchable text metadata and lyrics. IDs, dates, numbers, URLs, and covers are not converted</string>
+    <string name="conversion_mode_hint">Applies to searchable text metadata and lyrics.</string>
     <string name="offset_adjust_hint">Adjust Offset</string>
     <string name="label_lyrics_offset">Lyrics Offset (ms)</string>
     <string name="action_manual_input">Enter Manually</string>
@@ -591,9 +590,9 @@
     <string name="lyrics_remove_tag_lines_settings_hint">Use Non-Lyric Content Rules from Settings on the current lyrics</string>
     <string name="lyrics_remove_empty_lines_manual_hint">Delete lyric lines that are empty or contain only placeholders</string>
     <string name="non_lyrics_cleanup_rules_title">Non-Lyric Content Rules</string>
-    <string name="non_lyrics_cleanup_rules_summary">Used by the Remove non-lyric content option in Format lyrics</string>
+    <string name="non_lyrics_cleanup_rules_summary">Used by single-song or batch Remove non-lyric content</string>
     <string name="non_lyrics_cleanup_rules_section">Filter Rules</string>
-    <string name="non_lyrics_cleanup_rules_hint">These rules are used only when Remove non-lyric content is selected in single-song or batch Format lyrics. Rules match complete text in the raw lyric line. Word-by-word lyrics are joined into full lines before matching</string>
+    <string name="non_lyrics_cleanup_rules_hint">These rules are used by single-song or batch Remove non-lyric content. Rules match complete text in the raw lyric line. Word-by-word lyrics are joined into full lines before matching</string>
     <string name="add_non_lyrics_cleanup_rule">Add rule</string>
     <string name="edit_non_lyrics_cleanup_rule">Edit rule</string>
     <string name="non_lyrics_cleanup_rule_input_hint">Enter a tag or phrase to remove, such as [by: or Lyricist:</string>

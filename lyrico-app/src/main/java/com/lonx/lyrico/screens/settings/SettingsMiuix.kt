@@ -95,7 +95,7 @@ internal object MiuixSettingsItems : SettingsItemPresentation {
         summary: String?,
         icon: ImageVector?,
         tone: PreferenceIconTone,
-        endActions: @Composable (() -> Unit)?,
+        value: String?,
         holdDownState: Boolean,
         onClick: () -> Unit,
     ) {
@@ -103,7 +103,15 @@ internal object MiuixSettingsItems : SettingsItemPresentation {
             title = title,
             summary = summary,
             startAction = { icon?.let { PreferenceIcon(it, tone) } },
-            endActions = { endActions?.invoke() },
+            endActions = {
+                value?.let {
+                    top.yukonga.miuix.kmp.basic.Text(
+                        text = it,
+                        fontSize = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2.fontSize,
+                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceVariantActions,
+                    )
+                }
+            },
             holdDownState = holdDownState,
             onClick = onClick,
         )

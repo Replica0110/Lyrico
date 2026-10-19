@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -23,11 +22,11 @@ import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.domain.poster.ArtistPictureEntry
 import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 /**
  * 「艺术家海报」的两个面板（操作菜单、目标选择）以及它们的选中状态。
@@ -235,7 +234,7 @@ fun ArtistPosterMenu(
         return
     }
 
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = state.showOptions,
         enableNestedScroll = false,
         title = stringResource(R.string.label_artist_image_options),
@@ -243,7 +242,6 @@ fun ArtistPosterMenu(
     ) {
         Column(
             modifier = Modifier
-                .padding(bottom = 32.dp)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         ) {
@@ -312,7 +310,7 @@ fun ArtistPosterMenu(
 
     // 选择目标：选艺术家（设置/重挂）或选具体某张图片（移除/保存/裁剪）
     val pickerRequest = state.pickerRequest
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = pickerRequest != null,
         enableNestedScroll = false,
         title = stringResource(
@@ -323,7 +321,6 @@ fun ArtistPosterMenu(
     ) {
         Column(
             modifier = Modifier
-                .padding(bottom = 32.dp)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         ) {

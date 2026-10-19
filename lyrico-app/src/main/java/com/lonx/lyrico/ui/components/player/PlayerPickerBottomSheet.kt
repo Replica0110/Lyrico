@@ -40,6 +40,7 @@ import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.platform.player.InstalledAppChecker
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemArrowType
 import com.moriafly.salt.ui.ItemOuterTitle
@@ -55,7 +56,6 @@ import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import androidx.core.net.toUri
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 
@@ -141,7 +141,7 @@ fun PlayerPickerBottomSheet(
         return
     }
 
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = show,
         enableNestedScroll = true,
         onDismissRequest = onDismissRequest,
@@ -150,7 +150,6 @@ fun PlayerPickerBottomSheet(
         Column(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState())
         ) {
 

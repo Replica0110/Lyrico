@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,8 +22,9 @@ import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.AlbumActionsUiState
 import com.moriafly.salt.ui.SaltTheme
-import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -103,9 +102,7 @@ fun AlbumReplayGainProgressBottomSheet(
 
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            // Salt 的共享弹层壳已提供卡片内边距，不再叠加。
-                            .then(if (salt) Modifier else Modifier.padding(bottom = 12.dp)),
+                            .fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Row(
@@ -142,10 +139,9 @@ fun AlbumReplayGainProgressBottomSheet(
 
 
 
-                if (!salt) Spacer(modifier = Modifier.height(12.dp))
             }
         },
-        endAction = {
+        footer = {
             val actionLabel = if (uiState.isCalculatingAlbumReplayGain) {
                 stringResource(R.string.action_abort)
             } else {
@@ -155,22 +151,11 @@ fun AlbumReplayGainProgressBottomSheet(
                 if (uiState.isCalculatingAlbumReplayGain) onAbort() else onDismissRequest()
             }
             TextButton(
-                colors = ButtonColors(
-                    containerColor = MiuixTheme.colorScheme.surface,
-                    contentColor = MiuixTheme.colorScheme.primary,
-                    disabledContainerColor = MiuixTheme.colorScheme.surface,
-                    disabledContentColor = MiuixTheme.colorScheme.disabledPrimary
-                ),
-                onClick = onAction
-            ) {
-                Text(
-                    text = actionLabel,
-                    color = when {
-                        uiState.isCalculatingAlbumReplayGain -> MiuixTheme.colorScheme.error
-                        else -> MiuixTheme.colorScheme.primary
-                    }
-                )
-            }
+                text = actionLabel,
+                onClick = onAction,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
         }
     )
 }

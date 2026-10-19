@@ -23,7 +23,7 @@ internal fun SaltSheetActions(
     confirmEnabled: Boolean = true,
 ) {
     FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         maxItemsInEachRow = if (LocalDensity.current.fontScale >= 1.3f) 1 else 2,

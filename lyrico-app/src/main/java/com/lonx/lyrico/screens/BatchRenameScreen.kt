@@ -3,7 +3,6 @@
 package com.lonx.lyrico.screens
 
 import com.lonx.lyrico.ui.components.salt.SaltTextInput
-
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
@@ -62,6 +61,7 @@ import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.ramcosta.composedestinations.generated.destinations.CharacterMappingDestination
 import com.lonx.lyrico.utils.TagField
 import com.lonx.lyrico.viewmodel.BatchRenameViewModel
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -95,7 +95,6 @@ import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 
@@ -253,30 +252,36 @@ fun BatchRenameScreen(
             ) {
                 BatchRenameProgressContent(
                     uiState = uiState,
-                    onAbort = viewModel::abortRename,
-                    onClose = viewModel::closeRenameDialog,
                     salt = true,
                 )
             }
         } else {
-            WindowBottomSheet(
+            MiuixBottomSheet(
                 show = uiState.renameProgress != null,
                 onDismissRequest = {
                     if (!uiState.isRenamingInProgress) viewModel.closeRenameDialog()
                 },
                 allowDismiss = !uiState.isRenamingInProgress,
                 title = stringResource(R.string.batch_rename_title),
+                footer = {
+                    TextButton(
+                        text = stringResource(if (uiState.isRenamingInProgress) R.string.action_abort else R.string.confirm),
+                        onClick = {
+                            if (uiState.isRenamingInProgress) viewModel.abortRename()
+                            else viewModel.closeRenameDialog()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                },
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(bottom = 32.dp)
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
                     BatchRenameProgressContent(
                         uiState = uiState,
-                        onAbort = viewModel::abortRename,
-                        onClose = viewModel::closeRenameDialog,
                         salt = false,
                     )
                 }
@@ -285,12 +290,10 @@ fun BatchRenameScreen(
     }
 }
 
-/** 重命名进度内容；Salt 的操作独立放在弹层 footer 中。 */
+/** Progress content only; each engine keeps the action in its fixed footer. */
 @Composable
 private fun BatchRenameProgressContent(
     uiState: com.lonx.lyrico.viewmodel.BatchRenameUiState,
-    onAbort: () -> Unit,
-    onClose: () -> Unit,
     salt: Boolean,
 ) {
     Column(
@@ -360,9 +363,7 @@ private fun BatchRenameProgressContent(
             com.moriafly.salt.ui.Text(stringResource(R.string.batch_matching_failure, uiState.failureCount), style = SaltTheme.textStyles.main)
         }
     } else Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
@@ -379,18 +380,7 @@ private fun BatchRenameProgressContent(
         )
     }
 
-    if (!salt) {
-        TextButton(
-            text = if (uiState.isRenamingInProgress) stringResource(R.string.action_abort) else stringResource(
-                R.string.confirm
-            ),
-            onClick = {
-                if (uiState.isRenamingInProgress) onAbort() else onClose()
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-        )
-    }
+
 }
 
 @Composable
@@ -424,6 +414,8 @@ private fun BatchRenameConfigTab(
                     Box(Modifier.fillMaxWidth()) {
                         SaltTextInput(
                             text = renameFormat,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            backgroundColor = SaltTheme.colors.background,
                             onChange = onFormatChange,
                             actionContent = {
                                 SaltIconButton(
@@ -471,7 +463,8 @@ private fun BatchRenameConfigTab(
                         text = stringResource(id = R.string.action_rename),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .innerPadding(vertical = false),
+                            .innerPadding(vertical = false)
+                            .padding(bottom = 12.dp),
                         enabled = uiState.previews.isNotEmpty() && !uiState.isRenamingInProgress,
                     )
                 }

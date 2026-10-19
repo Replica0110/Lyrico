@@ -2,14 +2,11 @@
 
 package com.lonx.lyrico.ui.components.batch
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
@@ -22,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,13 +28,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.data.model.BatchMatchConfig
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
+import com.lonx.lyrico.ui.components.base.ConcurrencyDropdown
 import com.lonx.lyrico.viewmodel.BatchMatchType
 import com.moriafly.salt.ui.enabledAlpha
 import com.moriafly.salt.ui.icons.Check
@@ -46,17 +40,13 @@ import com.moriafly.salt.ui.icons.SaltIcons
 import com.moriafly.salt.ui.icons.Uncheck
 import com.moriafly.salt.ui.innerPadding
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Checkbox
-import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.CheckboxPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,7 +104,7 @@ fun BatchMatchConfigBottomSheet(
         ),
         enableNestedScroll = false,
         // 内容自带 verticalScroll，外壳不再提供滚动出口。
-        saltScrollContent = false,
+        scrollContent = false,
         content = {
             if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
                 com.lonx.lyrico.data.model.UiEngine.SALT
@@ -187,21 +177,11 @@ fun BatchMatchConfigBottomSheet(
                             sub = stringResource(R.string.batch_match_prefer_filename_summary),
                         )
                     }
-                    // 滑杆属于分组控件，放进 RoundedColumn；提示用 outer tip 放在分组之外。
                     com.moriafly.salt.ui.RoundedColumn {
-                        val tempConcurrency = remember(config.concurrency) {
-                            mutableIntStateOf(config.concurrency)
-                        }
-                        com.moriafly.salt.ui.ItemSlider(
-                            value = tempConcurrency.intValue.toFloat(),
-                            onValueChange = { tempConcurrency.intValue = it.roundToInt() },
-                            text = stringResource(R.string.batch_match_config_concurrency),
-                            sub = tempConcurrency.intValue.toString(),
-                            valueRange = 1f..5f,
-                            steps = 3,
-                            onValueChangeFinished = {
-                                config = config.copy(concurrency = tempConcurrency.intValue)
-                            },
+                        ConcurrencyDropdown(
+                            title = stringResource(R.string.batch_match_config_concurrency),
+                            value = config.concurrency,
+                            onChange = { config = config.copy(concurrency = it) },
                         )
                     }
                     com.moriafly.salt.ui.ItemOuterTip(
@@ -262,9 +242,6 @@ fun BatchMatchConfigBottomSheet(
                         color = MiuixTheme.colorScheme.secondaryContainer,
                     )
                 ) {
-                    val tempConcurrency = remember(config.concurrency) {
-                        mutableIntStateOf(config.concurrency)
-                    }
                     if (singleTarget != null) {
                         // 单字段的匹配类型（如歌词 / 封面）打开即匹配，不需要勾选字段，
                         // 这一项只负责切换「覆盖」还是「补充」
@@ -309,43 +286,13 @@ fun BatchMatchConfigBottomSheet(
                         },
                         insideMargin = PaddingValues(12.dp)
                     )
-                    ArrowPreference(
-                        startAction = { PreferenceIcon(LucideIcons.Parallel, PreferenceIconTone.Appearance) },
+                    ConcurrencyDropdown(
                         title = stringResource(R.string.batch_match_config_concurrency),
-                        endActions = {
-                            Text(
-                                text = "${tempConcurrency.intValue}",
-                                fontSize = MiuixTheme.textStyles.body2.fontSize,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                            )
-                        },
-                        insideMargin = PaddingValues(12.dp),
-                        onClick = {
-
-                        },
-                        bottomAction = {
-                            Slider(
-                                showKeyPoints = true,
-                                valueRange = 1f..5f,
-                                steps = 3,
-                                value = tempConcurrency.intValue.toFloat(),
-                                onValueChange = {
-                                    tempConcurrency.intValue = it.roundToInt()
-                                },
-                                onValueChangeFinished = {
-                                    config = config.copy(concurrency = tempConcurrency.intValue)
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(BasicComponentDefaults.InsideMargin.calculateBottomPadding()))
-                            Text(
-                                text = stringResource(R.string.search_limit_tip),
-                                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                            )
-                        }
+                        summary = stringResource(R.string.search_limit_tip),
+                        value = config.concurrency,
+                        onChange = { config = config.copy(concurrency = it) },
                     )
                 }
-                Spacer(modifier = Modifier.padding(vertical = 12.dp))
             }
         },
         onDismissRequest = { onDismissRequest(config) },

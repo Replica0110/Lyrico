@@ -468,6 +468,8 @@ private fun PluginConfigFormItem(
             if (salt) {
                 SaltTextInput(
                     text = value,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    backgroundColor = com.moriafly.salt.ui.SaltTheme.colors.background,
                     onChange = onValueChange,
                     label = field.title,
                     summary = field.summary,

@@ -1,24 +1,12 @@
 package com.lonx.lyrico.ui.components.library
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import com.lonx.lyrico.ui.components.base.ItemMenuAction
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
+import com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet
 
 @Composable
 fun AlbumActionBottomSheet(
@@ -55,19 +43,11 @@ fun AlbumActionBottomSheet(
         )
     }
     val label = albumName.ifBlank { stringResource(R.string.album_detail_title) }
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
-        com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
-            show = show, label = label, onDismissRequest = onDismissRequest,
-            onDismissFinished = onDismissFinished, content = actions)
-    } else {
-        WindowBottomSheet(show = show, onDismissRequest = onDismissRequest,
-            onDismissFinished = onDismissFinished) {
-            Column(Modifier.fillMaxWidth().padding(bottom = 12.dp).verticalScroll(rememberScrollState())) {
-                SmallTitle(text = label, insideMargin = PaddingValues(4.dp))
-                Card(Modifier.padding(bottom = 12.dp),
-                    colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
-                    content = actions)
-            }
-        }
-    }
+    ItemMenuBottomSheet(
+        show = show,
+        label = label,
+        onDismissRequest = onDismissRequest,
+        onDismissFinished = onDismissFinished,
+        content = actions,
+    )
 }

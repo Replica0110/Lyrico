@@ -2,34 +2,32 @@
 
 package com.lonx.lyrico.screens
 
-import com.lonx.lyrico.ui.components.icons.LucideIcons
-import androidx.compose.foundation.rememberOverscrollEffect
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
-import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.ui.components.library.LibraryDetailPage
-import com.lonx.lyrico.ui.components.library.libraryDetailScroll
-import com.moriafly.salt.ui.ItemTip
-import com.moriafly.salt.ui.ItemDropdown
-import com.moriafly.salt.ui.screen.ScreenCard
-import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.lonx.lyrico.data.model.CharacterMappingRule
 import com.lonx.lyrico.data.model.ReplacementCharOption
+import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.model.toReplacementOption
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.ui.components.library.LibraryDetailPage
+import com.lonx.lyrico.ui.components.library.libraryDetailScroll
+import com.lonx.lyrico.ui.components.scaffoldContentPadding
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.CharacterMappingViewModel
+import com.moriafly.salt.ui.ItemDropdown
+import com.moriafly.salt.ui.ItemTip
+import com.moriafly.salt.ui.popup.PopupMenuItem
+import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -76,22 +74,6 @@ fun CharacterMappingScreen(
             contentPadding = scaffoldContentPadding(paddingValues, bottomExtra = 12.dp),
             overscrollEffect = if (salt) rememberOverscrollEffect() else null
         ) {
-            item(key = "description") {
-                val description = stringResource(R.string.character_mapping_description)
-                if (salt) com.moriafly.salt.ui.Text(
-                    text = description,
-                    style = com.moriafly.salt.ui.SaltTheme.textStyles.sub,
-                    color = com.moriafly.salt.ui.SaltTheme.colors.subText,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(12.dp)
-                ) else Text(
-                    text = description,
-                    fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(12.dp)
-                )
-            }
             val config = characterMappingConfig
             if (config != null && config.rules.isNotEmpty()) {
                 items(items = config.rules, key = { it.id }) { rule ->

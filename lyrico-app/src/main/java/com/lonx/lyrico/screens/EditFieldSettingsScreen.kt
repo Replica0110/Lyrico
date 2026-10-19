@@ -3,7 +3,6 @@
 package com.lonx.lyrico.screens
 
 import com.lonx.lyrico.ui.components.salt.SaltTextInput
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -74,20 +73,16 @@ import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.CustomTagKeyError
 import com.lonx.lyrico.viewmodel.EditFieldSettingsViewModel
-import com.moriafly.salt.ui.Button
-import com.moriafly.salt.ui.ButtonAppearance
+import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Switcher
-import com.moriafly.salt.ui.dialog.BasicDialog
-import com.moriafly.salt.ui.dialog.DialogTitle
 import com.moriafly.salt.ui.dialog.YesNoDialog as SaltYesNoDialog
 import com.moriafly.salt.ui.innerPadding
 import com.moriafly.salt.ui.outerPadding
 import com.moriafly.salt.ui.popup.PopupMenu
 import com.moriafly.salt.ui.popup.PopupMenuItem
-import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.FieldSongsDestination
@@ -106,7 +101,6 @@ import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
@@ -115,7 +109,6 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowBottomSheet
 import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.window.WindowListPopup
 
@@ -637,7 +630,7 @@ private fun ComponentFieldsBottomSheet(
         }
         return
     }
-    WindowBottomSheet(
+    MiuixBottomSheet(
         show = show,
         title = component?.title().orEmpty(),
         enableNestedScroll = false,

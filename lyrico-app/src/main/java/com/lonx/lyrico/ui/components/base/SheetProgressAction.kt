@@ -16,7 +16,7 @@ import com.moriafly.salt.ui.ButtonIntent
 internal fun SheetProgressAction(running: Boolean, onAbort: () -> Unit, onClose: () -> Unit,
     label: String? = null) {
     Button(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
         text = label ?: stringResource(if (running) R.string.action_abort else R.string.action_close),
         onClick = if (running) onAbort else onClose,
         appearance = if (running) ButtonAppearance.Subtle else ButtonAppearance.Filled,

@@ -35,10 +35,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberOverscrollEffect
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -100,20 +98,14 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.PluginConfigDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import com.moriafly.salt.ui.Button
-import com.moriafly.salt.ui.ButtonAppearance
-import com.moriafly.salt.ui.ButtonIntent
-import com.moriafly.salt.ui.ControlSize
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemArrowType
 import com.moriafly.salt.ui.ItemCheck
 import com.moriafly.salt.ui.ItemDivider
-import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemTip
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Switcher
 import com.moriafly.salt.ui.innerPadding
-import com.moriafly.salt.ui.screen.ScreenCard
 import com.moriafly.salt.ui.dialog.YesNoDialog as SaltYesNoDialog
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
@@ -127,7 +119,6 @@ import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Switch
@@ -559,7 +550,7 @@ fun PluginManagerScreen(
 
     YesNoBottomSheet(
         show = showImportPreviewSheet,
-        saltScrollContent = true,
+        scrollContent = true,
         title = stringResource(R.string.plugin_import_found_title),
         onDismissRequest = {
             viewModel.discardPendingImportFiles()
@@ -584,8 +575,7 @@ fun PluginManagerScreen(
             pendingImport?.let { session ->
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .then(if (salt) Modifier else Modifier.verticalScroll(rememberScrollState())),
+                        .fillMaxWidth(),
                 ) {
                     if (session.candidates.isNotEmpty()) {
                         if (salt) com.moriafly.salt.ui.Text(

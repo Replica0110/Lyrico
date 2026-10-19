@@ -1,5 +1,6 @@
 package com.lonx.lyrico.ui.components.salt
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -44,12 +45,14 @@ internal fun SaltTextInput(
     secure: Boolean = false,
     passwordVisible: Boolean = false,
     inputTransformation: InputTransformation? = null,
+    backgroundColor: Color = Color.Transparent,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val decorator = TextFieldDecorator { innerTextField ->
         Column(
             Modifier.fillMaxWidth()
+                .background(backgroundColor, SaltTheme.shapes.medium)
                 .border(
                     1.dp,
                     when {
@@ -181,6 +184,7 @@ internal fun SaltTextInput(
     secure: Boolean = false,
     passwordVisible: Boolean = false,
     inputTransformation: InputTransformation? = null,
+    backgroundColor: Color = Color.Transparent,
 ) {
     SaltTextInput(
         state = rememberEditorTextFieldState(text, onChange),
@@ -196,5 +200,6 @@ internal fun SaltTextInput(
         secure = secure,
         passwordVisible = passwordVisible,
         inputTransformation = inputTransformation,
+        backgroundColor = backgroundColor,
     )
 }

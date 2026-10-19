@@ -3,7 +3,6 @@
 package com.lonx.lyrico.screens
 
 import com.lonx.lyrico.ui.components.salt.SaltTextInput
-
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.screens.settings.*
@@ -20,9 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -385,13 +382,7 @@ fun SettingsScreen(
                         icon = LucideIcons.Volume2, tone = PreferenceIconTone.Teal,
                         title = stringResource(R.string.settings_replay_gain_target_loudness),
                         summary = stringResource(R.string.settings_replay_gain_target_loudness_summary),
-                        endActions = {
-                            Text(
-                                text = formatLoudnessValue(settingsUiState.replayGainTargetLoudness),
-                                fontSize = MiuixTheme.textStyles.body2.fontSize,
-                                color = MiuixTheme.colorScheme.onSurfaceVariantActions
-                            )
-                        },
+                        value = formatLoudnessValue(settingsUiState.replayGainTargetLoudness),
                         onClick = { showRgTargetDialog.value = true },
                         holdDownState = showRgTargetDialog.value
                     )
@@ -708,6 +699,8 @@ private fun ReplayGainTargetLoudnessSheet(
                         onChange = { customSelected = true; invalid = false },
                     )
                     if (customSelected) SaltTextInput(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        backgroundColor = com.moriafly.salt.ui.SaltTheme.colors.background,
                         text = customText, hint = stringResource(R.string.replay_gain_target_custom_hint),
                         onChange = { customText = it; invalid = false },
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -722,6 +715,7 @@ private fun ReplayGainTargetLoudnessSheet(
 
     YesNoBottomSheet(
         show = show,
+        title = stringResource(R.string.settings_replay_gain_target_loudness),
         onDismissRequest = onDismiss,
         onConfirm = {
             if (customSelected) {
@@ -738,7 +732,7 @@ private fun ReplayGainTargetLoudnessSheet(
             }
         },
         content = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())){
+            Column {
                 Card(
                     colors = CardDefaults.defaultColors(
                         color = MiuixTheme.colorScheme.secondaryContainer
@@ -791,7 +785,6 @@ private fun ReplayGainTargetLoudnessSheet(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     )

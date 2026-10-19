@@ -6,11 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,9 +21,9 @@ import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.ArtistPosterEmbedUiState
 import com.moriafly.salt.ui.SaltTheme
-import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
-import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
@@ -73,16 +69,7 @@ fun ArtistPosterProgressSheet(
         onDismissFinished = onDismissFinished,
         // Salt 侧裸内容需要分组获得标准内边距（内容不长，由外壳负责滚动）。
         groupContent = true,
-        startAction = {
-            if (state.isRunning) {
-                if (salt) androidx.compose.material3.CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = SaltTheme.colors.highlight,
-                    trackColor = SaltTheme.colors.stroke,
-                ) else CircularProgressIndicator(size = 20.dp)
-            }
-        },
-        endAction = {
+        footer = {
             val message = state.message
             val permissionSender = state.permissionIntentSender
             val actionLabel = when {
@@ -99,22 +86,11 @@ fun ArtistPosterProgressSheet(
                 }
             }
             TextButton(
-                colors = ButtonColors(
-                    containerColor = MiuixTheme.colorScheme.surface,
-                    contentColor = MiuixTheme.colorScheme.primary,
-                    disabledContainerColor = MiuixTheme.colorScheme.surface,
-                    disabledContentColor = MiuixTheme.colorScheme.disabledPrimary
-                ),
-                onClick = onAction
-            ) {
-                Text(
-                    text = actionLabel,
-                    color = when {
-                        state.isRunning -> MiuixTheme.colorScheme.error
-                        else -> MiuixTheme.colorScheme.primary
-                    }
-                )
-            }
+                text = actionLabel,
+                onClick = onAction,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
         },
         content = {
             Column(
@@ -211,8 +187,6 @@ fun ArtistPosterProgressSheet(
                     }
                 }
 
-                // Salt 的共享弹层壳已提供卡片内边距，不再叠加。
-                if (!salt) Spacer(modifier = Modifier.height(12.dp))
             }
         }
     )

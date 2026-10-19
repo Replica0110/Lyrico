@@ -966,8 +966,10 @@ private fun BatchEditValueOptionItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 56.dp)
                 .clickable { onClick() }
-                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.CenterStart,
         ) {
             Text(
                 text = option.value,
@@ -1350,7 +1352,7 @@ private fun BatchEditFieldItem(
                 }
                 IconButton(onClick = onSelectFromSongs) {
                     Icon(
-                        imageVector = LucideIcons.ArrowDownUp,
+                        imageVector = LucideIcons.ListCheck,
                         contentDescription = stringResource(R.string.batch_edit_select_from_selected_songs)
                     )
                 }
@@ -1359,7 +1361,7 @@ private fun BatchEditFieldItem(
                 textStyle = MiuixTheme.textStyles.body2,
                 modifier = Modifier.fillMaxWidth(),
                 value = value,
-                label = stringResource(field.labelResId) + if (isKeep) " (无修改)" else "",
+                label = if (isKeep) stringResource(R.string.batch_edit_unchanged_field_label, stringResource(field.labelResId)) else stringResource(field.labelResId),
                 onValueChange = onValueChange,
                 singleLine = false,
                 minLines = 6
@@ -1372,7 +1374,7 @@ private fun BatchEditFieldItem(
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             value = value,
             onValueChange = onValueChange,
-            label = stringResource(field.labelResId) + if (isKeep) " (无修改)" else "",
+            label = if (isKeep) stringResource(R.string.batch_edit_unchanged_field_label, stringResource(field.labelResId)) else stringResource(field.labelResId),
             trailingIcon = {
                 Row {
                     IconButton(onClick = {
@@ -1389,7 +1391,7 @@ private fun BatchEditFieldItem(
                     }
                     IconButton(onClick = onSelectFromSongs) {
                         Icon(
-                            imageVector = LucideIcons.ArrowDownUp,
+                            imageVector = LucideIcons.ListCheck,
                             contentDescription = stringResource(R.string.batch_edit_select_from_selected_songs)
                         )
                     }
@@ -1422,7 +1424,7 @@ private fun BatchEditCustomFieldItem(
             .padding(horizontal = 12.dp, vertical = 6.dp),
         value = value,
         onValueChange = onValueChange,
-        label = keyName + if (isKeep) " (无修改)" else "",
+        label = if (isKeep) stringResource(R.string.batch_edit_unchanged_field_label, keyName) else keyName,
         trailingIcon = {
             Row {
                 IconButton(onClick = {
@@ -1443,7 +1445,7 @@ private fun BatchEditCustomFieldItem(
                 }
                 IconButton(onClick = onSelectFromSongs) {
                     Icon(
-                        imageVector = LucideIcons.ArrowDownUp,
+                        imageVector = LucideIcons.ListCheck,
                         contentDescription = stringResource(R.string.batch_edit_select_from_selected_songs)
                     )
                 }
@@ -1519,11 +1521,14 @@ private fun SaltBatchField(
     onKeep: () -> Unit, onSelect: () -> Unit, multiline: Boolean = false,
 ) {
     val keep = value == "<keep>"
-    SaltEditorField(label, value, onChange, multiline = multiline, grouped = false) {
+    val fieldLabel = if (keep) stringResource(R.string.batch_edit_unchanged_field_label, label) else label
+    SaltEditorField(fieldLabel, value, onChange, multiline = multiline, grouped = false) {
         SaltIconButton(if (keep) LucideIcons.Close else LucideIcons.Undo,
             stringResource(if (keep) R.string.action_delete else R.string.action_undo_changes),
-            { if (keep) onChange("") else onKeep() }, size = 32.dp, iconSize = 18.dp)
-        SaltIconButton(LucideIcons.ArrowDownUp,
+            { if (keep) onChange("") else onKeep() },
+            tint = if (keep) SaltTheme.colors.highlight else SaltTheme.colors.error,
+            size = 32.dp, iconSize = 18.dp)
+        SaltIconButton(LucideIcons.ListCheck,
             stringResource(R.string.batch_edit_select_from_selected_songs), onSelect,
             size = 32.dp, iconSize = 18.dp)
     }
@@ -1552,12 +1557,22 @@ private fun SaltBatchOverlays(
         when {
             valuesLoading -> RoundedColumn { SaltText(stringResource(R.string.batch_edit_loading_selected_values), modifier = Modifier.padding(16.dp)) }
             values.isEmpty() -> IllustratedEmptyState(title = stringResource(R.string.batch_edit_no_selected_values), compact = true, modifier = Modifier.fillMaxWidth())
-            else -> RoundedColumn {
-                LazyColumn(Modifier.heightIn(max = 420.dp)) {
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     items(values, key = { "${it.sourceUri}\n${it.value}" }) { option ->
-                        Box(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                            .clickable { onValue(option.value) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            SaltText(option.value, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        com.moriafly.salt.ui.Card(modifier = Modifier.fillMaxWidth()) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                                    .clickable { onValue(option.value) }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.CenterStart,
+                            ) {
+                                SaltText(option.value, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                 }

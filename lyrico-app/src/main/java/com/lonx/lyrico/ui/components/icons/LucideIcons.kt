@@ -25,6 +25,17 @@ internal object LucideIcons {
     }
 
 
+    // Lucide 1.59.0, icons/list-check.svg; same license as the existing icons.
+    // Archive SHA-256: aae4638a541df91e28cd7733eed2d0d87e72da0942a28b306941284fd00e176a
+    val ListCheck: ImageVector by lazy {
+        lucideIcon("list-check",
+            "M16 5H3",
+            "M16 12H3",
+            "M11 19H3",
+            "m15 18 2 2 4-4",
+        )
+    }
+
     val ALargeSmall: ImageVector by lazy {
         lucideIcon("a-large-small",
             "m15 16 2.536-7.328a1.02 1.02 1 0 1 1.928 0L22 16",

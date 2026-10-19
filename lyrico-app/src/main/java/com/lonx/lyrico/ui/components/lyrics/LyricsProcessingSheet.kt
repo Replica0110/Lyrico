@@ -21,6 +21,7 @@ import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.model.lyrics.*
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltSheetActions
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
@@ -311,14 +312,26 @@ fun LyricsProcessingSheet(show: Boolean, raw: String, operation: LyricsOperation
         }
     }
     val canConfirm = raw.isNotBlank()
+    val confirm = {
+        onConfirm(operation.options(target).copy(twoColumnMapping = twoColumnMapping, threeColumnMapping = threeColumnMapping))
+    }
     ActionBottomSheet(show = show, title = stringResource(operation.titleRes), onDismissRequest = onDismiss,
         // 内容自带 verticalScroll（Salt 下同样），外壳不再提供第二个滚动出口。
         saltScrollContent = false,
-        startAction = { LyricsActionButton(stringResource(R.string.cancel), onClick = onDismiss) },
+        saltFooter = {
+            SaltSheetActions(
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.confirm),
+                onCancel = onDismiss,
+                confirmEnabled = canConfirm,
+                onConfirm = confirm,
+            )
+        },
+        startAction = if (LocalUiEngine.current == UiEngine.SALT) null else {
+            { LyricsActionButton(stringResource(R.string.cancel), onClick = onDismiss) }
+        },
         endAction = {
-            LyricsActionButton(stringResource(R.string.confirm), canConfirm, primary = true) {
-                onConfirm(operation.options(target).copy(twoColumnMapping = twoColumnMapping, threeColumnMapping = threeColumnMapping))
-            }
+            LyricsActionButton(stringResource(R.string.confirm), canConfirm, primary = true, onClick = confirm)
         }, content = {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(rememberScrollState())

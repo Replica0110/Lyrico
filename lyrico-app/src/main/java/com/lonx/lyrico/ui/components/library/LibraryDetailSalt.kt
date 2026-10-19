@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.screens.library.LibrarySelectionState
 import com.lonx.lyrico.screens.library.LibraryTopBarTransition
-import com.lonx.lyrico.screens.library.SaltSelectionTextButton
+import com.lonx.lyrico.screens.library.SaltSelectionActions
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.scaffoldPageWindowInsets
@@ -62,7 +62,7 @@ internal fun LibraryDetailPageSalt(
                         // Include the native title bar's side and slot spacing as well as the 40dp
                         // action.
                         val reserved =
-                            if (selected == null) 72.dp else if (compact) 104.dp else 188.dp
+                            if (selected == null) 72.dp else if (compact) 128.dp else 188.dp
                         Row(
                             Modifier.widthIn(max = (width - reserved).coerceAtLeast(40.dp)),
                             verticalAlignment = Alignment.CenterVertically,
@@ -91,18 +91,7 @@ internal fun LibraryDetailPageSalt(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (selected == null) actions()
                             else {
-                                if (!compact)
-                                    SaltSelectionTextButton(
-                                        stringResource(
-                                            if (selected.allSelected) R.string.action_deselect_all
-                                            else R.string.action_select_all
-                                        ),
-                                        selected.onToggleAll,
-                                    )
-                                SaltSelectionTextButton(
-                                    stringResource(R.string.action_close),
-                                    selected.onClose,
-                                )
+                                SaltSelectionActions(selected, compact)
                             }
                         }
                     }

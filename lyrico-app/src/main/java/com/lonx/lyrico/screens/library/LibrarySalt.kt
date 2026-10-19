@@ -62,7 +62,7 @@ internal fun SaltLibraryPage(
                 LibraryTopBarTransition(selection, Alignment.CenterStart) { selected ->
                     val leadingMaxWidth =
                         (availableWidth -
-                                if (selected == null) 112.dp else if (compact) 104.dp else 188.dp)
+                                if (selected == null) 112.dp else if (compact) 128.dp else 188.dp)
                             .coerceAtLeast(40.dp)
                     Row(
                         Modifier.widthIn(max = leadingMaxWidth),
@@ -94,18 +94,7 @@ internal fun SaltLibraryPage(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         if (selected != null) {
-                            if (!compact)
-                                SaltSelectionTextButton(
-                                    stringResource(
-                                        if (selected.allSelected) R.string.action_deselect_all
-                                        else R.string.action_select_all
-                                    ),
-                                    selected.onToggleAll,
-                                )
-                            SaltSelectionTextButton(
-                                stringResource(R.string.action_close),
-                                selected.onClose,
-                            )
+                            SaltSelectionActions(selected, compact)
                         } else {
                             SaltIconButton(
                                 LucideIcons.Search,
@@ -146,7 +135,37 @@ internal fun SaltLibraryPage(
 }
 
 @Composable
-internal fun SaltSelectionTextButton(label: String, onClick: () -> Unit) {
+internal fun SaltSelectionActions(selection: LibrarySelectionState, compact: Boolean) {
+    val label = stringResource(
+        if (selection.allSelected) R.string.action_deselect_all else R.string.action_select_all
+    )
+    val closeLabel = stringResource(R.string.action_close)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        if (compact) {
+            SaltIconButton(
+                icon = LucideIcons.ListChecks,
+                label = label,
+                onClick = selection.onToggleAll,
+                tint = SaltTheme.colors.highlight,
+            )
+            SaltIconButton(
+                icon = LucideIcons.Close,
+                label = closeLabel,
+                onClick = selection.onClose,
+                tint = SaltTheme.colors.highlight,
+            )
+        } else {
+            SaltSelectionTextButton(label, selection.onToggleAll)
+            SaltSelectionTextButton(closeLabel, selection.onClose)
+        }
+    }
+}
+
+@Composable
+private fun SaltSelectionTextButton(label: String, onClick: () -> Unit) {
     Box(
         Modifier.heightIn(min = 40.dp)
             .clip(RoundedCornerShape(12.dp))

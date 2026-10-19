@@ -10,10 +10,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricsOperation
 import com.lonx.lyrico.data.model.lyrics.LyricsColumnMapping
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.salt.SaltSheetActions
 import com.lonx.lyrico.ui.components.lyrics.LyricsActionButton
 import com.lonx.lyrico.ui.components.lyrics.LyricsColumnOrderSettings
 import com.lonx.lyrico.ui.components.lyrics.LyricsConcurrency
@@ -32,17 +35,26 @@ fun BatchLyricsFormatConfigBottomSheet(
 ) {
     ActionBottomSheet(
         saltScrollContent = false,
+        saltFooter = {
+            SaltSheetActions(
+                cancelText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.lyrics_process_action),
+                onCancel = onDismiss,
+                onConfirm = onConfirm,
+            )
+        },
         show = state.showConfigDialog,
         title = stringResource(state.operation.titleRes),
         onDismissRequest = onDismiss,
-        startAction = { LyricsActionButton(stringResource(R.string.cancel), onClick = onDismiss) },
+        startAction = if (LocalUiEngine.current == UiEngine.SALT) null else {
+            { LyricsActionButton(stringResource(R.string.cancel), onClick = onDismiss) }
+        },
         endAction = { LyricsActionButton(stringResource(R.string.lyrics_process_action), primary = true, onClick = onConfirm) },
         content = {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                     .then(
-                        if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-                            com.lonx.lyrico.data.model.UiEngine.SALT) Modifier
+                        if (LocalUiEngine.current == UiEngine.SALT) Modifier
                         else Modifier.padding(bottom = 24.dp)
                     )
             ) {

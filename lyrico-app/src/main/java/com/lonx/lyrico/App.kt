@@ -1,7 +1,6 @@
 package com.lonx.lyrico
 
 import android.annotation.SuppressLint
-import android.app.Application
 import android.app.UiModeManager
 import android.content.Context
 import android.os.Build
@@ -22,6 +21,7 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.di.appModule
 import com.lonx.lyrico.utils.coil.AudioCoverFetcher
 import com.lonx.lyrico.utils.coil.AudioCoverKeyer
+import com.moriafly.salt.ui.app.SaltApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -33,7 +33,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.system.exitProcess
 
-class App : Application(), SingletonImageLoader.Factory {
+class App : SaltApplication(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         context = applicationContext

@@ -1,5 +1,8 @@
 package com.lonx.lyrico.data.song.scan
 
+import com.lonx.lyrico.data.model.log.recordOperation
+import com.lonx.lyrico.data.model.log.withLogOperation
+
 import android.content.Context
 import android.util.Log
 import androidx.room.withTransaction
@@ -46,7 +49,7 @@ class LibraryScanRepositoryImpl(
     ): LibraryScanResult {
         return syncMutex.withLock {
             withContext(Dispatchers.IO) {
-                synchronizeLocked(request, onProgress)
+                withLogOperation("library-scan") { synchronizeLocked(request, onProgress) }
             }
         }
     }
@@ -55,6 +58,9 @@ class LibraryScanRepositoryImpl(
         request: LibraryScanRequest,
         onProgress: suspend (LibraryScanProgress) -> Unit
     ): LibraryScanResult {
+        val started = System.nanoTime()
+        var filteredShort = 0
+        var unchanged = 0
         try {
             Log.d(TAG, "Start library sync: fullRescan=${request.fullRescan}")
             onProgress(LibraryScanProgress(stage = LibraryScanStage.LISTING_FILES))
@@ -83,6 +89,11 @@ class LibraryScanRepositoryImpl(
             val safFolderById = safFolders.associateBy { it.id }
             val safScanResult = mediaScanner.querySongsFromSafFolders(safFolders)
             val deviceSongs = safScanResult.songs
+            appLogRepository.recordOperation(AppLogType.APP, TAG, "Scan enumeration finished",
+                "fullRescan=${request.fullRescan}\nignoreShortAudio=${request.ignoreShortAudio}\nindexLyrics=$indexLyrics\n" +
+                    "roots=${safFolders.map { it.id }}\nfiles=${deviceSongs.size}\n" +
+                    "successfulRoots=${safScanResult.successfulFolderIds}\nfailedRoots=${safScanResult.failedFolderIds}\nmissingRoots=${safScanResult.missingFolderIds}",
+                level = if (safScanResult.failedFolderIds.isEmpty()) AppLogLevel.DEBUG else AppLogLevel.WARNING)
 
             onProgress(
                 LibraryScanProgress(
@@ -113,6 +124,9 @@ class LibraryScanRepositoryImpl(
                         knownDuration > 0L &&
                         knownDuration <= minDuration
                     ) {
+                        filteredShort++
+                        if (filteredShort <= 20) appLogRepository.recordOperation(AppLogType.APP, TAG, "Scan skipped short audio",
+                            "uri=$deviceUriString\ndurationMs=$knownDuration\nthresholdMs=$minDuration", deviceUriString)
                         continue
                     }
 
@@ -139,16 +153,21 @@ class LibraryScanRepositoryImpl(
                             metadata.entity.durationMilliseconds > 0 &&
                             metadata.entity.durationMilliseconds <= minDuration
                         ) {
+                            filteredShort++
+                            if (filteredShort <= 20) appLogRepository.recordOperation(AppLogType.APP, TAG, "Scan skipped short audio after tag read",
+                                "uri=$deviceUriString\ndurationMs=${metadata.entity.durationMilliseconds}\nthresholdMs=$minDuration", deviceUriString)
                             continue
                         }
 
                         metadata?.let(songsToUpsert::add)
-                    } else if (indexLyrics) {
-                        unchangedSongUris.add(deviceUriString)
+                    } else {
+                        unchanged++
+                        if (indexLyrics) unchangedSongUris.add(deviceUriString)
                     }
 
                     deviceUris.add(deviceUriString)
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     Log.e(TAG, "Failed to process song: ${deviceSong.fileName}", e)
                     failures.add(
                         LibraryScanFailure(
@@ -283,7 +302,8 @@ class LibraryScanRepositoryImpl(
                 skipped = deviceSongs.size - songsToUpsert.size,
                 failures = failures
             )
-            logResult(request, result, removedSafFolders, impactedFolderIds.size)
+            logResult(request, result, removedSafFolders, impactedFolderIds.size, filteredShort, unchanged,
+                (System.nanoTime() - started) / 1_000_000)
             onProgress(LibraryScanProgress(stage = LibraryScanStage.FINISHED))
             return result
         } catch (e: Exception) {
@@ -339,7 +359,10 @@ class LibraryScanRepositoryImpl(
         request: LibraryScanRequest,
         result: LibraryScanResult,
         removedSafFolders: Int,
-        foldersUpdated: Int
+        foldersUpdated: Int,
+        filteredShort: Int,
+        unchanged: Int,
+        elapsedMs: Long
     ) {
         try {
             appLogRepository.log(
@@ -357,6 +380,10 @@ class LibraryScanRepositoryImpl(
                     appendLine("foldersUpdated=$foldersUpdated")
                     appendLine("failures=${result.failures.size}")
                     appendLine("ignoreShortAudio=${request.ignoreShortAudio}")
+                    appendLine("filteredShort=$filteredShort")
+                    appendLine("unchanged=$unchanged")
+                    appendLine("elapsedMs=$elapsedMs")
+                    appendLine("failureDetails=${result.failures.take(20).map { "${it.uri}|stage=${it.stage}|${it.throwable?.javaClass?.simpleName}:${it.message}" }}")
                 }
             )
         } catch (e: Exception) {

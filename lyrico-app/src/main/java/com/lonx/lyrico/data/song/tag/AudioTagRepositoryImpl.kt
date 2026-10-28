@@ -5,10 +5,14 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.net.toUri
 import com.lonx.audiotag.model.AudioTagData
+import com.lonx.audiotag.model.type
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.recordOperation
+import com.lonx.lyrico.data.model.log.withLogOperation
 import com.lonx.lyrico.data.song.file.AudioFileAccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,8 +45,9 @@ class AudioTagRepositoryImpl(
             readFromUri(uri, displayName, strict = false, options = options)
         } catch (e: Throwable) {
             if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e !is Exception) appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Audio tag library failed",
+                "uri=$uri\nname=$displayName\n${e.stackTraceToString()}", uri, AppLogLevel.ERROR)
             Log.e(TAG, "Failed to read audio tags: $uri", e)
-            logMetadataException("Failed to read audio tags", e, uri)
             AudioTagData(fileName = displayName)
         }
     }
@@ -66,56 +71,94 @@ class AudioTagRepositoryImpl(
         return write(uri, mutation.copy(mode = AudioTagMutationMode.Patch))
     }
 
-    private suspend fun write(uri: String, mutation: AudioTagMutation): AudioTagWriteResult {
-        return try {
-            val current = readStrict(uri)
-            val resolved = mutationResolver.resolve(uri, current, mutation)
-
-            val writableDescriptor = fileAccess.openWritableDescriptor(uri)
-                ?: return fileAccess.createWritePermissionIntentSender(uri)?.let { intentSender ->
-                    AudioTagWriteResult.PermissionRequired(intentSender)
-                } ?: AudioTagWriteResult.Failed(
-                    IllegalStateException("Unable to open writable descriptor")
-                )
-
-            writableDescriptor.use { descriptor ->
-                if (resolved.tags.isNotEmpty()) {
-                    val tagsWritten = AudioTagWriter.writeTags(
-                        pfd = descriptor,
-                        updates = resolved.tags,
-                        preserveOldTags = true
+    private suspend fun write(uri: String, mutation: AudioTagMutation): AudioTagWriteResult = withLogOperation("tag-write") {
+        val started = System.nanoTime()
+        var stage = "read-current-tags"
+        val accessTrace = mutableListOf<String>()
+        val trace: (String) -> Unit = { if (accessTrace.size < 16) accessTrace += it }
+        val context = "uri=$uri\nmode=${mutation.mode}\nfields=${mutation.fields.mapValues { (_, value) -> when (value) {
+            FieldMutation.Unchanged -> "unchanged"
+            FieldMutation.Clear -> "clear"
+            is FieldMutation.Set -> "set"
+        } }}\ncustomMutations=${mutation.customFields.size}\npicturesChanged=${mutation.pictureUpdate != PictureUpdate.Unchanged}"
+        appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Tag write started", context, uri)
+        val result = try {
+            run attempt@ {
+                val current = readStrict(uri)
+                stage = "resolve-mutation"
+                val resolved = mutationResolver.resolve(uri, current, mutation)
+                appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Tag mutation resolved",
+                    "uri=$uri\ntagKeys=${resolved.tags.keys}\nexistingPictures=${current.pictures.map { "${it.type}:${it.mimeType}:${it.data.size}" }}\n" +
+                        "pictureCommand=${when (val pictures = resolved.pictures) {
+                            PictureWriteCommand.Unchanged -> "unchanged"
+                            is PictureWriteCommand.ReplaceAll -> "replace-all count=${pictures.pictures.size} types=${pictures.pictures.map { it.type }}"
+                        }}", uri)
+                stage = "open-writable-descriptor"
+                val writableDescriptor = fileAccess.openWritableDescriptor(uri, trace)
+                    ?: return@attempt fileAccess.createWritePermissionIntentSender(uri, trace)?.let { intentSender ->
+                        AudioTagWriteResult.PermissionRequired(intentSender)
+                    } ?: AudioTagWriteResult.Failed(
+                        IllegalStateException("Unable to open writable descriptor")
                     )
-                    if (!tagsWritten) {
-                        return AudioTagWriteResult.Failed(IllegalStateException("Audio tag write failed"))
-                    }
-                }
 
-                when (val pictureCommand = resolved.pictures) {
-                    PictureWriteCommand.Unchanged -> Unit
-                    is PictureWriteCommand.ReplaceAll -> {
-                        val picturesWritten = AudioTagWriter.writePictures(
+                writableDescriptor.use { descriptor ->
+                    if (resolved.tags.isNotEmpty()) {
+                        stage = "write-tags"
+                        val tagsWritten = AudioTagWriter.writeTags(
                             pfd = descriptor,
-                            pictures = pictureCommand.pictures
+                            updates = resolved.tags,
+                            preserveOldTags = true
                         )
-                        if (!picturesWritten) {
-                            return AudioTagWriteResult.Failed(
-                                IllegalStateException("Audio picture write failed")
+                        trace("tagsWritten=$tagsWritten")
+                        if (!tagsWritten) {
+                            return@attempt AudioTagWriteResult.Failed(IllegalStateException("Audio tag write failed"))
+                        }
+                    }
+
+                    when (val pictureCommand = resolved.pictures) {
+                        PictureWriteCommand.Unchanged -> Unit
+                        is PictureWriteCommand.ReplaceAll -> {
+                            stage = "write-pictures"
+                            val picturesWritten = AudioTagWriter.writePictures(
+                                pfd = descriptor,
+                                pictures = pictureCommand.pictures
                             )
+                            trace("picturesWritten=$picturesWritten")
+                            if (!picturesWritten) {
+                                return@attempt AudioTagWriteResult.Failed(
+                                    IllegalStateException("Audio picture write failed")
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            AudioTagWriteResult.Success(readStrict(uri))
+                stage = "read-back"
+                AudioTagWriteResult.Success(readStrict(uri))
+            }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            fileAccess.writePermissionFromThrowable(uri, e)?.let { intentSender ->
-                return AudioTagWriteResult.PermissionRequired(intentSender)
-            }
-            Log.e(TAG, "Failed to write audio tags: $uri", e)
-            logMetadataException("Failed to write audio tags", e, uri)
-            AudioTagWriteResult.Failed(e)
+            trace("originalError=${e.stackTraceToString()}")
+            fileAccess.writePermissionFromThrowable(uri, e, trace)?.let { AudioTagWriteResult.PermissionRequired(it) }
+                ?: AudioTagWriteResult.Failed(e)
         }
+        val outcome = when (result) {
+            is AudioTagWriteResult.Success -> "success"
+            is AudioTagWriteResult.PermissionRequired -> "permission-required"
+            is AudioTagWriteResult.Failed -> "failed"
+        }
+        appLogRepository.recordOperation(
+            AppLogType.METADATA, TAG, "Tag write $outcome",
+            "$context\nstage=$stage\nelapsedMs=${(System.nanoTime() - started) / 1_000_000}\n" +
+                accessTrace.joinToString("\n") +
+                if (result is AudioTagWriteResult.Failed) "\n${result.error.stackTraceToString()}" else "",
+            uri, when (result) {
+                is AudioTagWriteResult.Success -> AppLogLevel.DEBUG
+                is AudioTagWriteResult.PermissionRequired -> AppLogLevel.WARNING
+                is AudioTagWriteResult.Failed -> AppLogLevel.ERROR
+            }
+        )
+        result
     }
 
     private suspend fun readFromUri(
@@ -124,15 +167,31 @@ class AudioTagRepositoryImpl(
         strict: Boolean,
         options: AudioTagReadOptions
     ): AudioTagData {
-        fileAccess.openReadableDescriptor(uri)?.use { descriptor ->
-            return AudioTagReader.read(
-                pfd = descriptor,
-                readPictures = true,
-                multiValueSeparator = options.multiValueSeparator,
-                strict = strict
-            ).copy(fileName = displayName)
+        val accessTrace = mutableListOf<String>()
+        var stage = "open-readable-descriptor"
+        try {
+            fileAccess.openReadableDescriptor(uri) { if (accessTrace.size < 8) accessTrace += it }?.use { descriptor ->
+                stage = "read-taglib"
+                return AudioTagReader.read(
+                    pfd = descriptor,
+                    readPictures = true,
+                    multiValueSeparator = options.multiValueSeparator,
+                    strict = strict
+                ).copy(fileName = displayName).also { data ->
+                    appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Audio tags read",
+                        "uri=$uri\nname=$displayName\nstrict=$strict\ndurationMs=${data.durationMilliseconds}\n" +
+                            "pictures=${data.pictures.map { it.type }}\nlyricsChars=${data.lyrics?.length ?: 0}\ncustomKeys=${data.customFields.map { it.key }}", uri)
+                }
+            }
+            stage = "read-stream-cache"
+            return readFromStreamCache(uri, displayName, strict, options)
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Audio tag read failed",
+                "uri=$uri\nname=$displayName\nstrict=$strict\nstage=$stage\n" +
+                    accessTrace.joinToString("\n") + "\n${error.stackTraceToString()}", uri, AppLogLevel.ERROR)
+            throw error
         }
-        return readFromStreamCache(uri, displayName, strict, options)
     }
 
     private suspend fun readFromStreamCache(
@@ -174,24 +233,6 @@ class AudioTagRepositoryImpl(
             if (!tempFile.delete()) {
                 Log.w(TAG, "Unable to delete temp audio cache: ${tempFile.absolutePath}")
             }
-        }
-    }
-
-    private suspend fun logMetadataException(
-        message: String,
-        throwable: Throwable,
-        relatedId: String? = null
-    ) {
-        try {
-            appLogRepository.logException(
-                type = AppLogType.METADATA,
-                tag = TAG,
-                message = message,
-                throwable = throwable,
-                relatedId = relatedId
-            )
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to write metadata exception log", e)
         }
     }
 

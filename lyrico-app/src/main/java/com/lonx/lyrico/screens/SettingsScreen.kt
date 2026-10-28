@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.utils.DownloadsFileWriter
+
 import com.lonx.lyrico.ui.components.salt.SaltTextInput
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
@@ -63,6 +65,7 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AboutDestination
 import com.ramcosta.composedestinations.generated.destinations.AppLogsDestination
+import com.ramcosta.composedestinations.generated.destinations.ProblemReproductionDestination
 import com.ramcosta.composedestinations.generated.destinations.ArtistPosterFoldersDestination
 import com.ramcosta.composedestinations.generated.destinations.ArtistSplitSettingsDestination
 import com.ramcosta.composedestinations.generated.destinations.BatchTaskListDestination
@@ -573,7 +576,11 @@ fun SettingsScreen(
                         summary = stringResource(R.string.export_config_hint),
                         onClick = {
                             val currentTime = System.currentTimeMillis()
-                            exportLauncher.launch("lyrico_settings_backup_${currentTime}.json")
+                            if (DownloadsFileWriter.canWrite(context)) {
+                                settingsViewModel.exportSettings(context)
+                            } else {
+                                exportLauncher.launch("lyrico_settings_backup_${currentTime}.json")
+                            }
                         }
                     )
                     Action(
@@ -600,6 +607,12 @@ fun SettingsScreen(
                         title = stringResource(R.string.app_log_title),
                         summary = stringResource(R.string.app_log_summary),
                         onClick = { navigator.navigate(AppLogsDestination()) }
+                    )
+                    Action(
+                        icon = LucideIcons.Activity, tone = PreferenceIconTone.Tools,
+                        title = stringResource(R.string.reproduction_title),
+                        summary = stringResource(R.string.log_recording_summary),
+                        onClick = { navigator.navigate(ProblemReproductionDestination()) },
                     )
                     if (BuildConfig.DEBUG) {
                         Action(

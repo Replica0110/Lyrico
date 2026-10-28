@@ -1,5 +1,7 @@
 package com.lonx.lyrico.worker.processor
 
+import com.lonx.lyrico.data.model.metadata.StandardPluginField
+
 import android.util.Log
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.BatchMatchConfig
@@ -339,6 +341,15 @@ class MatchMetadataProcessor(
         )
 
         if (tagDataToWrite.isEmpty()) {
+            logPluginBatch(
+                level = AppLogLevel.INFO,
+                message = "Batch metadata match skipped: no fields to update",
+                detail = "task=${task.taskId}\nitem=${item.itemId}\nsongUri=${song.uri}\nsource=$sourceId\n" +
+                    "targetModes=${plan.targetModes}\nreturnedKeys=${candidateFields.keys}\n" +
+                    "missingTargetKeys=${StandardPluginField.entries.filter { it.target in plan.targetModes && it.key !in candidateFields }.map { it.key }}\n" +
+                    "emptyCandidateKeys=${candidateFields.filterValues { it.isBlank() }.keys}\nscore=${finalDetail.finalScore}",
+                relatedId = sourceId
+            )
             Log.w(
                 TAG,
                 "Skipping match metadata with empty patch. " +

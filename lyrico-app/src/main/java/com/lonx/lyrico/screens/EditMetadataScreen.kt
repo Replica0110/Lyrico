@@ -494,8 +494,8 @@ fun EditMetadataScreen(
     val intentSenderLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) viewModel.saveMetadata()
-        else scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.permission_denied_cannot_save)) }
+        viewModel.onWritePermissionResult(result.resultCode == Activity.RESULT_OK)
+        if (result.resultCode != Activity.RESULT_OK) scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.permission_denied_cannot_save)) }
     }
 
     // 导入歌词文件选择器

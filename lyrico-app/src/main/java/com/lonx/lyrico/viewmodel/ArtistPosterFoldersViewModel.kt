@@ -1,5 +1,9 @@
 package com.lonx.lyrico.viewmodel
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+
 import android.app.Application
 import android.net.Uri
 import android.graphics.Bitmap
@@ -112,34 +116,38 @@ class ArtistPosterFoldersViewModel(
             ?.sortedBy { it.name.lowercase() }
     }
 
-    private fun update(action: suspend () -> Unit) {
+    private fun update(operation: String, action: suspend () -> Unit) {
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) { action() }
                 _uiState.update { it.copy(error = false) }
+                AppLog.record(AppLogType.METADATA, "PosterFolders", operation,
+                    "folder=${_uiState.value.folder?.uri}", level = AppLogLevel.INFO)
             } catch (e: CancellationException) {
                 throw e
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                AppLog.record(AppLogType.METADATA, "PosterFolders", "$operation failed",
+                    "folder=${_uiState.value.folder?.uri}", level = AppLogLevel.ERROR, error = error)
                 _uiState.update { it.copy(error = true) }
             }
         }
     }
 
-    fun addFolder(uri: Uri) = update {
+    fun addFolder(uri: Uri) = update("Register poster folder") {
         settings.setArtistPosterFolder(uri.toString())
         settings.refreshArtistPosters()
     }
 
-    fun removeFolder() = update {
+    fun removeFolder() = update("Remove poster folder registration") {
         // Grants can be shared with the music library; removing a poster folder only removes its registration.
         settings.clearArtistPosterFolder()
     }
 
-    fun refresh() = update { settings.refreshArtistPosters() }
+    fun refresh() = update("Refresh poster folder") { settings.refreshArtistPosters() }
 
     fun clearOperationMessage() { _uiState.update { it.copy(operationMessage = null) } }
 
-    private fun editFile(file: ArtistPosterFile, onSuccess: () -> Unit = {}, action: (Uri, List<com.lonx.lyrico.utils.SafDocumentRow>) -> Unit) {
+    private fun editFile(file: ArtistPosterFile, operation: String, onSuccess: () -> Unit = {}, action: (Uri, List<com.lonx.lyrico.utils.SafDocumentRow>) -> Unit) {
         if (_uiState.value.isEditing) return
         val folder = _uiState.value.folder?.uri ?: return
         _uiState.update { it.copy(isEditing = true, operationMessage = null) }
@@ -153,8 +161,12 @@ class ArtistPosterFoldersViewModel(
                 }
                 onSuccess()
                 settings.refreshArtistPosters()
+                AppLog.record(AppLogType.METADATA, "PosterFiles", "$operation completed",
+                    "folder=$folder\nuri=${file.uri}\nname=${file.name}", file.uri, AppLogLevel.INFO)
             } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
+                AppLog.record(AppLogType.METADATA, "PosterFiles", "$operation failed",
+                    "folder=$folder\nuri=${file.uri}\nname=${file.name}", file.uri, AppLogLevel.ERROR, e)
                 _uiState.update { it.copy(operationMessage = application.getString(R.string.poster_operation_failed)) }
             } finally {
                 _uiState.update { it.copy(isEditing = false) }
@@ -162,13 +174,13 @@ class ArtistPosterFoldersViewModel(
         }
     }
 
-    fun deleteFile(file: ArtistPosterFile) = editFile(file) { _, _ ->
+    fun deleteFile(file: ArtistPosterFile) = editFile(file, "Delete poster") { _, _ ->
         check(DocumentsContract.deleteDocument(application.contentResolver, file.uri.toUri()))
     }
 
     fun renameFile(file: ArtistPosterFile, stem: String, onRenamed: (ArtistPosterFile) -> Unit = {}) {
         var renamed: ArtistPosterFile? = null
-        editFile(file, onSuccess = {
+        editFile(file, "Rename poster", onSuccess = {
             renamed?.let { replacement ->
                 onRenamed(replacement)
                 _uiState.update { state -> state.copy(folder = state.folder?.let { folder ->
@@ -202,7 +214,7 @@ class ArtistPosterFoldersViewModel(
         }
     }
 
-    fun cropFile(file: ArtistPosterFile, bitmap: Bitmap) = editFile(file) { tree, _ ->
+    fun cropFile(file: ArtistPosterFile, bitmap: Bitmap) = editFile(file, "Crop poster") { tree, _ ->
         com.lonx.lyrico.utils.ArtistPosterFileWriter.replaceFile(application, tree, file.uri.toUri(), file.name, bitmap)
     }
 

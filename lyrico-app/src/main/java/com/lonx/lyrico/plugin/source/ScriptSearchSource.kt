@@ -3,6 +3,7 @@ package com.lonx.lyrico.plugin.source
 import android.util.Log
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.newLogOperation
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginManifest
 import com.lonx.lyrico.data.repository.AppLogRepository
@@ -84,7 +85,8 @@ class ScriptSearchSource(
         page: Int,
         separator: String,
         pageSize: Int
-    ): List<SongSearchResult> = withContext(quickJsDispatcher) {
+    ): List<SongSearchResult> = withContext(quickJsDispatcher + newLogOperation("plugin-search")) {
+        val started = System.nanoTime()
         try {
             if (PluginCapability.SEARCH_SONGS !in capabilities) {
                 return@withContext emptyList()
@@ -103,15 +105,6 @@ class ScriptSearchSource(
                 pluginId = id,
                 pluginName = name
             )
-            Log.d(
-                TAG,
-                "searchSongs plugin=$id version=${manifest.versionName}(${
-                    manifest.versionCode
-                }) keyword=$keyword resultCount=${results.size} " +
-                        "top=${results.take(3).map { result ->
-                            "${result.id}:${result.title}|keys=${result.fields.keys}|commentBlank=${result.fields["comment"].isNullOrBlank()}"
-                        }} rawPreview=${raw.take(1000)}"
-            )
             logPluginCall(
                 level = AppLogLevel.DEBUG,
                 message = "Plugin song search returned ${results.size} result(s)",
@@ -124,13 +117,15 @@ class ScriptSearchSource(
                     appendLine("pageSize=$pageSize")
                     appendLine("resultCount=${results.size}")
                     appendLine("top=${results.take(5).map { "${it.id}:${it.title}" }}")
-                    appendLine("rawPreview=${raw.preview()}")
+                    appendLine("fieldKeys=${results.take(5).map { it.id to it.normalizedFields().keys }}")
+                    appendLine("responseChars=${raw.length}")
+                    appendLine("elapsedMs=${(System.nanoTime() - started) / 1_000_000}")
                 }
             )
             results
         } catch (throwable: Exception) {
             if (throwable is CancellationException) throw throwable
-            Log.w(TAG, "search failed for plugin $id (${manifest.name})", throwable)
+            Log.w(TAG, "search failed for plugin $id ($name)", throwable)
             logPluginException(
                 message = "Plugin song search failed",
                 throwable = throwable,
@@ -147,7 +142,8 @@ class ScriptSearchSource(
         song: SongSearchResult,
         page: Int,
         pageSize: Int
-    ): List<LyricsCandidateResult> = withContext(quickJsDispatcher) {
+    ): List<LyricsCandidateResult> = withContext(quickJsDispatcher + newLogOperation("plugin-lyrics")) {
+        val started = System.nanoTime()
         try {
             if (PluginCapability.GET_LYRICS !in capabilities) {
                 return@withContext emptyList()
@@ -182,13 +178,14 @@ class ScriptSearchSource(
                     appendLine("pageSize=$pageSize")
                     appendLine("candidateCount=${candidates.size}")
                     appendLine("payloadTypes=${candidates.map { it.lyrics.payloadType }}")
-                    appendLine("rawPreview=${raw.preview()}")
+                    appendLine("responseChars=${raw.length}")
+                    appendLine("elapsedMs=${(System.nanoTime() - started) / 1_000_000}")
                 }
             )
             candidates
         } catch (throwable: Exception) {
             if (throwable is CancellationException) throw throwable
-            Log.w(TAG, "getLyrics failed for plugin $id (${manifest.name})", throwable)
+            Log.w(TAG, "getLyrics failed for plugin $id ($name)", throwable)
             logPluginException(
                 message = "Plugin lyrics call failed",
                 throwable = throwable,
@@ -199,7 +196,8 @@ class ScriptSearchSource(
     }
 
     override suspend fun searchCovers(keyword: String, page: Int, pageSize: Int): List<SongSearchResult> =
-        withContext(quickJsDispatcher) {
+        withContext(quickJsDispatcher + newLogOperation("plugin-covers")) {
+            val started = System.nanoTime()
             try {
                 if (PluginCapability.SEARCH_COVERS !in capabilities) {
                     return@withContext emptyList()
@@ -222,12 +220,12 @@ class ScriptSearchSource(
                     level = AppLogLevel.DEBUG,
                     message = "Plugin cover search returned ${results.size} result(s)",
                     detail = "plugin=$id\nname=$name\nkeyword=$keyword\npage=$page\npageSize=$pageSize\n" +
-                            "coverCount=${results.count { it.picUrl.isNotBlank() }}\nrawPreview=${raw.preview()}"
+                            "coverCount=${results.count { it.picUrl.isNotBlank() }}\nresponseChars=${raw.length}\nelapsedMs=${(System.nanoTime() - started) / 1_000_000}"
                 )
                 results
             } catch (throwable: Exception) {
                 if (throwable is CancellationException) throw throwable
-                Log.w(TAG, "searchCover failed for plugin $id (${manifest.name})", throwable)
+                Log.w(TAG, "searchCover failed for plugin $id ($name)", throwable)
                 logPluginException(
                     message = "Plugin cover search failed",
                     throwable = throwable,
@@ -238,7 +236,8 @@ class ScriptSearchSource(
         }
 
     override suspend fun searchCovers(song: SongSearchResult, page: Int, pageSize: Int): List<SongSearchResult> =
-        withContext(quickJsDispatcher) {
+        withContext(quickJsDispatcher + newLogOperation("plugin-covers")) {
+            val started = System.nanoTime()
             try {
                 if (PluginCapability.SEARCH_COVERS !in capabilities) {
                     return@withContext emptyList()
@@ -262,12 +261,12 @@ class ScriptSearchSource(
                     level = AppLogLevel.DEBUG,
                     message = "Plugin cover search returned ${results.size} result(s)",
                     detail = "plugin=$id\nname=$name\nsong=${song.id}:${song.title}\npage=$page\npageSize=$pageSize\n" +
-                            "coverCount=${results.count { it.picUrl.isNotBlank() }}\nrawPreview=${raw.preview()}"
+                            "coverCount=${results.count { it.picUrl.isNotBlank() }}\nresponseChars=${raw.length}\nelapsedMs=${(System.nanoTime() - started) / 1_000_000}"
                 )
                 results
             } catch (throwable: Exception) {
                 if (throwable is CancellationException) throw throwable
-                Log.w(TAG, "searchCover failed for plugin $id (${manifest.name})", throwable)
+                Log.w(TAG, "searchCover failed for plugin $id ($name)", throwable)
                 logPluginException(
                     message = "Plugin cover search failed",
                     throwable = throwable,
@@ -334,7 +333,7 @@ class ScriptSearchSource(
             appLogRepository?.logException(
                 type = AppLogType.PLUGIN,
                 tag = TAG,
-                message = "$message\n$detail",
+                message = "$message\nversion=${manifest.versionName}(${manifest.versionCode}) API=$apiVersion\n$detail",
                 throwable = throwable,
                 relatedId = id
             )
@@ -342,9 +341,6 @@ class ScriptSearchSource(
             Log.w(TAG, "Failed to write plugin exception log", logThrowable)
         }
     }
-
-    private fun String.preview(): String =
-        replace('\n', ' ').replace('\r', ' ').take(RAW_PREVIEW_LIMIT)
 
     private data class RuntimeExecutionContext(
         val executor: ExecutorService,
@@ -356,7 +352,6 @@ class ScriptSearchSource(
         const val FUNCTION_GET_LYRICS = "getLyrics"
         const val FUNCTION_SEARCH_COVERS = "searchCovers"
         const val TAG = "PlatformPlugin"
-        const val RAW_PREVIEW_LIMIT = 1_000
         const val LOG_DETAIL_PREVIEW_LIMIT = 4_000
 
         val defaultJson: Json = Json {

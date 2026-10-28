@@ -2,19 +2,14 @@ package com.lonx.lyrico.viewmodel
 
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.entity.AppLogEntity
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.utils.UiMessage
-import com.hjq.device.compat.DeviceMarketName
-import com.hjq.device.compat.DeviceOs
-import com.hjq.device.compat.SystemPropertyCompat
+import com.lonx.lyrico.utils.DiagnosticEnvironment
 import com.lonx.lyrico.data.model.log.LogRetentionOption
 import com.lonx.lyrico.data.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -28,15 +23,10 @@ import kotlinx.coroutines.launch
 sealed class AppLogEvent {
     data class ShowMessage(val message: UiMessage) : AppLogEvent()
 }
-data class AppLogUiState(
-    val logRetentionOption: LogRetentionOption = LogRetentionOption.THIRTY_DAYS,
-)
-
 class AppLogViewModel(
     private val appLogRepository: AppLogRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
-
     val logRetentionOption: StateFlow<LogRetentionOption> = settingsRepository.logRetentionOption
         .stateIn(
             scope = viewModelScope,
@@ -66,14 +56,14 @@ class AppLogViewModel(
                     appLogRepository.exportText(ids)
                 }
                 val text = buildString {
-                    appendLine(buildDiagnosticInfo(context))
+                    appendLine(DiagnosticEnvironment.describe(context))
                     appendLine()
                     append(logsText)
                 }
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                requireNotNull(context.contentResolver.openOutputStream(uri)) { "Unable to open export destination" }.use { outputStream ->
                     outputStream.write(text.toByteArray(Charsets.UTF_8))
                 }
-                _events.emit(AppLogEvent.ShowMessage(UiMessage.StringResource(R.string.export_success)))
+                _events.emit(AppLogEvent.ShowMessage(UiMessage.StringResource(R.string.app_log_export_success)))
             } catch (e: Exception) {
                 appLogRepository.logException(
                     type = AppLogType.APP,
@@ -83,38 +73,12 @@ class AppLogViewModel(
                 )
                 _events.emit(
                     AppLogEvent.ShowMessage(
-                        UiMessage.StringResource(R.string.export_failed, e.message ?: "Unknown error")
+                        UiMessage.StringResource(R.string.app_log_export_failed, e.message ?: "Unknown error")
                     )
                 )
             }
         }
     }
-
-    private fun buildDiagnosticInfo(context: Context): String = buildString {
-        appendLine("Lyrico diagnostic info")
-        appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-        appendLine("Device model: ${buildDeviceModel(context)}")
-        appendLine("System version: ${buildSystemVersion()}")
-        appendLine("Android version: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-    }
-
-    private fun buildDeviceModel(context: Context): String =
-        DeviceMarketName.getMarketName(context).takeIfNotBlank()
-            ?: listOf(Build.MANUFACTURER, Build.MODEL)
-                .filter { it.isNotBlank() }
-                .joinToString(" ")
-                .ifBlank { Build.DEVICE }
-
-    private fun buildSystemVersion(): String {
-        val osName = DeviceOs.getOsName().takeIfNotBlank()
-        val osVersion = DeviceOs.getOsVersionName().takeIfNotBlank()
-        return listOfNotNull(osName, osVersion)
-            .joinToString(" ")
-            .ifBlank { "Android ${Build.VERSION.RELEASE}" }
-    }
-
-    private fun String?.takeIfNotBlank(): String? =
-        this?.trim()?.takeIf { it.isNotBlank() }
 
     fun setLogRetentionOption(option: LogRetentionOption) {
         viewModelScope.launch {

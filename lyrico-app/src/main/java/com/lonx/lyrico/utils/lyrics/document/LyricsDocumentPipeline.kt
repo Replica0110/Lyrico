@@ -1,5 +1,9 @@
 package com.lonx.lyrico.utils.lyrics.document
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+
 import com.github.houbb.opencc4j.util.ZhConverterUtil
 import com.lonx.lyrico.data.model.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
@@ -46,7 +50,17 @@ object LyricsDocumentPipeline {
     ).associateBy { it.format }
 
     fun parse(raw: String, sourceFormat: LyricFormat): LyricsDocument? {
-        return parsers[sourceFormat]?.parse(raw)
+        return try {
+            parsers[sourceFormat]?.parse(raw)
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            AppLog.record(AppLogType.METADATA, "LyricsParser", "Lyrics parsing failed",
+                "format=$sourceFormat\ncharacters=${raw.length}\nlines=${raw.count { it == '\n' } + 1}\n" +
+                    "hasXmlDeclaration=${raw.contains("<?xml")}\nhasTtmlEnd=${raw.contains("</tt>")}\nhasLrcTime=${Regex("\\[\\d{2}:\\d{2}").containsMatchIn(raw)}",
+                level = AppLogLevel.WARNING, error = error,
+                repeatedFailureKey = "lyrics:$sourceFormat:${raw.hashCode()}:${error.javaClass.name}")
+            throw error
+        }
     }
 
     fun processRawResult(
@@ -109,9 +123,8 @@ object LyricsDocumentPipeline {
         removeTagLineKeywords: List<String> = emptyList(),
         offset: Long = 0L
     ): String? {
-        val parser = parsers[sourceFormat] ?: return null
         val writer = writers[targetFormat] ?: return null
-        val document = parser.parse(raw)
+        val document = parse(raw, sourceFormat) ?: return null
         return processDocument(
             document = document,
             writer = writer,
@@ -124,7 +137,12 @@ object LyricsDocumentPipeline {
             removeEmptyLines = removeEmptyLines,
             removeTagLineKeywords = removeTagLineKeywords,
             offset = offset
-        )
+        ).also { output ->
+            AppLog.record(AppLogType.METADATA, "LyricsProcessor", "Lyrics processing finished",
+                "sourceFormat=$sourceFormat\ntargetFormat=$targetFormat\ninputChars=${raw.length}\noutputChars=${output?.length ?: 0}\n" +
+                    "conversion=$conversionMode\ntranslation=$showTranslation\nromanization=$showRomanization\n" +
+                    "removeEmptyLines=$removeEmptyLines\nremoveTagRules=${removeTagLineKeywords.size}\noffset=$offset")
+        }
     }
 
     fun processStructuredResult(result: LyricsResult, config: LyricRenderConfig, offset: Long = 0L): String? {

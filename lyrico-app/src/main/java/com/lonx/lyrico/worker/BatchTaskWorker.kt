@@ -11,6 +11,8 @@ import androidx.work.WorkerParameters
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.LogOperation
+import com.lonx.lyrico.data.model.log.recordOperation
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.repository.AppLogRepository
@@ -70,6 +72,9 @@ class BatchTaskWorker(
 
             val processor = processorFactory.create(task.type)
             val items = taskRepository.getPendingItems(taskId)
+            appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch task started",
+                "task=$taskId\ntype=${task.type}\npending=${items.size}\n" +
+                    "routineDetailSamples=$ROUTINE_DETAIL_SAMPLES; warnings and errors are not sampled\n$configSummary", taskId, AppLogLevel.INFO)
 
             if (items.isEmpty()) {
                 taskRepository.markSucceeded(taskId)
@@ -106,51 +111,64 @@ class BatchTaskWorker(
 
             try {
                 coroutineScope {
-                    val jobs = items.map { item ->
+                    val jobs = items.mapIndexed { index, item ->
                         async(Dispatchers.IO) {
                             semaphore.withPermit {
                                 if (isStopped) return@async
-                                try {
-                                    taskRepository.markItemRunning(item.itemId)
-                                    val result = processor.process(task, item) { progress ->
-                                        taskRepository.updateItemProgress(item.itemId, progress)
-                                    }
-                                    if (result.updatedFilePath != null && result.updatedFileName != null) {
-                                        taskRepository.updateItemFileInfo(
-                                            itemId = item.itemId,
-                                            filePath = result.updatedFilePath,
-                                            fileName = result.updatedFileName
-                                        )
-                                    }
-                                    taskRepository.markItemSucceeded(item.itemId, result.resultJson)
-                                    successCount.incrementAndGet()
-                                } catch (e: BatchTaskSkippedException) {
-                                    Log.i(
-                                        TAG,
-                                        "Item processing skipped: ${item.fileName}, reason=${e.message ?: "No reason"}"
-                                    )
-                                    taskRepository.markItemSkipped(item.itemId, e.message)
-                                    skippedCount.incrementAndGet()
-                                    itemDetails.add("SKIPPED ${item.fileName}: ${e.message ?: "No reason"}")
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Item processing failed: ${item.fileName}", e)
-                                    taskRepository.markItemFailed(item.itemId, e.message)
-                                    failureCount.incrementAndGet()
-                                    itemDetails.add(
-                                        buildString {
-                                            appendLine("FAILED ${item.fileName}: ${e.message ?: e::class.java.simpleName}")
-                                            append(Log.getStackTraceString(e))
-                                        }
-                                    )
-                                } finally {
-                                    val current = processedCount.incrementAndGet()
-                                    taskRepository.updateProgressFromItems(taskId, item.fileName)
+                                withContext(LogOperation("batch-$taskId-item-${item.itemId}", recordRoutine = index < ROUTINE_DETAIL_SAMPLES)) {
+                                    val itemStarted = System.nanoTime()
                                     try {
-                                        setForeground(
-                                            createForegroundInfo(title, current, itemTotal)
-                                        )
+                                        appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item started",
+                                            "task=$taskId\nitem=${item.itemId}\ntype=${task.type}\nuri=${item.songUri}", item.songUri)
+                                        taskRepository.markItemRunning(item.itemId)
+                                        val result = processor.process(task, item) { progress ->
+                                            taskRepository.updateItemProgress(item.itemId, progress)
+                                        }
+                                        if (result.updatedFilePath != null && result.updatedFileName != null) {
+                                            taskRepository.updateItemFileInfo(
+                                                itemId = item.itemId,
+                                                filePath = result.updatedFilePath,
+                                                fileName = result.updatedFileName
+                                            )
+                                        }
+                                        taskRepository.markItemSucceeded(item.itemId, result.resultJson)
+                                        successCount.incrementAndGet()
+                                        appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item succeeded",
+                                            "task=$taskId\nitem=${item.itemId}\nuri=${item.songUri}\n" +
+                                                "elapsedMs=${(System.nanoTime() - itemStarted) / 1_000_000}\noutput=${result.updatedFilePath}", item.songUri)
+                                    } catch (e: BatchTaskSkippedException) {
+                                        appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item skipped",
+                                            "task=$taskId\nitem=${item.itemId}\nuri=${item.songUri}\nreason=${e.message}", item.songUri)
+                                        taskRepository.markItemSkipped(item.itemId, e.message)
+                                        skippedCount.incrementAndGet()
+                                        if (itemDetails.size < MAX_ITEM_DETAILS_IN_LOG) itemDetails.add("SKIPPED item=${item.itemId}: ${e.message ?: "No reason"}")
                                     } catch (e: Exception) {
-                                        Log.w(TAG, "Failed to update foreground notification", e)
+                                        if (e is kotlinx.coroutines.CancellationException) throw e
+                                        appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item failed",
+                                            "task=$taskId\nitem=${item.itemId}\ntype=${task.type}\nuri=${item.songUri}\n" +
+                                                "elapsedMs=${(System.nanoTime() - itemStarted) / 1_000_000}\n${e.stackTraceToString()}", item.songUri, AppLogLevel.ERROR)
+                                        taskRepository.markItemFailed(item.itemId, e.message)
+                                        failureCount.incrementAndGet()
+                                        if (itemDetails.size < MAX_ITEM_DETAILS_IN_LOG) itemDetails.add("FAILED item=${item.itemId}: ${e.message ?: e::class.java.simpleName}")
+                                    } finally {
+                                        val current = processedCount.incrementAndGet()
+                                        if (current % LOG_PROGRESS_INTERVAL == 0 || current == itemTotal) {
+                                            withContext(LogOperation("batch-$taskId")) {
+                                                appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch task progress",
+                                                    "task=$taskId\nprocessed=$current/$itemTotal\nsuccess=${successCount.get()}\n" +
+                                                        "skipped=${skippedCount.get()}\nfailed=${failureCount.get()}\n" +
+                                                        "routineDetailSamples=$ROUTINE_DETAIL_SAMPLES; warnings and errors are not sampled",
+                                                    taskId, AppLogLevel.INFO)
+                                            }
+                                        }
+                                        taskRepository.updateProgressFromItems(taskId, item.fileName)
+                                        try {
+                                            setForeground(
+                                                createForegroundInfo(title, current, itemTotal)
+                                            )
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "Failed to update foreground notification", e)
+                                        }
                                     }
                                 }
                             }
@@ -354,7 +372,7 @@ class BatchTaskWorker(
                 appendLine(detail.trimEnd())
                 appendLine()
             }
-            val omitted = itemDetails.size - MAX_ITEM_DETAILS_IN_LOG
+            val omitted = skipped + failure - itemDetails.size
             if (omitted > 0) {
                 appendLine("... $omitted more item details omitted")
             }
@@ -378,7 +396,7 @@ class BatchTaskWorker(
         }.getOrElse { e ->
             buildString {
                 appendLine("configParseError=${e.message ?: e::class.java.simpleName}")
-                appendLine("rawConfig=${configJson.take(MAX_CONFIG_LOG_LENGTH)}")
+                appendLine("configCharacters=${configJson.length}")
             }.trimEnd()
         }
     }
@@ -504,7 +522,7 @@ class BatchTaskWorker(
         keep: String
     ) {
         if (value == keep) return
-        appendLine("$name=${value.sanitizeConfigValue()}")
+        appendLine("$name=${if (name == "lyrics" || name == "comment") "set (${value.length} chars)" else value.sanitizeConfigValue()}")
     }
 
     private fun String.sanitizeConfigValue(): String {
@@ -571,7 +589,8 @@ class BatchTaskWorker(
         private const val WAKE_LOCK_TAG_PREFIX = "Lyrico:BatchTask"
         private const val WAKE_LOCK_TIMEOUT_MILLIS = 6 * 60 * 60 * 1000L
         private const val MAX_ITEM_DETAILS_IN_LOG = 50
-        private const val MAX_CONFIG_LOG_LENGTH = 8_000
+        private const val ROUTINE_DETAIL_SAMPLES = 3
+        private const val LOG_PROGRESS_INTERVAL = 50
         private const val MAX_CONFIG_VALUE_LENGTH = 200
     }
 }

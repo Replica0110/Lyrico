@@ -16,6 +16,7 @@ import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.di.appModule
@@ -45,6 +46,8 @@ class App : SaltApplication(), SingletonImageLoader.Factory {
         }
 
         installCrashLogger()
+        val koin = org.koin.core.context.GlobalContext.get()
+        AppLog.initialize(koin.get(), koin.get())
 
         CoroutineScope(Dispatchers.Main.immediate).launch {
             val settingsRepository = org.koin.core.context.GlobalContext.get().get<SettingsRepository>()
@@ -74,12 +77,6 @@ class App : SaltApplication(), SingletonImageLoader.Factory {
         CoroutineScope(Dispatchers.IO).launch {
             val logRepository = org.koin.core.context.GlobalContext.get().get<AppLogRepository>()
             logRepository.trim()
-//            logRepository.log(
-//                level = AppLogLevel.INFO,
-//                type = AppLogType.APP,
-//                tag = TAG,
-//                message = "Application started"
-//            )
             val repo = org.koin.core.context.GlobalContext.get().get<BatchTaskRepository>()
             repo.markOrphanedTasksFailed()
         }
@@ -112,7 +109,6 @@ class App : SaltApplication(), SingletonImageLoader.Factory {
     }
 
     override fun newImageLoader(context: Context): ImageLoader {
-        Log.d(TAG, "newImageLoader")
         return ImageLoader.Builder(context)
             .components {
                 add(AudioCoverKeyer())

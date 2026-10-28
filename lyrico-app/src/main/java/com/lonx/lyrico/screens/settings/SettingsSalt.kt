@@ -29,10 +29,10 @@ import com.moriafly.salt.ui.screen.ScreenCard
 internal fun SettingsPageSalt(
     initialized: Boolean,
     onBack: () -> Unit,
+    title: String,
     content: SettingsItemsScope.() -> Unit,
 ) {
     val listState = rememberLazyListState()
-    val title = stringResource(R.string.settings_title)
     CompositionLocalProvider(
         LocalIndication provides SaltTheme.configs.indication,
         LocalOverscrollFactory provides CupertinoOverscrollEffectFactory(),
@@ -77,12 +77,14 @@ internal object SaltSettingsItems : SettingsItemPresentation {
         tone: PreferenceIconTone,
         value: String?,
         holdDownState: Boolean,
+        enabled: Boolean,
         onClick: () -> Unit,
     ) {
         Item(
             text = title,
             sub = summary,
             onClick = onClick,
+            enabled = enabled,
             tag = value,
             iconPainter = icon?.let { rememberVectorPainter(it) },
             iconColor = tone.color(),

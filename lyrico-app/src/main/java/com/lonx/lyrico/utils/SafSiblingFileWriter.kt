@@ -4,6 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import java.io.OutputStream
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.AppLogType
 
 object SafSiblingFileWriter {
 
@@ -24,21 +27,33 @@ object SafSiblingFileWriter {
         fileName: String,
         writeContent: (OutputStream) -> Unit
     ): Uri {
-        val parentDocumentId = findParentDocumentId(context, sourceDocumentUri)
-            ?: throw IllegalStateException("Source folder unavailable")
-        val outputUri = createOrFindSiblingFile(
-            context = context,
-            treeUri = sourceDocumentUri,
-            parentDocumentId = parentDocumentId,
-            mimeType = mimeType,
-            fileName = fileName
-        ) ?: throw IllegalStateException("Failed to create sibling file")
+        var stage = "resolve-parent"
+        try {
+            val parentDocumentId = findParentDocumentId(context, sourceDocumentUri)
+                ?: throw IllegalStateException("Source folder unavailable")
+            stage = "create-sibling"
+            val outputUri = createOrFindSiblingFile(
+                context = context,
+                treeUri = sourceDocumentUri,
+                parentDocumentId = parentDocumentId,
+                mimeType = mimeType,
+                fileName = fileName
+            ) ?: throw IllegalStateException("Failed to create sibling file")
 
-        context.contentResolver.openOutputStream(outputUri, "wt")?.use { outputStream ->
-            writeContent(outputStream)
-        } ?: throw IllegalStateException("Failed to open sibling output stream")
+            stage = "write-output"
+            context.contentResolver.openOutputStream(outputUri, "wt")?.use { outputStream ->
+                writeContent(outputStream)
+            } ?: throw IllegalStateException("Failed to open sibling output stream")
 
-        return outputUri
+            AppLog.record(AppLogType.METADATA, "SiblingExport", "Sibling file exported",
+                "source=$sourceDocumentUri\ndestination=$outputUri\nname=$fileName\nmime=$mimeType", sourceDocumentUri.toString(), AppLogLevel.INFO)
+            return outputUri
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            AppLog.record(AppLogType.METADATA, "SiblingExport", "Sibling file export failed",
+                "source=$sourceDocumentUri\nname=$fileName\nmime=$mimeType\nstage=$stage", sourceDocumentUri.toString(), AppLogLevel.ERROR, error)
+            throw error
+        }
     }
 
     internal fun findParentDocumentId(context: Context, sourceDocumentUri: Uri): String? {

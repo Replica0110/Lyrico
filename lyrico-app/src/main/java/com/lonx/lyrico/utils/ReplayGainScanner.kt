@@ -1,6 +1,10 @@
 package com.lonx.lyrico.utils
 
 import android.content.Context
+import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.recordOperation
 import android.media.AudioFormat
 import android.media.MediaCodec
 import android.media.MediaCodecList
@@ -65,7 +69,7 @@ sealed interface AlbumReplayGainCalculateState {
     ) : AlbumReplayGainCalculateState
 }
 
-class ReplayGainScanner(private val context: Context) {
+class ReplayGainScanner(private val context: Context, private val appLogRepository: AppLogRepository? = null) {
     companion object {
         const val DEFAULT_TARGET_LOUDNESS_LUFS = -18.0
         private const val PROGRESS_UPDATE_THRESHOLD = 0.01
@@ -155,6 +159,8 @@ class ReplayGainScanner(private val context: Context) {
             return decodeWithPlatform(uriString, peakMode, onProgress)
         } catch (platformError: ReplayGainScanException) {
             currentCoroutineContext().ensureActive()
+            appLogRepository?.recordOperation(AppLogType.METADATA, "ReplayGainScanner", "Platform decoding failed; trying FFmpeg",
+                "uri=$uriString\nmime=${platformError.mimeType}\npeakMode=$peakMode\nerror=${platformError.error}", uriString)
             // The platform state is already closed. Retry from the beginning with a new state.
             var state: LibEbuR128? = null
             var completed = false
@@ -185,16 +191,24 @@ class ReplayGainScanner(private val context: Context) {
                         ReplayGainAnalysis(analysisState.loudness, analysisState.sampleCount, analysisState.peak),
                         decoder.mimeType, analysisState
                     )
+                    appLogRepository?.recordOperation(AppLogType.METADATA, "ReplayGainScanner", "FFmpeg decoding succeeded",
+                        "uri=$uriString\nmime=${decoder.mimeType}\nsampleRate=${decoder.sampleRate}\nchannels=${decoder.channels}\nsampleCount=${analysisState.sampleCount}", uriString)
                     completed = true
                     return result
                 }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: UnsupportedOperationException) {
+                appLogRepository?.recordOperation(AppLogType.METADATA, "ReplayGainScanner", "ReplayGain decoding failed",
+                    "uri=$uriString\nplatformError=${platformError.error}\nfallback=${error.stackTraceToString()}", uriString, AppLogLevel.ERROR)
                 throw platformError
             } catch (error: ReplayGainScanException) {
+                appLogRepository?.recordOperation(AppLogType.METADATA, "ReplayGainScanner", "ReplayGain decoding failed",
+                    "uri=$uriString\nplatformError=${platformError.error}\nfallbackError=${error.error}", uriString, AppLogLevel.ERROR)
                 throw error
             } catch (error: Exception) {
+                appLogRepository?.recordOperation(AppLogType.METADATA, "ReplayGainScanner", "ReplayGain decoding failed",
+                    "uri=$uriString\nplatformError=${platformError.error}\nfallback=${error.stackTraceToString()}", uriString, AppLogLevel.ERROR)
                 val failedMimeType = fallbackMimeType ?: platformError.mimeType?.takeIf {
                     it.equals("audio/alac", true) || it.equals("audio/ape", true) || it.equals("audio/x-ape", true)
                 }

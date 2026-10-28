@@ -27,10 +27,10 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 internal fun SettingsPageMiuix(
     initialized: Boolean,
     onBack: () -> Unit,
+    title: String,
     content: SettingsItemsScope.() -> Unit,
 ) {
     val listState = rememberLazyListState()
-    val title = stringResource(R.string.settings_title)
     val behavior = MiuixScrollBehavior()
     val backdrop = rememberBarBlurBackdrop()
     top.yukonga.miuix.kmp.basic.Scaffold(
@@ -97,6 +97,7 @@ internal object MiuixSettingsItems : SettingsItemPresentation {
         tone: PreferenceIconTone,
         value: String?,
         holdDownState: Boolean,
+        enabled: Boolean,
         onClick: () -> Unit,
     ) {
         top.yukonga.miuix.kmp.preference.ArrowPreference(
@@ -113,6 +114,7 @@ internal object MiuixSettingsItems : SettingsItemPresentation {
                 }
             },
             holdDownState = holdDownState,
+            enabled = enabled,
             onClick = onClick,
         )
     }

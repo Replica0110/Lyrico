@@ -27,7 +27,7 @@ class AudioFileAccess(
         }?.takeIf { it.isNotBlank() } ?: uriString.substringAfterLast("/")
     }
 
-    fun openReadableDescriptor(uriString: String): ParcelFileDescriptor? {
+    fun openReadableDescriptor(uriString: String, trace: (String) -> Unit = {}): ParcelFileDescriptor? {
         val uri = uriString.toUri()
         if (uri.scheme == "file" || uri.scheme.isNullOrBlank()) {
             val file = if (uri.scheme == "file") {
@@ -38,10 +38,10 @@ class AudioFileAccess(
             return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
         }
 
-        return openContentDescriptor(uri, "r")
+        return openContentDescriptor(uri, "r", trace)
     }
 
-    fun openWritableDescriptor(uriString: String): ParcelFileDescriptor? {
+    fun openWritableDescriptor(uriString: String, trace: (String) -> Unit = {}): ParcelFileDescriptor? {
         val uri = uriString.toUri()
         if (uri.scheme == "file" || uri.scheme.isNullOrBlank()) {
             val file = if (uri.scheme == "file") {
@@ -52,30 +52,34 @@ class AudioFileAccess(
             return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_WRITE)
         }
 
-        return openContentDescriptor(uri, "rw")
+        return openContentDescriptor(uri, "rw", trace)
     }
 
-    fun createWritePermissionIntentSender(uriString: String): IntentSender? {
+    fun createWritePermissionIntentSender(uriString: String, trace: (String) -> Unit = {}): IntentSender? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
 
         return try {
             val uri = uriString.toUri()
-            val writableUri = uri.toWritableMediaStoreUri() ?: return null
+            val writableUri = uri.toWritableMediaStoreUri()
+            trace("permissionMapping original=$uri mapped=$writableUri")
+            if (writableUri == null) return null
 
             MediaStore.createWriteRequest(context.contentResolver, listOf(writableUri))
                 .intentSender
         } catch (e: Exception) {
+            trace("permissionRequest error=${e.stackTraceToString()}")
             Log.w(TAG, "Unable to create write permission request: $uriString", e)
             null
         }
     }
 
-    fun writePermissionFromThrowable(uriString: String, throwable: Throwable): IntentSender? {
+    fun writePermissionFromThrowable(uriString: String, throwable: Throwable, trace: (String) -> Unit = {}): IntentSender? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && throwable is RecoverableSecurityException) {
+            trace("permissionRequest recoverableSecurityException uri=$uriString")
             return throwable.userAction.actionIntent.intentSender
         }
         if (throwable is SecurityException) {
-            return createWritePermissionIntentSender(uriString)
+            return createWritePermissionIntentSender(uriString, trace)
         }
         return null
     }
@@ -105,31 +109,37 @@ class AudioFileAccess(
         return context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
     }
 
-    private fun openContentDescriptor(uri: Uri, mode: String): ParcelFileDescriptor? {
+    private fun openContentDescriptor(uri: Uri, mode: String, trace: (String) -> Unit = {}): ParcelFileDescriptor? {
         val mediaStoreAudioUri = uri.toMediaStoreAudioUri()
         if (mediaStoreAudioUri != null && mediaStoreAudioUri != uri) {
-            tryOpenContentDescriptor(mediaStoreAudioUri, mode)?.let { return it }
+            tryOpenContentDescriptor(mediaStoreAudioUri, mode, trace)?.let { return it }
         }
 
-        tryOpenContentDescriptor(uri, mode)?.let { return it }
+        tryOpenContentDescriptor(uri, mode, trace)?.let { return it }
 
         if (mediaStoreAudioUri == null && uri.scheme == "content") {
             findMediaStoreAudioUri(uri)?.let { matchedUri ->
-                tryOpenContentDescriptor(matchedUri, mode)?.let { return it }
+                trace("descriptorMapping original=$uri matched=$matchedUri")
+                tryOpenContentDescriptor(matchedUri, mode, trace)?.let { return it }
             }
         }
 
         return null
     }
 
-    private fun tryOpenContentDescriptor(uri: Uri, mode: String): ParcelFileDescriptor? {
+    private fun tryOpenContentDescriptor(uri: Uri, mode: String, trace: (String) -> Unit): ParcelFileDescriptor? {
         return try {
-            context.contentResolver.openFileDescriptor(uri, mode)
+            context.contentResolver.openFileDescriptor(uri, mode).also {
+                trace("openDescriptor uri=$uri mode=$mode result=${if (it == null) "null" else "opened"}")
+            }
         } catch (e: SecurityException) {
+            trace("openDescriptor uri=$uri mode=$mode error=${e.stackTraceToString()}")
             null
         } catch (e: FileNotFoundException) {
+            trace("openDescriptor uri=$uri mode=$mode error=${e.stackTraceToString()}")
             null
         } catch (e: IllegalArgumentException) {
+            trace("openDescriptor uri=$uri mode=$mode error=${e.stackTraceToString()}")
             null
         }
     }

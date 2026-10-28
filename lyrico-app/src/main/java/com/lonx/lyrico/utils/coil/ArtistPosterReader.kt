@@ -1,5 +1,9 @@
 package com.lonx.lyrico.utils.coil
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+
 import android.content.Context
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
@@ -76,6 +80,9 @@ class ArtistPosterReader(
                         return@withContext ResolvedArtistPoster.Embedded(artistName, uri, entry.picture)
                     }
                     readError = IllegalStateException("Cannot decode artist artwork: $uri")
+                    AppLog.record(AppLogType.METADATA, "ArtistPosterReader", "Embedded poster is undecodable",
+                        "uri=$uri\nartist=$artistName\nbytes=${entry.picture.data.size}", relatedId = uri,
+                        level = AppLogLevel.WARNING, repeatedFailureKey = "embedded-poster:$uri:$key")
                 }
             } catch (e: CancellationException) {
                 throw e

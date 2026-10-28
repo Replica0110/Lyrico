@@ -1,5 +1,9 @@
 package com.lonx.lyrico.viewmodel
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -174,7 +178,8 @@ class ArtistPosterEditViewModel(
                 withContext(NonCancellable) { refreshPosters() }
                 throw e
             } catch (e: Exception) {
-                Log.e("ArtistPosterEdit", "Failed to crop artist artwork", e)
+                AppLog.record(AppLogType.METADATA, "ArtistPosterEdit", "Artist artwork crop failed",
+                    "artists=$artistIds", level = AppLogLevel.ERROR, error = e)
                 updateState { it.copy(isRunning = false, activeSong = null,
                     message = application.getString(R.string.poster_operation_failed)) }
             }
@@ -201,7 +206,8 @@ class ArtistPosterEditViewModel(
                 withContext(NonCancellable) { refreshPosters() }
                 throw e
             } catch (e: Exception) {
-                Log.e("ArtistPosterEdit", "Failed to delete poster file", e)
+                AppLog.record(AppLogType.METADATA, "ArtistPosterEdit", "Poster file delete failed",
+                    "uri=${target.uri}\nfolder=${target.folderUri}", target.uri, AppLogLevel.ERROR, e)
                 if (generation == runGeneration) _state.update {
                     it.copy(isRunning = false, activeSong = null,
                         message = application.getString(R.string.poster_operation_failed))
@@ -271,7 +277,8 @@ class ArtistPosterEditViewModel(
                             else failures += artist.key
                         } catch (e: CancellationException) { throw e
                         } catch (e: Exception) {
-                            Log.e("ArtistPosterEdit", "Failed to export poster: ${artist.key}", e)
+                            AppLog.record(AppLogType.METADATA, "ArtistPosterEdit", "Artist poster export failed",
+                                "artist=${artist.key}\nfolder=${plan.folder}", level = AppLogLevel.ERROR, error = e)
                             failures += artist.key
                         }
                         updateState { it.copy(done = index + 1, failures = failures.toList()) }
@@ -301,7 +308,8 @@ class ArtistPosterEditViewModel(
                             }
                         } catch (e: CancellationException) { throw e
                         } catch (e: Exception) {
-                            Log.e("ArtistPosterEdit", "Failed to edit posters: ${song.uri}", e)
+                            AppLog.record(AppLogType.METADATA, "ArtistPosterEdit", "Embedded poster edit failed",
+                                "uri=${song.uri}\naction=$action", song.uri, AppLogLevel.ERROR, e)
                             failures += title
                         }
                         updateState { it.copy(done = index + 1, failures = failures.toList()) }
@@ -324,7 +332,8 @@ class ArtistPosterEditViewModel(
                                     else failures += file.displayName
                                 } catch (e: CancellationException) { throw e
                                 } catch (e: Exception) {
-                                    Log.e("ArtistPosterEdit", "Failed to remove poster file: ${file.uri}", e)
+                                    AppLog.record(AppLogType.METADATA, "ArtistPosterEdit", "Poster removal failed",
+                                        "uri=${file.uri}\nname=${file.displayName}", file.uri.toString(), AppLogLevel.ERROR, e)
                                     failures += file.displayName
                                 }
                                 updateState { it.copy(done = it.done + 1, failures = failures.toList()) }
@@ -333,13 +342,17 @@ class ArtistPosterEditViewModel(
                     }
                 }
                 refreshPosters()
+                AppLog.record(AppLogType.METADATA, "ArtistPosterEdit", "Artist poster operation finished",
+                    "action=$action\nartists=$artistIds\nchanged=$changed\nunchanged=$unchanged\nfailures=${failures.size}\nfailedTargets=${failures.take(20)}",
+                    level = if (failures.isEmpty()) AppLogLevel.INFO else AppLogLevel.WARNING)
                 updateState { it.copy(isRunning = false, activeSong = null,
                     message = application.getString(R.string.poster_edit_result, changed, unchanged, failures.size)) }
             } catch (e: CancellationException) {
                 withContext(NonCancellable) { refreshPosters() }
                 throw e
             } catch (e: Exception) {
-                Log.e("ArtistPosterEdit", "Poster operation failed", e)
+                AppLog.record(AppLogType.METADATA, "ArtistPosterEdit", "Artist poster operation failed",
+                    "action=$action\nartists=$artistIds", level = AppLogLevel.ERROR, error = e)
                 updateState { it.copy(isRunning = false, activeSong = null,
                     message = application.getString(R.string.poster_operation_failed)) }
             }

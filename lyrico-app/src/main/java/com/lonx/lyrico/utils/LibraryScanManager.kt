@@ -1,6 +1,9 @@
 package com.lonx.lyrico.utils
 
 import android.content.Context
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.repository.SettingsRepository
@@ -71,14 +74,23 @@ class LibraryScanManagerImpl(
 
     override fun addFolderAndScan(path: String, treeUri: String) {
         appScope.launch {
-            releaseRedundantSafPermissions(path, treeUri)
-            val id = folderDao.upsertAndGetId(
-                path = path,
-                treeUri = treeUri,
-                addedBySaf = true
-            )
-            folderDao.setIgnored(id, false)
-            enqueueScan(ScanRequest(fullRescan = false, folderIds = setOf(id)))
+            try {
+                releaseRedundantSafPermissions(path, treeUri)
+                val id = folderDao.upsertAndGetId(
+                    path = path,
+                    treeUri = treeUri,
+                    addedBySaf = true
+                )
+                folderDao.setIgnored(id, false)
+                enqueueScan(ScanRequest(fullRescan = false, folderIds = setOf(id)))
+                AppLog.record(AppLogType.APP, "LibraryFolders", "Library folder registered",
+                    "path=$path\ntreeUri=$treeUri\nfolderId=$id\nscanQueued=true", treeUri, AppLogLevel.INFO)
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                AppLog.record(AppLogType.APP, "LibraryFolders", "Library folder registration failed",
+                    "path=$path\ntreeUri=$treeUri", treeUri, AppLogLevel.ERROR, error)
+                throw error
+            }
         }
     }
 
@@ -139,6 +151,8 @@ class LibraryScanManagerImpl(
     }
 
     private fun enqueueScan(request: ScanRequest) {
+        AppLog.record(AppLogType.APP, "LibraryScanQueue", "Scan requested",
+            "roots=${request.folderIds}\nfullRescan=${request.fullRescan}\ncurrentlyScanning=${state.value.isScanning}")
         synchronized(queueLock) {
             mergePendingRequest(request)
             updateQueuedState()

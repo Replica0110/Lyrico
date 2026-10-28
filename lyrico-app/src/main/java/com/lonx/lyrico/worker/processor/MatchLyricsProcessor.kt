@@ -1,5 +1,9 @@
 package com.lonx.lyrico.worker.processor
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
@@ -118,14 +122,23 @@ class MatchLyricsProcessor(
                 }
             } catch (throwable: Exception) {
                 if (throwable is CancellationException) throw throwable
+                AppLog.record(AppLogType.BATCH, "LyricsMatch", "Lyrics source unusable",
+                    "task=${task.taskId}\nitem=${item.itemId}\nuri=${song.uri}\nsource=${source.id}\nreason=${throwable.message}", relatedId = song.uri)
                 null
             }
+            AppLog.record(AppLogType.BATCH, "LyricsMatch", "Lyrics source candidate evaluated",
+                "uri=${song.uri}\nsource=${source.id}\ncandidate=${candidate?.candidate?.song?.id}\nscore=${candidate?.score}\nthreshold=$MIN_MATCH_SCORE",
+                relatedId = song.uri)
             if (candidate != null && candidate.score > (best?.score ?: Double.NEGATIVE_INFINITY)) {
                 best = candidate
             }
             onProgress(0.1f + 0.6f * (sourceIndex + 1) / sources.size)
         }
 
+        AppLog.record(AppLogType.BATCH, "LyricsMatch", "Lyrics match decision",
+            "uri=${song.uri}\nsource=${best?.sourceId}\ncandidate=${best?.candidate?.song?.id}\nscore=${best?.score}\nthreshold=$MIN_MATCH_SCORE\n" +
+                "accepted=${best?.let { it.score >= MIN_MATCH_SCORE } == true}", relatedId = song.uri,
+            level = if (best?.let { it.score >= MIN_MATCH_SCORE } == true) AppLogLevel.DEBUG else AppLogLevel.INFO)
         val selected = best?.takeIf { it.score >= MIN_MATCH_SCORE }
             ?: throw BatchTaskSkippedException("No reliable lyrics match")
         val renderConfig = config.lyricRenderConfig ?: settingsRepository.getLyricRenderConfig()

@@ -30,6 +30,8 @@ import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.utils.CacheManager
 import com.lonx.lyrico.utils.UiMessage
+import com.lonx.lyrico.utils.DownloadsFileWriter
+import com.lonx.lyrico.data.model.log.recordOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -385,28 +387,43 @@ class SettingsViewModel(
         }
     }
 
-    fun exportSettings(context: Context, uri: Uri) {
+    fun exportSettings(context: Context, uri: Uri? = null) {
         viewModelScope.launch(Dispatchers.IO) {
+            var destination = uri
             try {
                 val jsonString = settingsRepository.exportSettings()
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(jsonString.toByteArray())
+                val bytes = jsonString.toByteArray(Charsets.UTF_8)
+                destination = if (uri == null) {
+                    DownloadsFileWriter.write(
+                        context = context,
+                        fileName = "lyrico_settings_backup_${System.currentTimeMillis()}.json",
+                        mimeType = "application/json",
+                        bytes = bytes,
+                    )
+                } else {
+                    requireNotNull(context.contentResolver.openOutputStream(uri)) { "Settings export returned no output stream: $uri" }.use {
+                        it.write(bytes)
+                    }
+                    uri
                 }
-                appLogRepository.log(
+                appLogRepository.recordOperation(
+                    type = AppLogType.APP,
+                    tag = TAG,
+                    stage = "Settings exported",
+                    detail = "uri=$destination\nbytes=${bytes.size}",
                     level = AppLogLevel.INFO,
-                    type = AppLogType.APP,
-                    tag = TAG,
-                    message = "Settings exported",
-                    detail = "uri=$uri"
                 )
-                _events.emit(SettingsEvent.ShowToast(UiMessage.StringResource(R.string.export_success)))
+                _events.emit(SettingsEvent.ShowToast(UiMessage.StringResource(
+                    if (uri == null) R.string.settings_export_downloads_success else R.string.export_success
+                )))
             } catch (e: Exception) {
-                e.printStackTrace()
-                appLogRepository.logException(
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                appLogRepository.recordOperation(
                     type = AppLogType.APP,
                     tag = TAG,
-                    message = "Failed to export settings",
-                    throwable = e
+                    stage = "Failed to export settings",
+                    detail = "uri=$destination\ndownloads=${uri == null}\n${e.stackTraceToString()}",
+                    level = AppLogLevel.ERROR,
                 )
                 _events.emit(SettingsEvent.ShowToast(UiMessage.StringResource(R.string.export_failed, e.message ?: "Unknown error")))
             }
@@ -416,42 +433,39 @@ class SettingsViewModel(
     fun importSettings(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val jsonString = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                val jsonString = requireNotNull(context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     inputStream.bufferedReader().use { it.readText() }
-                }
-
-                if (jsonString != null) {
-                    val success = settingsRepository.importSettings(jsonString)
-                    if (success) {
-                        appLogRepository.log(
-                            level = AppLogLevel.INFO,
-                            type = AppLogType.APP,
-                            tag = TAG,
-                            message = "Settings imported",
-                            detail = "uri=$uri"
-                        )
-                        _events.emit(SettingsEvent.ShowToast(
-                            UiMessage.StringResource(R.string.import_success)
-                        ))
-                    } else {
-                        appLogRepository.log(
-                            level = AppLogLevel.WARNING,
-                            type = AppLogType.APP,
-                            tag = TAG,
-                            message = "Settings import rejected: invalid format",
-                            detail = "uri=$uri"
-                        )
-                        _events.emit(SettingsEvent.ShowToast(
-                            UiMessage.StringResource(R.string.import_failed_format)
-                        ))
-                    }
+                }) { "Settings import returned no input stream: $uri" }
+                val success = settingsRepository.importSettings(jsonString)
+                if (success) {
+                    appLogRepository.log(
+                        level = AppLogLevel.INFO,
+                        type = AppLogType.APP,
+                        tag = TAG,
+                        message = "Settings imported",
+                        detail = "uri=$uri"
+                    )
+                    _events.emit(SettingsEvent.ShowToast(
+                        UiMessage.StringResource(R.string.import_success)
+                    ))
+                } else {
+                    appLogRepository.log(
+                        level = AppLogLevel.WARNING,
+                        type = AppLogType.APP,
+                        tag = TAG,
+                        message = "Settings import rejected: invalid format",
+                        detail = "uri=$uri"
+                    )
+                    _events.emit(SettingsEvent.ShowToast(
+                        UiMessage.StringResource(R.string.import_failed_format)
+                    ))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 appLogRepository.logException(
                     type = AppLogType.APP,
                     tag = TAG,
-                    message = "Failed to import settings",
+                    message = "Failed to import settings: uri=$uri",
                     throwable = e
                 )
                 _events.emit(SettingsEvent.ShowToast(

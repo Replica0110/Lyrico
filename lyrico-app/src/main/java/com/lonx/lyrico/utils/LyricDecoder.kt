@@ -1,13 +1,10 @@
 package com.lonx.lyrico.utils
 
-import android.util.Log
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.utils.lyrics.document.LyricsDocumentPipeline
 
 object LyricDecoder {
-    private const val TAG = "LyricDecoder"
-
     fun detectFormat(lyricsText: String): LyricFormat? {
         if (lyricsText.isBlank()) return null
 
@@ -92,12 +89,6 @@ object LyricDecoder {
             LyricsDocumentPipeline.parse(lyricsText, format)?.let { document ->
                 with(LyricsDocumentPipeline) { document.toLyricsResult() }
             }
-        }.onFailure { e ->
-            Log.w(
-                TAG,
-                "Failed to decode lyrics as $format " +
-                    "(length=${lyricsText.length}, preview=${lyricsText.take(80).replace('\n', ' ')}): ${e.message}"
-            )
         }.getOrNull()
     }
 }

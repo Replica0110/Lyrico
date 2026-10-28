@@ -1,5 +1,9 @@
 package com.lonx.lyrico.worker.processor
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
@@ -82,16 +86,25 @@ class MatchCoverProcessor(
                     }
                     .maxByOrNull { it.second }
                     ?.let { candidate ->
+                        AppLog.record(AppLogType.BATCH, "CoverMatch", "Cover source candidate evaluated",
+                            "uri=${song.uri}\nsource=${source.id}\ncandidate=${candidate.first.id}\nscore=${candidate.second}\nthreshold=$MIN_MATCH_SCORE",
+                            relatedId = song.uri)
                         if (candidate.second > (best?.second ?: Double.NEGATIVE_INFINITY)) {
                             best = candidate
                         }
                     }
             } catch (throwable: Exception) {
                 if (throwable is CancellationException) throw throwable
+                AppLog.record(AppLogType.BATCH, "CoverMatch", "Cover source unusable",
+                    "task=${task.taskId}\nitem=${item.itemId}\nuri=${song.uri}\nsource=${source.id}\nreason=${throwable.message}", relatedId = song.uri)
             }
             onProgress(0.1f + 0.7f * (sourceIndex + 1) / sources.size)
         }
 
+        AppLog.record(AppLogType.BATCH, "CoverMatch", "Cover match decision",
+            "uri=${song.uri}\nsource=${best?.first?.pluginId}\ncandidate=${best?.first?.id}\nscore=${best?.second}\nthreshold=$MIN_MATCH_SCORE\n" +
+                "accepted=${best?.let { it.second >= MIN_MATCH_SCORE } == true}", relatedId = song.uri,
+            level = if (best?.let { it.second >= MIN_MATCH_SCORE } == true) AppLogLevel.DEBUG else AppLogLevel.INFO)
         val selected = best?.takeIf { it.second >= MIN_MATCH_SCORE }?.first
             ?: throw BatchTaskSkippedException("No reliable cover match")
         onProgress(0.9f)

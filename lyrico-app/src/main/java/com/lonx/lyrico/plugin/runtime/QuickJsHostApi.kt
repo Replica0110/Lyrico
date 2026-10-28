@@ -2,6 +2,11 @@ package com.lonx.lyrico.plugin.runtime
 
 import android.util.Base64
 import android.util.Log
+import com.lonx.lyrico.data.network.PluginRequestLogContext
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.LogOperation
 import androidx.annotation.Keep
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -310,17 +315,17 @@ class QuickJsHostApi(
                 )
             )
             "log.debug" -> {
-                Log.d(payload.logTag(), payload.string("message"))
+                AppLog.record(AppLogType.PLUGIN, payload.logTag(), "Plugin script debug", payload.string("message"), pluginId)
                 text("")
             }
 
             "log.warn" -> {
-                Log.w(payload.logTag(), payload.string("message"))
+                AppLog.record(AppLogType.PLUGIN, payload.logTag(), "Plugin script warning", payload.string("message"), pluginId, AppLogLevel.WARNING)
                 text("")
             }
 
             "log.error" -> {
-                Log.e(payload.logTag(), payload.string("message"))
+                AppLog.record(AppLogType.PLUGIN, payload.logTag(), "Plugin script error", payload.string("message"), pluginId, AppLogLevel.ERROR)
                 text("")
             }
 
@@ -411,7 +416,7 @@ class QuickJsHostApi(
     }
 
     private fun logCache(message: String) {
-        Log.d(CACHE_LOG_TAG, message)
+        AppLog.record(AppLogType.PLUGIN, CACHE_LOG_TAG, "Plugin cache", message, pluginId)
     }
 
     private fun executeHttp(
@@ -431,6 +436,7 @@ class QuickJsHostApi(
         }
 
         val requestBuilder = Request.Builder().url(urlText)
+            .tag(PluginRequestLogContext::class.java, PluginRequestLogContext(pluginId, LogOperation.current.get()?.id))
         if (method == "POST" || method == "PUT" || method == "PATCH") {
             requestBuilder.header("Content-Type", contentType)
         }

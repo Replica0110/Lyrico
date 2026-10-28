@@ -1,7 +1,6 @@
 package com.lonx.lyrico
 
 import android.net.Uri
-import android.util.Log
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -36,7 +35,6 @@ fun LyricoApp(externalUri: Uri?, externalEditRequestId: Long = 0L) {
                 }
                     ?: NavGraphs.root.defaultStartDirection
 
-            Log.d("LyricoApp", "LyricoApp: $startDirection")
             DestinationsNavHost(
                 navGraph = NavGraphs.root,
                 navController = navController,

@@ -1,5 +1,9 @@
 package com.lonx.lyrico.utils
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.AppLogType
+
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -179,8 +183,14 @@ class MediaScanner(
                 null
             )?.use { cursor ->
                 cursor.moveToFirst()
+            }.also { found ->
+                if (found != true) AppLog.record(AppLogType.APP, "MediaScanner", "SAF scan root unavailable",
+                    "uri=$documentUri\nresult=${if (found == null) "null-cursor" else "empty-cursor"}",
+                    documentUri.toString(), AppLogLevel.WARNING)
             } == true
         } catch (e: Exception) {
+            AppLog.record(AppLogType.APP, "MediaScanner", "SAF scan root query failed",
+                "uri=$documentUri", documentUri.toString(), AppLogLevel.WARNING, e)
             false
         }
     }

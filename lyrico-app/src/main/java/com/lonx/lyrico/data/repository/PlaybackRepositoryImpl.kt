@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.R
 import com.lonx.lyrico.platform.player.PlayerIntentFactory
 
@@ -44,14 +47,24 @@ class PlaybackRepositoryImpl : PlaybackRepository {
     private fun startSafely(context: Context, intent: Intent): Boolean {
         return try {
             context.startActivity(intent)
+            AppLog.record(AppLogType.APP, "Playback", "Player launch requested",
+                "uri=${intent.data}\naction=${intent.action}\npackage=${intent.`package`}\nflags=${intent.flags}", intent.data?.toString())
             true
-        } catch (_: ActivityNotFoundException) {
+        } catch (error: ActivityNotFoundException) {
+            recordFailure(intent, error)
             false
-        } catch (_: SecurityException) {
+        } catch (error: SecurityException) {
+            recordFailure(intent, error)
             false
         } catch (e: Exception) {
+            recordFailure(intent, e)
             Toast.makeText(context, context.getString(R.string.unknown_error, e.message), Toast.LENGTH_SHORT).show()
             false
         }
     }
+
+    private fun recordFailure(intent: Intent, error: Exception) = AppLog.record(
+        AppLogType.APP, "Playback", "Unable to launch player",
+        "uri=${intent.data}\naction=${intent.action}\npackage=${intent.`package`}\nflags=${intent.flags}",
+        intent.data?.toString(), AppLogLevel.WARNING, error)
 }

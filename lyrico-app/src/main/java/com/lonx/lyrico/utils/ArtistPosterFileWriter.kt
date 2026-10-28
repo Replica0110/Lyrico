@@ -5,6 +5,9 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.util.Log
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
 import androidx.core.net.toUri
 import com.lonx.lyrico.domain.poster.ArtistPosterFileNaming
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +33,11 @@ object ArtistPosterFileWriter {
         mimeType: String,
         posterFolder: String?
     ): String? = withContext(Dispatchers.IO) {
-        if (data.isEmpty() || posterFolder == null) return@withContext null
+        if (data.isEmpty() || posterFolder == null) {
+            AppLog.record(AppLogType.METADATA, TAG, "Poster write skipped",
+                "folder=$posterFolder\nartist=$artistName\nbytes=${data.size}\nreason=empty-data-or-no-folder", level = AppLogLevel.WARNING)
+            return@withContext null
+        }
 
         val stem = ArtistPosterFileNaming.stemFor(artistName) ?: return@withContext null
         val extension = ArtistPosterFileNaming.extensionFor(mimeType)
@@ -50,7 +57,9 @@ object ArtistPosterFileWriter {
                 data = data
             )
         }.getOrElse { error ->
-            Log.w(TAG, "写入海报文件夹失败: $posterFolder", error)
+            AppLog.record(AppLogType.METADATA, TAG, "Poster folder write failed",
+                "folder=$posterFolder\nartist=$artistName\nmime=$folderMimeType\nbytes=${data.size}",
+                level = AppLogLevel.ERROR, error = error)
             null
         }
     }
@@ -64,9 +73,14 @@ object ArtistPosterFileWriter {
         mimeType: String,
         data: ByteArray
     ): String? {
+        fun report(stage: String, detail: String, level: AppLogLevel = AppLogLevel.WARNING) =
+            AppLog.record(AppLogType.METADATA, TAG, stage, "folder=$folder\nartist=$artistName\n$detail", folder, level)
         val treeUri = folder.toUri()
         // `null` 表示文件夹被删除或授权已失效，不能与空文件夹混为一谈。
-        val children = SafDocuments.children(context, treeUri) ?: return null
+        val children = SafDocuments.children(context, treeUri) ?: run {
+            report("Poster write failed", "stage=enumerate-folder reason=provider-unavailable")
+            return null
+        }
         val files = children.filterNot { it.isDirectory }
         val existing = ArtistPosterFileNaming
             .matchesArtist(files.map { it.displayName }, artistName)
@@ -84,7 +98,10 @@ object ArtistPosterFileWriter {
             parentUri,
             mimeType,
             stagedName
-        ) ?: return null
+        ) ?: run {
+            report("Poster write failed", "stage=create-document name=$stagedName reason=provider-returned-null")
+            return null
+        }
 
         val written = context.contentResolver.openOutputStream(documentUri, "wt")?.use { outputStream ->
             outputStream.write(data)
@@ -93,17 +110,22 @@ object ArtistPosterFileWriter {
         } ?: false
 
         if (!written) {
+            report("Poster write failed", "stage=open-output uri=$documentUri reason=provider-returned-null")
             runCatching { DocumentsContract.deleteDocument(context.contentResolver, documentUri) }
             return null
         }
 
-        if (existingUri == null) return desiredName
+        if (existingUri == null) {
+            report("Poster file written", "uri=$documentUri\nbytes=${data.size}\nmime=$mimeType", AppLogLevel.INFO)
+            return desiredName
+        }
 
         // 新文件已经完整落盘，现在才动旧文件。删不掉时保留两者，至少不会丢图。
         val oldDeleted = runCatching {
             DocumentsContract.deleteDocument(context.contentResolver, existingUri)
         }.getOrDefault(false)
         if (!oldDeleted) {
+            report("Poster replacement failed", "stage=delete-original original=$existingUri staged=$documentUri")
             runCatching { DocumentsContract.deleteDocument(context.contentResolver, documentUri) }
             return null
         }
@@ -111,6 +133,8 @@ object ArtistPosterFileWriter {
         val renamed = runCatching {
             DocumentsContract.renameDocument(context.contentResolver, documentUri, desiredName)
         }.getOrNull()
+        report("Poster replacement finished", "original=$existingUri\nstaged=$documentUri\nrenamed=$renamed\nbytes=${data.size}",
+            if (renamed == null) AppLogLevel.WARNING else AppLogLevel.INFO)
         return if (renamed != null) desiredName else stagedName
     }
     /** Replace an existing image only after a complete staged file has been written. */

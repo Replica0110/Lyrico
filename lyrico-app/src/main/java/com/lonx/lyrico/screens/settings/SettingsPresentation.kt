@@ -3,6 +3,8 @@ package com.lonx.lyrico.screens.settings
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.lonx.lyrico.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -15,11 +17,12 @@ internal fun SettingsPage(
     engine: UiEngine,
     initialized: Boolean,
     onBack: () -> Unit,
+    title: String = stringResource(R.string.settings_title),
     content: SettingsItemsScope.() -> Unit,
 ) {
     when (engine) {
-        UiEngine.SALT -> SettingsPageSalt(initialized, onBack, content)
-        UiEngine.MIUIX -> SettingsPageMiuix(initialized, onBack, content)
+        UiEngine.SALT -> SettingsPageSalt(initialized, onBack, title, content)
+        UiEngine.MIUIX -> SettingsPageMiuix(initialized, onBack, title, content)
     }
 }
 
@@ -46,6 +49,7 @@ internal interface SettingsItemPresentation {
         tone: PreferenceIconTone = PreferenceIconTone.Tools,
         value: String? = null,
         holdDownState: Boolean = false,
+        enabled: Boolean = true,
         onClick: () -> Unit,
     )
 

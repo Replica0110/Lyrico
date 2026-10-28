@@ -1,5 +1,9 @@
 package com.lonx.lyrico.utils.coil
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -15,12 +19,14 @@ import kotlin.coroutines.coroutineContext
 
 private const val TAG = "ArtistPoster"
 
-internal inline fun <T> readArtworkSafely(block: () -> T): T? = try {
+internal inline fun <T> readArtworkSafely(diagnosticContext: String = "", block: () -> T): T? = try {
     block()
 } catch (e: CancellationException) {
     throw e
 } catch (e: Exception) {
-    Log.w(TAG, "Artwork read failed", e)
+    AppLog.record(AppLogType.METADATA, TAG, "Artwork read failed", diagnosticContext,
+        level = AppLogLevel.WARNING, error = e,
+        repeatedFailureKey = "artwork:$diagnosticContext:${e.javaClass.name}")
     null
 }
 
@@ -79,14 +85,18 @@ internal suspend fun readExternalArtistPoster(
     return null
 }
 
-internal fun readPosterBytes(context: Context, uri: android.net.Uri, name: String): ByteArray? = readArtworkSafely {
+internal fun readPosterBytes(context: Context, uri: android.net.Uri, name: String): ByteArray? = readArtworkSafely("uri=$uri\nname=$name") {
     if (name.endsWith(".mp4", ignoreCase = true)) {
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(context, uri)
             val frame = retriever.getScaledFrameAtTime(
                 -1, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 512, 512
-            ) ?: return@readArtworkSafely null
+            ) ?: run {
+                AppLog.record(AppLogType.METADATA, TAG, "Poster video has no decodable frame", "uri=$uri\nname=$name",
+                    relatedId = uri.toString(), level = AppLogLevel.WARNING, repeatedFailureKey = "poster-frame:$uri")
+                return@readArtworkSafely null
+            }
             try {
                 ByteArrayOutputStream().use {
                     frame.compress(Bitmap.CompressFormat.PNG, 100, it)
@@ -99,6 +109,10 @@ internal fun readPosterBytes(context: Context, uri: android.net.Uri, name: Strin
             retriever.release()
         }
     } else {
-        context.contentResolver.openInputStream(uri)?.use { it.readBytes().validArtwork() }
+        context.contentResolver.openInputStream(uri)?.use { it.readBytes().validArtwork() }.also { bytes ->
+            if (bytes == null) AppLog.record(AppLogType.METADATA, TAG, "Poster image unavailable or undecodable",
+                "uri=$uri\nname=$name", relatedId = uri.toString(), level = AppLogLevel.WARNING,
+                repeatedFailureKey = "poster-image:$uri")
+        }
     }
 }

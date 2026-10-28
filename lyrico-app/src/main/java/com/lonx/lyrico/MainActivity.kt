@@ -1,5 +1,9 @@
 package com.lonx.lyrico
 
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -93,6 +97,9 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
     private val externalAudioPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             val uri = pendingExternalUri
+            AppLog.record(AppLogType.APP, "ExternalEdit", "External read permission result",
+                "uri=$uri\ngranted=$isGranted\nrequestId=$externalEditRequestId", uri?.toString(),
+                if (isGranted) AppLogLevel.INFO else AppLogLevel.WARNING)
             pendingExternalUri = null
 
             if (uri != null) {
@@ -242,6 +249,8 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
         // An old editor must not finish a newer request delivered through onNewIntent.
         if (requestId != externalEditRequestId) return
         val uri = externalUri ?: return
+        AppLog.record(AppLogType.METADATA, "ExternalEdit", "External edit finished",
+            "uri=$uri\nrequestId=$requestId\nsaved=$saved", uri.toString(), AppLogLevel.INFO)
         if (saved) {
             setResult(RESULT_OK, Intent().setData(uri))
         } else {
@@ -279,7 +288,13 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
         pendingExternalUri = null
         externalUri = null
 
-        if (needsExternalAudioReadPermission(uri, intentFlags)) {
+        val requestReadPermission = needsExternalAudioReadPermission(uri, intentFlags)
+        AppLog.record(AppLogType.METADATA, "ExternalEdit", "External edit opened",
+            "uri=$uri\nrequestId=$externalEditRequestId\nflags=$intentFlags\n" +
+                "temporaryRead=${intentFlags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0}\n" +
+                "temporaryWrite=${intentFlags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION != 0}\nrequestReadPermission=$requestReadPermission",
+            uri.toString(), AppLogLevel.INFO)
+        if (requestReadPermission) {
             pendingExternalUri = uri
             requestExternalAudioReadPermission()
         } else {

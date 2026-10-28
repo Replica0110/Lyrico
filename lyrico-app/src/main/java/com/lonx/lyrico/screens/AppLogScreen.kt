@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -117,7 +118,7 @@ fun AppLogScreen(
     var showDetailSheet by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var pendingDeleteIds by remember { mutableStateOf<List<Long>>(emptyList()) }
-    var pendingExportIds by remember { mutableStateOf<List<Long>?>(null) }
+    var pendingExportIds by rememberSaveable { mutableStateOf<List<Long>?>(null) }
     val copiedMessage = stringResource(R.string.msg_copied_to_clipboard)
     val logRetentionOption by viewModel.logRetentionOption.collectAsState()
     val logRetentionItems = LogRetentionOption.entries.map { stringResource(it.labelRes) }
@@ -474,7 +475,7 @@ private fun AppLogItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                log.relatedId?.takeIf { it.isNotBlank() }?.let {
+                log.displayRelatedId?.takeIf { it.isNotBlank() }?.let {
                     Spacer(modifier = Modifier.height(2.dp))
                     com.moriafly.salt.ui.Text(
                         text = it,
@@ -535,7 +536,7 @@ private fun AppLogItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            log.relatedId?.takeIf { it.isNotBlank() }?.let {
+            log.displayRelatedId?.takeIf { it.isNotBlank() }?.let {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = it,
@@ -687,7 +688,7 @@ private fun AppLogDetailContent(log: AppLogEntity) {
             stringResource(log.type.labelRes)
         )
         DetailRow(stringResource(R.string.app_log_field_tag), log.tag)
-        log.relatedId?.let {
+        log.displayRelatedId?.let {
             DetailRow(stringResource(R.string.app_log_field_related), it)
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -779,10 +780,15 @@ private fun DetailRow(
 }
 
 
+private val AppLogEntity.displayRelatedId: String?
+    get() = relatedId?.let {
+        if (level <= AppLogLevel.INFO) com.lonx.lyrico.data.model.log.LogFileReference.compact(it) else it
+    }
+
 private fun AppLogEntity.formatForCopy(): String = buildString {
     appendLine("${formatDateTime(createdAt)} [$level/$type] $tag")
     appendLine(message)
-    relatedId?.let { appendLine("Related: $it") }
+    displayRelatedId?.let { appendLine("Related: $it") }
     detail?.takeIf { it.isNotBlank() }?.let {
         appendLine()
         appendLine(it)

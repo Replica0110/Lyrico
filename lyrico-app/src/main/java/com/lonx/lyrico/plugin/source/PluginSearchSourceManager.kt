@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.combine
 import com.lonx.lyrico.plugin.i18n.PluginLocales
+import com.lonx.lyrico.plugin.i18n.PluginNames
 
 data class SearchSourceWithState(
     val source: SearchSource,
@@ -139,7 +140,7 @@ class PluginSearchSourceManager(
                 type = AppLogType.PLUGIN,
                 tag = TAG,
                 message = "Failed to build plugin search source\n" +
-                        "plugin=${plugin.id}\nname=${plugin.name}\nentry=${plugin.entryFile}",
+                        "plugin=${plugin.id}\nname=${PluginNames.resolve(plugin)}\nentry=${plugin.entryFile}",
                 throwable = throwable,
                 relatedId = plugin.id
             )

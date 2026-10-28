@@ -2,6 +2,9 @@ package com.lonx.lyrico.viewmodel
 
 import android.app.Application
 import android.util.Log
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.LyricoDatabase
@@ -101,12 +104,22 @@ class FolderManagerViewModel(
 
     fun deleteFolder(folder: FolderEntity) {
         appScope.launch {
-            val released = UriUtils.releasePersistedPermission(contentResolver, folder.treeUri)
-            if (!released) {
-                Log.w(TAG, "Failed to fully release persisted permission for folder: ${folder.path}")
+            try {
+                val released = UriUtils.releasePersistedPermission(contentResolver, folder.treeUri)
+                if (!released) {
+                    Log.w(TAG, "Failed to fully release persisted permission for folder: ${folder.path}")
+                }
+                folderDao.deleteFolderTreePermanently(folder.id)
+                libraryIndexRepository.refreshAndPruneIndexes()
+                AppLog.record(AppLogType.DATABASE, TAG, "Library folder removed",
+                    "folderId=${folder.id}\npath=${folder.path}\ntreeUri=${folder.treeUri}\npermissionReleased=$released",
+                    folder.treeUri, if (released) AppLogLevel.INFO else AppLogLevel.WARNING)
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                AppLog.record(AppLogType.DATABASE, TAG, "Library folder removal failed",
+                    "folderId=${folder.id}\npath=${folder.path}\ntreeUri=${folder.treeUri}", folder.treeUri, AppLogLevel.ERROR, error)
+                throw error
             }
-            folderDao.deleteFolderTreePermanently(folder.id)
-            libraryIndexRepository.refreshAndPruneIndexes()
         }
     }
 
@@ -116,8 +129,17 @@ class FolderManagerViewModel(
 
     fun setFolderIgnored(folder: FolderEntity, ignored: Boolean) {
         appScope.launch {
-            folderDao.setIgnoredRecursively(folder.id, ignored)
-            libraryIndexRepository.refreshAndPruneIndexes()
+            try {
+                folderDao.setIgnoredRecursively(folder.id, ignored)
+                libraryIndexRepository.refreshAndPruneIndexes()
+                AppLog.record(AppLogType.DATABASE, TAG, "Folder visibility updated",
+                    "folderId=${folder.id}\npath=${folder.path}\nignored=$ignored", folder.treeUri, AppLogLevel.INFO)
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                AppLog.record(AppLogType.DATABASE, TAG, "Folder visibility update failed",
+                    "folderId=${folder.id}\nignored=$ignored", folder.treeUri, AppLogLevel.ERROR, error)
+                throw error
+            }
         }
     }
 }

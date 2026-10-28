@@ -192,7 +192,7 @@ val appModule = module {
 
     single<UpdateManager> { UpdateManagerImpl(get(), get()) }
     single { MediaScanner(androidContext()) }
-    single { ReplayGainScanner(androidContext()) }
+    single { ReplayGainScanner(androidContext(), get()) }
     // 数据库和存储库
     single {
         Room.databaseBuilder(
@@ -252,7 +252,7 @@ val appModule = module {
         LibraryScanRepositoryImpl(androidContext(), get(), get(), get(), get(), get(), get(), get())
     }
     single { ReadAudioTagsUseCase(get(), get()) }
-    single { SaveAudioTagsUseCase(get(), get(), get(), get(), get(), get()) }
+    single { SaveAudioTagsUseCase(get(), get(), get(), get(), get(), get(), get()) }
     single { BatchEditSongsUseCase(get(), get()) }
     single { PatchSongTagsUseCase(get()) }
     single { OverwriteSongTagsUseCase(get()) }
@@ -262,11 +262,12 @@ val appModule = module {
     single<SourcePluginRepository> { SourcePluginRepositoryImpl(get()) }
     single<LibraryScanManager> { LibraryScanManagerImpl(get(), androidContext(), get(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
-    single<AppLogRepository> { AppLogRepositoryImpl(get(), get()) }
+    single<AppLogRepository> { AppLogRepositoryImpl(get(), get(), get()) }
+    single { com.lonx.lyrico.diagnostics.ProblemReproductionRecorder(get(), get(), get(), get(), get()) }
     single<GhContributorRepository> { GhContributorRepositoryImpl(get(), get()) }
     single { BatchTaskScheduler(androidContext(), get()) }
     single { LyricsFormatProcessor(get(), get(), get()) }
-    single { ReplayGainProcessor(get(), get(), get(), get(), get()) }
+    single { ReplayGainProcessor(get(), get(), get(), get(), get(), get()) }
     single { MatchMetadataProcessor(get(), get(), get(), get(), get(), get()) }
     single { MatchLyricsProcessor(get(), get(), get(), get(), get()) }
     single { MatchCoverProcessor(get(), get(), get(), get()) }
@@ -319,7 +320,8 @@ val appModule = module {
     viewModel { EditFieldSettingsViewModel(get(), get()) }
     viewModel { (fieldCode: String, component: Boolean) -> FieldSongsViewModel(fieldCode, component, get(), get(), get(), get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get(), get()) }
-    viewModel { AppLogViewModel(get(),get()) }
+    viewModel { AppLogViewModel(get(), get()) }
+    viewModel { com.lonx.lyrico.viewmodel.ProblemReproductionViewModel(get(), get(), get(), get()) }
     viewModel { PluginViewModel(get(), get(), get(), get(), get()) }
 
     viewModel { FolderManagerViewModel(get(), get(), get(), get(), get(), get()) }

@@ -1,6 +1,7 @@
 package com.lonx.lyrico.plugin.source
 
 import android.util.Log
+import com.lonx.lyrico.plugin.i18n.PluginNames
 import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
@@ -17,6 +18,12 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
+import java.io.IOException
+import java.nio.file.Files
+import com.lonx.lyrico.data.model.log.recordOperation
+import com.lonx.lyrico.data.model.log.withLogOperation
+import com.lonx.lyrico.data.model.log.LogOperation
+import kotlinx.coroutines.currentCoroutineContext
 import java.util.zip.ZipInputStream
 
 data class PluginImportLimits(
@@ -90,7 +97,7 @@ fun PluginInstallCandidate.toFailed(reason: String): PluginInstallFailed {
         rootPath = relativeRootInArchive,
         reason = reason,
         pluginId = manifest.id,
-        pluginName = manifest.name,
+        pluginName = PluginNames.resolve(manifest, pluginRoot),
         versionCode = manifest.versionCode,
         versionName = manifest.versionName,
         existingVersionCode = existingPlugin?.versionCode,
@@ -248,7 +255,7 @@ class SourcePluginInstaller(
                     failed += failure
                     logInstallerException(
                         message = "Plugin install failed\nplugin=${candidate.manifest.id}\n" +
-                                "name=${candidate.manifest.name}\nroot=${candidate.relativeRootInArchive}",
+                                "name=${PluginNames.resolve(candidate.manifest, candidate.pluginRoot)}\nroot=${candidate.relativeRootInArchive}",
                         throwable = throwable,
                         relatedId = candidate.manifest.id
                     )
@@ -371,30 +378,64 @@ class SourcePluginInstaller(
         allCandidates: List<PluginInstallCandidate>,
         installRoot: File,
         enabled: Boolean
-    ): SourcePluginEntity {
+    ): SourcePluginEntity = withLogOperation("plugin-install") {
+        val started = System.nanoTime()
+        var stage = "copy-to-staging"
         val targetDir = File(installRoot, candidate.manifest.id)
         val stagingDir = File(installRoot, ".staging-${candidate.manifest.id}-${System.currentTimeMillis()}")
         if (stagingDir.exists()) stagingDir.deleteRecursively()
         stagingDir.mkdirs()
 
         try {
+            appLogRepository.recordOperation(AppLogType.PLUGIN, TAG, "Plugin installation started",
+                "plugin=${candidate.manifest.id}\nversion=${candidate.manifest.versionName}(${candidate.manifest.versionCode})\n" +
+                    "previousVersion=${candidate.existingPlugin?.versionName}\nconflict=${candidate.versionConflict}\n" +
+                    "target=${targetDir.absolutePath}\nexistingDirectory=${targetDir.exists()}", candidate.manifest.id)
             copyPluginRoot(candidate, allCandidates, stagingDir)
+            stage = "validate-staging"
             validatePluginSize(stagingDir)
             if (targetDir.exists()) {
-                require(targetDir.deleteRecursively()) {
-                    "Failed to remove existing plugin directory: ${targetDir.absolutePath}"
-                }
+                stage = "remove-existing-directory"
+                removeExistingPluginDirectory(targetDir)
             }
+            stage = "move-staging"
             if (!stagingDir.renameTo(targetDir)) {
                 require(stagingDir.copyRecursively(targetDir, overwrite = true)) {
                     "Failed to copy plugin into ${targetDir.absolutePath}"
                 }
                 stagingDir.deleteRecursively()
             }
-            return upsertInstalledPlugin(candidate.manifest, targetDir, enabled)
+            stage = "update-database"
+            upsertInstalledPlugin(candidate.manifest, targetDir, enabled)
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            throw IOException("Plugin installation failed: operationId=${currentCoroutineContext()[LogOperation]?.id} stage=$stage plugin=${candidate.manifest.id} " +
+                "elapsedMs=${(System.nanoTime() - started) / 1_000_000}; ${error.message}", error)
         } finally {
             if (stagingDir.exists()) stagingDir.deleteRecursively()
         }
+    }
+
+    private fun removeExistingPluginDirectory(directory: File) {
+        var failures = 0
+        val details = mutableListOf<IOException>()
+        fun failed(file: File, error: IOException) {
+            failures++
+            if (details.size < 8) details += IOException(
+                "path=${file.absolutePath} exists=${file.exists()} directory=${file.isDirectory} " +
+                    "readable=${file.canRead()} writable=${file.canWrite()}; ${error.javaClass.simpleName}: ${error.message}", error)
+        }
+        directory.walkBottomUp().onFail { file, error -> failed(file, error) }.forEach { file ->
+            try {
+                Files.deleteIfExists(file.toPath())
+            } catch (error: IOException) {
+                failed(file, error)
+            }
+        }
+        if (failures > 0) throw IOException(
+            "Failed to remove existing plugin directory: ${directory.absolutePath}; failures=$failures; ${details.first().message}",
+            details.first()
+        ).also { error -> details.drop(1).forEach(error::addSuppressed) }
     }
 
     private fun copyPluginRoot(
@@ -475,7 +516,7 @@ class SourcePluginInstaller(
         repository.upsertPlugin(entity)
         logInstaller(
             level = AppLogLevel.INFO,
-            message = "Plugin installed: ${entity.name}",
+            message = "Plugin installed: ${PluginNames.resolve(entity)}",
             detail = buildString {
                 appendLine("plugin=${entity.id}")
                 appendLine("version=${entity.versionName}(${entity.versionCode})")

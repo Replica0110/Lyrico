@@ -6,6 +6,10 @@ import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.model.ReplayGainPeakMode
 import com.lonx.lyrico.data.model.ReplayGainSettings
 import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.recordOperation
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
@@ -28,7 +32,8 @@ class ReplayGainProcessor(
     private val patchSongTagsUseCase: PatchSongTagsUseCase,
     private val replayGainScanner: ReplayGainScanner,
     private val settingsRepository: SettingsRepository,
-    private val audioTagRepository: AudioTagRepository
+    private val audioTagRepository: AudioTagRepository,
+    private val appLogRepository: AppLogRepository? = null
 ) : BatchTaskProcessor {
 
     override suspend fun process(
@@ -51,7 +56,12 @@ class ReplayGainProcessor(
             audioTagRepository,
             song.uri,
             replayGainScanner.formatReferenceLoudness(replayGainSettings.targetLoudness)
-        )
+        ) { detail, skipped ->
+            appLogRepository?.recordOperation(AppLogType.BATCH, "ReplayGainProcessor",
+                if (skipped) "ReplayGain skipped: complete tags for current target" else "ReplayGain requires analysis",
+                "task=${task.taskId}\nitem=${item.itemId}\nuri=${song.uri}\npeakMode=${replayGainSettings.peakMode}\n$detail", song.uri,
+                if (skipped) AppLogLevel.INFO else AppLogLevel.DEBUG)
+        }
 
         var analysisSuccess = false
         var analysisResult: com.lonx.lyrico.utils.ReplayGainAnalysis? = null
@@ -105,13 +115,17 @@ internal fun ReplayGainTaskConfig.toReplayGainSettingsOrNull(): ReplayGainSettin
 internal suspend fun checkReplayGainTags(
     repository: AudioTagRepository,
     uri: String,
-    expectedReferenceLoudness: String
+    expectedReferenceLoudness: String,
+    report: suspend (String, Boolean) -> Unit = { _, _ -> }
 ) {
     val tag = repository.read(uri, AudioTagReadOptions(strict = true))
     val hasCompleteTrackReplayGain = !tag.replayGainTrackGain.isNullOrBlank() &&
         !tag.replayGainTrackPeak.isNullOrBlank() &&
         !tag.replayGainReferenceLoudness.isNullOrBlank()
     val hasCurrentReferenceLoudness = tag.replayGainReferenceLoudness == expectedReferenceLoudness
+    report("trackGainPresent=${!tag.replayGainTrackGain.isNullOrBlank()}\ntrackPeakPresent=${!tag.replayGainTrackPeak.isNullOrBlank()}\n" +
+        "storedReference=${tag.replayGainReferenceLoudness}\nexpectedReference=$expectedReferenceLoudness",
+        hasCompleteTrackReplayGain && hasCurrentReferenceLoudness)
     if (hasCompleteTrackReplayGain && hasCurrentReferenceLoudness) {
         throw BatchTaskSkippedException("ReplayGain already exists")
     }

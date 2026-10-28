@@ -7,6 +7,10 @@ import android.util.Log
 import androidx.core.net.toUri
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.recordOperation
+import com.lonx.lyrico.data.model.log.withLogOperation
+import com.lonx.lyrico.data.model.log.newLogOperation
 import com.lonx.lyrico.data.repository.AppLogRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,12 +23,27 @@ class SongFileRepositoryImpl(
     private val appLogRepository: AppLogRepository
 ) : SongFileRepository {
 
-    override suspend fun deleteFile(song: SongEntity): DeleteSongFileResult {
-        return if (song.source == "SAF") {
+    override suspend fun deleteFile(song: SongEntity): DeleteSongFileResult = withLogOperation("delete-file") {
+        val result = if (song.source == "SAF") {
             deleteSafSongFile(song)
         } else {
             deleteMediaStoreSongFile(song)
         }
+        val outcome = when (result) {
+            DeleteSongFileResult.Deleted -> "deleted"
+            DeleteSongFileResult.AlreadyMissing -> "already-missing"
+            is DeleteSongFileResult.PermissionRequired -> "permission-required"
+            is DeleteSongFileResult.Failed -> "failed"
+        }
+        appLogRepository.recordOperation(AppLogType.APP, TAG, "File deletion $outcome",
+            "uri=${song.uri}\npath=${song.filePath}\nsource=${song.source}\n" +
+                ((result as? DeleteSongFileResult.Failed)?.throwable?.stackTraceToString() ?: ""), song.uri,
+            when (result) {
+                is DeleteSongFileResult.Failed -> AppLogLevel.ERROR
+                is DeleteSongFileResult.PermissionRequired -> AppLogLevel.WARNING
+                else -> AppLogLevel.INFO
+            })
+        result
     }
 
     override suspend fun deleteFiles(songs: List<SongEntity>): BatchSongFileOperationResult {
@@ -38,12 +57,28 @@ class SongFileRepositoryImpl(
     override suspend fun renameFile(
         song: SongEntity,
         newFileName: String
-    ): RenameSongFileResult = withContext(Dispatchers.IO) {
-        if (song.source == "SAF") {
+    ): RenameSongFileResult = withContext(Dispatchers.IO + newLogOperation("rename-file")) {
+        val result = if (song.source == "SAF") {
             renameSafSong(song, newFileName)
         } else {
             renameFilePathSong(song, newFileName)
         }
+        val outcome = when (result) {
+            is RenameSongFileResult.Success -> "renamed"
+            is RenameSongFileResult.NameConflict -> "name-conflict"
+            is RenameSongFileResult.PermissionRequired -> "permission-required"
+            is RenameSongFileResult.Failed -> "failed"
+        }
+        appLogRepository.recordOperation(AppLogType.APP, TAG, "File rename $outcome",
+            "uri=${song.uri}\nsource=${song.source}\noldPath=${song.filePath}\nrequestedName=$newFileName\n" +
+                "newUri=${(result as? RenameSongFileResult.Success)?.newUri}\n" +
+                ((result as? RenameSongFileResult.Failed)?.throwable?.stackTraceToString() ?: ""), song.uri,
+            when (result) {
+                is RenameSongFileResult.Failed -> AppLogLevel.ERROR
+                is RenameSongFileResult.Success -> AppLogLevel.INFO
+                else -> AppLogLevel.WARNING
+            })
+        result
     }
 
     private suspend fun deleteSafSongFile(song: SongEntity): DeleteSongFileResult {
@@ -65,7 +100,6 @@ class SongFileRepositoryImpl(
                 DeleteSongFileResult.AlreadyMissing
             } else {
                 Log.e(TAG, "Failed to delete SAF song: ${song.uri}", e)
-                logException("Failed to delete SAF song", e, song.uri)
                 DeleteSongFileResult.Failed(e)
             }
         }
@@ -92,7 +126,6 @@ class SongFileRepositoryImpl(
                 return DeleteSongFileResult.PermissionRequired(it)
             }
             Log.e(TAG, "Failed to delete song: ${song.title}", e)
-            logException("Failed to delete song: ${song.title}", e, song.uri)
             DeleteSongFileResult.Failed(e)
         }
     }
@@ -119,7 +152,6 @@ class SongFileRepositoryImpl(
                 return RenameSongFileResult.PermissionRequired(it)
             }
             Log.e(TAG, "Failed to rename SAF song: ${song.uri}", e)
-            logException("Failed to rename SAF song", e, song.uri)
             RenameSongFileResult.Failed(e)
         }
     }
@@ -152,24 +184,6 @@ class SongFileRepositoryImpl(
         } catch (e: Exception) {
             Log.e(TAG, "Failed to rename song: ${song.fileName}", e)
             RenameSongFileResult.Failed(e)
-        }
-    }
-
-    private suspend fun logException(
-        message: String,
-        throwable: Throwable,
-        relatedId: String? = null
-    ) {
-        try {
-            appLogRepository.logException(
-                type = AppLogType.APP,
-                tag = TAG,
-                message = message,
-                throwable = throwable,
-                relatedId = relatedId
-            )
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to write exception log", e)
         }
     }
 

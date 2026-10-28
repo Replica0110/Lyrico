@@ -1,6 +1,7 @@
 package com.lonx.lyrico.viewmodel
 
 import android.app.RecoverableSecurityException
+import com.lonx.lyrico.data.model.log.recordOperation
 import android.content.ContentValues
 import android.content.Context
 import android.content.IntentSender
@@ -797,6 +798,9 @@ class EditMetadataViewModel(
                         relatedId = currentSongUri,
                         detail = "Destination: $destinationUri"
                     )
+                } else {
+                    appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Picture exported",
+                        "uri=$currentSongUri\ndestination=$destinationUri\nsourceType=${getCoverSourceType(source)}", currentSongUri, AppLogLevel.INFO)
                 }
                 onResult(wrotePicture)
             } catch (e: Exception) {
@@ -967,12 +971,28 @@ class EditMetadataViewModel(
     /**
      * 保存元数据
      */
+    private var saveAttempt = 0
+    private var saveAttemptUri: String? = null
+
+    fun onWritePermissionResult(granted: Boolean) {
+        val uri = _uiState.value.songInfo?.uriString
+        viewModelScope.launch {
+            appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Write permission result",
+                "uri=$uri\ngranted=$granted\npreviousAttempt=$saveAttempt\nretry=$granted", uri,
+                if (granted) AppLogLevel.INFO else AppLogLevel.WARNING)
+            if (granted) saveMetadata()
+        }
+    }
+
     fun saveMetadata() {
         val state = _uiState.value
         val uriString = state.songInfo?.uriString ?: return
         val editingTagData = state.editingTagData ?: return
 
         if (_uiState.value.isSaving) return
+        if (saveAttemptUri != uriString) saveAttempt = 0
+        saveAttemptUri = uriString
+        val attempt = ++saveAttempt
 
         viewModelScope.launch {
             _uiState.update {
@@ -986,6 +1006,8 @@ class EditMetadataViewModel(
             }
 
             try {
+                appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Editor save attempt",
+                    "uri=$uriString\nattempt=$attempt", uriString)
                 val audioTagData = editingTagData.filterHiddenEditFields(
                     original = state.originalTagData,
                     visibleFieldCodes = editFieldConfigRepository.configFlow.first()
@@ -1000,6 +1022,7 @@ class EditMetadataViewModel(
                     )
                 ) {
                     is SaveAudioTagsResult.Success -> {
+                        saveAttempt = 0
                         val savedTagData = saveResult.tagData
                         val savedDisplayPicture = savedTagData.pictures.frontCoverOrFallback()
                         val savedDisplayCover = savedDisplayPicture?.data
@@ -1019,6 +1042,8 @@ class EditMetadataViewModel(
                         currentSong = saveResult.song
                     }
                     is SaveAudioTagsResult.PermissionRequired -> {
+                        appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Editor waiting for write permission",
+                            "uri=$uriString\nattempt=$attempt", uriString, AppLogLevel.WARNING)
                         Log.w(TAG, "需要用户授权修改文件: $uriString")
                         _uiState.update {
                             it.copy(
@@ -1430,15 +1455,16 @@ class EditMetadataViewModel(
                     return@launch
                 }
 
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                requireNotNull(context.contentResolver.openOutputStream(uri)) { "No lyrics output stream: $uri" }.use { outputStream ->
                     outputStream.write(lyrics.toByteArray(Charsets.UTF_8))
                 }
                 _uiState.update { it.copy(exportLyricsResult = true) }
-                Log.d(TAG, "歌词导出成功: ${uri.path}")
+                appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Lyrics exported",
+                    "uri=$currentSongUri\ndestination=$uri\ncharacters=${lyrics.length}\nformat=${LyricDecoder.detectFormat(lyrics)}", currentSongUri, AppLogLevel.INFO)
             } catch (e: Exception) {
                 Log.e(TAG, "导出歌词失败", e)
                 recordMetadataException(
-                    message = "Failed to export lyrics",
+                    message = "Failed to export lyrics: destination=$uri",
                     relatedId = currentSongUri,
                     throwable = e
                 )
@@ -1519,7 +1545,6 @@ class EditMetadataViewModel(
                     bytes = lyrics.toByteArray(Charsets.UTF_8)
                 )
                 _uiState.update { it.copy(exportLyricsResult = true) }
-                Log.d(TAG, "歌词已导出到音频同目录: ${outputUri.path}")
             } catch (e: Exception) {
                 Log.e(TAG, "导出歌词到音频同目录失败", e)
                 recordMetadataException(
@@ -1546,7 +1571,8 @@ class EditMetadataViewModel(
                     lyricsFormatConversionSession = null
                     updateTag { copy(lyrics = lyrics) }
                     _uiState.update { it.copy(importLyricsResult = true) }
-                    Log.d(TAG, "歌词导入成功")
+                    appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Lyrics imported into draft",
+                        "uri=$currentSongUri\nsource=$uri\ncharacters=${lyrics.length}\nformat=${LyricDecoder.detectFormat(lyrics)}", currentSongUri)
                 } else {
                     _uiState.update { it.copy(importLyricsResult = false) }
                     Log.w(TAG, "歌词导入失败: 文件内容为空")
@@ -1560,7 +1586,7 @@ class EditMetadataViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "导入歌词失败", e)
                 recordMetadataException(
-                    message = "Failed to import lyrics",
+                    message = "Failed to import lyrics: source=$uri",
                     relatedId = currentSongUri,
                     throwable = e
                 )

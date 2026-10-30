@@ -49,6 +49,7 @@ import com.lonx.lyrico.ui.components.library.libraryOverlayInsets
 import com.lonx.lyrico.ui.components.library.libraryScrollbarOverlay
 import com.lonx.lyrico.ui.components.library.rememberAlbumGridTextStyle
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
+import com.lonx.lyrico.ui.components.scaffoldPageWindowInsets
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.viewmodel.AlbumActionsViewModel
 import com.lonx.lyrico.viewmodel.AlbumLibraryViewModel
@@ -280,6 +281,7 @@ fun AlbumsPage(
         }, content = pageContent,
     ) else Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = scaffoldPageWindowInsets(),
         topBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
                 SmallTopAppBar(

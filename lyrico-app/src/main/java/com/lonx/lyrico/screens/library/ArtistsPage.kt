@@ -72,6 +72,7 @@ import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
 import com.lonx.lyrico.ui.components.library.libraryOverlayInsets
 import com.lonx.lyrico.ui.components.library.libraryScrollbarOverlay
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
+import com.lonx.lyrico.ui.components.scaffoldPageWindowInsets
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.viewmodel.ArtistLibraryViewModel
 import com.lonx.lyrico.viewmodel.SortOrder
@@ -331,6 +332,7 @@ fun ArtistsPage(
             }, content = pageContent,
         )
     } else Scaffold(
+        contentWindowInsets = scaffoldPageWindowInsets(),
         topBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
                 AnimatedContent(

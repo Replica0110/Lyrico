@@ -58,6 +58,7 @@ import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
 import com.lonx.lyrico.ui.components.library.libraryOverlayInsets
 import com.lonx.lyrico.ui.components.library.libraryScrollbarOverlay
 import com.lonx.lyrico.ui.components.scaffoldContentPadding
+import com.lonx.lyrico.ui.components.scaffoldPageWindowInsets
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.components.song.LibraryScanProgressText
 import com.lonx.lyrico.ui.components.song.SongActionSheets
@@ -364,6 +365,7 @@ fun SongsPage(
         )
     } else Scaffold(
         modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = scaffoldPageWindowInsets(),
         topBar = {
             BlurredTopBar(backdrop = topBarBackdrop) {
                 val topBarState = when {

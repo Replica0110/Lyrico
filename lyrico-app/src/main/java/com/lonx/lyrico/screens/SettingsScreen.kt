@@ -96,6 +96,9 @@ fun SettingsScreen(
 ) {
     val settingsViewModel: SettingsViewModel = koinViewModel()
     val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        settingsViewModel.refreshDefaultPlayerInfo()
+    }
     val folderViewModel: FolderManagerViewModel = koinViewModel()
     val folderUiState by folderViewModel.uiState.collectAsStateWithLifecycle()
     val settingsRepository: SettingsRepository = koinInject()
@@ -597,6 +600,11 @@ fun SettingsScreen(
             item(key = "other"){
                 SectionTitle(text = stringResource(R.string.section_other))
                 Group {
+                    DefaultPlayerSetting(
+                        selected = settingsUiState.defaultPlayerComponent,
+                        selectedLabel = settingsUiState.defaultPlayerLabel,
+                        onSelect = settingsViewModel::setDefaultPlayerComponent,
+                    )
                     Action(
                         icon = LucideIcons.ClipboardList, tone = PreferenceIconTone.Library,
                         title = stringResource(R.string.batch_task_list_title),

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="choose_player">选择播放器</string>
+    <string name="default_player">默认播放器</string>
+    <string name="default_player_none">不选择</string>
+    <string name="default_player_ask_each_time">每次播放时选择应用</string>
+    <string name="default_player_not_selected">未选择，每次播放时询问</string>
+    <string name="default_player_unavailable">不可用：%1$s</string>
+    <string name="player_open_failed">无法打开该播放器，已改用系统选择器</string>
+    <string name="no_player_found">未找到可用播放器</string>
+</resources>

@@ -143,7 +143,6 @@ import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
 import com.lonx.lyrico.ui.components.getBitmap
-import com.lonx.lyrico.ui.components.player.PlayerPickerBottomSheet
 import com.lonx.lyrico.ui.components.poster.ArtistPosterMenu
 import com.lonx.lyrico.ui.components.poster.rememberArtistPosterMenuState
 import com.lonx.lyrico.ui.components.rememberTintedPainter
@@ -292,7 +291,6 @@ fun EditMetadataScreen(
     var showAddCustomTagDialog by remember { mutableStateOf(false) }
     var lyricsOperation by remember { mutableStateOf(LyricsOperation.CONVERT) }
     var showLyricsProcessingSheet by remember { mutableStateOf(false) }
-    var showPlayerPicker by remember { mutableStateOf(false) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var cropRequest by remember { mutableStateOf<CropRequest>(CropRequest.Cover) }
     var isFabMenuExpanded by remember { mutableStateOf(false) }
@@ -1317,7 +1315,7 @@ Box(modifier = Modifier.fillMaxSize()) {
             icon = LucideIcons.Play,
             onClick = {
                 isFabMenuExpanded = false
-                showPlayerPicker = true
+                viewModel.play(context)
             }
         )
 
@@ -1331,11 +1329,6 @@ Box(modifier = Modifier.fillMaxSize()) {
         )
     }
 }
-    PlayerPickerBottomSheet(
-        show = showPlayerPicker,
-        uri = songFileUri.toUri(),
-        onDismissRequest = { showPlayerPicker = false }
-    )
     // 歌词操作
     EditorSheet(
         show = showLyricsActionBottomSheet,

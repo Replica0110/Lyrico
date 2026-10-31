@@ -32,6 +32,14 @@ internal object LucideIcons {
         lucideIcon("power", "M12 2v10", "M18.4 6.6a9 9 0 1 1-12.77.04")
     }
 
+    // User-supplied Lucide ban.svg, using the shared 24px / 2px round-stroke builder.
+    val Ban: ImageVector by lazy {
+        lucideIcon("ban",
+            "M22 12a10 10 0 1 1-20 0a10 10 0 0 1 20 0",
+            "M4.929 4.929 19.07 19.071",
+        )
+    }
+
     // Lucide 1.58.0, icons/swatch-book.svg; same license as the existing icons.
     // Archive SHA-256: b8ef0e89a3a26d96ef43fabb3c55ace846236cd09439b15c2dac6ea450524e55
     val SwatchBook: ImageVector by lazy {

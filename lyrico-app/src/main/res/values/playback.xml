@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="choose_player">Choose player</string>
+    <string name="default_player">Default player</string>
+    <string name="default_player_none">None</string>
+    <string name="default_player_ask_each_time">Choose an app each time you play</string>
+    <string name="default_player_not_selected">Not selected; ask when playing</string>
+    <string name="default_player_unavailable">Unavailable: %1$s</string>
+    <string name="player_open_failed">Unable to open this player, using the system picker instead</string>
+    <string name="no_player_found">No player available</string>
+</resources>

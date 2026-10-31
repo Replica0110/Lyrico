@@ -38,11 +38,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import com.lonx.lyrico.platform.player.AudioPlayerApps
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
     val isInitialized: Boolean = false,
+    val defaultPlayerComponent: String? = null,
+    val defaultPlayerLabel: String? = null,
     val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
@@ -83,10 +87,37 @@ sealed class SettingsEvent {
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val database: LyricoDatabase,
-    private val appLogRepository: AppLogRepository
+    private val appLogRepository: AppLogRepository,
+    private val applicationContext: Context,
 ) : ViewModel() {
     private val folder = database.folderDao()
     private val _categorizedCacheSize = MutableStateFlow<Map<CacheCategory, Long>>(emptyMap())
+    private val defaultPlayerRefresh = MutableStateFlow(0L)
+    private data class DefaultPlayerState(val component: String?, val label: String?)
+    private val defaultPlayerState = combine(
+        settingsRepository.defaultPlayerComponent, defaultPlayerRefresh
+    ) { component, _ -> component }.map { component ->
+        val label = component?.let { withContext(Dispatchers.IO) { AudioPlayerApps.label(applicationContext, it) } }
+        DefaultPlayerState(component, label)
+    }
+
+    fun refreshDefaultPlayerInfo() {
+        defaultPlayerRefresh.value++
+    }
+
+    fun setDefaultPlayerComponent(component: String?) {
+        viewModelScope.launch {
+            try {
+                settingsRepository.saveDefaultPlayerComponent(component)
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _events.emit(SettingsEvent.ShowToast(
+                    UiMessage.StringResource(R.string.unknown_error, error.message.orEmpty())
+                ))
+            }
+        }
+    }
 
     private data class SettingsBaseState(
         val lyric: LyricRenderConfig,
@@ -158,10 +189,13 @@ class SettingsViewModel(
     private val baseUiState = combine(
         settingsBaseState,
         _categorizedCacheSize,
-        settingsRepository.lyricIndexEnabled
-    ) { base, cacheMap, lyricIndexEnabled ->
+        settingsRepository.lyricIndexEnabled,
+        defaultPlayerState,
+    ) { base, cacheMap, lyricIndexEnabled, defaultPlayer ->
         SettingsUiState(
             isInitialized = true,
+            defaultPlayerComponent = defaultPlayer.component,
+            defaultPlayerLabel = defaultPlayer.label,
             lyricFormat = base.lyric.format,
             romaEnabled = base.lyric.showRomanization,
             lyricLineOrder = base.lyric.normalizedLineOrder,

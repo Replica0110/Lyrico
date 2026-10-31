@@ -6,14 +6,10 @@ import com.lonx.lyrico.ui.components.salt.SaltTextInput
 
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -21,9 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.ui.components.base.YesNoDialog
-import com.lonx.lyrico.ui.components.player.PlayerPickerBottomSheet
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -50,8 +44,6 @@ fun SongActionSheets(
     onRename: (SongEntity, String) -> Unit
 ) {
     val context = LocalContext.current
-    var showPlayerPicker by remember { mutableStateOf(false) }
-    var pendingPlayUri by remember { mutableStateOf<Uri?>(null) }
     val song = selectedSong
 
     val shareTitle = stringResource(R.string.share_chooser_title)
@@ -62,9 +54,8 @@ fun SongActionSheets(
             onDismissRequest = onDismissMenu,
             onDismissFinished = onDismissMenuFinished,
             onPlay = {
-                pendingPlayUri = song.getUri
-                showPlayerPicker = true
                 onDismissMenu()
+                onPlay(song)
             },
             showInfo = onShowDetail,
             onDelete = onShowDelete,
@@ -116,14 +107,6 @@ fun SongActionSheets(
         )
     }
 
-    PlayerPickerBottomSheet(
-        show = showPlayerPicker,
-        uri = pendingPlayUri,
-        onDismissRequest = {
-            showPlayerPicker = false
-            pendingPlayUri = null
-        }
-    )
 }
 
 @Composable

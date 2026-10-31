@@ -180,6 +180,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val TRANSLATION_ENABLED = booleanPreferencesKey("translation_enabled")
         val LYRIC_INDEX_ENABLED = booleanPreferencesKey("lyric_index_enabled")
         val IGNORE_SHORT_AUDIO = booleanPreferencesKey("ignore_short_audio")
+        val DEFAULT_PLAYER_COMPONENT = stringPreferencesKey("default_player_component")
         val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
         val ENABLED_SEARCH_SOURCES = stringPreferencesKey("enabled_search_sources")
         val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
@@ -316,6 +317,16 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.LYRIC_INDEX_ENABLED] ?: false
         }
+
+    override val defaultPlayerComponent: Flow<String?>
+        get() = context.settingsDataStore.data.map { it[PreferencesKeys.DEFAULT_PLAYER_COMPONENT] }
+
+    override suspend fun saveDefaultPlayerComponent(component: String?) {
+        context.settingsDataStore.edit { preferences ->
+            if (component == null) preferences.remove(PreferencesKeys.DEFAULT_PLAYER_COMPONENT)
+            else preferences[PreferencesKeys.DEFAULT_PLAYER_COMPONENT] = component
+        }
+    }
 
     override val ignoreShortAudio: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -844,6 +855,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 ?: SettingsDefaults.TRANSLATION_ENABLED,
 
             lyricIndexEnabled = prefs[PreferencesKeys.LYRIC_INDEX_ENABLED] ?: false,
+            defaultPlayerComponent = prefs[PreferencesKeys.DEFAULT_PLAYER_COMPONENT].orEmpty(),
             ignoreShortAudio = prefs[PreferencesKeys.IGNORE_SHORT_AUDIO]
                 ?: SettingsDefaults.IGNORE_SHORT_AUDIO,
 
@@ -930,6 +942,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 backup.translationEnabled?.let { prefs[PreferencesKeys.TRANSLATION_ENABLED] = it }
                 backup.lyricIndexEnabled?.let { prefs[PreferencesKeys.LYRIC_INDEX_ENABLED] = it }
                 backup.ignoreShortAudio?.let { prefs[PreferencesKeys.IGNORE_SHORT_AUDIO] = it }
+                backup.defaultPlayerComponent?.let {
+                    if (it.isBlank()) prefs.remove(PreferencesKeys.DEFAULT_PLAYER_COMPONENT)
+                    else prefs[PreferencesKeys.DEFAULT_PLAYER_COMPONENT] = it
+                }
                 backup.replayGainTargetLoudness?.let {
                     prefs[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS] = it
                 }

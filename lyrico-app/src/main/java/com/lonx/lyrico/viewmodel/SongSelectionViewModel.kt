@@ -57,7 +57,7 @@ class SongSelectionViewModel(
     }
 
     fun play(context: Context, song: SongEntity) {
-        playbackRepository.play(context, song.getUri)
+        viewModelScope.launch { playbackRepository.play(context, song.getUri) }
     }
 
     fun delete(song: SongEntity) {

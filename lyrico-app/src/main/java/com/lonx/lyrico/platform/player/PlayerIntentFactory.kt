@@ -14,16 +14,6 @@ object PlayerIntentFactory {
         }
     }
 
-    fun buildPlayIntentForPackage(
-        uri: Uri,
-        packageName: String,
-        mimeType: String = "audio/*"
-    ): Intent {
-        return buildPlayIntent(uri, mimeType).apply {
-            setPackage(packageName)
-        }
-    }
-
     fun buildChooserIntent(
         uri: Uri,
         title: String,

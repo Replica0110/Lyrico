@@ -1,6 +1,7 @@
 package com.lonx.lyrico.data.repository
 
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -10,22 +11,29 @@ import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.R
 import com.lonx.lyrico.platform.player.PlayerIntentFactory
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CancellationException
 
-class PlaybackRepositoryImpl : PlaybackRepository {
-    override fun play(context: Context, uri: Uri) {
+class PlaybackRepositoryImpl(private val settingsRepository: SettingsRepository) : PlaybackRepository {
+    override suspend fun play(context: Context, uri: Uri) {
+        val savedComponent = try {
+            settingsRepository.defaultPlayerComponent.first()
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            AppLog.record(AppLogType.APP, "Playback", "Unable to read default player",
+                detail = error.message.orEmpty(), level = AppLogLevel.WARNING, error = error)
+            null
+        }
+        val component = savedComponent?.let(ComponentName::unflattenFromString)
+        if (component != null) {
+            val intent = PlayerIntentFactory.buildPlayIntent(uri).setComponent(component)
+            if (startSafely(context, intent)) return
+            Toast.makeText(context, context.getString(R.string.player_open_failed), Toast.LENGTH_SHORT).show()
+        }
         openSystemChooser(context, uri)
     }
 
-    override fun openWithPackage(context: Context, uri: Uri, packageName: String): Boolean {
-        val intent = PlayerIntentFactory.buildPlayIntentForPackage(
-            uri = uri,
-            packageName = packageName
-        )
-
-        return startSafely(context, intent)
-    }
-
-    override fun openSystemChooser(context: Context, uri: Uri): Boolean {
+    private fun openSystemChooser(context: Context, uri: Uri): Boolean {
         val intent = PlayerIntentFactory.buildChooserIntent(
             uri = uri,
             title = context.getString(R.string.choose_player)
@@ -38,17 +46,11 @@ class PlaybackRepositoryImpl : PlaybackRepository {
         }
     }
 
-    override fun openDefaultApp(context: Context, uri: Uri): Boolean {
-        val intent = PlayerIntentFactory.buildPlayIntent(uri)
-
-        return startSafely(context, intent)
-    }
-
     private fun startSafely(context: Context, intent: Intent): Boolean {
         return try {
             context.startActivity(intent)
             AppLog.record(AppLogType.APP, "Playback", "Player launch requested",
-                "uri=${intent.data}\naction=${intent.action}\npackage=${intent.`package`}\nflags=${intent.flags}", intent.data?.toString())
+                "uri=${intent.data}\naction=${intent.action}\ncomponent=${intent.component}\nflags=${intent.flags}", intent.data?.toString())
             true
         } catch (error: ActivityNotFoundException) {
             recordFailure(intent, error)
@@ -65,6 +67,6 @@ class PlaybackRepositoryImpl : PlaybackRepository {
 
     private fun recordFailure(intent: Intent, error: Exception) = AppLog.record(
         AppLogType.APP, "Playback", "Unable to launch player",
-        "uri=${intent.data}\naction=${intent.action}\npackage=${intent.`package`}\nflags=${intent.flags}",
+        "uri=${intent.data}\naction=${intent.action}\ncomponent=${intent.component}\nflags=${intent.flags}",
         intent.data?.toString(), AppLogLevel.WARNING, error)
 }

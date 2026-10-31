@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.Flow
 
 
 interface SettingsRepository {
+    val defaultPlayerComponent: Flow<String?>
+    suspend fun saveDefaultPlayerComponent(component: String?)
     val proActivated: Flow<Boolean>
     suspend fun activatePro()
     suspend fun deactivatePro()

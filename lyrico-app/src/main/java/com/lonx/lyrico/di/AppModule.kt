@@ -233,7 +233,7 @@ val appModule = module {
     single { CustomTagKeyRepository(get()) }
     single { EditFieldConfigRepository(androidContext()) }
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
-    single<PlaybackRepository> { PlaybackRepositoryImpl() }
+    single<PlaybackRepository> { PlaybackRepositoryImpl(get()) }
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
     single { AudioFileAccess(androidContext()) }
     single { ImageMimeTypeDetector() }
@@ -311,7 +311,7 @@ val appModule = module {
     viewModel { com.lonx.lyrico.viewmodel.ArtistSelectionViewModel() }
     viewModel { ArtistSplitSettingsViewModel(get(), get()) }
     viewModel { AlbumLibraryViewModel(get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), androidContext()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { LyricsSearchViewModel(get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get(), get()) }

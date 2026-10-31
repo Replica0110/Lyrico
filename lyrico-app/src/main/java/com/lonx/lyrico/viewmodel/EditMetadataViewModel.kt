@@ -1732,7 +1732,7 @@ class EditMetadataViewModel(
 
     fun play(context: Context) {
         val uriStr = currentSong?.uri ?: currentSongUri ?: return
-        playbackRepository.play(context, uriStr.toUri())
+        viewModelScope.launch { playbackRepository.play(context, uriStr.toUri()) }
     }
 
     /** 获取同专辑歌曲封面，优先同专辑且同歌手的结果。 */

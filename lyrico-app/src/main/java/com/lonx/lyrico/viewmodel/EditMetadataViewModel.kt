@@ -112,7 +112,7 @@ data class EditMetadataUiState(
     val permissionIntentSender: IntentSender? = null,
     val isReplayGainCalculating: Boolean = false,
     val replayGainScanMessage: UiMessage? = null,
-    val saveFailureMessage: String? = null,
+    val saveFailureMessage: UiMessage? = null,
     val saveFailureLogText: String? = null,
 
     /**
@@ -192,6 +192,7 @@ class EditMetadataViewModel(
             )
 
     fun readMetadata(uriString: String) {
+        if (currentSongUri != uriString) pendingWritePermissionUri = null
         currentSongUri = uriString
         lyricsFormatConversionSession = null
 
@@ -973,20 +974,27 @@ class EditMetadataViewModel(
      */
     private var saveAttempt = 0
     private var saveAttemptUri: String? = null
+    private var pendingWritePermissionUri: String? = null
 
     fun onWritePermissionResult(granted: Boolean) {
         val uri = _uiState.value.songInfo?.uriString
+        val requestedUri = pendingWritePermissionUri
+        pendingWritePermissionUri = null
+        val retry = granted && uri != null && uri == requestedUri
         viewModelScope.launch {
             appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Write permission result",
-                "uri=$uri\ngranted=$granted\npreviousAttempt=$saveAttempt\nretry=$granted", uri,
+                "uri=$uri\nrequestedUri=$requestedUri\ngranted=$granted\npreviousAttempt=$saveAttempt\nretry=$retry", uri,
                 if (granted) AppLogLevel.INFO else AppLogLevel.WARNING)
-            if (granted) saveMetadata()
+            if (retry) saveMetadata(afterPermission = true, expectedUri = requestedUri)
         }
     }
 
-    fun saveMetadata() {
+    fun saveMetadata() = saveMetadata(afterPermission = false)
+
+    private fun saveMetadata(afterPermission: Boolean, expectedUri: String? = null) {
         val state = _uiState.value
         val uriString = state.songInfo?.uriString ?: return
+        if (expectedUri != null && (uriString != expectedUri || currentSongUri != expectedUri)) return
         val editingTagData = state.editingTagData ?: return
 
         if (_uiState.value.isSaving) return
@@ -1007,7 +1015,7 @@ class EditMetadataViewModel(
 
             try {
                 appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Editor save attempt",
-                    "uri=$uriString\nattempt=$attempt", uriString)
+                    "uri=$uriString\nattempt=$attempt\nafterPermission=$afterPermission", uriString)
                 val audioTagData = editingTagData.filterHiddenEditFields(
                     original = state.originalTagData,
                     visibleFieldCodes = editFieldConfigRepository.configFlow.first()
@@ -1042,15 +1050,7 @@ class EditMetadataViewModel(
                         currentSong = saveResult.song
                     }
                     is SaveAudioTagsResult.PermissionRequired -> {
-                        appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Editor waiting for write permission",
-                            "uri=$uriString\nattempt=$attempt", uriString, AppLogLevel.WARNING)
-                        Log.w(TAG, "需要用户授权修改文件: $uriString")
-                        _uiState.update {
-                            it.copy(
-                                isSaving = false,
-                                permissionIntentSender = saveResult.intentSender
-                            )
-                        }
+                        handleWritePermissionRequired(uriString, attempt, saveResult.intentSender, afterPermission)
                     }
                     is SaveAudioTagsResult.Failed -> {
                         val reason = saveResult.error.localizedMessage
@@ -1060,7 +1060,7 @@ class EditMetadataViewModel(
                             it.copy(
                                 isSaving = false,
                                 saveSuccess = false,
-                                saveFailureMessage = reason,
+                                saveFailureMessage = UiMessage.DynamicString(reason),
                                 saveFailureLogText = buildSaveFailureLog(uriString, reason)
                             )
                         }
@@ -1068,22 +1068,11 @@ class EditMetadataViewModel(
                 }
 
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 if (e is RequiresUserPermissionException) {
-                    Log.w(TAG, "需要用户授权修改文件: $uriString")
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            permissionIntentSender = e.intentSender
-                        )
-                    }
+                    handleWritePermissionRequired(uriString, attempt, e.intentSender, afterPermission)
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && e is RecoverableSecurityException) {
-                    Log.w(TAG, "需要用户授权修改文件: $uriString")
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false, // 暂停保存状态
-                            permissionIntentSender = e.userAction.actionIntent.intentSender
-                        )
-                    }
+                    handleWritePermissionRequired(uriString, attempt, e.userAction.actionIntent.intentSender, afterPermission)
                 } else {
                     Log.e(TAG, "保存元数据发生未知错误", e)
                     val reason = e.localizedMessage ?: e::class.java.simpleName
@@ -1092,12 +1081,36 @@ class EditMetadataViewModel(
                         it.copy(
                             isSaving = false,
                             saveSuccess = false,
-                            saveFailureMessage = reason,
+                            saveFailureMessage = UiMessage.DynamicString(reason),
                             saveFailureLogText = buildSaveFailureLog(uriString, reason, e)
                         )
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun handleWritePermissionRequired(
+        uri: String,
+        attempt: Int,
+        sender: IntentSender,
+        afterPermission: Boolean,
+    ) {
+        if (afterPermission) {
+            val reason = "Write access is still unavailable after authorization"
+            recordSaveFailure(uri, reason)
+            _uiState.update { it.copy(
+                isSaving = false,
+                saveSuccess = false,
+                permissionIntentSender = null,
+                saveFailureMessage = UiMessage.StringResource(R.string.write_permission_retry_failed),
+                saveFailureLogText = buildSaveFailureLog(uri, reason),
+            ) }
+        } else {
+            pendingWritePermissionUri = uri
+            appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Editor waiting for write permission",
+                "uri=$uri\nattempt=$attempt", uri, AppLogLevel.WARNING)
+            _uiState.update { it.copy(isSaving = false, permissionIntentSender = sender) }
         }
     }
 

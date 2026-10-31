@@ -570,7 +570,7 @@ fun EditMetadataScreen(
             } else {
                 context.getString(
                     R.string.msg_save_failed_with_reason,
-                    uiState.saveFailureMessage ?: context.getString(R.string.unknown_error_simple)
+                    uiState.saveFailureMessage?.asString(context) ?: context.getString(R.string.unknown_error_simple)
                 )
             }
             scope.launch {

@@ -880,4 +880,5 @@
     <string name="reproduction_report_failed">报告处理失败：%1$s</string>
     <string name="reproduction_unavailable">复现记录已失效，请重新记录</string>
     <string name="reproduction_empty">暂无复现记录</string>
+    <string name="write_permission_retry_failed">授权后仍无法写入，请从音乐库打开文件后重试</string>
 </resources>

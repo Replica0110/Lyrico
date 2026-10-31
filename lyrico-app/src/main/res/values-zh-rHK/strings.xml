@@ -876,4 +876,5 @@
     <string name="reproduction_report_failed">報告處理失敗：%1$s</string>
     <string name="reproduction_unavailable">重現記錄已失效，請重新記錄</string>
     <string name="reproduction_empty">暫無重現記錄</string>
+    <string name="write_permission_retry_failed">授權後仍無法寫入，請從音樂庫開啟檔案後重試</string>
 </resources>

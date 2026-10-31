@@ -95,9 +95,7 @@ class AudioTagRepositoryImpl(
                         }}", uri)
                 stage = "open-writable-descriptor"
                 val writableDescriptor = fileAccess.openWritableDescriptor(uri, trace)
-                    ?: return@attempt fileAccess.createWritePermissionIntentSender(uri, trace)?.let { intentSender ->
-                        AudioTagWriteResult.PermissionRequired(intentSender)
-                    } ?: AudioTagWriteResult.Failed(
+                    ?: return@attempt AudioTagWriteResult.Failed(
                         IllegalStateException("Unable to open writable descriptor")
                     )
 

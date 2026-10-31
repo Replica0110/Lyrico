@@ -110,35 +110,61 @@ class AudioFileAccess(
     }
 
     private fun openContentDescriptor(uri: Uri, mode: String, trace: (String) -> Unit = {}): ParcelFileDescriptor? {
+        var originalFailure: Exception? = null
+        var mappedFailure: Exception? = null
+        fun attempt(target: Uri, mapped: Boolean = false): ParcelFileDescriptor? =
+            tryOpenContentDescriptor(target, mode, trace) { error ->
+                if (mapped) mappedFailure = error else originalFailure = error
+            }
         val mediaStoreAudioUri = uri.toMediaStoreAudioUri()
         if (mediaStoreAudioUri != null && mediaStoreAudioUri != uri) {
-            tryOpenContentDescriptor(mediaStoreAudioUri, mode, trace)?.let { return it }
+            attempt(mediaStoreAudioUri, mapped = true)?.let { return it }
         }
 
-        tryOpenContentDescriptor(uri, mode, trace)?.let { return it }
+        attempt(uri)?.let { return it }
 
         if (mediaStoreAudioUri == null && uri.scheme == "content") {
             findMediaStoreAudioUri(uri)?.let { matchedUri ->
                 trace("descriptorMapping original=$uri matched=$matchedUri")
-                tryOpenContentDescriptor(matchedUri, mode, trace)?.let { return it }
+                attempt(matchedUri, mapped = true)?.let { return it }
             }
         }
 
+        // Authorization applies to the mapped MediaStore item. Preserve its actual failure,
+        // rather than turning every failed open (including missing files) into a permission request.
+        if (mode == "rw") {
+            // A provider-supplied recovery action is stronger evidence than a failed inferred mapping.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (originalFailure is RecoverableSecurityException) throw originalFailure!!
+                if (mappedFailure is RecoverableSecurityException) throw mappedFailure!!
+            }
+            throw mappedFailure ?: originalFailure
+                ?: FileNotFoundException("Provider returned no writable descriptor: $uri")
+        }
         return null
     }
 
-    private fun tryOpenContentDescriptor(uri: Uri, mode: String, trace: (String) -> Unit): ParcelFileDescriptor? {
+    private fun tryOpenContentDescriptor(
+        uri: Uri,
+        mode: String,
+        trace: (String) -> Unit,
+        onFailure: (Exception) -> Unit,
+    ): ParcelFileDescriptor? {
         return try {
             context.contentResolver.openFileDescriptor(uri, mode).also {
                 trace("openDescriptor uri=$uri mode=$mode result=${if (it == null) "null" else "opened"}")
+                if (it == null) onFailure(FileNotFoundException("Provider returned no descriptor: $uri"))
             }
         } catch (e: SecurityException) {
+            onFailure(e)
             trace("openDescriptor uri=$uri mode=$mode error=${e.stackTraceToString()}")
             null
         } catch (e: FileNotFoundException) {
+            onFailure(e)
             trace("openDescriptor uri=$uri mode=$mode error=${e.stackTraceToString()}")
             null
         } catch (e: IllegalArgumentException) {
+            onFailure(e)
             trace("openDescriptor uri=$uri mode=$mode error=${e.stackTraceToString()}")
             null
         }
@@ -158,6 +184,8 @@ class AudioFileAccess(
             ?: return null
         val sourceSize = getOpenableSize(sourceUri)
         val sourceRelativePath = inferRelativePath(sourceUri)
+        // A name alone cannot identify an external file safely enough for editing.
+        if (sourceSize == null && sourceRelativePath == null) return null
 
         val projection = buildList {
             add(MediaStore.Audio.Media._ID)
@@ -194,23 +222,23 @@ class AudioFileAccess(
                     -1
                 }
 
-                var fallbackUri: Uri? = null
+                var matchedUri: Uri? = null
                 while (cursor.moveToNext()) {
                     val mediaUri = ContentUris.withAppendedId(
                         MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                         cursor.getLong(idIndex)
                     )
-                    if (fallbackUri == null) fallbackUri = mediaUri
-
-                    if (
-                        sourceRelativePath != null &&
-                        relativePathIndex >= 0 &&
-                        cursor.getString(relativePathIndex)?.trimEnd('/') == sourceRelativePath.trimEnd('/')
-                    ) {
-                        return@use mediaUri
+                    if (sourceRelativePath != null) {
+                        if (relativePathIndex < 0 ||
+                            cursor.getString(relativePathIndex)?.trimEnd('/') != sourceRelativePath.trimEnd('/')) {
+                            continue
+                        }
                     }
+                    // Do not choose an arbitrary copy when multiple items match.
+                    if (matchedUri != null) return@use null
+                    matchedUri = mediaUri
                 }
-                fallbackUri
+                matchedUri
             }
         } catch (e: Exception) {
             Log.w(TAG, "Unable to match MediaStore audio uri: $sourceUri", e)
@@ -227,7 +255,7 @@ class AudioFileAccess(
         return when {
             isMediaStoreAudioItemUri(this) -> this
             isMediaStoreFilesItemUri(this) -> ContentUris.withAppendedId(
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                MediaStore.Audio.Media.getContentUri(pathSegments.first()),
                 id
             )
             else -> null

@@ -875,4 +875,5 @@
     <string name="reproduction_report_failed">Unable to prepare or export report: %1$s</string>
     <string name="reproduction_unavailable">Recording is no longer available. Record the problem again</string>
     <string name="reproduction_empty">No recording</string>
+    <string name="write_permission_retry_failed">Still unable to write after authorization. Open the file from the library and try again.</string>
 </resources>

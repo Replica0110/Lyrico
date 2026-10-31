@@ -233,7 +233,8 @@ val appModule = module {
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
     single<PlaybackRepository> { PlaybackRepositoryImpl(get()) }
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
-    single { LibraryFolderRepository(get(), get(), androidContext(), get()) }
+    single { com.lonx.lyrico.data.LibraryOperationLock() }
+    single { LibraryFolderRepository(get(), get(), androidContext(), get(), get()) }
     single { CacheManager(androidContext(), get()) }
     single { AudioFileAccess(androidContext()) }
     single { ImageMimeTypeDetector() }
@@ -249,7 +250,7 @@ val appModule = module {
     single<SongLibraryRepository> { SongLibraryRepositoryImpl(get(), get(), get(), get()) }
     single<SongSearchRepository> { SongSearchRepositoryImpl(get()) }
     single<LibraryScanRepository> {
-        LibraryScanRepositoryImpl(androidContext(), get(), get(), get(), get(), get(), get(), get())
+        LibraryScanRepositoryImpl(androidContext(), get(), get(), get(), get(), get(), get(), get(), get())
     }
     single { ReadAudioTagsUseCase(get(), get()) }
     single { SaveAudioTagsUseCase(get(), get(), get()) }

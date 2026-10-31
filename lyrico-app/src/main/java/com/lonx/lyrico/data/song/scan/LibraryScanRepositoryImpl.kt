@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.room.withTransaction
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.data.LyricoDatabase
+import com.lonx.lyrico.data.LibraryOperationLock
 import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.log.AppLogLevel
@@ -24,8 +25,6 @@ import com.lonx.lyrico.utils.LyricsSearchTextExtractor
 import com.lonx.lyrico.utils.UriUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class LibraryScanRepositoryImpl(
@@ -36,18 +35,18 @@ class LibraryScanRepositoryImpl(
     private val audioTagRepository: AudioTagRepository,
     private val songMetadataMapper: SongMetadataMapper,
     private val libraryIndexRepository: LibraryIndexRepository,
-    private val appLogRepository: AppLogRepository
+    private val appLogRepository: AppLogRepository,
+    private val operationLock: LibraryOperationLock
 ) : LibraryScanRepository {
 
     private val songDao = database.songDao()
     private val folderDao = database.folderDao()
-    private val syncMutex = Mutex()
 
     override suspend fun synchronize(
         request: LibraryScanRequest,
         onProgress: suspend (LibraryScanProgress) -> Unit
     ): LibraryScanResult {
-        return syncMutex.withLock {
+        return operationLock.withLock {
             withContext(Dispatchers.IO) {
                 withLogOperation("library-scan") { synchronizeLocked(request, onProgress) }
             }
@@ -89,6 +88,17 @@ class LibraryScanRepositoryImpl(
             val safFolderById = safFolders.associateBy { it.id }
             val safScanResult = mediaScanner.querySongsFromSafFolders(safFolders)
             val deviceSongs = safScanResult.songs
+            safScanResult.failedFolderIds.forEach { folderId ->
+                val folder = safFolderById.getValue(folderId)
+                failures.add(
+                    LibraryScanFailure(
+                        uri = folder.treeUri,
+                        fileName = folder.path,
+                        stage = LibraryScanFailureStage.Collecting,
+                        message = "无法读取目录，请检查存储状态和访问权限"
+                    )
+                )
+            }
             appLogRepository.recordOperation(AppLogType.APP, TAG, "Scan enumeration finished",
                 "fullRescan=${request.fullRescan}\nignoreShortAudio=${request.ignoreShortAudio}\nindexLyrics=$indexLyrics\n" +
                     "roots=${safFolders.map { it.id }}\nfiles=${deviceSongs.size}\n" +
@@ -168,6 +178,8 @@ class LibraryScanRepositoryImpl(
                     deviceUris.add(deviceUriString)
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
+                    // The file was enumerated; a read failure alone cannot confirm its deletion.
+                    deviceUris.add(deviceSong.uri.toString())
                     Log.e(TAG, "Failed to process song: ${deviceSong.fileName}", e)
                     failures.add(
                         LibraryScanFailure(
@@ -279,7 +291,7 @@ class LibraryScanRepositoryImpl(
                 val indexedSongs = songDao.getSongsByUris(songsToUpsert.map { it.entity.uri })
                 libraryIndexRepository.reindexSongs(indexedSongs)
             }
-            if (allDeletedUris.isNotEmpty() || missingSafFolderIds.isNotEmpty()) {
+            if (allDeletedUris.isNotEmpty() || missingSafFolderIds.isNotEmpty() || removedSafFolders > 0) {
                 libraryIndexRepository.refreshAndPruneIndexes()
             }
 
@@ -291,7 +303,7 @@ class LibraryScanRepositoryImpl(
                 )
             )
 
-            settingsRepository.saveLastScanTime(System.currentTimeMillis())
+            if (failures.isEmpty()) settingsRepository.saveLastScanTime(System.currentTimeMillis())
             val result = LibraryScanResult(
                 scanned = deviceSongs.size,
                 inserted = songsToUpsert.count { it.isInsert },
@@ -335,6 +347,7 @@ class LibraryScanRepositoryImpl(
         val audioData = audioTagRepository.read(
             uri = songFile.uri.toString(),
             options = AudioTagReadOptions(
+                strict = true,
                 multiValueSeparator = settingsRepository.separator.first()
             )
         )

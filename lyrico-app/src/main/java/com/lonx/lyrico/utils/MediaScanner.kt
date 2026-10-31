@@ -12,6 +12,7 @@ import androidx.core.net.toUri
 import com.lonx.lyrico.data.model.SongFile
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import java.util.Locale
+import java.io.IOException
 import kotlin.math.abs
 
 data class SafScanResult(
@@ -166,7 +167,8 @@ class MediaScanner(
         treeUri: Uri,
         parentDocumentId: String
     ): List<SafDocumentRow> =
-        SafDocuments.children(context, treeUri, parentDocumentId).orEmpty()
+        SafDocuments.children(context, treeUri, parentDocumentId)
+            ?: throw IOException("SAF directory enumeration unavailable: $parentDocumentId")
 
     private fun canQueryDocument(documentUri: Uri): Boolean {
         val projection = arrayOf(
@@ -187,11 +189,11 @@ class MediaScanner(
                 if (found != true) AppLog.record(AppLogType.APP, "MediaScanner", "SAF scan root unavailable",
                     "uri=$documentUri\nresult=${if (found == null) "null-cursor" else "empty-cursor"}",
                     documentUri.toString(), AppLogLevel.WARNING)
-            } == true
+            } ?: throw IOException("SAF root query returned no cursor")
         } catch (e: Exception) {
             AppLog.record(AppLogType.APP, "MediaScanner", "SAF scan root query failed",
                 "uri=$documentUri", documentUri.toString(), AppLogLevel.WARNING, e)
-            false
+            throw e
         }
     }
 

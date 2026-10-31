@@ -133,12 +133,24 @@ class LibraryScanManagerImpl(
 
     private fun mergePendingRequest(request: ScanRequest) {
         if (request.folderIds == null) {
+            val merged = request.copy(
+                fullRescan = request.fullRescan || pendingRequests.any { it.fullRescan },
+                onSuccessActions = pendingRequests.flatMap { it.onSuccessActions } + request.onSuccessActions
+            )
             pendingRequests.clear()
-            pendingRequests.addLast(request)
+            pendingRequests.addLast(merged)
             return
         }
 
-        if (pendingRequests.any { it.folderIds == null }) return
+        val allFoldersIndex = pendingRequests.indexOfFirst { it.folderIds == null }
+        if (allFoldersIndex >= 0) {
+            val existing = pendingRequests[allFoldersIndex]
+            pendingRequests[allFoldersIndex] = existing.copy(
+                fullRescan = existing.fullRescan || request.fullRescan,
+                onSuccessActions = existing.onSuccessActions + request.onSuccessActions
+            )
+            return
+        }
 
         val existingIndex = pendingRequests.indexOfFirst {
             it.folderIds != null && it.fullRescan == request.fullRescan
@@ -176,7 +188,7 @@ class LibraryScanManagerImpl(
             }
 
             try {
-                libraryScanRepository.synchronize(
+                val result = libraryScanRepository.synchronize(
                     request = LibraryScanRequest(
                         fullRescan = request.fullRescan,
                         folderIds = request.folderIds,
@@ -186,7 +198,15 @@ class LibraryScanManagerImpl(
                         _state.update { it.copy(progress = progress) }
                     }
                 )
-                request.onSuccessActions.forEach { action -> action() }
+                if (result.failures.isEmpty()) {
+                    request.onSuccessActions.forEach { action -> action() }
+                } else {
+                    _state.update {
+                        it.copy(error = result.failures.joinToString("\n") { failure ->
+                            "${failure.fileName ?: failure.uri.orEmpty()}: ${failure.message}"
+                        })
+                    }
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.update { it.copy(error = e.message ?: e::class.java.simpleName) }

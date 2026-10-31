@@ -142,16 +142,19 @@ interface FolderDao {
         val relativePath = normalizedFolderPath
             .removePrefix(normalizedRootPath)
             .trimStart('/')
+        val existingFolders = getAllFoldersOnce().associateBy { normalizeFolderPath(it.path) }
 
         var currentPath = normalizedRootPath
-        var currentId = upsertScannedFolderAndGetId(currentPath, isIgnored)
+        var inheritedIgnored = existingFolders[currentPath]?.isIgnored ?: isIgnored
+        var currentId = upsertScannedFolderAndGetId(currentPath, inheritedIgnored)
 
         relativePath
             .split('/')
             .filter { it.isNotBlank() }
             .forEach { segment ->
                 currentPath = "$currentPath/$segment"
-                currentId = upsertScannedFolderAndGetId(currentPath, isIgnored)
+                inheritedIgnored = existingFolders[currentPath]?.isIgnored ?: inheritedIgnored
+                currentId = upsertScannedFolderAndGetId(currentPath, inheritedIgnored)
             }
 
         return currentId

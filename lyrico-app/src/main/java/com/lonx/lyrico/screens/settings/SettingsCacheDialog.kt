@@ -21,34 +21,25 @@ internal fun SettingsCacheDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        if (show)
-            com.lonx.lyrico.ui.components.salt.SaltConfirmDialog(
-                title = stringResource(R.string.clear_cache),
-                content = {
-                    Text(
-                        text,
-                        modifier =
-                            Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()),
-                    )
-                },
-                onDismissRequest = onDismiss,
-                onConfirm = onConfirm,
-                cancelText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.confirm),
-            )
-    } else
-        com.lonx.lyrico.ui.components.base.YesNoDialog(
-            show = show,
-            title = stringResource(R.string.clear_cache),
-            content = {
+    com.lonx.lyrico.ui.components.base.YesNoDialog(
+        show = show,
+        title = stringResource(R.string.clear_cache),
+        content = {
+            if (LocalUiEngine.current == UiEngine.SALT) {
+                Text(
+                    text,
+                    modifier =
+                        Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()),
+                )
+            } else {
                 top.yukonga.miuix.kmp.basic.Text(
                     text,
                     modifier =
                         Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState()),
                 )
-            },
-            onDismissRequest = onDismiss,
-            onConfirm = onConfirm,
-        )
+            }
+        },
+        onDismissRequest = onDismiss,
+        onConfirm = onConfirm,
+    )
 }

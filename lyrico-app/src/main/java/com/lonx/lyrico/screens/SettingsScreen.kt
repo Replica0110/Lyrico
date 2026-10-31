@@ -102,7 +102,7 @@ fun SettingsScreen(
     val folderViewModel: FolderManagerViewModel = koinViewModel()
     val folderUiState by folderViewModel.uiState.collectAsStateWithLifecycle()
     val settingsRepository: SettingsRepository = koinInject()
-    val artistPosterFolder by settingsRepository.artistPosterFolder.collectAsStateWithLifecycle(initialValue = null)
+    val artistPosterFolder = settingsUiState.artistPosterFolder
 
     val uiEngine = LocalUiEngine.current
     val lyricFormat = settingsUiState.lyricFormat

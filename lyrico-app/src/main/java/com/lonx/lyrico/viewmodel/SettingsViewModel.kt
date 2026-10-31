@@ -47,6 +47,7 @@ data class SettingsUiState(
     val isInitialized: Boolean = false,
     val defaultPlayerComponent: String? = null,
     val defaultPlayerLabel: String? = null,
+    val artistPosterFolder: String? = null,
     val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
@@ -191,11 +192,13 @@ class SettingsViewModel(
         _categorizedCacheSize,
         settingsRepository.lyricIndexEnabled,
         defaultPlayerState,
-    ) { base, cacheMap, lyricIndexEnabled, defaultPlayer ->
+        settingsRepository.artistPosterFolder,
+    ) { base, cacheMap, lyricIndexEnabled, defaultPlayer, artistPosterFolder ->
         SettingsUiState(
             isInitialized = true,
             defaultPlayerComponent = defaultPlayer.component,
             defaultPlayerLabel = defaultPlayer.label,
+            artistPosterFolder = artistPosterFolder,
             lyricFormat = base.lyric.format,
             romaEnabled = base.lyric.showRomanization,
             lyricLineOrder = base.lyric.normalizedLineOrder,

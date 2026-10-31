@@ -15,7 +15,7 @@ import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.utils.MusicMatchUtils
@@ -24,7 +24,7 @@ import kotlin.coroutines.cancellation.CancellationException
 
 class MatchCoverProcessor(
     private val audioTagRepository: AudioTagRepository,
-    private val patchSongTagsUseCase: PatchSongTagsUseCase,
+    private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val songLibraryRepository: SongLibraryRepository,
     private val searchSourceProvider: SearchSourceProvider
 ) : BatchTaskProcessor {
@@ -108,7 +108,7 @@ class MatchCoverProcessor(
         val selected = best?.takeIf { it.second >= MIN_MATCH_SCORE }?.first
             ?: throw BatchTaskSkippedException("No reliable cover match")
         onProgress(0.9f)
-        val result = patchSongTagsUseCase(song.uri, AudioTagData(picUrl = selected.picUrl))
+        val result = saveAudioTagsUseCase.patch(song.uri, AudioTagData(picUrl = selected.picUrl))
         if (result !is SaveAudioTagsResult.Success) throw Exception("Write failed")
         onProgress(1f)
         return BatchTaskProcessResult()

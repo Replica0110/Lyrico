@@ -11,18 +11,18 @@ import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
-import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.LyricDecoder
 import com.lonx.lyrico.utils.LyricEncoder
 import com.lonx.lyrico.utils.lyrics.LyricsColumnSorter
 import com.lonx.lyrico.utils.lyrics.LyricsTextCleanup
-import com.lonx.lyrico.viewmodel.LyricsFormatConfig
+import com.lonx.lyrico.data.model.lyrics.LyricsFormatConfig
 import kotlinx.serialization.json.Json
 
 class LyricsFormatProcessor(
     private val songLibraryRepository: SongLibraryRepository,
-    private val patchSongTagsUseCase: PatchSongTagsUseCase,
+    private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val audioTagRepository: AudioTagRepository
 ) : BatchTaskProcessor {
 
@@ -69,7 +69,7 @@ class LyricsFormatProcessor(
             throw BatchTaskSkippedException("Converted lyrics are unchanged")
         }
 
-        val result = patchSongTagsUseCase(
+        val result = saveAudioTagsUseCase.patch(
             item.songUri,
             AudioTagData(lyrics = convertedLyrics)
         )

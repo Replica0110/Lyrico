@@ -3,7 +3,6 @@ package com.lonx.lyrico.screens.library
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
-
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,7 +52,7 @@ import com.lonx.lyrico.ui.components.scaffoldPageWindowInsets
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.viewmodel.AlbumActionsViewModel
 import com.lonx.lyrico.viewmodel.AlbumLibraryViewModel
-import com.lonx.lyrico.viewmodel.SortOrder
+import com.lonx.lyrico.data.model.SortOrder
 import com.moriafly.salt.ui.SaltTheme
 import com.ramcosta.composedestinations.generated.destinations.AlbumDetailDestination
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination

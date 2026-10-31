@@ -91,7 +91,7 @@ import com.lonx.lyrico.data.editfield.toEditFieldBlocks
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
-import com.lonx.lyrico.ui.components.CoverRequest
+import com.lonx.lyrico.data.model.artwork.CoverRequest
 import com.lonx.lyrico.ui.components.base.LyricsOffsetField
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle

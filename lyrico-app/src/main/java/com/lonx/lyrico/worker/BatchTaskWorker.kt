@@ -23,7 +23,7 @@ import com.lonx.lyrico.worker.processor.BatchTaskSkippedException
 import com.lonx.lyrico.worker.processor.EditTagsTaskConfig
 import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig
 import com.lonx.lyrico.worker.processor.RenameFilesTaskConfig
-import com.lonx.lyrico.viewmodel.LyricsFormatConfig
+import com.lonx.lyrico.data.model.lyrics.LyricsFormatConfig
 import com.lonx.lyrico.worker.processor.ReplayGainTaskConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable

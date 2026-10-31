@@ -51,7 +51,7 @@ import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.BatchTaskListViewModel
 import com.moriafly.salt.ui.SaltTheme
-import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
+import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -125,128 +125,38 @@ fun BatchTaskListScreen(
         stringResource(R.string.batch_task_delete_message)
     }
 
-    if (salt) {
-        if (showDeleteDialog) SaltConfirmDialog(
-            title = stringResource(R.string.batch_task_delete_title),
-            summary = deleteMessage,
-            onDismissRequest = {
-                showDeleteDialog = false
-                selectedTaskId = null
-                pendingDeleteTaskIds = emptyList()
-            },
-            onConfirm = {
-                if (pendingDeleteTaskIds.isNotEmpty()) {
-                    viewModel.deleteTasks(pendingDeleteTaskIds)
-                } else {
-                    selectedTaskId?.let(viewModel::deleteTask)
-                }
-                selectedTaskIds = emptySet()
-                selectedTaskId = null
-                pendingDeleteTaskIds = emptyList()
-                showDeleteDialog = false
-            },
-            cancelText = stringResource(R.string.cancel),
-            confirmText = stringResource(R.string.confirm),
-        )
-        if (showClearDialog) SaltConfirmDialog(
-            title = stringResource(R.string.batch_task_clear_title),
-            summary = stringResource(R.string.batch_task_clear_message),
-            onDismissRequest = { showClearDialog = false },
-            onConfirm = {
-                viewModel.deleteTasks(deletableFilteredTaskIds)
-                selectedTaskIds = emptySet()
-                showClearDialog = false
-            },
-            cancelText = stringResource(R.string.cancel),
-            confirmText = stringResource(R.string.confirm),
-        )
-    } else {
-        WindowDialog(
-            title = stringResource(R.string.batch_task_delete_title),
-            show = showDeleteDialog,
-            onDismissRequest = {
-                showDeleteDialog = false
-            },
-            onDismissFinished = {
-                showDeleteDialog = false
+    YesNoDialog(
+        show = showDeleteDialog,
+        title = stringResource(R.string.batch_task_delete_title),
+        summary = deleteMessage,
+        onDismissRequest = { showDeleteDialog = false },
+        onDismissFinished = {
+            if (!showDeleteDialog) {
                 selectedTaskId = null
                 pendingDeleteTaskIds = emptyList()
             }
-        ) {
-            Column {
-                Text(
-                    text = deleteMessage,
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MiuixTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    TextButton(
-                        text = stringResource(R.string.cancel),
-                        onClick = {
-                            showDeleteDialog = false
-                            selectedTaskId = null
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(
-                        text = stringResource(R.string.confirm),
-                        onClick = {
-                            if (pendingDeleteTaskIds.isNotEmpty()) {
-                                viewModel.deleteTasks(pendingDeleteTaskIds)
-                            } else {
-                                selectedTaskId?.let(viewModel::deleteTask)
-                            }
-                            selectedTaskIds = emptySet()
-                            showDeleteDialog = false
-                            selectedTaskId = null
-                            pendingDeleteTaskIds = emptyList()
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
-                    )
-                }
+        },
+        onConfirm = {
+            if (pendingDeleteTaskIds.isNotEmpty()) {
+                viewModel.deleteTasks(pendingDeleteTaskIds)
+            } else {
+                selectedTaskId?.let(viewModel::deleteTask)
             }
-        }
-
-        WindowDialog(
-            title = stringResource(R.string.batch_task_clear_title),
-            show = showClearDialog,
-            onDismissRequest = { showClearDialog = false }
-        ) {
-            Column {
-                Text(
-                    text = stringResource(R.string.batch_task_clear_message),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    TextButton(
-                        text = stringResource(R.string.cancel),
-                        onClick = { showClearDialog = false },
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(
-                        text = stringResource(R.string.confirm),
-                        onClick = {
-                            viewModel.deleteTasks(deletableFilteredTaskIds)
-                            selectedTaskIds = emptySet()
-                            showClearDialog = false
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
-                    )
-                }
-            }
-        }
-    }
-
+            selectedTaskIds = emptySet()
+            showDeleteDialog = false
+        },
+    )
+    YesNoDialog(
+        show = showClearDialog,
+        title = stringResource(R.string.batch_task_clear_title),
+        summary = stringResource(R.string.batch_task_clear_message),
+        onDismissRequest = { showClearDialog = false },
+        onConfirm = {
+            viewModel.deleteTasks(deletableFilteredTaskIds)
+            selectedTaskIds = emptySet()
+            showClearDialog = false
+        },
+    )
     val canClearFinishedTasks = deletableFilteredTaskIds.isNotEmpty()
     val topBarBackdrop = rememberBarBlurBackdrop()
     LibraryDetailPage(

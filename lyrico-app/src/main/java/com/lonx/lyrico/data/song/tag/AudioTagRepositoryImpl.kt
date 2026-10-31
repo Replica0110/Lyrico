@@ -12,9 +12,10 @@ import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.recordOperation
-import com.lonx.lyrico.data.model.log.withLogOperation
+import com.lonx.lyrico.data.model.log.newLogOperation
 import com.lonx.lyrico.data.song.file.AudioFileAccess
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -22,14 +23,15 @@ class AudioTagRepositoryImpl(
     private val context: Context,
     private val fileAccess: AudioFileAccess,
     private val mutationResolver: AudioTagMutationResolver,
-    private val appLogRepository: AppLogRepository
+    private val appLogRepository: AppLogRepository,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AudioTagRepository {
 
     override suspend fun read(
         uri: String,
         options: AudioTagReadOptions
     ): AudioTagData = if (options.strict) {
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             readFromUri(uri, fileAccess.getDisplayName(uri), strict = true, options = options)
         }
     } else {
@@ -39,7 +41,7 @@ class AudioTagRepositoryImpl(
     private suspend fun readLenient(
         uri: String,
         options: AudioTagReadOptions
-    ): AudioTagData = withContext(Dispatchers.IO) {
+    ): AudioTagData = withContext(ioDispatcher) {
         val displayName = fileAccess.getDisplayName(uri)
         try {
             readFromUri(uri, displayName, strict = false, options = options)
@@ -52,7 +54,7 @@ class AudioTagRepositoryImpl(
         }
     }
 
-    private suspend fun readStrict(uri: String): AudioTagData = withContext(Dispatchers.IO) {
+    private suspend fun readStrict(uri: String): AudioTagData = withContext(ioDispatcher) {
         val displayName = fileAccess.getDisplayName(uri)
         readFromUri(uri, displayName, strict = true, options = AudioTagReadOptions())
     }
@@ -71,7 +73,7 @@ class AudioTagRepositoryImpl(
         return write(uri, mutation.copy(mode = AudioTagMutationMode.Patch))
     }
 
-    private suspend fun write(uri: String, mutation: AudioTagMutation): AudioTagWriteResult = withLogOperation("tag-write") {
+    private suspend fun write(uri: String, mutation: AudioTagMutation): AudioTagWriteResult = withContext(ioDispatcher + newLogOperation("tag-write")) {
         val started = System.nanoTime()
         var stage = "read-current-tags"
         val accessTrace = mutableListOf<String>()
@@ -205,7 +207,7 @@ class AudioTagRepositoryImpl(
         }
 
         val cacheDir = File(context.cacheDir, "external-audio-read-cache").apply { mkdirs() }
-        val tempFile = withContext(Dispatchers.IO) {
+        val tempFile = withContext(ioDispatcher) {
             File.createTempFile("audio-", ".tmp", cacheDir)
         }
 

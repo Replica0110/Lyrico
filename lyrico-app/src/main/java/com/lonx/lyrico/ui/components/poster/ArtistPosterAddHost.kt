@@ -3,12 +3,15 @@ package com.lonx.lyrico.ui.components.poster
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.os.Parcelable
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.parcelize.Parcelize
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -119,7 +122,8 @@ fun ArtistPosterAddHost(
 
 internal enum class ArtistPosterTarget { EmbedIntoSongs, SaveToFolder }
 
-private data class ArtistPosterPickRequest(val artistName: String, val target: ArtistPosterTarget)
+@Parcelize
+private data class ArtistPosterPickRequest(val artistName: String, val target: ArtistPosterTarget) : Parcelable
 
 /** Destination choice, folder permission and image selection shared by artist and song editors. */
 @Composable
@@ -135,7 +139,7 @@ internal fun ArtistPosterPickerHost(
 ) {
     val context = LocalContext.current
     val permissionMessage = stringResource(R.string.permission_denied_cannot_save)
-    var pendingRequest by remember { mutableStateOf<ArtistPosterPickRequest?>(null) }
+    var pendingRequest by rememberSaveable { mutableStateOf<ArtistPosterPickRequest?>(null) }
     val picked by rememberUpdatedState(onImagePicked)
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         val request = pendingRequest

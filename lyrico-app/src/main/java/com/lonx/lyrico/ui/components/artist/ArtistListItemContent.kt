@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.entity.ArtistEntity
-import com.lonx.lyrico.ui.components.CoverCandidate
+import com.lonx.lyrico.data.model.artwork.CoverCandidate
 import com.lonx.lyrico.ui.components.cover.CoverImage
 import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme

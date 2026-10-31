@@ -26,6 +26,8 @@ import com.lonx.lyrico.data.repository.UpdateRepository
 import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepositoryImpl
+import com.lonx.lyrico.data.repository.LibraryFolderRepository
+import com.lonx.lyrico.utils.CacheManager
 import com.lonx.lyrico.data.song.file.AudioFileAccess
 import com.lonx.lyrico.data.song.file.SongFileRepository
 import com.lonx.lyrico.data.song.file.SongFileRepositoryImpl
@@ -45,13 +47,9 @@ import com.lonx.lyrico.data.song.tag.PictureMutationResolver
 import com.lonx.lyrico.data.song.tag.TagMapBuilder
 import com.lonx.lyrico.domain.SearchSourceConfigApplier
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
-import com.lonx.lyrico.domain.song.usecase.BatchEditSongsUseCase
-import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
-import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.ReadAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.RenameSongUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
-import com.lonx.lyrico.domain.song.usecase.SynchronizeLibraryUseCase
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.plugin.source.ScriptSearchSourceFactory
@@ -215,11 +213,11 @@ val appModule = module {
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
-                    LyricoDatabase.createLyricFtsTable(db)
+                    LyricoDatabase.configureLibraryIndexes(db)
                 }
 
                 override fun onOpen(db: SupportSQLiteDatabase) {
-                    LyricoDatabase.createLyricFtsTable(db)
+                    LyricoDatabase.configureLibraryIndexes(db)
                 }
             })
             .build()
@@ -235,6 +233,8 @@ val appModule = module {
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
     single<PlaybackRepository> { PlaybackRepositoryImpl(get()) }
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
+    single { LibraryFolderRepository(get(), get(), androidContext(), get()) }
+    single { CacheManager(androidContext(), get()) }
     single { AudioFileAccess(androidContext()) }
     single { ImageMimeTypeDetector() }
     single<ImageBytesFetcher> { DefaultImageBytesFetcher(get(), get()) }
@@ -242,25 +242,21 @@ val appModule = module {
     single { TagMapBuilder() }
     single { AudioTagMutationResolver(get(), get()) }
     single<AudioTagRepository> { AudioTagRepositoryImpl(androidContext(), get(), get(), get()) }
-    single { com.lonx.lyrico.utils.coil.ArtistPosterReader(androidContext(), get(), get(), get()) }
+    single { com.lonx.lyrico.data.artwork.ArtistPosterReader(androidContext(), get(), get(), get()) }
     single<SongFileRepository> { SongFileRepositoryImpl(androidContext(), get(), get()) }
     single { SortKeyUpdater() }
     single { SongMetadataMapper(get()) }
-    single<SongLibraryRepository> { SongLibraryRepositoryImpl(get()) }
+    single<SongLibraryRepository> { SongLibraryRepositoryImpl(get(), get(), get(), get()) }
     single<SongSearchRepository> { SongSearchRepositoryImpl(get()) }
     single<LibraryScanRepository> {
         LibraryScanRepositoryImpl(androidContext(), get(), get(), get(), get(), get(), get(), get())
     }
     single { ReadAudioTagsUseCase(get(), get()) }
-    single { SaveAudioTagsUseCase(get(), get(), get(), get(), get(), get(), get()) }
-    single { BatchEditSongsUseCase(get(), get()) }
-    single { PatchSongTagsUseCase(get()) }
-    single { OverwriteSongTagsUseCase(get()) }
-    single { DeleteSongsUseCase(get(), get(), get(), get()) }
-    single { RenameSongUseCase(get(), get(), get(), get()) }
-    single { SynchronizeLibraryUseCase(get()) }
+    single { SaveAudioTagsUseCase(get(), get(), get()) }
+    single { DeleteSongsUseCase(get(), get()) }
+    single { RenameSongUseCase(get(), get(), get()) }
     single<SourcePluginRepository> { SourcePluginRepositoryImpl(get()) }
-    single<LibraryScanManager> { LibraryScanManagerImpl(get(), androidContext(), get(), get(), get()) }
+    single<LibraryScanManager> { LibraryScanManagerImpl(get(), get(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
     single<AppLogRepository> { AppLogRepositoryImpl(get(), get(), get()) }
     single { com.lonx.lyrico.diagnostics.ProblemReproductionRecorder(get(), get(), get(), get(), get()) }
@@ -272,7 +268,7 @@ val appModule = module {
     single { MatchLyricsProcessor(get(), get(), get(), get(), get()) }
     single { MatchCoverProcessor(get(), get(), get(), get()) }
     single { RenameFilesProcessor(get(), get(), get()) }
-    single { EditTagsProcessor(get(), get()) }
+    single { EditTagsProcessor(get(), get(), get()) }
     single { BatchExportProcessor(androidContext(), get()) }
     single { BatchTaskProcessorFactory(mapOf(
         BatchTaskType.CONVERT_LYRICS_FORMAT to get<LyricsFormatProcessor>(),
@@ -302,7 +298,7 @@ val appModule = module {
             libraryIndexRepository = get(),
             artistId = artistId,
             audioTagRepository = get(),
-            overwriteSongTagsUseCase = get(),
+            saveAudioTagsUseCase = get(),
             settingsRepository = get(),
             application = get()
         )
@@ -311,7 +307,7 @@ val appModule = module {
     viewModel { com.lonx.lyrico.viewmodel.ArtistSelectionViewModel() }
     viewModel { ArtistSplitSettingsViewModel(get(), get()) }
     viewModel { AlbumLibraryViewModel(get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get(), get(), androidContext()) }
+    viewModel { SettingsViewModel(get(), get(), get(), androidContext(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { LyricsSearchViewModel(get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get(), get()) }
@@ -324,7 +320,7 @@ val appModule = module {
     viewModel { com.lonx.lyrico.viewmodel.ProblemReproductionViewModel(get(), get(), get(), get()) }
     viewModel { PluginViewModel(get(), get(), get(), get(), get()) }
 
-    viewModel { FolderManagerViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { FolderManagerViewModel(get(), get(), get(), get()) }
     viewModel { ArtistPosterFoldersViewModel(get(), get(), get()) }
     viewModel { com.lonx.lyrico.viewmodel.ArtistPosterEditViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { BatchRenameViewModel(get(), get(), get(), get(), get()) }

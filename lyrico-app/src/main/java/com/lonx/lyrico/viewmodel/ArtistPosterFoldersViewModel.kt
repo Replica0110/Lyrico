@@ -1,9 +1,9 @@
 package com.lonx.lyrico.viewmodel
 
+import com.lonx.lyrico.data.model.artist.ArtistPosterFile
 import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
-
 import android.app.Application
 import android.net.Uri
 import android.graphics.Bitmap
@@ -18,7 +18,7 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.entity.ArtistEntity
 import com.lonx.lyrico.utils.SafDocuments
 import com.lonx.lyrico.utils.UriUtils
-import com.lonx.lyrico.utils.coil.ArtistPosterMatcher
+import com.lonx.lyrico.domain.poster.ArtistPosterMatcher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,14 +28,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-data class ArtistPosterFile(
-    val uri: String,
-    val name: String,
-    val lastModified: Long,
-    val artistId: Long? = null,
-    val artistName: String? = null
-)
 
 data class ArtistPosterFolder(
     val uri: String,

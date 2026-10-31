@@ -117,6 +117,7 @@ object UriUtils {
         return try {
             DocumentsContract.isTreeUri(left) &&
                     DocumentsContract.isTreeUri(right) &&
+                    left.authority == right.authority &&
                     DocumentsContract.getTreeDocumentId(left) == DocumentsContract.getTreeDocumentId(right)
         } catch (e: Exception) {
             false

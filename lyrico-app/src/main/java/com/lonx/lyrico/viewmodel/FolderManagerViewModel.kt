@@ -1,19 +1,16 @@
 package com.lonx.lyrico.viewmodel
 
-import android.app.Application
-import android.util.Log
+import com.lonx.lyrico.data.model.SortInfo
 import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.entity.FolderEntity
 import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
+import com.lonx.lyrico.data.repository.LibraryFolderRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.utils.LibraryScanManager
-import com.lonx.lyrico.utils.UriUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,11 +31,9 @@ data class FolderManagerUiState(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FolderManagerViewModel(
-    private val database: LyricoDatabase,
+    private val folderRepository: LibraryFolderRepository,
     private val libraryScanManager: LibraryScanManager,
-    private val application: Application,
     private val appScope: CoroutineScope,
-    private val libraryIndexRepository: LibraryIndexRepository,
     private val songLibraryRepository: SongLibraryRepository
 ) : ViewModel() {
 
@@ -46,13 +41,12 @@ class FolderManagerViewModel(
         const val TAG = "FolderManagerViewModel"
     }
 
-    private val folderDao = database.folderDao()
-    private val contentResolver = application.contentResolver
 
     private val _sortInfo = MutableStateFlow(SortInfo())
     val sortInfo: StateFlow<SortInfo> = _sortInfo.asStateFlow()
 
     private val _currentFolderId = MutableStateFlow<Long?>(null)
+    private val operationError = MutableStateFlow<String?>(null)
 
     val currentFolderSongs: StateFlow<List<SongEntity>> =
         combine(
@@ -74,14 +68,15 @@ class FolderManagerViewModel(
 
     val uiState: StateFlow<FolderManagerUiState> =
         combine(
-            folderDao.getAllFolders(),
-            libraryScanManager.state
-        ) { folders, scanState ->
+            folderRepository.observeFolders(),
+            libraryScanManager.state,
+            operationError,
+        ) { folders, scanState, folderError ->
             FolderManagerUiState(
                 folders = folders,
                 scanningFolderIds = scanState.scanningFolderIds,
                 queuedFolderIds = scanState.queuedFolderIds,
-                error = scanState.error
+                error = folderError ?: scanState.error
             )
         }
             .stateIn(
@@ -104,21 +99,17 @@ class FolderManagerViewModel(
 
     fun deleteFolder(folder: FolderEntity) {
         appScope.launch {
+            operationError.value = null
             try {
-                val released = UriUtils.releasePersistedPermission(contentResolver, folder.treeUri)
-                if (!released) {
-                    Log.w(TAG, "Failed to fully release persisted permission for folder: ${folder.path}")
-                }
-                folderDao.deleteFolderTreePermanently(folder.id)
-                libraryIndexRepository.refreshAndPruneIndexes()
+                folderRepository.remove(folder.id)
                 AppLog.record(AppLogType.DATABASE, TAG, "Library folder removed",
-                    "folderId=${folder.id}\npath=${folder.path}\ntreeUri=${folder.treeUri}\npermissionReleased=$released",
-                    folder.treeUri, if (released) AppLogLevel.INFO else AppLogLevel.WARNING)
+                    "folderId=${folder.id}\npath=${folder.path}\ntreeUri=${folder.treeUri}",
+                    folder.treeUri, AppLogLevel.INFO)
             } catch (error: Exception) {
                 if (error is kotlinx.coroutines.CancellationException) throw error
                 AppLog.record(AppLogType.DATABASE, TAG, "Library folder removal failed",
                     "folderId=${folder.id}\npath=${folder.path}\ntreeUri=${folder.treeUri}", folder.treeUri, AppLogLevel.ERROR, error)
-                throw error
+                operationError.value = error.message ?: error::class.java.simpleName
             }
         }
     }
@@ -129,16 +120,16 @@ class FolderManagerViewModel(
 
     fun setFolderIgnored(folder: FolderEntity, ignored: Boolean) {
         appScope.launch {
+            operationError.value = null
             try {
-                folderDao.setIgnoredRecursively(folder.id, ignored)
-                libraryIndexRepository.refreshAndPruneIndexes()
+                folderRepository.setIgnored(folder.id, ignored)
                 AppLog.record(AppLogType.DATABASE, TAG, "Folder visibility updated",
                     "folderId=${folder.id}\npath=${folder.path}\nignored=$ignored", folder.treeUri, AppLogLevel.INFO)
             } catch (error: Exception) {
                 if (error is kotlinx.coroutines.CancellationException) throw error
                 AppLog.record(AppLogType.DATABASE, TAG, "Folder visibility update failed",
                     "folderId=${folder.id}\nignored=$ignored", folder.treeUri, AppLogLevel.ERROR, error)
-                throw error
+                operationError.value = error.message ?: error::class.java.simpleName
             }
         }
     }

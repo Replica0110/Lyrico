@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components
+package com.lonx.lyrico.data.model.artwork
 
 import android.net.Uri
 import com.lonx.audiotag.model.AudioPictureType

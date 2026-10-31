@@ -11,7 +11,7 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
-import com.lonx.lyrico.domain.song.usecase.PatchSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.AlbumReplayGainCalculateState
 import com.lonx.lyrico.utils.ReplayGainError
@@ -41,7 +41,7 @@ data class AlbumActionsUiState(
 class AlbumActionsViewModel(
     private val libraryIndexRepository: LibraryIndexRepository,
     private val deleteSongsUseCase: DeleteSongsUseCase,
-    private val patchSongTagsUseCase: PatchSongTagsUseCase,
+    private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val replayGainScanner: ReplayGainScanner,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
@@ -211,7 +211,7 @@ class AlbumActionsViewModel(
 
         var written = 0
         for (song in songs) {
-            when (val result = patchSongTagsUseCase(song.uri, tagData)) {
+            when (val result = saveAudioTagsUseCase.patch(song.uri, tagData)) {
                 is SaveAudioTagsResult.Success -> {
                     written += 1
                     val writeProgress = if (songs.isNotEmpty()) {

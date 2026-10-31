@@ -422,6 +422,21 @@ abstract class LyricoDatabase : RoomDatabase() {
             }
         }
 
+        /** Install auxiliary indexes after Room has created/migrated all entity tables. */
+        fun configureLibraryIndexes(db: SupportSQLiteDatabase) {
+            createLyricFtsTable(db)
+            db.execSQL(
+                """
+                CREATE TRIGGER IF NOT EXISTS songs_delete_search_indexes
+                AFTER DELETE ON songs
+                BEGIN
+                    DELETE FROM song_lyric_lines_fts WHERE songUri = OLD.uri;
+                    DELETE FROM song_custom_tag_keys WHERE songUri = OLD.uri;
+                END
+                """.trimIndent()
+            )
+        }
+
         fun createLyricFtsTable(db: SupportSQLiteDatabase) {
             db.execSQL(
                 """

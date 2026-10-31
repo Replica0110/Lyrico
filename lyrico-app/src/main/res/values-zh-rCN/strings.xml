@@ -44,6 +44,7 @@
     <string name="cache_item">%1$s: %2$s</string>
     <string name="cache_total">总计：%1$s</string>
     <string name="cache_size_label">缓存大小：%1$s</string>
+    <string name="cache_operation_failed">缓存操作失败：%1$s</string>
 
     <!-- 分组标题 -->
     <string name="section_appearance">外观</string>
@@ -294,7 +295,7 @@
     <!-- 文件夹列表状态 -->
     <string name="folder_scanning">正在扫描文件夹…</string>
     <string name="folder_scan_queued">排队等待扫描…</string>
-    <string name="folder_scan_failed">扫描失败：%s</string>
+    <string name="folder_operation_failed">操作失败：%s</string>
 
     <!-- 文件夹项信息 -->
     <string name="folder_root_path">文件夹</string>
@@ -392,6 +393,8 @@
 
     <string name="unknown_error">未知错误：%1$s</string>
     <string name="clear_songs">清空所有歌曲</string>
+    <string name="library_cleared">已清空曲库</string>
+    <string name="library_clear_failed">清空曲库失败</string>
 
 
 

@@ -62,6 +62,7 @@
     <string name="cache_item">%1$s: %2$s</string>
     <string name="cache_total">Total: %1$s</string>
     <string name="cache_size_label">Cache size: %1$s</string>
+    <string name="cache_operation_failed">Cache operation failed: %1$s</string>
 
     <!-- Sections -->
     <string name="section_appearance">Appearance</string>
@@ -293,7 +294,7 @@
     <!-- Folder List Status -->
     <string name="folder_scanning">Scanning folder…</string>
     <string name="folder_scan_queued">Queued for scanning…</string>
-    <string name="folder_scan_failed">Scan failed: %s</string>
+    <string name="folder_operation_failed">Operation failed: %s</string>
 
     <!-- Folder Item Info -->
     <string name="folder_root_path">Folders</string>
@@ -408,6 +409,8 @@
     <string name="unknown_error">Unknown error: %1$s</string>
     <string name="unknown_error_simple">Unknown error</string>
     <string name="clear_songs">Clear All Songs</string>
+    <string name="library_cleared">Music library cleared</string>
+    <string name="library_clear_failed">Could not clear the music library</string>
 
     <string name="action_reset">Reset</string>
     <string name="action_batch_rename">Rename</string>

@@ -261,9 +261,7 @@ class LibraryScanRepositoryImpl(
                 }
 
                 allDeletedUris.chunked(BATCH_SIZE).forEach { chunk ->
-                    songDao.deleteByUris(chunk.toList())
-                    songDao.deleteLyricFtsByUris(chunk.toList())
-                    database.songCustomTagKeyDao().deleteForSongs(chunk.toList())
+                    songDao.deleteByUris(chunk)
                 }
 
                 missingSafFolderIds.forEach { folderId ->

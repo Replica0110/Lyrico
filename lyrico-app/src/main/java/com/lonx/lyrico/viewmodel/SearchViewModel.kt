@@ -151,11 +151,11 @@ class SearchViewModel(
         searchSourceProvider.observeSources(PluginSourceType.METADATA).stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            emptyList()
+            null
         )
 
     init {
-        searchSourceConfigApplier.observeIn(viewModelScope, allSourcesFlow)
+        searchSourceConfigApplier.observeIn(viewModelScope, allSourcesFlow.filterNotNull())
     }
 
 
@@ -165,7 +165,7 @@ class SearchViewModel(
             searchConfigFlow,
             renderedLyricsFlow,
             selectedSourceId,
-            allSourcesFlow
+            allSourcesFlow.filterNotNull()
         ) { search, searchConfig, renderedLyrics, selectedId, allSources ->
 
             val sourceImpls = getSearchSources(searchConfig, allSources)
@@ -255,7 +255,7 @@ class SearchViewModel(
         searchJob = viewModelScope.launch {
             try {
                 val config = searchConfigFlow.filterNotNull().first()
-                val sources = getSearchSources(config, allSourcesFlow.first { it.isNotEmpty() })
+                val sources = getSearchSources(config, allSourcesFlow.filterNotNull().first())
                 val targets = sources.filter { sourceId == null || it.id == sourceId }
                 targets.forEach { source ->
                     val state = searchState.value
@@ -381,7 +381,7 @@ class SearchViewModel(
             logSearch(
                 level = AppLogLevel.WARNING,
                 message = "Search skipped: source not found",
-                detail = "keyword=$keyword\nsource=$sourceId\navailableSources=${allSourcesFlow.value.map { it.id }}",
+                detail = "keyword=$keyword\nsource=$sourceId\navailableSources=${allSourcesFlow.value.orEmpty().map { it.id }}",
                 relatedId = sourceId
             )
             return SearchPage(results = emptyList(), hasMore = false)
@@ -430,7 +430,7 @@ class SearchViewModel(
         val targetSourceIds = if (sourceId != null) {
             listOf(sourceId)
         } else {
-            allSourcesFlow.value.map { it.id }
+            allSourcesFlow.value.orEmpty().map { it.id }
         }.filter { id ->
             state.hasMoreBySource[id] == true &&
                     id !in state.loadingMoreSourceIds &&
@@ -600,7 +600,7 @@ class SearchViewModel(
      * 根据 sourceId 查找对应的 SearchSource 实现
      */
     private fun findSource(sourceId: String): SearchSource? {
-        return allSourcesFlow.value.firstOrNull { it.id == sourceId }
+        return allSourcesFlow.value.orEmpty().firstOrNull { it.id == sourceId }
     }
 
     private suspend fun logSearch(

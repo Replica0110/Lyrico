@@ -2,7 +2,6 @@ package com.lonx.lyrico.domain.poster
 
 import com.lonx.lyrico.data.model.CharacterMappingDefaults
 import com.lonx.lyrico.utils.FileNameSanitizer
-import com.lonx.lyrico.utils.coil.ArtistPosterMatcher
 
 /**
  * 艺术家海报文件的命名。外置海报按文件名认艺术家，所以文件名必须写成艺术家名；

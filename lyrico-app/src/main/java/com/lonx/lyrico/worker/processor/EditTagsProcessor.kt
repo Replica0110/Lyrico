@@ -1,13 +1,13 @@
 package com.lonx.lyrico.worker.processor
 
-import android.util.Log
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.data.model.entity.BatchTaskEntity
 import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
-import com.lonx.lyrico.domain.song.usecase.BatchEditSongsUseCase
-import com.lonx.lyrico.domain.song.usecase.BatchTagEditItemRequest
+import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
+import com.lonx.lyrico.data.song.tag.AudioTagRepository
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.LyricEncoder
 import kotlinx.serialization.Serializable
@@ -56,7 +56,8 @@ data class EditTagsCustomField(
 
 class EditTagsProcessor(
     private val songLibraryRepository: SongLibraryRepository,
-    private val batchEditSongsUseCase: BatchEditSongsUseCase
+    private val audioTagRepository: AudioTagRepository,
+    private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
 ) : BatchTaskProcessor {
 
     override suspend fun process(
@@ -71,22 +72,13 @@ class EditTagsProcessor(
         val song = songLibraryRepository.getSongByUri(item.songUri)
             ?: throw BatchTaskSkippedException("Song not found")
 
-        val result = try {
-            batchEditSongsUseCase.editOne(
-                BatchTagEditItemRequest(
-                    song = song,
-                    tagDataFactory = { _, currentTag -> buildMergedTag(currentTag, config) }
-                )
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to edit tags: ${item.songUri}", e)
-            throw Exception("Write failed", e)
-        }
+        val currentTag = audioTagRepository.read(song.uri, AudioTagReadOptions(strict = true))
+        val editedTag = buildMergedTag(currentTag, config)
+        if (editedTag == currentTag) throw BatchTaskSkippedException("No changes")
 
-        if (result.skippedReason != null) {
-            throw BatchTaskSkippedException(result.skippedReason)
-        }
-        if (result.result !is SaveAudioTagsResult.Success) {
+        val result = saveAudioTagsUseCase.overwrite(song.uri, editedTag)
+
+        if (result !is SaveAudioTagsResult.Success) {
             throw Exception("Write failed")
         }
 
@@ -172,7 +164,4 @@ class EditTagsProcessor(
         }
     }
 
-    private companion object {
-        const val TAG = "EditTagsProcessor"
-    }
 }

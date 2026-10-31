@@ -5,6 +5,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -15,8 +17,10 @@ import com.lonx.lyrico.viewmodel.ArtistPosterEditViewModel
 @Composable
 fun ArtistPosterExportHost(viewModel: ArtistPosterEditViewModel, pendingIds: Set<Long>, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val folder by viewModel.posterFolder.collectAsStateWithLifecycle(initialValue = null)
-    var exportIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    val exportSettings by viewModel.exportSettings.collectAsStateWithLifecycle()
+    var exportIds by rememberSaveable(
+        stateSaver = Saver<Set<Long>, LongArray>(save = { it.toLongArray() }, restore = { it.toSet() })
+    ) { mutableStateOf<Set<Long>>(emptySet()) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         val targets = exportIds
         exportIds = emptySet()
@@ -32,10 +36,11 @@ fun ArtistPosterExportHost(viewModel: ArtistPosterEditViewModel, pendingIds: Set
     YesNoDialog(
         show = pendingIds.isNotEmpty(), title = stringResource(R.string.poster_export_embedded),
         summary = stringResource(R.string.poster_export_confirm, pendingIds.size),
+        confirmEnabled = exportSettings != null,
         onDismissRequest = onDismiss,
         onConfirm = {
             val targets = pendingIds.toSet()
-            if (folder != null) viewModel.export(targets)
+            if (exportSettings?.folder != null) viewModel.export(targets)
             else { exportIds = targets; picker.launch(null) }
         }
     )

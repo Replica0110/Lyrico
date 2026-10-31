@@ -1,19 +1,14 @@
 package com.lonx.lyrico.domain.song.usecase
 
 import android.content.IntentSender
-import androidx.room.withTransaction
-import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.repository.CustomTagKeyRepository
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.file.DeleteSongFileResult
 import com.lonx.lyrico.data.song.file.SongFileRepository
 
 class DeleteSongsUseCase(
-    private val database: LyricoDatabase,
     private val songFileRepository: SongFileRepository,
-    private val customTagKeyRepository: CustomTagKeyRepository,
-    private val libraryIndexRepository: LibraryIndexRepository
+    private val songLibraryRepository: SongLibraryRepository,
 ) {
     suspend operator fun invoke(songs: List<SongEntity>): DeleteSongsResult {
         if (songs.isEmpty()) {
@@ -29,19 +24,7 @@ class DeleteSongsUseCase(
             .map { it.song }
 
         if (deletableSongs.isNotEmpty()) {
-            val uris = deletableSongs.map { it.uri }
-            val impactedFolderIds = deletableSongs.map { it.folderId }.distinct()
-            database.withTransaction {
-                uris.chunked(BATCH_SIZE).forEach { chunk ->
-                    database.songDao().deleteByUris(chunk)
-                    customTagKeyRepository.removeSongs(chunk)
-                }
-                impactedFolderIds.forEach { folderId ->
-                    database.folderDao().refreshSongCount(folderId)
-                }
-                database.folderDao().performPostScanCleanup()
-            }
-            libraryIndexRepository.refreshAndPruneIndexes()
+            songLibraryRepository.deleteSongsByUris(deletableSongs.map { it.uri })
         }
 
         return DeleteSongsResult(
@@ -51,10 +34,6 @@ class DeleteSongsUseCase(
                 DeleteSongsItemResult(item.song, item.result)
             }
         )
-    }
-
-    private companion object {
-        const val BATCH_SIZE = 50
     }
 }
 

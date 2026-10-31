@@ -24,13 +24,8 @@ class CustomTagKeyRepository(
         )
     }
 
-    suspend fun removeSongs(songUris: List<String>) {
-        if (songUris.isEmpty()) return
-        dao.deleteForSongs(songUris)
-    }
-
-    suspend fun clearAll() {
-        dao.clearAll()
+    suspend fun updateSongUri(oldUri: String, newUri: String) {
+        if (oldUri != newUri) dao.updateSongUri(oldUri, newUri)
     }
 
     fun observeSongUrisByKey(key: String): Flow<List<String>> =

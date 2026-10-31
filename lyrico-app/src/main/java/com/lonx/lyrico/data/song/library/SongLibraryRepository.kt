@@ -1,8 +1,9 @@
 package com.lonx.lyrico.data.song.library
 
+import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.viewmodel.SortBy
-import com.lonx.lyrico.viewmodel.SortOrder
+import com.lonx.lyrico.data.model.SortBy
+import com.lonx.lyrico.data.model.SortOrder
 import kotlinx.coroutines.flow.Flow
 
 interface SongLibraryRepository {
@@ -20,13 +21,10 @@ interface SongLibraryRepository {
 
     suspend fun getSongCount(): Int
 
-    suspend fun upsertSongs(songs: List<SongEntity>)
+    /** Synchronize a saved file snapshot and its indexes; external files need not be in the library. */
+    suspend fun synchronizeSavedTags(uri: String, tagData: AudioTagData): SongEntity?
 
-    suspend fun updateSong(song: SongEntity)
-
-    suspend fun updateSongs(songs: List<SongEntity>)
+    suspend fun synchronizeRenamedSong(song: SongEntity, oldUri: String)
 
     suspend fun deleteSongsByUris(uris: List<String>)
-
-    suspend fun clearAll()
 }

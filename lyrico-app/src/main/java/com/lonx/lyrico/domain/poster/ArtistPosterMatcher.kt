@@ -1,4 +1,4 @@
-package com.lonx.lyrico.utils.coil
+package com.lonx.lyrico.domain.poster
 
 import com.lonx.lyrico.data.model.CharacterMappingDefaults
 import java.text.Normalizer

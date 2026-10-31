@@ -5,7 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.LyricoDatabase
+import com.lonx.lyrico.utils.LibraryScanManager
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.ArtistSeparator
@@ -87,11 +87,11 @@ sealed class SettingsEvent {
 }
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
-    private val database: LyricoDatabase,
+    private val libraryScanManager: LibraryScanManager,
     private val appLogRepository: AppLogRepository,
     private val applicationContext: Context,
+    private val cacheManager: CacheManager,
 ) : ViewModel() {
-    private val folder = database.folderDao()
     private val _categorizedCacheSize = MutableStateFlow<Map<CacheCategory, Long>>(emptyMap())
     private val defaultPlayerRefresh = MutableStateFlow(0L)
     private data class DefaultPlayerState(val component: String?, val label: String?)
@@ -241,17 +241,33 @@ class SettingsViewModel(
             settingsRepository.saveLyricDisplayMode(mode)
         }
     }
-    fun refreshCache(context: Context) {
+    fun refreshCache() {
         viewModelScope.launch {
-            val sizes = CacheManager.getCategorizedCacheSize(context)
-            _categorizedCacheSize.value = sizes
+            try {
+                _categorizedCacheSize.value = cacheManager.getCategorizedCacheSize()
+            } catch (error: Exception) {
+                reportCacheFailure(error)
+            }
         }
     }
-    fun clearCache(context: Context) {
+    fun clearCache() {
         viewModelScope.launch {
-            CacheManager.clearAllCache(context)
-            refreshCache(context)
+            try {
+                cacheManager.clearAllCache()
+                _categorizedCacheSize.value = cacheManager.getCategorizedCacheSize()
+            } catch (error: Exception) {
+                reportCacheFailure(error)
+            }
         }
+    }
+
+    private suspend fun reportCacheFailure(error: Exception) {
+        if (error is kotlinx.coroutines.CancellationException) throw error
+        appLogRepository.recordOperation(AppLogType.APP, TAG, "Cache operation failed",
+            error.stackTraceToString(), level = AppLogLevel.ERROR)
+        _events.emit(SettingsEvent.ShowToast(UiMessage.StringResource(
+            R.string.cache_operation_failed, error.message ?: error::class.java.simpleName
+        )))
     }
 
     fun setLyricLineOrder(order: List<LyricLineTrack>) {
@@ -264,10 +280,13 @@ class SettingsViewModel(
         }
     }
 
-    suspend fun clearSongs(): Boolean = withContext(Dispatchers.IO) {
-        folder.clearAllFolders()
-        val counts = folder.getFoldersCount()
-        counts == 0
+    suspend fun clearSongs(): Boolean = try {
+        libraryScanManager.clearLibrary()
+    } catch (error: Exception) {
+        if (error is kotlinx.coroutines.CancellationException) throw error
+        appLogRepository.recordOperation(AppLogType.DATABASE, TAG, "Library reset failed",
+            error.stackTraceToString(), level = AppLogLevel.ERROR)
+        false
     }
     fun setTranslationEnabled(enabled: Boolean) {
         viewModelScope.launch {
@@ -498,6 +517,7 @@ class SettingsViewModel(
                     ))
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 e.printStackTrace()
                 appLogRepository.logException(
                     type = AppLogType.APP,

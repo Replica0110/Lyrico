@@ -3,7 +3,6 @@ package com.lonx.lyrico.screens.library
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
-
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -68,9 +67,9 @@ import com.lonx.lyrico.utils.UriUtils
 import com.moriafly.salt.ui.SaltTheme
 import com.lonx.lyrico.viewmodel.SongListViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
-import com.lonx.lyrico.viewmodel.SortBy
-import com.lonx.lyrico.viewmodel.SortInfo
-import com.lonx.lyrico.viewmodel.SortOrder
+import com.lonx.lyrico.data.model.SortBy
+import com.lonx.lyrico.data.model.SortInfo
+import com.lonx.lyrico.data.model.SortOrder
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination
 import com.ramcosta.composedestinations.generated.destinations.SettingsDestination

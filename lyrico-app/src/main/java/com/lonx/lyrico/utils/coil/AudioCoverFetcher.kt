@@ -1,5 +1,7 @@
 package com.lonx.lyrico.utils.coil
 
+import com.lonx.lyrico.data.artwork.ArtistPosterReader
+import com.lonx.lyrico.data.artwork.readArtworkSafely
 import android.content.ContentResolver
 import coil3.ImageLoader
 import coil3.decode.DataSource
@@ -10,8 +12,8 @@ import coil3.fetch.SourceFetchResult
 import coil3.request.Options
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.rw.AudioTagReader
-import com.lonx.lyrico.ui.components.CoverCandidate
-import com.lonx.lyrico.ui.components.CoverRequest
+import com.lonx.lyrico.data.model.artwork.CoverCandidate
+import com.lonx.lyrico.data.model.artwork.CoverRequest
 import okio.Buffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.viewmodel.SortOrder
+import com.lonx.lyrico.data.model.SortOrder
 import com.moriafly.salt.ui.Icon as SaltIcon
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text as SaltText

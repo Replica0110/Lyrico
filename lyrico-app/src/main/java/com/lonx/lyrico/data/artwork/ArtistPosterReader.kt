@@ -1,9 +1,8 @@
-package com.lonx.lyrico.utils.coil
+package com.lonx.lyrico.data.artwork
 
 import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
-
 import android.content.Context
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
@@ -13,7 +12,7 @@ import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.data.utils.ArtistNameSplitter
 import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
-import com.lonx.lyrico.ui.components.CoverRequest
+import com.lonx.lyrico.data.model.artwork.CoverRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive

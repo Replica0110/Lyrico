@@ -1,5 +1,6 @@
 package com.lonx.lyrico.utils.coil
 
+import com.lonx.lyrico.data.artwork.readPosterBytes
 import coil3.ImageLoader
 import coil3.decode.DataSource
 import coil3.decode.ImageSource
@@ -7,7 +8,7 @@ import coil3.fetch.Fetcher
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
 import androidx.core.net.toUri
-import com.lonx.lyrico.viewmodel.ArtistPosterFile
+import com.lonx.lyrico.data.model.artist.ArtistPosterFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okio.Buffer

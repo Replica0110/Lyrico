@@ -3,7 +3,6 @@ package com.lonx.lyrico.viewmodel
 import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
-
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -26,15 +25,15 @@ import com.lonx.lyrico.domain.poster.ArtistPosterBatchEdit
 import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
 import com.lonx.lyrico.domain.poster.ArtistPosterEdits
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
-import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.ArtistPosterFileWriter
 import com.lonx.lyrico.utils.SafDocumentRow
 import com.lonx.lyrico.utils.SafDocuments
-import com.lonx.lyrico.utils.coil.ArtistPosterMatcher
-import com.lonx.lyrico.utils.coil.ArtistPosterReader
-import com.lonx.lyrico.ui.components.CoverCandidate
-import com.lonx.lyrico.ui.components.CoverRequest
+import com.lonx.lyrico.domain.poster.ArtistPosterMatcher
+import com.lonx.lyrico.data.artwork.ArtistPosterReader
+import com.lonx.lyrico.data.model.artwork.CoverCandidate
+import com.lonx.lyrico.data.model.artwork.CoverRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,6 +44,9 @@ import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -54,11 +56,13 @@ data class ArtistPosterMenuState(
     val error: Boolean = false
 )
 
+data class ArtistPosterExportSettings(val folder: String?)
+
 /** One execution path for the list and detail menu, with fixed targets across permission retries. */
 class ArtistPosterEditViewModel(
     private val library: LibraryIndexRepository,
     private val tags: AudioTagRepository,
-    private val overwrite: OverwriteSongTagsUseCase,
+    private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val settings: SettingsRepository,
     private val application: Application,
     private val posterReader: ArtistPosterReader
@@ -77,7 +81,9 @@ class ArtistPosterEditViewModel(
     val state = _state.asStateFlow()
     private val _titleRes = MutableStateFlow(R.string.poster_remove_artwork)
     val titleRes = _titleRes.asStateFlow()
-    val posterFolder = settings.artistPosterFolder
+    val exportSettings = settings.artistPosterFolder
+        .map { ArtistPosterExportSettings(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     private var artistIds = emptySet<Long>()
     private var job: Job? = null
     @Volatile private var generation = 0
@@ -155,7 +161,7 @@ class ArtistPosterEditViewModel(
                             check(entries.any { it.picture.data.contentEquals(bytes) }) { "Poster changed" }
                         } else {
                             val next = ArtistPosterEdits.replaceData(current.pictures, picture, bytes, "image/png")
-                            when (val result = overwrite(target.songUri, current.copy(pictures = next), picturesAuthored = true)) {
+                            when (val result = saveAudioTagsUseCase.overwrite(target.songUri, current.copy(pictures = next), picturesAuthored = true)) {
                                 is SaveAudioTagsResult.Success -> Unit
                                 is SaveAudioTagsResult.Failed -> throw result.error
                                 is SaveAudioTagsResult.PermissionRequired -> {
@@ -295,7 +301,7 @@ class ArtistPosterEditViewModel(
                             val next = ArtistPosterBatchEdit.apply(current.pictures,
                                 ArtistNameSplitter.splitArtists(current.artist, plan.config), plan.owners[song.uri].orEmpty(), null)
                             if (next == current.pictures) unchanged++
-                            else when (val result = overwrite(song.uri, current.copy(pictures = next), picturesAuthored = true)) {
+                            else when (val result = saveAudioTagsUseCase.overwrite(song.uri, current.copy(pictures = next), picturesAuthored = true)) {
                                 is SaveAudioTagsResult.Success -> changed++
                                 is SaveAudioTagsResult.Failed -> failures += title
                                 is SaveAudioTagsResult.PermissionRequired -> {

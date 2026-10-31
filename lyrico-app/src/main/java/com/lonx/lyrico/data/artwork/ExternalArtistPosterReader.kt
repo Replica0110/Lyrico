@@ -1,9 +1,8 @@
-package com.lonx.lyrico.utils.coil
+package com.lonx.lyrico.data.artwork
 
 import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
-
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -12,6 +11,7 @@ import android.util.Log
 import androidx.core.net.toUri
 import com.lonx.lyrico.utils.SafDocuments
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
+import com.lonx.lyrico.domain.poster.ArtistPosterMatcher
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive

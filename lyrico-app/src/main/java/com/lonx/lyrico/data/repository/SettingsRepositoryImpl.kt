@@ -43,9 +43,9 @@ import com.lonx.lyrico.data.model.ArtistSortInfo
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.ui.theme.KeyColors
-import com.lonx.lyrico.viewmodel.SortBy
-import com.lonx.lyrico.viewmodel.SortInfo
-import com.lonx.lyrico.viewmodel.SortOrder
+import com.lonx.lyrico.data.model.SortBy
+import com.lonx.lyrico.data.model.SortInfo
+import com.lonx.lyrico.data.model.SortOrder
 import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
@@ -1031,6 +1031,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             }
             true
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             e.printStackTrace()
             false
         }

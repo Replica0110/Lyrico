@@ -183,7 +183,7 @@ fun SettingsScreen(
     val selectedArtistSeparatorIndex = artistSeparators.indexOf(artistSeparator).coerceAtLeast(0)
 
     LaunchedEffect(Unit) {
-        settingsViewModel.refreshCache(context)
+        settingsViewModel.refreshCache()
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -649,17 +649,11 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     val success = settingsViewModel.clearSongs()
-                                    if (success) {
-                                        Toast.makeText(context, "已清空数据库", Toast.LENGTH_SHORT)
-                                            .show()
-                                    } else {
-                                        Toast.makeText(
-                                            context,
-                                            "清空数据库失败",
-                                            Toast.LENGTH_SHORT
-                                        )
-                                            .show()
-                                    }
+                                    Toast.makeText(
+                                        context,
+                                        if (success) R.string.library_cleared else R.string.library_clear_failed,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
                         )
@@ -682,7 +676,7 @@ fun SettingsScreen(
         text = cacheContent,
         onDismiss = { showClearCacheDialog.value = false },
         onConfirm = {
-            settingsViewModel.clearCache(context)
+            settingsViewModel.clearCache()
             showClearCacheDialog.value = false
         },
     )

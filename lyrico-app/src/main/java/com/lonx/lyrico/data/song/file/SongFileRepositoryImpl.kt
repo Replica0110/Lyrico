@@ -9,10 +9,10 @@ import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.recordOperation
-import com.lonx.lyrico.data.model.log.withLogOperation
 import com.lonx.lyrico.data.model.log.newLogOperation
 import com.lonx.lyrico.data.repository.AppLogRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
@@ -20,10 +20,11 @@ import java.io.FileNotFoundException
 class SongFileRepositoryImpl(
     private val context: Context,
     private val fileAccess: AudioFileAccess,
-    private val appLogRepository: AppLogRepository
+    private val appLogRepository: AppLogRepository,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : SongFileRepository {
 
-    override suspend fun deleteFile(song: SongEntity): DeleteSongFileResult = withLogOperation("delete-file") {
+    override suspend fun deleteFile(song: SongEntity): DeleteSongFileResult = withContext(ioDispatcher + newLogOperation("delete-file")) {
         val result = if (song.source == "SAF") {
             deleteSafSongFile(song)
         } else {
@@ -57,7 +58,7 @@ class SongFileRepositoryImpl(
     override suspend fun renameFile(
         song: SongEntity,
         newFileName: String
-    ): RenameSongFileResult = withContext(Dispatchers.IO + newLogOperation("rename-file")) {
+    ): RenameSongFileResult = withContext(ioDispatcher + newLogOperation("rename-file")) {
         val result = if (song.source == "SAF") {
             renameSafSong(song, newFileName)
         } else {

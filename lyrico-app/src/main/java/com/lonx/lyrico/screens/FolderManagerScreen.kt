@@ -89,9 +89,9 @@ import com.lonx.lyrico.ui.components.song.SongListItemActions
 import com.lonx.lyrico.utils.UriUtils
 import com.lonx.lyrico.viewmodel.FolderManagerViewModel
 import com.lonx.lyrico.viewmodel.SongSelectionViewModel
-import com.lonx.lyrico.viewmodel.SortBy
-import com.lonx.lyrico.viewmodel.SortInfo
-import com.lonx.lyrico.viewmodel.SortOrder
+import com.lonx.lyrico.data.model.SortBy
+import com.lonx.lyrico.data.model.SortInfo
+import com.lonx.lyrico.data.model.SortOrder
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.EditMetadataDestination
@@ -556,9 +556,9 @@ fun FolderManagerScreen(
 
                 uiState.error?.let { error ->
                     if (salt) com.moriafly.salt.ui.ItemTip(
-                        stringResource(R.string.folder_scan_failed, error)
+                        stringResource(R.string.folder_operation_failed, error)
                     ) else Text(
-                        text = stringResource(R.string.folder_scan_failed, error),
+                        text = stringResource(R.string.folder_operation_failed, error),
                         fontSize = MiuixTheme.textStyles.footnote1.fontSize,
                         color = MiuixTheme.colorScheme.error,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)

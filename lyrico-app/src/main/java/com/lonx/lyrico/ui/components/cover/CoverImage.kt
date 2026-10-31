@@ -21,8 +21,8 @@ import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.CoverCandidate
-import com.lonx.lyrico.ui.components.CoverRequest
+import com.lonx.lyrico.data.model.artwork.CoverCandidate
+import com.lonx.lyrico.data.model.artwork.CoverRequest
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.theme.LyricoColors
 import top.yukonga.miuix.kmp.theme.MiuixTheme

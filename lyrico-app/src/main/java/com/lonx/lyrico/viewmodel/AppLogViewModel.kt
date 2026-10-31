@@ -65,6 +65,7 @@ class AppLogViewModel(
                 }
                 _events.emit(AppLogEvent.ShowMessage(UiMessage.StringResource(R.string.app_log_export_success)))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 appLogRepository.logException(
                     type = AppLogType.APP,
                     tag = TAG,

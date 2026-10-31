@@ -2,7 +2,6 @@ package com.lonx.lyrico.data.model
 
 import androidx.annotation.StringRes
 import com.lonx.lyrico.R
-import com.lonx.lyrico.viewmodel.SortOrder
 
 enum class ArtistSortBy(
     @param:StringRes val labelRes: Int,

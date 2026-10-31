@@ -56,7 +56,7 @@ import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.utils.ArtistNameSplitter
 import com.lonx.lyrico.domain.poster.ArtistPosterEdits
 import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
-import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.ReadAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.CoverSourceType
@@ -138,7 +138,7 @@ private const val LYRICS_EXPORT_MIME_TYPE = "application/octet-stream"
 class EditMetadataViewModel(
     private val songLibraryRepository: SongLibraryRepository,
     private val readAudioTagsUseCase: ReadAudioTagsUseCase,
-    private val overwriteSongTagsUseCase: OverwriteSongTagsUseCase,
+    private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val settingsRepository: SettingsRepository,
     private val playbackRepository: PlaybackRepository,
     private val replayGainScanner: ReplayGainScanner,
@@ -224,6 +224,7 @@ class EditMetadataViewModel(
                     )
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "读取音频元数据失败: $uriString", e)
                 recordMetadataException(
                     message = "Failed to read metadata",
@@ -1022,7 +1023,7 @@ class EditMetadataViewModel(
                         .visibleFieldCodesForScene(EditFieldScene.SingleEdit),
                 )
                 when (
-                    val saveResult = overwriteSongTagsUseCase(
+                    val saveResult = saveAudioTagsUseCase.overwrite(
                         uri = uriString,
                         tagData = audioTagData,
                         // 用户基于读取到的图片列表改过图（含删空）时，必须把这份列表写下去

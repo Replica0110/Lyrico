@@ -20,7 +20,7 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.data.utils.ArtistNameSplitter
 import com.lonx.lyrico.domain.poster.ArtistPosterEmbedding
-import com.lonx.lyrico.domain.song.usecase.OverwriteSongTagsUseCase
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.utils.ArtistPosterFileWriter
 import kotlinx.coroutines.CancellationException
@@ -74,7 +74,7 @@ class ArtistDetailViewModel(
     private val libraryIndexRepository: LibraryIndexRepository,
     private val artistId: Long,
     private val audioTagRepository: AudioTagRepository,
-    private val overwriteSongTagsUseCase: OverwriteSongTagsUseCase,
+    private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val settingsRepository: SettingsRepository,
     private val application: Application
 ) : ViewModel() {
@@ -386,7 +386,7 @@ class ArtistDetailViewModel(
         )
         if (nextPictures == current.pictures) return SaveAudioTagsResult.Success(song = song, tagData = current)
 
-        return overwriteSongTagsUseCase(
+        return saveAudioTagsUseCase.overwrite(
             uri = song.uri,
             tagData = current.copy(pictures = nextPictures),
             picturesAuthored = true

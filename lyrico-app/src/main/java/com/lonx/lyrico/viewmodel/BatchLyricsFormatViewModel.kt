@@ -1,13 +1,13 @@
 package com.lonx.lyrico.viewmodel
 
 import com.lonx.lyrico.data.model.lyrics.LyricsOperation
+import com.lonx.lyrico.data.model.lyrics.LyricsFormatConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
-import com.lonx.lyrico.data.model.lyrics.LyricsColumnEdit
 import com.lonx.lyrico.data.model.lyrics.LyricsColumnMapping
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
@@ -240,18 +240,3 @@ class BatchLyricsFormatViewModel(
         }
     }
 }
-
-@kotlinx.serialization.Serializable
-data class LyricsFormatConfig(
-    val targetFormat: LyricFormat? = null,
-    val concurrency: Int,
-    val formatLineOrder: Boolean = true,
-    val removeTagLines: Boolean = false,
-    val tagLineKeywords: List<String> = LyricsProcessingOptions.DefaultTagLineKeywords,
-    val removeEmptyLines: Boolean = false,
-    val twoColumnMapping: LyricsColumnMapping = LyricsColumnMapping.identity(2),
-    val threeColumnMapping: LyricsColumnMapping = LyricsColumnMapping.identity(3),
-    @kotlinx.serialization.SerialName("columnEdits")
-    val legacyColumnEdits: Map<String, LyricsColumnEdit> = emptyMap(),
-    val operation: LyricsOperation = LyricsOperation.CONVERT
-)

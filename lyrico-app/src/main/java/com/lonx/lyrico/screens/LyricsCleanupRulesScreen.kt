@@ -50,7 +50,7 @@ import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text as SaltText
-import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
+import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -256,54 +256,17 @@ fun LyricsCleanupRulesScreen(
         }
     )
 
-    if (salt) {
-        if (deletingRule != null) SaltConfirmDialog(
-            title = stringResource(R.string.non_lyrics_cleanup_delete_rule_title),
-            summary = stringResource(
-                R.string.non_lyrics_cleanup_delete_rule_message,
-                deletingRule.orEmpty()
-            ),
-            onDismissRequest = { deletingRule = null },
-            onConfirm = {
-                deletingRule?.let(viewModel::removeNonLyricsContentRule)
-                deletingRule = null
-            },
-            cancelText = stringResource(R.string.cancel),
-            confirmText = stringResource(R.string.common_delete),
-        )
-    } else WindowDialog(
+    YesNoDialog(
         show = deletingRule != null,
         title = stringResource(R.string.non_lyrics_cleanup_delete_rule_title),
-        onDismissRequest = { deletingRule = null }
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(
-                    R.string.non_lyrics_cleanup_delete_rule_message,
-                    deletingRule.orEmpty()
-                ),
-                color = MiuixTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = { deletingRule = null },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                TextButton(
-                    text = stringResource(R.string.common_delete),
-                    onClick = {
-                        deletingRule?.let(viewModel::removeNonLyricsContentRule)
-                        deletingRule = null
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = MiuixButtonDefaults.textButtonColorsPrimary()
-                )
-            }
-        }
-    }
+        summary = stringResource(R.string.non_lyrics_cleanup_delete_rule_message, deletingRule.orEmpty()),
+        confirmText = stringResource(R.string.common_delete),
+        onDismissRequest = { deletingRule = null },
+        onConfirm = {
+            deletingRule?.let(viewModel::removeNonLyricsContentRule)
+            deletingRule = null
+        },
+    )
 }
 
 @Composable

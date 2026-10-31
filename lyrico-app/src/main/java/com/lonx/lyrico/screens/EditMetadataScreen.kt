@@ -131,7 +131,7 @@ import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
 import com.lonx.lyrico.domain.poster.ArtistPosterPages
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
-import com.lonx.lyrico.ui.components.CoverRequest
+import com.lonx.lyrico.data.model.artwork.CoverRequest
 import com.lonx.lyrico.ui.components.PagerDotsIndicator
 import com.lonx.lyrico.ui.components.base.LyricsOffsetField
 import com.lonx.lyrico.ui.components.base.ExportDestinationBottomSheet
@@ -150,7 +150,7 @@ import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.utils.CoverSourceType
 import com.lonx.lyrico.utils.getCoverSourceType
-import com.lonx.lyrico.utils.coil.ArtistPosterReader
+import com.lonx.lyrico.data.artwork.ArtistPosterReader
 import com.lonx.lyrico.viewmodel.EditMetadataViewModel
 import com.lonx.lyrico.viewmodel.isEqualIgnoringBlank
 import com.ramcosta.composedestinations.annotation.Destination

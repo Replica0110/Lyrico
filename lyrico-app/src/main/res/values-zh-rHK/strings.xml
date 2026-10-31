@@ -44,6 +44,7 @@
     <string name="cache_item">%1$s: %2$s</string>
     <string name="cache_total">總計：%1$s</string>
     <string name="cache_size_label">快取大小：%1$s</string>
+    <string name="cache_operation_failed">快取操作失敗：%1$s</string>
 
     <!-- 分組標題 -->
     <string name="section_appearance">外觀</string>
@@ -294,7 +295,7 @@
     <!-- 資料夾清單狀態 -->
     <string name="folder_scanning">正在掃描資料夾…</string>
     <string name="folder_scan_queued">排隊等待掃描…</string>
-    <string name="folder_scan_failed">掃描失敗：%s</string>
+    <string name="folder_operation_failed">操作失敗：%s</string>
 
     <!-- 資料夾項目資訊 -->
     <string name="folder_root_path">資料夾</string>
@@ -392,6 +393,8 @@
 
     <string name="unknown_error">未知錯誤：%1$s</string>
     <string name="clear_songs">清除所有歌曲</string>
+    <string name="library_cleared">已清空音樂庫</string>
+    <string name="library_clear_failed">清空音樂庫失敗</string>
 
 
 

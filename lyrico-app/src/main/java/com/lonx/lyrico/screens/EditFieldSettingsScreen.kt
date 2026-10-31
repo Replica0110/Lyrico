@@ -77,7 +77,6 @@ import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Switcher
-import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
 import com.moriafly.salt.ui.innerPadding
 import com.moriafly.salt.ui.outerPadding
 import com.moriafly.salt.ui.popup.PopupMenu
@@ -327,56 +326,30 @@ fun EditFieldSettingsScreen(
         },
     )
 
-    if (salt) {
-        if (pendingDeleteKey != null) SaltConfirmDialog(
-            title = stringResource(R.string.custom_tag_delete_title),
-            summary = stringResource(R.string.custom_tag_delete_message, pendingDeleteKey.orEmpty()),
-            onDismissRequest = { pendingDeleteKey = null },
-            onConfirm = {
-                pendingDeleteKey?.let(viewModel::removeCustomTag)
-                pendingDeleteKey = null
-            },
-            cancelText = stringResource(R.string.cancel),
-            confirmText = stringResource(R.string.common_delete),
-        )
-        if (showResetDialog) SaltConfirmDialog(
-            title = stringResource(R.string.reset_to_default),
-            summary = stringResource(R.string.edit_field_settings_reset_message),
-            onDismissRequest = { showResetDialog = false },
-            onConfirm = {
-                viewModel.resetAll()
-                orderState.resetPending()
-                showResetDialog = false
-            },
-            cancelText = stringResource(R.string.cancel),
-            confirmText = stringResource(R.string.confirm),
-        )
-    } else {
-        YesNoDialog(
-            show = pendingDeleteKey != null,
-            title = stringResource(R.string.custom_tag_delete_title),
-            summary = stringResource(R.string.custom_tag_delete_message, pendingDeleteKey.orEmpty()),
-            confirmText = stringResource(R.string.common_delete),
-            onDismissRequest = { pendingDeleteKey = null },
-            onConfirm = {
-                pendingDeleteKey?.let(viewModel::removeCustomTag)
-                pendingDeleteKey = null
-            },
-        )
+    YesNoDialog(
+        show = pendingDeleteKey != null,
+        title = stringResource(R.string.custom_tag_delete_title),
+        summary = stringResource(R.string.custom_tag_delete_message, pendingDeleteKey.orEmpty()),
+        confirmText = stringResource(R.string.common_delete),
+        onDismissRequest = { pendingDeleteKey = null },
+        onConfirm = {
+            pendingDeleteKey?.let(viewModel::removeCustomTag)
+            pendingDeleteKey = null
+        },
+    )
 
-        YesNoDialog(
-            show = showResetDialog,
-            title = stringResource(R.string.reset_to_default),
-            summary = stringResource(R.string.edit_field_settings_reset_message),
-            confirmText = stringResource(R.string.confirm),
-            onDismissRequest = { showResetDialog = false },
-            onConfirm = {
-                viewModel.resetAll()
-                orderState.resetPending()
-                showResetDialog = false
-            },
-        )
-    }
+    YesNoDialog(
+        show = showResetDialog,
+        title = stringResource(R.string.reset_to_default),
+        summary = stringResource(R.string.edit_field_settings_reset_message),
+        confirmText = stringResource(R.string.confirm),
+        onDismissRequest = { showResetDialog = false },
+        onConfirm = {
+            viewModel.resetAll()
+            orderState.resetPending()
+            showResetDialog = false
+        },
+    )
 
     ComponentFieldsBottomSheet(
         show = showComponentSheet,

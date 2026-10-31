@@ -103,11 +103,18 @@ object ArtistPosterFileWriter {
             return null
         }
 
-        val written = context.contentResolver.openOutputStream(documentUri, "wt")?.use { outputStream ->
-            outputStream.write(data)
-            outputStream.flush()
-            true
-        } ?: false
+        val written = try {
+            context.contentResolver.openOutputStream(documentUri, "wt")?.use { outputStream ->
+                outputStream.write(data)
+                outputStream.flush()
+                true
+            } ?: false
+        } catch (error: Exception) {
+            // Only this newly created file is ours to remove; leave the previous poster untouched.
+            runCatching { DocumentsContract.deleteDocument(context.contentResolver, documentUri) }
+                .exceptionOrNull()?.let(error::addSuppressed)
+            throw error
+        }
 
         if (!written) {
             report("Poster write failed", "stage=open-output uri=$documentUri reason=provider-returned-null")

@@ -2,7 +2,6 @@ package com.lonx.lyrico.screens.library
 
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -59,7 +58,7 @@ import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.data.model.ArtistSortBy
 import com.lonx.lyrico.data.model.ArtistSortInfo
-import com.lonx.lyrico.ui.components.CoverCandidate
+import com.lonx.lyrico.data.model.artwork.CoverCandidate
 import com.lonx.lyrico.ui.components.artist.ArtistListItemContent
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.rememberAlphabetSideBarScrollController
@@ -75,7 +74,7 @@ import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.scaffoldPageWindowInsets
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.viewmodel.ArtistLibraryViewModel
-import com.lonx.lyrico.viewmodel.SortOrder
+import com.lonx.lyrico.data.model.SortOrder
 import com.moriafly.salt.ui.SaltTheme
 import com.ramcosta.composedestinations.generated.destinations.ArtistDetailDestination
 import com.ramcosta.composedestinations.generated.destinations.LocalSearchDestination

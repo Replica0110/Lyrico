@@ -70,7 +70,7 @@ import com.lonx.lyrico.ui.components.album.AlbumListItem
 import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.base.YesNoDialog
-import com.lonx.lyrico.ui.components.CoverCandidate
+import com.lonx.lyrico.data.model.artwork.CoverCandidate
 import com.lonx.lyrico.ui.components.cover.CoverImage
 import com.lonx.lyrico.ui.components.library.AlbumActionBottomSheet
 import com.lonx.lyrico.ui.components.poster.ArtistPosterActionsSheet

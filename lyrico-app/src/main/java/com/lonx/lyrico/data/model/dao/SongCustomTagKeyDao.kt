@@ -38,8 +38,8 @@ interface SongCustomTagKeyDao {
     @Query("DELETE FROM song_custom_tag_keys WHERE songUri = :songUri")
     suspend fun deleteForSong(songUri: String)
 
-    @Query("DELETE FROM song_custom_tag_keys WHERE songUri IN (:songUris)")
-    suspend fun deleteForSongs(songUris: List<String>)
+    @Query("UPDATE song_custom_tag_keys SET songUri = :newUri WHERE songUri = :oldUri")
+    suspend fun updateSongUri(oldUri: String, newUri: String)
 
     @Query("DELETE FROM song_custom_tag_keys")
     suspend fun clearAll()

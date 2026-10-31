@@ -72,7 +72,7 @@ import com.lonx.lyrico.viewmodel.AppLogEvent
 import com.lonx.lyrico.viewmodel.AppLogViewModel
 import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.SaltTheme
-import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
+import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.moriafly.salt.ui.screen.ScreenCard
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -80,7 +80,6 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -89,12 +88,10 @@ import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowDialog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -373,52 +370,20 @@ fun AppLogScreen(
         }
     )
 
-    if (salt) {
-        if (showDeleteConfirmDialog) SaltConfirmDialog(
-            title = stringResource(R.string.app_log_delete_title),
-            summary = stringResource(R.string.app_log_delete_message, pendingDeleteIds.size),
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            onConfirm = {
-                viewModel.deleteLogs(pendingDeleteIds)
-                selectedLogIds = emptySet()
-                pendingDeleteIds = emptyList()
-                showDeleteConfirmDialog = false
-            },
-            cancelText = stringResource(R.string.cancel),
-            confirmText = stringResource(R.string.confirm),
-        )
-    } else WindowDialog(
+    YesNoDialog(
         show = showDeleteConfirmDialog,
         title = stringResource(R.string.app_log_delete_title),
-        onDismissRequest = { showDeleteConfirmDialog = false }
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(R.string.app_log_delete_message, pendingDeleteIds.size),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = { showDeleteConfirmDialog = false },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(20.dp))
-                TextButton(
-                    text = stringResource(R.string.confirm),
-                    onClick = {
-                        viewModel.deleteLogs(pendingDeleteIds)
-                        selectedLogIds = emptySet()
-                        pendingDeleteIds = emptyList()
-                        showDeleteConfirmDialog = false
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary()
-                )
-            }
-        }
-    }
+        summary = stringResource(R.string.app_log_delete_message, pendingDeleteIds.size),
+        onDismissRequest = { showDeleteConfirmDialog = false },
+        onDismissFinished = {
+            if (!showDeleteConfirmDialog) pendingDeleteIds = emptyList()
+        },
+        onConfirm = {
+            viewModel.deleteLogs(pendingDeleteIds)
+            selectedLogIds = emptySet()
+            showDeleteConfirmDialog = false
+        },
+    )
 }
 
 @Composable

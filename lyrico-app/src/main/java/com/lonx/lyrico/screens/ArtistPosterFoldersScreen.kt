@@ -3,7 +3,6 @@
 package com.lonx.lyrico.screens
 
 import com.lonx.lyrico.ui.components.salt.SaltTextInput
-
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,7 +46,7 @@ import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 import com.lonx.lyrico.ui.components.base.ItemMenuAction
-import com.lonx.lyrico.viewmodel.ArtistPosterFile
+import com.lonx.lyrico.data.model.artist.ArtistPosterFile
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState

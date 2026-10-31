@@ -1,18 +1,15 @@
 package com.lonx.lyrico.domain.song.usecase
 
 import android.content.IntentSender
-import androidx.room.withTransaction
-import com.lonx.lyrico.data.LyricoDatabase
 import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.file.RenameSongFileResult
 import com.lonx.lyrico.data.song.file.SongFileRepository
 import com.lonx.lyrico.data.song.mapper.SortKeyUpdater
 
 class RenameSongUseCase(
-    private val database: LyricoDatabase,
     private val songFileRepository: SongFileRepository,
-    private val libraryIndexRepository: LibraryIndexRepository,
+    private val songLibraryRepository: SongLibraryRepository,
     private val sortKeyUpdater: SortKeyUpdater
 ) {
     suspend operator fun invoke(
@@ -30,12 +27,7 @@ class RenameSongUseCase(
                     )
                 )
 
-                database.withTransaction {
-                    database.songDao().update(updatedSong)
-                    libraryIndexRepository.reindexSongInTransaction(updatedSong)
-                    database.folderDao().refreshSongCount(updatedSong.folderId)
-                }
-                libraryIndexRepository.refreshAndPruneIndexes()
+                songLibraryRepository.synchronizeRenamedSong(updatedSong, fileResult.oldUri)
                 RenameSongResult.Success(updatedSong, fileResult.oldUri)
             }
             is RenameSongFileResult.NameConflict -> RenameSongResult.NameConflict(fileResult.targetName)

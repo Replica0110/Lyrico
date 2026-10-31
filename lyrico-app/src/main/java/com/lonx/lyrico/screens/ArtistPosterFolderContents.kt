@@ -32,7 +32,7 @@ import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.poster.PosterPreviewMenuAction
-import com.lonx.lyrico.viewmodel.ArtistPosterFile
+import com.lonx.lyrico.data.model.artist.ArtistPosterFile
 import com.lonx.lyrico.viewmodel.ArtistPosterFolder
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemValue

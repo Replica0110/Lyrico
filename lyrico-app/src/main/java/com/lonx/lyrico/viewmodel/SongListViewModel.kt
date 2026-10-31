@@ -1,11 +1,12 @@
 package com.lonx.lyrico.viewmodel
 
+import com.lonx.lyrico.data.model.SortInfo
 import android.os.Parcelable
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.LyricoDatabase
+import com.lonx.lyrico.data.repository.LibraryFolderRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.model.search.LocalSearchType
 import com.lonx.lyrico.data.model.entity.SongEntity
@@ -59,11 +60,10 @@ class SongListViewModel(
     private val settingsRepository: SettingsRepository,
     private val updateManager: UpdateManager,
     private val libraryScanManager: LibraryScanManager,
-    database: LyricoDatabase
+    folderRepository: LibraryFolderRepository
 ) : ViewModel() {
 
     private val TAG = "SongListViewModel"
-    private val folderDao = database.folderDao()
     private var batchMatchJob: Job? = null
 
 
@@ -71,7 +71,7 @@ class SongListViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, SortInfo())
 
 
-    val hasFolders: StateFlow<Boolean> = folderDao.getAllFolders()
+    val hasFolders: StateFlow<Boolean> = folderRepository.observeFolders()
         .map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 

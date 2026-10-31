@@ -1,8 +1,6 @@
 package com.lonx.lyrico.data.model
 
 import androidx.annotation.StringRes
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
 import kotlinx.serialization.Serializable
 
@@ -108,14 +106,6 @@ enum class ReplacementCharOption(
 fun String?.toReplacementOption(): ReplacementCharOption? {
     return ReplacementCharOption.fromValue(this)
 }
-/**
- * 预定义的替换字符选项
- */
-@Composable
-fun ReplacementCharOption.displayName(): String {
-    return stringResource(id = labelRes)
-}
-
 object CharacterMappingDefaults {
     val DEFAULT_INVALID_CHARS = CharacterMappingRule(
         id = "default_invalid_chars",

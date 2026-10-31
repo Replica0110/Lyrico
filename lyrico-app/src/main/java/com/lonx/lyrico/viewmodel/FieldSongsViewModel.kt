@@ -1,5 +1,7 @@
 package com.lonx.lyrico.viewmodel
 
+import com.lonx.lyrico.data.model.SortOrder
+import com.lonx.lyrico.data.model.SortBy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.SharedSelectionManager

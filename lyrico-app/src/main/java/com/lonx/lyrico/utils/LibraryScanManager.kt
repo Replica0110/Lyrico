@@ -1,15 +1,13 @@
 package com.lonx.lyrico.utils
 
-import android.content.Context
 import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.model.entity.FolderEntity
+import com.lonx.lyrico.data.repository.LibraryFolderRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.song.scan.LibraryScanProgress
 import com.lonx.lyrico.data.song.scan.LibraryScanRequest
-import com.lonx.lyrico.domain.song.usecase.SynchronizeLibraryUseCase
+import com.lonx.lyrico.data.song.scan.LibraryScanRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class LibraryScanState(
     val isScanning: Boolean = false,
@@ -37,28 +37,29 @@ interface LibraryScanManager {
     )
     fun scanFolders(folderIds: Set<Long>, fullRescan: Boolean = false)
     fun addFolderAndScan(path: String, treeUri: String)
+    suspend fun clearLibrary(): Boolean
 }
 
 class LibraryScanManagerImpl(
     private val appScope: CoroutineScope,
-    private val context: Context,
-    private val database: LyricoDatabase,
+    private val folderRepository: LibraryFolderRepository,
     private val settingsRepository: SettingsRepository,
-    private val synchronizeLibraryUseCase: SynchronizeLibraryUseCase
+    private val libraryScanRepository: LibraryScanRepository
 ) : LibraryScanManager {
 
-    private val folderDao = database.folderDao()
     private val _state = MutableStateFlow(LibraryScanState())
     override val state: StateFlow<LibraryScanState> = _state.asStateFlow()
     private var scanJob: Job? = null
     private val pendingRequests = ArrayDeque<ScanRequest>()
     private val queueLock = Any()
+    private val requestMutex = Mutex()
+    private var requestGeneration = 0L
 
     override fun scanAll(
         fullRescan: Boolean,
         onSuccess: (suspend () -> Unit)?
     ) {
-        enqueueScan(
+        requestScan(
             ScanRequest(
                 fullRescan = fullRescan,
                 folderIds = null,
@@ -69,85 +70,52 @@ class LibraryScanManagerImpl(
 
     override fun scanFolders(folderIds: Set<Long>, fullRescan: Boolean) {
         if (folderIds.isEmpty()) return
-        enqueueScan(ScanRequest(fullRescan = fullRescan, folderIds = folderIds))
+        requestScan(ScanRequest(fullRescan = fullRescan, folderIds = folderIds))
     }
 
     override fun addFolderAndScan(path: String, treeUri: String) {
+        val generation = synchronized(queueLock) { requestGeneration }
         appScope.launch {
             try {
-                releaseRedundantSafPermissions(path, treeUri)
-                val id = folderDao.upsertAndGetId(
-                    path = path,
-                    treeUri = treeUri,
-                    addedBySaf = true
-                )
-                folderDao.setIgnored(id, false)
-                enqueueScan(ScanRequest(fullRescan = false, folderIds = setOf(id)))
-                AppLog.record(AppLogType.APP, "LibraryFolders", "Library folder registered",
-                    "path=$path\ntreeUri=$treeUri\nfolderId=$id\nscanQueued=true", treeUri, AppLogLevel.INFO)
+                requestMutex.withLock {
+                    if (generation != synchronized(queueLock) { requestGeneration }) return@withLock
+                    val id = folderRepository.register(path, treeUri)
+                    enqueueScan(ScanRequest(fullRescan = false, folderIds = setOf(id)))
+                    AppLog.record(AppLogType.APP, "LibraryFolders", "Library folder registered",
+                        "path=$path\ntreeUri=$treeUri\nfolderId=$id\nscanQueued=true", treeUri, AppLogLevel.INFO)
+                }
             } catch (error: Exception) {
                 if (error is kotlinx.coroutines.CancellationException) throw error
                 AppLog.record(AppLogType.APP, "LibraryFolders", "Library folder registration failed",
                     "path=$path\ntreeUri=$treeUri", treeUri, AppLogLevel.ERROR, error)
-                throw error
+                _state.update { it.copy(error = error.message ?: error::class.java.simpleName) }
             }
         }
     }
 
-    private suspend fun releaseRedundantSafPermissions(path: String, treeUri: String) {
-        val normalizedPath = normalizeFolderPath(path)
-        val allFolders = folderDao.getAllFoldersOnce()
-
-        val existing = allFolders.firstOrNull { folder ->
-            normalizeFolderPath(folder.path) == normalizedPath
-        }
-        if (existing != null && existing.treeUri != treeUri) {
-            releaseFolderPermission(existing)
-        }
-
-        val existingParent = allFolders
-            .filter { folder ->
-                folder.id != existing?.id &&
-                        isParentFolder(
-                            parentPath = normalizeFolderPath(folder.path),
-                            childPath = normalizedPath
-                        )
+    override suspend fun clearLibrary(): Boolean {
+        // Invalidate requests whose app-scope coroutines have not entered the queue yet.
+        synchronized(queueLock) { requestGeneration++ }
+        return requestMutex.withLock {
+            val active = synchronized(queueLock) {
+                pendingRequests.clear()
+                scanJob.also { scanJob = null; it?.cancel() }
             }
-            .maxByOrNull { folder -> normalizeFolderPath(folder.path).length }
-        if (existingParent != null) {
-            UriUtils.releasePersistedPermission(context.contentResolver, treeUri)
-            return
+            active?.join()
+            updateQueuedState()
+            val cleared = folderRepository.clear()
+            _state.update { it.copy(error = null) }
+            cleared
         }
+    }
 
-        allFolders
-            .filter { folder ->
-                isParentFolder(
-                    parentPath = normalizedPath,
-                    childPath = normalizeFolderPath(folder.path)
-                )
+    private fun requestScan(request: ScanRequest) {
+        val generation = synchronized(queueLock) { requestGeneration }
+        appScope.launch {
+            requestMutex.withLock {
+                if (generation == synchronized(queueLock) { requestGeneration }) enqueueScan(request)
             }
-            .forEach { folder -> releaseFolderPermission(folder) }
-    }
-
-    private fun releaseFolderPermission(folder: FolderEntity) {
-        if (folder.addedBySaf) {
-            UriUtils.releasePersistedPermission(context.contentResolver, folder.treeUri)
         }
-    }
-
-    private fun normalizeFolderPath(path: String): String {
-        val normalized = path
-            .replace('\\', '/')
-            .trim()
-            .trimEnd('/')
-
-        return normalized.ifBlank { path.trim() }
-    }
-
-    private fun isParentFolder(parentPath: String, childPath: String): Boolean {
-        if (parentPath.isBlank() || childPath.isBlank()) return false
-        if (parentPath == childPath) return false
-        return childPath.startsWith("$parentPath/")
     }
 
     private fun enqueueScan(request: ScanRequest) {
@@ -208,7 +176,7 @@ class LibraryScanManagerImpl(
             }
 
             try {
-                synchronizeLibraryUseCase(
+                libraryScanRepository.synchronize(
                     request = LibraryScanRequest(
                         fullRescan = request.fullRescan,
                         folderIds = request.folderIds,
@@ -220,6 +188,7 @@ class LibraryScanManagerImpl(
                 )
                 request.onSuccessActions.forEach { action -> action() }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.update { it.copy(error = e.message ?: e::class.java.simpleName) }
             } finally {
                 _state.update {

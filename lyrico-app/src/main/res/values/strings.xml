@@ -830,8 +830,8 @@
     <string name="poster_preview_format">Format</string>
     <string name="ui_engine">Interface style</string>
     <string name="common_edit">Edit</string>
-    <string name="ui_engine_miuix">Miuix</string>
-    <string name="ui_engine_salt">SaltUI</string>
+    <string name="ui_engine_miuix" translatable="false">Miuix</string>
+    <string name="ui_engine_salt" translatable="false">SaltUI</string>
     <string name="batch_edit_unchanged_field_label">%1$s (Unchanged)</string>
     <string name="action_clear_search">Clear search</string>
     <string name="plugin_action_scanned">Plugin package scanned</string>

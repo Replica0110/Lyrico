@@ -111,6 +111,20 @@ Enter multi-select mode by:
 
 See [Batch Operations](./batch.md#entering-selection-mode) for details.
 
+### Batch tasks stall in the background but continue when I return to the app?
+
+Battery optimization or background activity restrictions may pause the app. Check Lyrico's background settings first. Systems such as ColorOS may have a separate background activity control.
+
+1. Long-press the Lyrico icon, open **App info**, and find **Battery usage**, **Battery management**, or a similar setting.
+2. Set Lyrico to **Unrestricted / No restrictions**, or enable **Allow background activity / Allow background running**.
+3. If your system has a separate **Battery optimization** setting, select **Don't optimize / Ignore battery optimization** for Lyrico. Also check whether a power-saving mode is still restricting it.
+
+Names and locations vary by device and system version. Background activity and battery optimization may need to be configured separately. Allowing continuous background activity may increase battery use.
+
+If tasks still stall, filter **App Logs** by **Batch** under `Settings` → `Other` and include the logs in your report. You can also keep Lyrico in the foreground until the task finishes.
+
+References: [Android background optimization](https://developer.android.com/topic/performance/background-optimization), [World Run's OPPO background settings guide](https://donate.wingsforlifeworldrun.com/en/wflwr-app-settings/android/oppo).
+
 ### Batch matching fails halfway through?
 
 Possible reasons:

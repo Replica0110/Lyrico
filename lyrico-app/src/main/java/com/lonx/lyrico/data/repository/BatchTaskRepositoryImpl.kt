@@ -124,20 +124,8 @@ class BatchTaskRepositoryImpl(
     }
 
     override suspend fun updateProgressFromItems(taskId: String, currentFile: String?) {
-        val task = batchTaskDao.getTask(taskId) ?: return
-        val succeeded = batchTaskDao.getItemsByStatus(taskId, BatchTaskStatus.SUCCEEDED)
-        val failed = batchTaskDao.getItemsByStatus(taskId, BatchTaskStatus.FAILED)
-        val skipped = batchTaskDao.getItemsByStatus(taskId, BatchTaskStatus.SKIPPED)
-        val totalProcessed = succeeded.size + failed.size + skipped.size
-        val now = System.currentTimeMillis()
-        batchTaskDao.updateTaskProgress(
-            taskId = taskId,
-            current = totalProcessed,
-            success = succeeded.size,
-            failure = failed.size,
-            skipped = skipped.size,
-            currentFile = currentFile,
-            updatedAt = now
+        batchTaskDao.updateTaskProgressFromItems(
+            taskId, currentFile, System.currentTimeMillis()
         )
     }
 
@@ -150,21 +138,8 @@ class BatchTaskRepositoryImpl(
         return batchTaskDao.getItemsByStatus(taskId, listOf(BatchTaskStatus.QUEUED, BatchTaskStatus.RUNNING))
     }
 
-    override suspend fun getOrphanedRunningTasks(): List<BatchTaskEntity> {
+    override suspend fun getActiveTasks(): List<BatchTaskEntity> {
         return batchTaskDao.getTasksByStatuses(listOf(BatchTaskStatus.RUNNING, BatchTaskStatus.QUEUED))
-    }
-
-    override suspend fun markOrphanedTasksFailed() {
-        val orphaned = getOrphanedRunningTasks()
-        val now = System.currentTimeMillis()
-        for (task in orphaned) {
-            batchTaskDao.updateTaskStatusWithError(
-                task.taskId,
-                BatchTaskStatus.FAILED,
-                "Task interrupted by system",
-                now
-            )
-        }
     }
 
     override suspend fun deleteTask(taskId: String) {

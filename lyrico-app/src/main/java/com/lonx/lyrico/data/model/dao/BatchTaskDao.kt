@@ -43,11 +43,29 @@ interface BatchTaskDao {
     @Query("SELECT * FROM batch_task_items WHERE taskId = :taskId AND status = :status")
     suspend fun getItemsByStatus(taskId: String, status: BatchTaskStatus): List<BatchTaskItemEntity>
 
-    @Query("UPDATE batch_tasks SET status = :status, updatedAt = :updatedAt, startedAt = COALESCE(startedAt, :updatedAt) WHERE taskId = :taskId")
-    suspend fun updateTaskStatus(taskId: String, status: BatchTaskStatus, updatedAt: Long)
+    @Query("UPDATE batch_tasks SET status = :status, updatedAt = :updatedAt, startedAt = COALESCE(startedAt, :updatedAt) WHERE taskId = :taskId AND status IN (:activeStatuses)")
+    suspend fun updateTaskStatus(
+        taskId: String, status: BatchTaskStatus, updatedAt: Long,
+        activeStatuses: List<BatchTaskStatus> = listOf(BatchTaskStatus.QUEUED, BatchTaskStatus.RUNNING)
+    )
 
-    @Query("UPDATE batch_tasks SET current = :current, successCount = :success, failureCount = :failure, skippedCount = :skipped, currentFile = :currentFile, updatedAt = :updatedAt WHERE taskId = :taskId")
-    suspend fun updateTaskProgress(taskId: String, current: Int, success: Int, failure: Int, skipped: Int, currentFile: String?, updatedAt: Long)
+    @Query("""
+        UPDATE batch_tasks SET
+            current = (SELECT COUNT(*) FROM batch_task_items WHERE taskId = :taskId AND status IN (:succeeded, :failed, :skipped)),
+            successCount = (SELECT COUNT(*) FROM batch_task_items WHERE taskId = :taskId AND status = :succeeded),
+            failureCount = (SELECT COUNT(*) FROM batch_task_items WHERE taskId = :taskId AND status = :failed),
+            skippedCount = (SELECT COUNT(*) FROM batch_task_items WHERE taskId = :taskId AND status = :skipped),
+            currentFile = :currentFile, updatedAt = :updatedAt
+        WHERE taskId = :taskId
+    """)
+    suspend fun updateTaskProgressFromItems(
+        taskId: String,
+        currentFile: String?,
+        updatedAt: Long,
+        succeeded: BatchTaskStatus = BatchTaskStatus.SUCCEEDED,
+        failed: BatchTaskStatus = BatchTaskStatus.FAILED,
+        skipped: BatchTaskStatus = BatchTaskStatus.SKIPPED
+    )
 
     @Query("UPDATE batch_task_items SET status = :status, resultJson = :resultJson, errorMessage = :errorMessage, updatedAt = :updatedAt WHERE itemId = :itemId")
     suspend fun updateItemStatus(itemId: String, status: BatchTaskStatus, resultJson: String?, errorMessage: String?, updatedAt: Long)
@@ -67,8 +85,11 @@ interface BatchTaskDao {
     @Query("SELECT * FROM batch_tasks WHERE type = :type AND status IN (:statuses) ORDER BY createdAt DESC LIMIT 1")
     suspend fun getTaskByTypeAndStatuses(type: BatchTaskType, statuses: List<BatchTaskStatus>): BatchTaskEntity?
 
-    @Query("UPDATE batch_tasks SET status = :status, errorMessage = :errorMessage, updatedAt = :updatedAt, finishedAt = COALESCE(finishedAt, :updatedAt) WHERE taskId = :taskId")
-    suspend fun updateTaskStatusWithError(taskId: String, status: BatchTaskStatus, errorMessage: String?, updatedAt: Long)
+    @Query("UPDATE batch_tasks SET status = :status, errorMessage = :errorMessage, updatedAt = :updatedAt, finishedAt = COALESCE(finishedAt, :updatedAt) WHERE taskId = :taskId AND status IN (:activeStatuses)")
+    suspend fun updateTaskStatusWithError(
+        taskId: String, status: BatchTaskStatus, errorMessage: String?, updatedAt: Long,
+        activeStatuses: List<BatchTaskStatus> = listOf(BatchTaskStatus.QUEUED, BatchTaskStatus.RUNNING)
+    )
 
     @Query("DELETE FROM batch_task_items WHERE taskId = :taskId")
     suspend fun deleteItemsByTaskId(taskId: String)

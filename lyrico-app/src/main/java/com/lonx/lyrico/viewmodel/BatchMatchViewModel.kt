@@ -234,12 +234,11 @@ class BatchMatchViewModel(
                     concurrency = matchConfig.concurrency
                 )
             )
-            val taskId = batchTaskRepository.createTask(
+            val taskId = batchTaskScheduler.schedule(
                 type = matchType.taskType,
                 songs = songsToMatch,
                 configJson = configJson
             )
-            batchTaskScheduler.enqueue(taskId)
             resumeObservingTask(taskId)
         }
     }

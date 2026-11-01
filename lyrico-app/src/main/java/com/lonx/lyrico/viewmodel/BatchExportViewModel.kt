@@ -98,12 +98,11 @@ class BatchExportViewModel(
                     destination = destination
                 )
             )
-            val taskId = batchTaskRepository.createTask(
+            val taskId = batchTaskScheduler.schedule(
                 type = taskType,
                 songs = songs,
                 configJson = configJson
             )
-            batchTaskScheduler.enqueue(taskId)
             resumeObservingTask(taskId, taskType)
         }
     }

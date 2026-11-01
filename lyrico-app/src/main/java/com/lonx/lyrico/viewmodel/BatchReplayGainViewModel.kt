@@ -160,12 +160,11 @@ class BatchReplayGainViewModel(
                     peakMode = replayGainSettings.peakMode
                 )
             )
-            val taskId = batchTaskRepository.createTask(
+            val taskId = batchTaskScheduler.schedule(
                 type = BatchTaskType.SCAN_REPLAY_GAIN,
                 songs = songs,
                 configJson = configJson
             )
-            batchTaskScheduler.enqueue(taskId)
             resumeObservingTask(taskId)
         }
     }

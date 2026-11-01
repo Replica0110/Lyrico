@@ -14,6 +14,7 @@ import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.LogOperation
 import com.lonx.lyrico.data.model.log.recordOperation
 import com.lonx.lyrico.data.model.BatchTaskType
+import com.lonx.lyrico.data.model.BatchTaskStatus
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.BatchTaskRepository
@@ -26,6 +27,7 @@ import com.lonx.lyrico.worker.processor.RenameFilesTaskConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsFormatConfig
 import com.lonx.lyrico.worker.processor.ReplayGainTaskConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -57,10 +59,13 @@ class BatchTaskWorker(
         if (taskId.isEmpty()) return Result.failure()
 
         val wakeLock = acquireWakeLock()
-        BatchTaskNotification.ensureChannel(applicationContext)
 
         try {
+            BatchTaskNotification.ensureChannel(applicationContext)
             val task = taskRepository.getTask(taskId) ?: return Result.failure()
+            if (task.status != BatchTaskStatus.QUEUED && task.status != BatchTaskStatus.RUNNING) {
+                return Result.success()
+            }
             val title = getTaskTitle(task.type)
             val total = task.total
             val startedAt = System.currentTimeMillis()
@@ -77,6 +82,7 @@ class BatchTaskWorker(
                     "routineDetailSamples=$ROUTINE_DETAIL_SAMPLES; warnings and errors are not sampled\n$configSummary", taskId, AppLogLevel.INFO)
 
             if (items.isEmpty()) {
+                taskRepository.updateProgressFromItems(taskId, task.currentFile)
                 taskRepository.markSucceeded(taskId)
                 logBatch(
                     level = AppLogLevel.INFO,
@@ -109,143 +115,115 @@ class BatchTaskWorker(
             val failureCount = AtomicInteger(0)
             val itemDetails = ConcurrentLinkedQueue<String>()
 
-            try {
-                coroutineScope {
-                    val jobs = items.mapIndexed { index, item ->
-                        async(Dispatchers.IO) {
-                            semaphore.withPermit {
-                                if (isStopped) return@async
-                                withContext(LogOperation("batch-$taskId-item-${item.itemId}", recordRoutine = index < ROUTINE_DETAIL_SAMPLES)) {
-                                    val itemStarted = System.nanoTime()
+            coroutineScope {
+                val jobs = items.mapIndexed { index, item ->
+                    async(Dispatchers.IO) {
+                        semaphore.withPermit {
+                            if (isStopped) throw CancellationException("Batch worker stopped")
+                            withContext(LogOperation("batch-$taskId-item-${item.itemId}", recordRoutine = index < ROUTINE_DETAIL_SAMPLES)) {
+                                val itemStarted = System.nanoTime()
+                                try {
+                                    appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item started",
+                                        "task=$taskId\nitem=${item.itemId}\ntype=${task.type}\nuri=${item.songUri}", item.songUri)
+                                    taskRepository.markItemRunning(item.itemId)
+                                    val result = processor.process(task, item) { progress ->
+                                        taskRepository.updateItemProgress(item.itemId, progress)
+                                    }
+                                    if (result.updatedFilePath != null && result.updatedFileName != null) {
+                                        taskRepository.updateItemFileInfo(
+                                            itemId = item.itemId,
+                                            filePath = result.updatedFilePath,
+                                            fileName = result.updatedFileName
+                                        )
+                                    }
+                                    taskRepository.markItemSucceeded(item.itemId, result.resultJson)
+                                    successCount.incrementAndGet()
+                                    appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item succeeded",
+                                        "task=$taskId\nitem=${item.itemId}\nuri=${item.songUri}\n" +
+                                            "elapsedMs=${(System.nanoTime() - itemStarted) / 1_000_000}\noutput=${result.updatedFilePath}", item.songUri)
+                                } catch (e: BatchTaskSkippedException) {
+                                    appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item skipped",
+                                        "task=$taskId\nitem=${item.itemId}\nuri=${item.songUri}\nreason=${e.message}", item.songUri)
+                                    taskRepository.markItemSkipped(item.itemId, e.message)
+                                    skippedCount.incrementAndGet()
+                                    if (itemDetails.size < MAX_ITEM_DETAILS_IN_LOG) itemDetails.add("SKIPPED item=${item.itemId}: ${e.message ?: "No reason"}")
+                                } catch (e: Exception) {
+                                    if (e is kotlinx.coroutines.CancellationException) throw e
+                                    appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item failed",
+                                        "task=$taskId\nitem=${item.itemId}\ntype=${task.type}\nuri=${item.songUri}\n" +
+                                            "elapsedMs=${(System.nanoTime() - itemStarted) / 1_000_000}\n${e.stackTraceToString()}", item.songUri, AppLogLevel.ERROR)
+                                    taskRepository.markItemFailed(item.itemId, e.message)
+                                    failureCount.incrementAndGet()
+                                    if (itemDetails.size < MAX_ITEM_DETAILS_IN_LOG) itemDetails.add("FAILED item=${item.itemId}: ${e.message ?: e::class.java.simpleName}")
+                                } finally {
+                                    val current = processedCount.incrementAndGet()
+                                    if (current % LOG_PROGRESS_INTERVAL == 0 || current == itemTotal) {
+                                        withContext(LogOperation("batch-$taskId")) {
+                                            appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch task progress",
+                                                "task=$taskId\nprocessed=$current/$itemTotal\nsuccess=${successCount.get()}\n" +
+                                                    "skipped=${skippedCount.get()}\nfailed=${failureCount.get()}\n" +
+                                                    "routineDetailSamples=$ROUTINE_DETAIL_SAMPLES; warnings and errors are not sampled",
+                                                taskId, AppLogLevel.INFO)
+                                        }
+                                    }
+                                    taskRepository.updateProgressFromItems(taskId, item.fileName)
                                     try {
-                                        appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item started",
-                                            "task=$taskId\nitem=${item.itemId}\ntype=${task.type}\nuri=${item.songUri}", item.songUri)
-                                        taskRepository.markItemRunning(item.itemId)
-                                        val result = processor.process(task, item) { progress ->
-                                            taskRepository.updateItemProgress(item.itemId, progress)
-                                        }
-                                        if (result.updatedFilePath != null && result.updatedFileName != null) {
-                                            taskRepository.updateItemFileInfo(
-                                                itemId = item.itemId,
-                                                filePath = result.updatedFilePath,
-                                                fileName = result.updatedFileName
-                                            )
-                                        }
-                                        taskRepository.markItemSucceeded(item.itemId, result.resultJson)
-                                        successCount.incrementAndGet()
-                                        appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item succeeded",
-                                            "task=$taskId\nitem=${item.itemId}\nuri=${item.songUri}\n" +
-                                                "elapsedMs=${(System.nanoTime() - itemStarted) / 1_000_000}\noutput=${result.updatedFilePath}", item.songUri)
-                                    } catch (e: BatchTaskSkippedException) {
-                                        appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item skipped",
-                                            "task=$taskId\nitem=${item.itemId}\nuri=${item.songUri}\nreason=${e.message}", item.songUri)
-                                        taskRepository.markItemSkipped(item.itemId, e.message)
-                                        skippedCount.incrementAndGet()
-                                        if (itemDetails.size < MAX_ITEM_DETAILS_IN_LOG) itemDetails.add("SKIPPED item=${item.itemId}: ${e.message ?: "No reason"}")
+                                        setForeground(
+                                            createForegroundInfo(title, current, itemTotal)
+                                        )
                                     } catch (e: Exception) {
-                                        if (e is kotlinx.coroutines.CancellationException) throw e
-                                        appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch item failed",
-                                            "task=$taskId\nitem=${item.itemId}\ntype=${task.type}\nuri=${item.songUri}\n" +
-                                                "elapsedMs=${(System.nanoTime() - itemStarted) / 1_000_000}\n${e.stackTraceToString()}", item.songUri, AppLogLevel.ERROR)
-                                        taskRepository.markItemFailed(item.itemId, e.message)
-                                        failureCount.incrementAndGet()
-                                        if (itemDetails.size < MAX_ITEM_DETAILS_IN_LOG) itemDetails.add("FAILED item=${item.itemId}: ${e.message ?: e::class.java.simpleName}")
-                                    } finally {
-                                        val current = processedCount.incrementAndGet()
-                                        if (current % LOG_PROGRESS_INTERVAL == 0 || current == itemTotal) {
-                                            withContext(LogOperation("batch-$taskId")) {
-                                                appLogRepository.recordOperation(AppLogType.BATCH, TAG, "Batch task progress",
-                                                    "task=$taskId\nprocessed=$current/$itemTotal\nsuccess=${successCount.get()}\n" +
-                                                        "skipped=${skippedCount.get()}\nfailed=${failureCount.get()}\n" +
-                                                        "routineDetailSamples=$ROUTINE_DETAIL_SAMPLES; warnings and errors are not sampled",
-                                                    taskId, AppLogLevel.INFO)
-                                            }
-                                        }
-                                        taskRepository.updateProgressFromItems(taskId, item.fileName)
-                                        try {
-                                            setForeground(
-                                                createForegroundInfo(title, current, itemTotal)
-                                            )
-                                        } catch (e: Exception) {
-                                            Log.w(TAG, "Failed to update foreground notification", e)
-                                        }
+                                        if (e is CancellationException) throw e
+                                        Log.w(TAG, "Failed to update foreground notification", e)
                                     }
                                 }
                             }
                         }
                     }
-                    jobs.awaitAll()
                 }
-            } finally {
-                withContext(NonCancellable) {
-                    if (isStopped) {
-                        taskRepository.markCancelled(taskId)
-                        logBatch(
-                            level = AppLogLevel.WARNING,
-                            message = buildBatchMessage(
-                                task.type,
-                                "cancelled",
-                                processedCount.get(),
-                                successCount.get(),
-                                skippedCount.get(),
-                                failureCount.get()
-                            ),
-                            detail = buildBatchSummary(
-                                taskType = task.type,
-                                status = "cancelled",
-                                configSummary = configSummary,
-                                startedAt = startedAt,
-                                total = total,
-                                pending = itemTotal,
-                                concurrency = concurrency,
-                                processed = processedCount.get(),
-                                success = successCount.get(),
-                                skipped = skippedCount.get(),
-                                failure = failureCount.get(),
-                                itemDetails = itemDetails.toList()
-                            ),
-                            relatedId = taskId
-                        )
-                    } else {
-                        taskRepository.markSucceeded(taskId)
-                        logBatch(
-                            level = if (failureCount.get() > 0) AppLogLevel.WARNING else AppLogLevel.INFO,
-                            message = buildBatchMessage(
-                                task.type,
-                                "finished",
-                                processedCount.get(),
-                                successCount.get(),
-                                skippedCount.get(),
-                                failureCount.get()
-                            ),
-                            detail = buildBatchSummary(
-                                taskType = task.type,
-                                status = if (failureCount.get() > 0) "finished_with_errors" else "succeeded",
-                                configSummary = configSummary,
-                                startedAt = startedAt,
-                                total = total,
-                                pending = itemTotal,
-                                concurrency = concurrency,
-                                processed = processedCount.get(),
-                                success = successCount.get(),
-                                skipped = skippedCount.get(),
-                                failure = failureCount.get(),
-                                itemDetails = itemDetails.toList()
-                            ),
-                            relatedId = taskId
-                        )
-                    }
-                }
+                jobs.awaitAll()
             }
-
-            return Result.success()
-        } catch (e: Exception) {
-            logBatchException(
-                message = "Batch task crashed",
-                throwable = e,
+            taskRepository.markSucceeded(taskId)
+            logBatch(
+                level = if (failureCount.get() > 0) AppLogLevel.WARNING else AppLogLevel.INFO,
+                message = buildBatchMessage(
+                    task.type,
+                    "finished",
+                    processedCount.get(),
+                    successCount.get(),
+                    skippedCount.get(),
+                    failureCount.get()
+                ),
+                detail = buildBatchSummary(
+                    taskType = task.type,
+                    status = if (failureCount.get() > 0) "finished_with_errors" else "succeeded",
+                    configSummary = configSummary,
+                    startedAt = startedAt,
+                    total = total,
+                    pending = itemTotal,
+                    concurrency = concurrency,
+                    processed = processedCount.get(),
+                    success = successCount.get(),
+                    skipped = skippedCount.get(),
+                    failure = failureCount.get(),
+                    itemDetails = itemDetails.toList()
+                ),
                 relatedId = taskId
             )
+            return Result.success()
+        } catch (e: CancellationException) {
+            // WorkManager may reschedule stopped work. User cancellation is persisted by
+            // the cancellation entry points; a scheduler stop must not finish the task.
             throw e
+        } catch (e: Exception) {
+            withContext(NonCancellable) {
+                taskRepository.markFailed(taskId, e.message)
+                logBatchException(
+                    message = "Batch task crashed",
+                    throwable = e,
+                    relatedId = taskId
+                )
+            }
+            return Result.failure()
         } finally {
             releaseWakeLock(wakeLock)
         }
@@ -561,6 +539,7 @@ class BatchTaskWorker(
                 relatedId = relatedId
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "Failed to write batch log", e)
         }
     }
@@ -579,6 +558,7 @@ class BatchTaskWorker(
                 relatedId = relatedId
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "Failed to write batch exception log", e)
         }
     }

@@ -652,12 +652,11 @@ class BatchEditViewModel(
                 EditTagsTaskConfig.serializer(),
                 state.toTaskConfig(visibleFieldCodes)
             )
-            val taskId = batchTaskRepository.createTask(
+            val taskId = batchTaskScheduler.schedule(
                 type = BatchTaskType.EDIT_TAGS,
                 songs = songs,
                 configJson = configJson
             )
-            batchTaskScheduler.enqueue(taskId)
             resumeObservingTask(taskId)
         }
     }

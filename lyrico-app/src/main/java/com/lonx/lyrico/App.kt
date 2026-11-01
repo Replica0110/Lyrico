@@ -12,7 +12,7 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
-import com.lonx.lyrico.data.repository.BatchTaskRepository
+import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
@@ -77,8 +77,13 @@ class App : SaltApplication(), SingletonImageLoader.Factory {
         CoroutineScope(Dispatchers.IO).launch {
             val logRepository = org.koin.core.context.GlobalContext.get().get<AppLogRepository>()
             logRepository.trim()
-            val repo = org.koin.core.context.GlobalContext.get().get<BatchTaskRepository>()
-            repo.markOrphanedTasksFailed()
+            try {
+                koin.get<BatchTaskScheduler>().restoreTaskStates()
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.e(TAG, "Failed to restore batch task states", error)
+            }
         }
     }
 

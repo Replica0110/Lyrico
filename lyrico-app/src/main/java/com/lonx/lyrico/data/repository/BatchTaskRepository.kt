@@ -26,8 +26,7 @@ interface BatchTaskRepository {
     suspend fun updateProgressFromItems(taskId: String, currentFile: String?)
     suspend fun bindWorkId(taskId: String, workId: String)
     suspend fun getPendingItems(taskId: String): List<BatchTaskItemEntity>
-    suspend fun getOrphanedRunningTasks(): List<BatchTaskEntity>
-    suspend fun markOrphanedTasksFailed()
+    suspend fun getActiveTasks(): List<BatchTaskEntity>
     suspend fun deleteTask(taskId: String)
     suspend fun deleteTasks(taskIds: List<String>)
     suspend fun clearFinishedTasks()

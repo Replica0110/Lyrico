@@ -204,12 +204,11 @@ class BatchLyricsFormatViewModel(
                     operation = state.operation
                 )
             )
-            val taskId = batchTaskRepository.createTask(
+            val taskId = batchTaskScheduler.schedule(
                 type = BatchTaskType.CONVERT_LYRICS_FORMAT,
                 songs = songs,
                 configJson = configJson
             )
-            batchTaskScheduler.enqueue(taskId)
             resumeObservingTask(taskId)
         }
     }

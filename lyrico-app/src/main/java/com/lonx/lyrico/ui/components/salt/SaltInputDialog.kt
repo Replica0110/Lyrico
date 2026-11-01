@@ -37,6 +37,7 @@ internal fun SaltInputDialog(
             SaltTextInput(
                 state = state,
                 hint = hint,
+                hintMaxLines = 3,
                 modifier = Modifier.focusRequester(focus),
             )
         }

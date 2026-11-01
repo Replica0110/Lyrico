@@ -824,6 +824,7 @@ private fun ReplayGainTargetLoudnessSheet(
                             state = customState,
                             inputTransformation = clearInputError,
                             label = stringResource(R.string.replay_gain_target_custom_hint),
+                            useLabelAsPlaceholder = true,
                             modifier = Modifier.fillMaxWidth(),
                             lineLimits = TextFieldLineLimits.SingleLine,
                         )

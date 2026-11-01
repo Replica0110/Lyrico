@@ -792,15 +792,11 @@ private fun AddCustomTagDialog(
             RoundedColumn(paddingValues = PaddingValues(0.dp)) {
                 SaltTextInput(
                     state = inputState,
-                    hint = stringResource(R.string.custom_tag_key),
+                    hint = stringResource(R.string.custom_tag_key_hint),
+                    hintMaxLines = 3,
+                    error = if (error == null) null else errorText,
                 )
             }
-            Spacer(Modifier.height(6.dp))
-            com.moriafly.salt.ui.Text(
-                text = errorText,
-                color = if (error == null) SaltTheme.colors.subText else SaltTheme.colors.error,
-                style = SaltTheme.textStyles.sub,
-            )
         }
         return
     }
@@ -843,25 +839,23 @@ private fun AddCustomTagDialog(
             Spacer(Modifier.height(16.dp))
             TextField(
                 state = inputState,
-                label = stringResource(R.string.custom_tag_key),
+                label = stringResource(R.string.custom_tag_key_hint),
+                useLabelAsPlaceholder = true,
                 modifier = Modifier.fillMaxWidth(),
                 lineLimits = TextFieldLineLimits.MultiLine(),
             )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = when (error) {
-                    null -> stringResource(R.string.custom_tag_key_hint)
-                    CustomTagKeyError.EMPTY -> stringResource(R.string.invalid_empty_input)
-                    CustomTagKeyError.INVALID -> stringResource(R.string.custom_tag_key_invalid)
-                    CustomTagKeyError.DUPLICATE -> stringResource(R.string.duplicate_item)
-                },
-                color = if (error == null) {
-                    MiuixTheme.colorScheme.onSurfaceVariantSummary
-                } else {
-                    MiuixTheme.colorScheme.error
-                },
-                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-            )
+            if (error != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = when (error) {
+                        CustomTagKeyError.EMPTY -> stringResource(R.string.invalid_empty_input)
+                        CustomTagKeyError.INVALID -> stringResource(R.string.custom_tag_key_invalid)
+                        CustomTagKeyError.DUPLICATE -> stringResource(R.string.duplicate_item)
+                    },
+                    color = MiuixTheme.colorScheme.error,
+                    fontSize = MiuixTheme.textStyles.footnote1.fontSize,
+                )
+            }
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(

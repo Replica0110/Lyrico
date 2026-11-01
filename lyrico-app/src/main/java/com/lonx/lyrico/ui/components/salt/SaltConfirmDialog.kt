@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,6 +34,7 @@ internal fun SaltConfirmDialog(
     confirmEnabled: Boolean = true,
     dismissOnConfirm: Boolean = true,
     onDismissFinished: () -> Unit = {},
+    leadingAction: (@Composable FlowRowScope.() -> Unit)? = null,
     content: (@Composable () -> Unit)? = null,
 ) {
     var wasVisible by remember { mutableStateOf(show) }
@@ -69,8 +71,13 @@ internal fun SaltConfirmDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                maxItemsInEachRow = if (LocalDensity.current.fontScale >= 1.3f) 1 else 2,
+                maxItemsInEachRow = when {
+                    LocalDensity.current.fontScale >= 1.3f -> 1
+                    leadingAction != null -> 3
+                    else -> 2
+                },
             ) {
+                leadingAction?.invoke(this)
                 SaltDialogButton(
                     modifier = Modifier.weight(1f),
                     onClick = onDismissRequest,

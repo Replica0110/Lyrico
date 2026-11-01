@@ -733,7 +733,7 @@
     <string name="sort_ascending">升序</string>
     <string name="sort_descending">降序</string>
     <string name="artist_split_settings_title">艺术家拆分规则</string>
-    <string name="artist_split_settings_summary">配置艺术家视图中的多艺术家拆分和不拆分白名单</string>
+    <string name="artist_split_settings_summary">设置分隔符与不拆分的艺术家</string>
     <string name="artist_split_general_section">艺术家拆分</string>
     <string name="artist_split_enabled">启用艺术家拆分</string>
     <string name="artist_split_enabled_summary">启用后，多个艺术家会在艺术家视图中分别归类</string>

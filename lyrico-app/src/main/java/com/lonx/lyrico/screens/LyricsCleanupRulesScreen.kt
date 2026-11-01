@@ -4,8 +4,6 @@ package com.lonx.lyrico.screens
 
 import com.lonx.lyrico.ui.components.salt.SaltTextInput
 
-import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -45,7 +42,6 @@ import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.viewmodel.SettingsViewModel
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonAppearance
-import com.moriafly.salt.ui.ItemButton
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -146,21 +142,25 @@ fun LyricsCleanupRulesScreen(
                             style = SaltTheme.textStyles.sub,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                         )
-                        ItemButton(
-                            onClick = {
-                                errorMessage = null
-                                addingRule = true
-                            },
-                            text = stringResource(R.string.add_non_lyrics_cleanup_rule),
-                            iconPainter = rememberVectorPainter(LucideIcons.Plus),
-                            iconColor = PreferenceIconTone.Appearance.color(),
-                        )
-                        ItemButton(
-                            onClick = viewModel::resetNonLyricsContentRules,
-                            text = stringResource(R.string.reset_to_default),
-                            iconPainter = rememberVectorPainter(LucideIcons.RotateCcw),
-                            iconColor = SaltTheme.colors.subText
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    errorMessage = null
+                                    addingRule = true
+                                },
+                                text = stringResource(R.string.add_non_lyrics_cleanup_rule),
+                                modifier = Modifier.weight(1f),
+                            )
+                            Button(
+                                onClick = viewModel::resetNonLyricsContentRules,
+                                text = stringResource(R.string.reset_to_default),
+                                modifier = Modifier.weight(1f),
+                                appearance = ButtonAppearance.Subtle,
+                            )
+                        }
                     }
                 } else {
                     SmallTitle(text = stringResource(R.string.non_lyrics_cleanup_rules_section))
@@ -289,15 +289,13 @@ private fun CleanupRuleInputDialog(
             dismissOnConfirm = false,
         ) {
             RoundedColumn(paddingValues = PaddingValues(0.dp)) {
-                SaltTextInput(state = inputState,
+                SaltTextInput(
+                    state = inputState,
+                    hint = stringResource(R.string.non_lyrics_cleanup_rule_input_hint),
+                    hintMaxLines = 3,
+                    error = errorMessage,
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            SaltText(
-                text = errorMessage ?: stringResource(R.string.non_lyrics_cleanup_rule_input_hint),
-                color = if (errorMessage == null) SaltTheme.colors.subText else SaltTheme.colors.error,
-                style = SaltTheme.textStyles.sub
-            )
         }
         return
     }
@@ -310,19 +308,19 @@ private fun CleanupRuleInputDialog(
         Column(modifier = Modifier.fillMaxWidth()) {
             TextField(
                 state = inputState,
+                label = stringResource(R.string.non_lyrics_cleanup_rule_input_hint),
+                useLabelAsPlaceholder = true,
                 modifier = Modifier.fillMaxWidth(),
                 lineLimits = TextFieldLineLimits.SingleLine,
             )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = errorMessage ?: stringResource(R.string.non_lyrics_cleanup_rule_input_hint),
-                color = if (errorMessage == null) {
-                    MiuixTheme.colorScheme.onSurfaceVariantSummary
-                } else {
-                    MiuixTheme.colorScheme.error
-                },
-                fontSize = MiuixTheme.textStyles.footnote1.fontSize
-            )
+            if (errorMessage != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = errorMessage,
+                    color = MiuixTheme.colorScheme.error,
+                    fontSize = MiuixTheme.textStyles.footnote1.fontSize
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(

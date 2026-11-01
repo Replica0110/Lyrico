@@ -536,17 +536,12 @@ fun PluginManagerScreen(
             TextField(
                 modifier = Modifier.fillMaxWidth(),
                 state = nameState,
-                label = stringResource(R.string.plugin_custom_name),
-                lineLimits = TextFieldLineLimits.SingleLine,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = stringResource(
+                label = stringResource(
                     R.string.plugin_custom_name_hint,
                     pendingRenamePlugin?.name.orEmpty()
                 ),
-                fontSize = 12.sp,
-                color = colorScheme.onSurfaceVariantSummary
+                useLabelAsPlaceholder = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
             )
             Spacer(modifier = Modifier.height(16.dp))
             Row(

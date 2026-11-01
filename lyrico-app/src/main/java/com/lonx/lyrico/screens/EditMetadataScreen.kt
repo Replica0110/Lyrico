@@ -1858,6 +1858,7 @@ Box(modifier = Modifier.fillMaxSize()) {
             TextField(
                 state = newCustomTagKeyState,
                 label = stringResource(R.string.label_custom_tag_name),
+                useLabelAsPlaceholder = true,
                 modifier = Modifier.fillMaxWidth(),
                 lineLimits = TextFieldLineLimits.SingleLine
             )
@@ -1867,6 +1868,7 @@ Box(modifier = Modifier.fillMaxSize()) {
             TextField(
                 state = newCustomTagValueState,
                 label = stringResource(R.string.label_custom_tag_value),
+                useLabelAsPlaceholder = true,
                 modifier = Modifier.fillMaxWidth(),
                 lineLimits = TextFieldLineLimits.SingleLine
             )

@@ -733,7 +733,7 @@
     <string name="sort_ascending">遞增</string>
     <string name="sort_descending">遞減</string>
     <string name="artist_split_settings_title">演出者拆分規則</string>
-    <string name="artist_split_settings_summary">設定演出者檢視中的多位演出者拆分與不拆分白名單</string>
+    <string name="artist_split_settings_summary">設定分隔符號與不拆分的演出者</string>
     <string name="artist_split_general_section">演出者拆分</string>
     <string name="artist_split_enabled">啟用演出者拆分</string>
     <string name="artist_split_enabled_summary">啟用後，多位演出者會在演出者檢視中分別歸類</string>

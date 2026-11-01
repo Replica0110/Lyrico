@@ -39,6 +39,7 @@ internal fun SaltTextInput(
     state: TextFieldState,
     modifier: Modifier = Modifier,
     hint: String? = null,
+    hintMaxLines: Int? = null,
     readOnly: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     actionContent: (@Composable () -> Unit)? = null,
@@ -104,7 +105,7 @@ internal fun SaltTextInput(
                             hint,
                             color = SaltTheme.colors.subText,
                             style = textStyle,
-                            maxLines = when (lineLimits) {
+                            maxLines = hintMaxLines ?: when (lineLimits) {
                                 is TextFieldLineLimits.MultiLine -> if (secure) 1 else lineLimits.maxHeightInLines
                                 else -> 1
                             },

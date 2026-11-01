@@ -726,7 +726,7 @@
     <string name="sort_ascending">Ascending</string>
     <string name="sort_descending">Descending</string>
     <string name="artist_split_settings_title">Artist split rules</string>
-    <string name="artist_split_settings_summary">Configure artist splitting and no-split allowlist for the artist view</string>
+    <string name="artist_split_settings_summary">Separators and artists to keep together</string>
     <string name="artist_split_general_section">Artist split</string>
     <string name="artist_split_enabled">Enable artist splitting</string>
     <string name="artist_split_enabled_summary">When enabled, multiple artists are listed separately in the artist view</string>

@@ -11,12 +11,12 @@ import com.lonx.lyrico.ui.components.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.ui.components.library.libraryDetailScroll
 import com.lonx.lyrico.ui.components.editor.rememberEditorTextFieldState
+import com.lonx.lyrico.ui.components.editor.CustomTagInputDialog
 import com.lonx.lyrico.ui.components.editor.SaltEditorField
 import com.lonx.lyrico.ui.components.editor.SaltEditorUndoAction
 import com.lonx.lyrico.ui.components.editor.EditorSheet
 import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.salt.SaltBasicDialog
-import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
 import com.lonx.lyrico.ui.components.base.ItemMenuAction
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
@@ -73,7 +73,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -1826,88 +1825,11 @@ Box(modifier = Modifier.fillMaxSize()) {
         }
     }
 
-    if (salt && showAddCustomTagDialog) {
-        val keyState = rememberTextFieldState()
-        val valueState = rememberTextFieldState()
-        SaltConfirmDialog(show = true, title = stringResource(R.string.action_add_custom_tag),
-            onDismissRequest = { showAddCustomTagDialog = false },
-            onConfirm = {
-                if (keyState.text.isNotBlank()) {
-                    viewModel.addCustomFieldAndShow(keyState.text.toString(), valueState.text.toString())
-                    showAddCustomTagDialog = false
-                }
-            }, confirmEnabled = keyState.text.isNotBlank(), dismissOnConfirm = false,
-            cancelText = stringResource(R.string.cancel), confirmText = stringResource(R.string.confirm),
-            content = {
-                RoundedColumn(paddingValues = PaddingValues(0.dp)) {
-                    SaltEditorField(stringResource(R.string.label_custom_tag_name), keyState, grouped = false)
-                    SaltEditorField(stringResource(R.string.label_custom_tag_value), valueState, grouped = false)
-                }
-            })
-    } else if (!salt) WindowDialog(
+    CustomTagInputDialog(
         show = showAddCustomTagDialog,
-        title = stringResource(R.string.action_add_custom_tag),
-        onDismissRequest = { showAddCustomTagDialog = false }
-    ) {
-        val newCustomTagKeyState = rememberTextFieldState()
-        val newCustomTagValueState = rememberTextFieldState()
-
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TextField(
-                state = newCustomTagKeyState,
-                label = stringResource(R.string.label_custom_tag_name),
-                useLabelAsPlaceholder = true,
-                modifier = Modifier.fillMaxWidth(),
-                lineLimits = TextFieldLineLimits.SingleLine
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            TextField(
-                state = newCustomTagValueState,
-                label = stringResource(R.string.label_custom_tag_value),
-                useLabelAsPlaceholder = true,
-                modifier = Modifier.fillMaxWidth(),
-                lineLimits = TextFieldLineLimits.SingleLine
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = {
-                        showAddCustomTagDialog = false
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-
-                Spacer(Modifier.width(20.dp))
-
-                TextButton(
-                    text = stringResource(R.string.confirm),
-                    onClick = {
-                        val key = newCustomTagKeyState.text.toString()
-                        val value = newCustomTagValueState.text.toString()
-
-                        if (key.isNotBlank()) {
-                            viewModel.addCustomFieldAndShow(
-                                key = key,
-                                value = value,
-                            )
-                            showAddCustomTagDialog = false
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
-        }
-    }
+        onDismissRequest = { showAddCustomTagDialog = false },
+        onConfirm = { key, value -> viewModel.addCustomFieldAndShow(key, value) },
+    )
     LyricsProcessingSheet(
         show = showLyricsProcessingSheet,
         raw = editingTagData?.lyrics.orEmpty(),

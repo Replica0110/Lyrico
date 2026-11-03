@@ -409,4 +409,4 @@ JS 端读取：`var useProxy = request.config.use_proxy === "true";`
 
 目录仅提供下载信息，不与已安装插件绑定。安装后以包内 manifest 的 `updateUrl` 为准，移除或修改导入链接不会改变已安装插件。后续包会替换这个地址，省略字段即清除旧地址；找不到匹配 ID 时不会改用其他条目更新。
 
-`changelog` 使用 Markdown，显示在插件更新页。官方插件仓库的填写位置和发布步骤见 [发布插件](https://github.com/Replica0110/Lyrico-Plugins#发布插件)。
+`changelog` 使用 Markdown，显示在插件更新页。官方插件共用对应 GitHub Release 的正文作为更新日志。

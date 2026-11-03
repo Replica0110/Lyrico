@@ -397,4 +397,4 @@ Publish each single-plugin ZIP first, calculate its actual byte size and SHA-256
 
 Catalog entries are download information, not installed-plugin ownership. After installation, the package manifest supplies `updateUrl`; removing or changing an import link does not change installed plugins. A subsequent package replaces that address, including clearing it when omitted. A missing matching ID never switches the plugin to another entry.
 
-`changelog` supports Markdown and appears on the plugin update sheet. For the official plugin repository’s authoring and release steps, see [Publishing plugins](https://github.com/Replica0110/Lyrico-Plugins#发布插件).
+`changelog` supports Markdown and appears on the plugin update sheet. Official plugins share their GitHub Release body as the changelog.

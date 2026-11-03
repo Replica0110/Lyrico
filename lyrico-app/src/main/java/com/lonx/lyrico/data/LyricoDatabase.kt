@@ -39,7 +39,7 @@ import com.lonx.lyrico.data.model.entity.DEFAULT_PLUGIN_CAPABILITIES_SQL
         SourcePluginEntity::class,
         SongCustomTagKeyEntity::class
     ],
-    version = 21,
+    version = 22,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3),
@@ -65,6 +65,11 @@ abstract class LyricoDatabase : RoomDatabase() {
     abstract fun songCustomTagKeyDao(): SongCustomTagKeyDao
 
     companion object {
+        val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE source_plugins ADD COLUMN updateUrl TEXT DEFAULT NULL")
+            }
+        }
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE songs ADD COLUMN replayGainTrackGain TEXT DEFAULT NULL")

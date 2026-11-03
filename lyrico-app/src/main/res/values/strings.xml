@@ -849,7 +849,6 @@
     <string name="plugin_action_failed">Plugin action failed: %1$s</string>
     <string name="plugin_action_cannot_open">Cannot open the selected file</string>
     <string name="plugin_action_none_installable">No installable plugins found</string>
-    <string name="plugin_action_remove_failed">Cannot delete plugin files</string>
     <string name="rating_stars_value">%1$d out of 5 stars</string>
     <string name="log_recording_start">Start recording</string>
     <string name="log_recording_stop">Stop recording</string>
@@ -879,4 +878,29 @@
     <string name="reproduction_unavailable">Recording is no longer available. Record the problem again</string>
     <string name="reproduction_empty">No recording</string>
     <string name="write_permission_retry_failed">Still unable to write after authorization. Open the file from the library and try again.</string>
+    <string name="plugin_import_local">Local import</string>
+    <string name="plugin_import_online">Online subscription</string>
+    <string name="plugin_online_url">Subscription URL</string>
+    <string name="plugin_online_fetch">Fetch</string>
+    <string name="plugin_update">Update</string>
+    <string name="plugin_online_installing">Installing</string>
+    <string name="plugin_online_retry">Retry</string>
+    <string name="plugin_online_incompatible">Plugin is incompatible with this app</string>
+    <string name="plugin_check_updates">Check for updates</string>
+    <string name="plugin_check_latest">No updates found</string>
+    <string name="plugin_check_available">%1$d plugin updates available</string>
+    <string name="plugin_check_failed">Failed to check %1$d update URLs</string>
+    <string name="plugin_update_url">Update URL</string>
+    <string name="plugin_catalog_incompatible_count">Incompatible (%1$d)</string>
+    <string name="plugin_download_size">Download size: %1$s</string>
+    <string name="plugin_install_result">Installed %1$d, failed %2$d</string>
+    <string name="plugin_task_waiting">Waiting</string>
+    <string name="plugin_task_verifying">Verifying</string>
+    <string name="plugin_task_installed">Installed</string>
+    <string name="plugin_task_cancelled">Stopped</string>
+    <string name="plugin_import_done">Done</string>
+    <string name="plugin_catalog_plugins">Plugins (%1$d)</string>
+    <string name="plugin_task_failed">Failed</string>
+    <string name="plugin_update_succeeded">%1$s updated to %2$s</string>
+    <string name="plugin_update_failed">%1$s update failed: %2$s</string>
 </resources>

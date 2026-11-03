@@ -1,6 +1,7 @@
 #include <jni.h>
 
 #include <chrono>
+#include <atomic>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -12,6 +13,7 @@ extern "C" {
 namespace {
 
 struct QuickJsRuntimeState {
+    std::atomic<bool> cancelled{false};
     JSRuntime *runtime = nullptr;
     JSContext *context = nullptr;
     JavaVM *javaVm = nullptr;
@@ -29,6 +31,7 @@ int64_t nowMs() {
 
 int interruptHandler(JSRuntime *, void *opaque) {
     const auto *state = static_cast<QuickJsRuntimeState *>(opaque);
+    if (state != nullptr && state->cancelled.load()) return 1;
     if (state == nullptr || state->deadlineMs <= 0) {
         return 0;
     }
@@ -231,6 +234,13 @@ Java_com_lonx_lyrico_plugin_runtime_QuickJsNative_createRuntime(
     }
 
     return reinterpret_cast<jlong>(state);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_lonx_lyrico_plugin_runtime_QuickJsNative_setCancelled(
+        JNIEnv *, jobject, jlong runtimePtr, jboolean cancelled) {
+    auto *state = reinterpret_cast<QuickJsRuntimeState *>(runtimePtr);
+    if (state != nullptr) state->cancelled.store(cancelled == JNI_TRUE);
 }
 
 extern "C" JNIEXPORT jstring JNICALL

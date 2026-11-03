@@ -47,9 +47,19 @@ class QuickJsHostApi(
         explicitNulls = false
     }
 ) {
+    private val cancelled = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val activeHttp = java.util.concurrent.atomic.AtomicReference<okhttp3.Call?>(null)
+    private var invocationDeadline = 0L
+
+    fun resetCancellation() { cancelled.set(false) }
+    fun cancelInvocation() {
+        cancelled.set(true)
+        activeHttp.get()?.cancel()
+    }
     private var stringsSnapshot: com.lonx.lyrico.plugin.i18n.PluginStrings.Snapshot? = null
 
     fun beginInvocation() {
+        invocationDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15)
         stringsSnapshot = pluginStrings?.snapshot(com.lonx.lyrico.plugin.i18n.PluginLocales.preferences.value)
     }
     private companion object {
@@ -461,35 +471,57 @@ class QuickJsHostApi(
 
         requestBuilder.method(method, requestBody)
 
+        check(!cancelled.get()) { "Plugin invocation cancelled" }
+        val remainingMs = TimeUnit.NANOSECONDS.toMillis(invocationDeadline - System.nanoTime())
+        check(remainingMs > 0) { "Plugin invocation timed out" }
         val client = okHttpClient.newBuilder()
+            .callTimeout(remainingMs, TimeUnit.MILLISECONDS)
             .followRedirects(payload.booleanOrNull("followRedirects") ?: true)
             .followSslRedirects(payload.booleanOrNull("followRedirects") ?: true)
             .connectTimeout((payload.intOrNull("connectTimeoutMs") ?: 8_000).toLong(), TimeUnit.MILLISECONDS)
             .readTimeout((payload.intOrNull("readTimeoutMs") ?: 12_000).toLong(), TimeUnit.MILLISECONDS)
             .build()
 
-        return client.newCall(requestBuilder.build()).execute().use { response ->
-            val responseBytes = response.body.bytes()
-            val bodyText = if (binaryResponse) {
-                ""
-            } else {
-                responseBytes.toString(Charsets.UTF_8)
-            }
+        val call = client.newCall(requestBuilder.build())
+        activeHttp.set(call)
+        if (cancelled.get()) call.cancel()
+        try {
+            return call.execute().use { response ->
+                val limit = 8L * 1024 * 1024
+                require(response.body.contentLength() <= limit) { "Plugin response is too large" }
+                val output = ByteArrayOutputStream()
+                response.body.byteStream().use { input ->
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        check(!cancelled.get()) { "Plugin invocation cancelled" }
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        require(output.size().toLong() + count <= limit) { "Plugin response is too large" }
+                        output.write(buffer, 0, count)
+                    }
+                }
+                val responseBytes = output.toByteArray()
+                val bodyText = if (binaryResponse) {
+                    ""
+                } else {
+                    responseBytes.toString(Charsets.UTF_8)
+                }
 
-            val bodyBase64 = if (binaryResponse) {
-                Base64.encodeToString(responseBytes, Base64.NO_WRAP)
-            } else {
-                ""
-            }
+                val bodyBase64 = if (binaryResponse) {
+                    Base64.encodeToString(responseBytes, Base64.NO_WRAP)
+                } else {
+                    ""
+                }
 
-            HostHttpResponse(
-                code = response.code,
-                message = response.message,
-                headers = response.headers.toMultimap(),
-                bodyText = bodyText,
-                bodyBase64 = bodyBase64
-            )
-        }
+                HostHttpResponse(
+                    code = response.code,
+                    message = response.message,
+                    headers = response.headers.toMultimap(),
+                    bodyText = bodyText,
+                    bodyBase64 = bodyBase64
+                )
+            }
+        } finally { activeHttp.compareAndSet(call, null) }
     }
 
     private fun hasNonBlankHeader(headers: JsonObject?, targetName: String): Boolean {

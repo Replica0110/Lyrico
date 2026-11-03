@@ -9,7 +9,7 @@ class QuickJsRuntime(
     timeoutMs: Long = DEFAULT_TIMEOUT_MS,
     private val hostApi: QuickJsHostApi? = QuickJsHostApi()
 ) : PluginJsRuntime {
-    private var runtimePtr: Long = QuickJsNative.createRuntime(
+    @Volatile private var runtimePtr: Long = QuickJsNative.createRuntime(
         memoryLimitBytes = memoryLimitBytes,
         stackSizeBytes = stackSizeBytes,
         timeoutMs = timeoutMs,
@@ -36,6 +36,19 @@ class QuickJsRuntime(
         return QuickJsNative.call(ptr, functionName, requestJson)
     }
 
+    @Synchronized
+    override fun resetCancellation() {
+        if (runtimePtr != 0L) QuickJsNative.setCancelled(runtimePtr, false)
+        hostApi?.resetCancellation()
+    }
+
+    @Synchronized
+    override fun cancelInvocation() {
+        if (runtimePtr != 0L) QuickJsNative.setCancelled(runtimePtr, true)
+        hostApi?.cancelInvocation()
+    }
+
+    @Synchronized
     override fun close() {
         val ptr = runtimePtr
         if (ptr != 0L) {

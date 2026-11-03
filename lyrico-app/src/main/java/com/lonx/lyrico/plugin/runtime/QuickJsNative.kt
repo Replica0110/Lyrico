@@ -20,4 +20,5 @@ object QuickJsNative {
     external fun call(runtimePtr: Long, functionName: String, requestJson: String): String
 
     external fun closeRuntime(runtimePtr: Long)
+    external fun setCancelled(runtimePtr: Long, cancelled: Boolean)
 }

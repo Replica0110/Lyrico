@@ -21,6 +21,7 @@ internal fun SaltSheetActions(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
     confirmEnabled: Boolean = true,
+    cancelEnabled: Boolean = true,
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
@@ -31,6 +32,7 @@ internal fun SaltSheetActions(
         Button(
             modifier = Modifier.weight(1f),
             onClick = onCancel,
+            enabled = cancelEnabled,
             text = cancelText,
             appearance = ButtonAppearance.Subtle,
         )

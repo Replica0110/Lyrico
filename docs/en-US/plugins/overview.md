@@ -84,7 +84,7 @@ The Lyrico plugin system is a source-plugin framework based on the **QuickJS emb
    - Copy all files under the plugin root into the staging directory
    - Automatically exclude nested child plugin directories
    - Verify total size ≤ **5 MB** (`maxSinglePluginBytes`)
-3. After staging succeeds, replace the previous plugin directory if it exists
+3. Publish staged files to a unique `plugins/sources/<pluginId>/<UUID>/` directory, then commit `pluginDir` and `iconPath` in the database. A failed database commit preserves the old version. Unreferenced files are reclaimed on the next process launch.
 
 ### Stage 3: Store In Database
 
@@ -119,7 +119,7 @@ After installation, plugin metadata is written to the Room `source_plugins` tabl
    - Read `manifest.json`
    - Concatenate JS scripts in order: first every `.js` file in `includeDirs` sorted by path, then the entry file
    - Inject the bootstrap that implements `include()` at the top of the script
-3. A `ScriptSearchSource` instance is created and cached by plugin ID
+3. Cache `ScriptSearchSource` by plugin ID, replacing the instance when its installation directory changes. Name, enabled-state, and ordering changes reuse the runtime.
 4. The JS runtime is **lazy initialized**: `QuickJsRuntime` is created and the complete script is executed only when `searchSongs`/`getLyrics`/`searchCovers` is first called
 
 ### Stage 5: Runtime Calls
@@ -145,12 +145,13 @@ Single-song and batch lyrics share lyrics-source order; single-song and batch co
 1. Delete the record from the Room database
 2. Call `PluginSearchSourceManager.invalidate(pluginId)` to close the runtime
 3. Remove user configuration for the plugin
-4. Recursively delete `plugins/sources/<pluginId>/`
+4. Leave files for next-launch recovery so running calls can finish safely
 
 ### Stage 8: Close / Release
 
 - `PluginSearchSourceManager.close()` closes all cached `ScriptSearchSource` instances
-- `ScriptSearchSource.close()` closes the QuickJS runtime and stops the dedicated executor
+- `ScriptSearchSource.close()` rejects new sessions and destroys QuickJS on its owning thread after existing sessions finish. Unused instances never create an execution thread.
+- Batch matching uses `SearchSource.withSession()` to retain the runtime version across search and lyrics calls during updates.
 - Import temporary directories are removed by `SourcePluginInstaller.discardImport()`
 
 ## Import Limits
@@ -220,3 +221,11 @@ interface SearchSource {
     suspend fun searchCovers(keyword, page, pageSize): List<SongSearchResult>
 }
 ```
+
+## Online distribution
+
+`PluginDistributionClient` parses the unified catalog and verifies HTTP/HTTPS downloads, byte sizes and SHA-256. `PluginDistributionManager` groups update checks by each installed plugin’s own `updateUrl`, limits concurrent downloads to three and sends every package through `SourcePluginInstaller`. Online packages must contain exactly one matching plugin; local multi-plugin ZIPs remain supported. See [Manifest](./manifest.md#online-catalogs-and-updates).
+
+Coroutine cancellation reaches native QuickJS interruption and active HTTP calls. HTTP calls share the remaining invocation budget, and response bodies are limited to 8 MiB.
+
+Failed installations keep their import session for retry in the same Sheet; committed plugins are skipped on retry. Dismissing the import removes temporary files and keeps installed plugins. The catalog root contains only `schemaVersion` and `plugins`; subscription identity is not stored.

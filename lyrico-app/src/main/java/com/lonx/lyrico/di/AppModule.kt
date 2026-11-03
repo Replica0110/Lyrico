@@ -172,6 +172,7 @@ val appModule = module {
         )
     }
     single { SourcePluginInstaller(repository = get(), json = get(), appLogRepository = get()) }
+    single { com.lonx.lyrico.plugin.source.PluginDistributionManager(androidContext(), get(), get(), get()) }
     single {
         PluginSearchSourceManager(
             repository = get(),
@@ -209,7 +210,8 @@ val appModule = module {
                 LyricoDatabase.MIGRATION_17_18,
                 LyricoDatabase.MIGRATION_18_19,
                 LyricoDatabase.MIGRATION_19_20,
-                LyricoDatabase.MIGRATION_20_21
+                LyricoDatabase.MIGRATION_20_21,
+                LyricoDatabase.MIGRATION_21_22
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -312,14 +314,14 @@ val appModule = module {
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { LyricsSearchViewModel(get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get(), get()) }
-    viewModel { SearchSourceConfigViewModel(get(), get()) }
+    viewModel { SearchSourceConfigViewModel(get(), get(), get()) }
     viewModel { EditMetadataViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditFieldSettingsViewModel(get(), get()) }
     viewModel { (fieldCode: String, component: Boolean) -> FieldSongsViewModel(fieldCode, component, get(), get(), get(), get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { AppLogViewModel(get(), get()) }
     viewModel { com.lonx.lyrico.viewmodel.ProblemReproductionViewModel(get(), get(), get(), get()) }
-    viewModel { PluginViewModel(get(), get(), get(), get(), get()) }
+    viewModel { PluginViewModel(get(), get(), get(), get(), get(), get()) }
 
     viewModel { FolderManagerViewModel(get(), get(), get(), get()) }
     viewModel { ArtistPosterFoldersViewModel(get(), get(), get()) }

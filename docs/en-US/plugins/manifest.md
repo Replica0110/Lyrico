@@ -22,6 +22,7 @@ Field application policy belongs to Lyrico. Plugins return data at runtime.
 | `capabilities` | `string[]` | No | `[]` | Plugin capabilities |
 | `configFields` | `ConfigField[]` | No | `[]` | User-configurable fields |
 | `i18n` | `object \| null` | No | `null` | Default locale and resource path mapping, see [Plugin Internationalization](./i18n) |
+| `updateUrl` | `string \| null` | No | `null` | Absolute HTTP/HTTPS plugin catalog URL |
 
 Text in names, descriptions, and settings is always a plain string: a value starting with `@` references a key in the language resources, anything else is shown literally. See [Plugin Internationalization](./i18n).
 
@@ -365,3 +366,35 @@ Combining all features into a realistic `configFields` array:
 Plugin functions return search data through two JSON objects: `fields` (host-standard metadata fields like title, artist) and `internal` (plugin-private context like platform IDs, tokens).
 
 See [Configuration And Result Fields](./config-metadata.md) for the full standard field list, `internal` size constraints, and host write policies.
+
+## Online catalogs and updates
+
+Local ZIP import remains supported. A manifest may include `updateUrl`, pointing to a catalog with the format below. Subscription import and individual plugin updates use the same format, including a `plugins` array for a single plugin.
+
+```json
+{
+  "schemaVersion": 1,
+  "plugins": [
+    {
+      "id": "com.example.music",
+      "name": "Music",
+      "versionCode": 2,
+      "versionName": "1.1.0",
+      "apiVersion": 5,
+      "minHostApiVersion": 4,
+      "downloadUrl": "./com.example.music-1.1.0.zip",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "size": 123456,
+      "changelog": "## 1.1.0\n\n- Fix missing song search results."
+    }
+  ]
+}
+```
+
+Plugin IDs must remain stable after publication. Only `versionCode` determines whether a release is newer. `schemaVersion` versions the catalog format. Package URLs may be relative to the final catalog response URL; manifest `updateUrl` must be absolute HTTP/HTTPS. Credentials and fragments in URLs are rejected.
+
+Publish each single-plugin ZIP first, calculate its actual byte size and SHA-256, and then publish the catalog. `changelog` is optional; other release fields shown above are required except `minHostApiVersion`, which defaults to 1. The package manifest must match the advertised ID, version code/name, and API requirements.
+
+Catalog entries are download information, not installed-plugin ownership. After installation, the package manifest supplies `updateUrl`; removing or changing an import link does not change installed plugins. A subsequent package replaces that address, including clearing it when omitted. A missing matching ID never switches the plugin to another entry.
+
+`changelog` supports Markdown and appears on the plugin update sheet. For the official plugin repository’s authoring and release steps, see [Publishing plugins](https://github.com/Replica0110/Lyrico-Plugins#发布插件).

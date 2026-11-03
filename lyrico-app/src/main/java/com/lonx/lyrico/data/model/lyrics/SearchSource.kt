@@ -32,6 +32,9 @@ interface SearchSource {
 
     fun applyConfig(config: SourceRuntimeConfig) = Unit
 
+    /** Keep one source version for all calls belonging to a business operation. */
+    suspend fun <T> withSession(block: suspend SearchSource.() -> T): T = block()
+
     suspend fun searchSongs(keyword: String, page: Int = 1, separator: String = "/", pageSize: Int = 20): List<SongSearchResult>
     suspend fun getLyrics(song: SongSearchResult): LyricsResult?
     suspend fun getLyricsCandidates(
@@ -54,4 +57,11 @@ fun SearchSource.isEnabledFor(sourceType: PluginSourceType): Boolean = when (sou
     PluginSourceType.METADATA -> metadataEnabled
     PluginSourceType.LYRICS -> lyricsEnabled
     PluginSourceType.COVER -> coverEnabled
+}
+
+/** Hold each selected source version until a multi-source operation completes. */
+suspend fun <T> List<SearchSource>.withSessions(block: suspend () -> T): T {
+    suspend fun hold(index: Int): T =
+        if (index == size) block() else this[index].withSession { hold(index + 1) }
+    return hold(0)
 }

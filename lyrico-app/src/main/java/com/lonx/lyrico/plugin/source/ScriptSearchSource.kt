@@ -21,7 +21,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.currentCoroutineContext
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import kotlin.coroutines.cancellation.CancellationException
 
 class ScriptSearchSource(
@@ -29,17 +33,17 @@ class ScriptSearchSource(
     private val script: String,
     private val displayName: String = manifest.name,
     override val iconPath: String? = null,
-    override val metadataEnabled: Boolean = true,
-    override val lyricsEnabled: Boolean = true,
-    override val coverEnabled: Boolean = true,
-    override val metadataSortOrder: Int = 0,
-    override val lyricsSortOrder: Int = 0,
-    override val coverSortOrder: Int = 0,
+    override var metadataEnabled: Boolean = true,
+    override var lyricsEnabled: Boolean = true,
+    override var coverEnabled: Boolean = true,
+    override var metadataSortOrder: Int = 0,
+    override var lyricsSortOrder: Int = 0,
+    override var coverSortOrder: Int = 0,
     private val appLogRepository: AppLogRepository? = null,
     private val json: Json = defaultJson,
     private val runtimeFactory: () -> PluginJsRuntime = { QuickJsRuntime() },
     private val localizedManifest: (() -> PluginManifest)? = null,
-    private val customName: String? = null
+    private var customName: String? = null
 ) : SearchSource, AutoCloseable {
     override val id: String = manifest.id
     override val name: String
@@ -50,31 +54,26 @@ class ScriptSearchSource(
         manifest.capabilities.normalizedPluginCapabilities()
     override val configFields: List<PluginConfigField>
         get() = localizedManifest?.invoke()?.configFields ?: manifest.configFields
-    private val executionContextDelegate = lazy {
-        val executor = Executors.newSingleThreadExecutor { runnable ->
-            Thread(
-                null,
-                runnable,
-                "QuickJS-$id",
-                4L * 1024L * 1024L
-            )
+    private val lifecycleLock = Any()
+    private var closing = false
+    private var activeSessions = 0
+    private var executionContext: RuntimeExecutionContext? = null
+
+    private fun executionContext(): RuntimeExecutionContext = synchronized(lifecycleLock) {
+        check(activeSessions > 0) { "Plugin execution requires an active session" }
+        executionContext ?: run {
+            val executor = Executors.newSingleThreadExecutor { runnable ->
+                Thread(null, runnable, "QuickJS-$id", 4L * 1024L * 1024L)
+            }
+            RuntimeExecutionContext(executor, executor.asCoroutineDispatcher()).also { executionContext = it }
         }
-        RuntimeExecutionContext(
-            executor = executor,
-            dispatcher = executor.asCoroutineDispatcher()
-        )
     }
-    private val executionContext: RuntimeExecutionContext by executionContextDelegate
-    private val quickJsDispatcher
-        get() = executionContext.dispatcher
     private val parser = PluginJsonParser(json)
-    private var config = SourceRuntimeConfig()
-    private val runtimeDelegate = lazy {
-        runtimeFactory().also {
-            it.eval(script, manifest.entry)
-        }
-    }
-    private val runtime: PluginJsRuntime by runtimeDelegate
+    @Volatile private var config = SourceRuntimeConfig()
+    private var runtimeInstance: PluginJsRuntime? = null
+    private val runtime: PluginJsRuntime
+        get() = runtimeInstance ?: runtimeFactory().also { runtimeInstance = it }
+    private var scriptInitialized = false
 
     override fun applyConfig(config: SourceRuntimeConfig) {
         this.config = config
@@ -85,11 +84,11 @@ class ScriptSearchSource(
         page: Int,
         separator: String,
         pageSize: Int
-    ): List<SongSearchResult> = withContext(quickJsDispatcher + newLogOperation("plugin-search")) {
+    ): List<SongSearchResult> = execute("plugin-search") {
         val started = System.nanoTime()
         try {
             if (PluginCapability.SEARCH_SONGS !in capabilities) {
-                return@withContext emptyList()
+                return@execute emptyList()
             }
 
             val request = PluginSearchSongsRequest(
@@ -99,7 +98,7 @@ class ScriptSearchSource(
                 separator = separator,
                 config = config.values
             )
-            val raw = runtime.call(FUNCTION_SEARCH_SONGS, json.encodeToString(request))
+            val raw = callRuntime(FUNCTION_SEARCH_SONGS, json.encodeToString(request))
             val results = parser.parseSongResults(
                 rawJson = raw,
                 pluginId = id,
@@ -142,11 +141,11 @@ class ScriptSearchSource(
         song: SongSearchResult,
         page: Int,
         pageSize: Int
-    ): List<LyricsCandidateResult> = withContext(quickJsDispatcher + newLogOperation("plugin-lyrics")) {
+    ): List<LyricsCandidateResult> = execute("plugin-lyrics") {
         val started = System.nanoTime()
         try {
             if (PluginCapability.GET_LYRICS !in capabilities) {
-                return@withContext emptyList()
+                return@execute emptyList()
             }
 
             val request = PluginGetLyricsRequest(
@@ -155,7 +154,7 @@ class ScriptSearchSource(
                 pageSize = pageSize,
                 config = config.values
             )
-            val raw = runtime.call(FUNCTION_GET_LYRICS, json.encodeToString(request))
+            val raw = callRuntime(FUNCTION_GET_LYRICS, json.encodeToString(request))
             val candidates = parser.parseLyricsCandidates(
                 rawJson = raw,
                 pluginId = id,
@@ -196,11 +195,11 @@ class ScriptSearchSource(
     }
 
     override suspend fun searchCovers(keyword: String, page: Int, pageSize: Int): List<SongSearchResult> =
-        withContext(quickJsDispatcher + newLogOperation("plugin-covers")) {
+        execute("plugin-covers") {
             val started = System.nanoTime()
             try {
                 if (PluginCapability.SEARCH_COVERS !in capabilities) {
-                    return@withContext emptyList()
+                    return@execute emptyList()
                 }
 
                 val request = PluginSearchCoversRequest(
@@ -209,7 +208,7 @@ class ScriptSearchSource(
                     pageSize = pageSize,
                     config = config.values
                 )
-                val raw = runtime.call(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
+                val raw = callRuntime(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
                 val results = parser.parseCoverResults(
                     rawJson = raw,
                     pluginId = id,
@@ -236,11 +235,11 @@ class ScriptSearchSource(
         }
 
     override suspend fun searchCovers(song: SongSearchResult, page: Int, pageSize: Int): List<SongSearchResult> =
-        withContext(quickJsDispatcher + newLogOperation("plugin-covers")) {
+        execute("plugin-covers") {
             val started = System.nanoTime()
             try {
                 if (PluginCapability.SEARCH_COVERS !in capabilities) {
-                    return@withContext emptyList()
+                    return@execute emptyList()
                 }
 
                 val request = PluginSearchCoversRequest(
@@ -250,7 +249,7 @@ class ScriptSearchSource(
                     pageSize = pageSize,
                     config = config.values
                 )
-                val raw = runtime.call(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
+                val raw = callRuntime(FUNCTION_SEARCH_COVERS, json.encodeToString(request))
                 val results = parser.parseCoverResults(
                     rawJson = raw,
                     pluginId = id,
@@ -276,18 +275,109 @@ class ScriptSearchSource(
             }
         }
 
-    override fun close() {
-        if (!executionContextDelegate.isInitialized()) return
-        val executionContext = executionContext
-        runCatching {
-            if (runtimeDelegate.isInitialized()) {
-                executionContext.executor.submit {
-                    runtime.close()
-                }.get(3, TimeUnit.SECONDS)
+    fun updateUserState(plugin: SourcePluginEntity) {
+        customName = plugin.customName
+        metadataEnabled = plugin.metadataEnabled
+        lyricsEnabled = plugin.lyricsEnabled
+        coverEnabled = plugin.coverEnabled
+        metadataSortOrder = plugin.metadataSortOrder
+        lyricsSortOrder = plugin.lyricsSortOrder
+        coverSortOrder = plugin.coverSortOrder
+    }
+
+    private suspend fun callRuntime(function: String, request: String): String {
+        val instance = runtime
+        instance.resetCancellation()
+        return suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { instance.cancelInvocation() }
+            if (continuation.isActive) {
+                continuation.resumeWith(runCatching {
+                    if (!scriptInitialized) {
+                        try {
+                            instance.eval(script, manifest.entry)
+                            scriptInitialized = true
+                        } catch (error: Throwable) {
+                            // An interrupted initializer may have left partial globals behind.
+                            runtimeInstance = null
+                            instance.close()
+                            throw error
+                        }
+                    }
+                    instance.call(function, request)
+                })
             }
         }
-        executionContext.dispatcher.close()
-        executionContext.executor.shutdown()
+    }
+
+    internal fun snapshot(plugin: SourcePluginEntity): SearchSource {
+        val localized = localizedManifest?.invoke() ?: manifest
+        val name = plugin.customName?.trim()?.takeIf { it.isNotEmpty() } ?: localized.name
+        return SourceSnapshot(this, plugin, name, localized.configFields)
+    }
+
+    override suspend fun <T> withSession(block: suspend SearchSource.() -> T): T = lease { block(this) }
+
+    private suspend fun <T> execute(operation: String, block: suspend () -> T): T = lease {
+        withContext(executionContext().dispatcher + newLogOperation(operation)) { block() }
+    }
+
+    private suspend fun <T> lease(block: suspend () -> T): T {
+        val held = currentCoroutineContext()[RuntimeSessions]?.sources.orEmpty()
+        if (this in held) return block()
+        synchronized(lifecycleLock) {
+            check(!closing) { "Plugin instance has been retired" }
+            activeSessions++
+        }
+        try {
+            return withContext(RuntimeSessions(held + this)) { block() }
+        } finally {
+            synchronized(lifecycleLock) {
+                activeSessions--
+                disposeIfIdle()
+            }
+        }
+    }
+
+    override fun close() = synchronized(lifecycleLock) {
+        closing = true
+        disposeIfIdle()
+    }
+
+    private fun disposeIfIdle() {
+        if (!closing || activeSessions != 0) return
+        val context = executionContext ?: return
+        executionContext = null
+        context.executor.execute {
+            try {
+                runtimeInstance?.close()
+                runtimeInstance = null
+            } finally {
+                context.dispatcher.close()
+                context.executor.shutdown()
+            }
+        }
+    }
+
+    private class RuntimeSessions(val sources: Set<ScriptSearchSource>) : AbstractCoroutineContextElement(Key) {
+        companion object Key : CoroutineContext.Key<RuntimeSessions>
+    }
+
+    private data class SourceSnapshot(
+        val source: ScriptSearchSource,
+        val plugin: SourcePluginEntity,
+        override val name: String,
+        override val configFields: List<PluginConfigField>
+    ) : SearchSource by source {
+        override val iconPath: String? = plugin.iconPath
+        override val metadataEnabled: Boolean = plugin.metadataEnabled
+        override val lyricsEnabled: Boolean = plugin.lyricsEnabled
+        override val coverEnabled: Boolean = plugin.coverEnabled
+        override val metadataSortOrder: Int = plugin.metadataSortOrder
+        override val lyricsSortOrder: Int = plugin.lyricsSortOrder
+        override val coverSortOrder: Int = plugin.coverSortOrder
+
+        override suspend fun <T> withSession(block: suspend SearchSource.() -> T): T =
+            source.withSession { block(this@SourceSnapshot) }
     }
 
     private fun SongSearchResult.toPluginSongRequest(): PluginSongRequest {

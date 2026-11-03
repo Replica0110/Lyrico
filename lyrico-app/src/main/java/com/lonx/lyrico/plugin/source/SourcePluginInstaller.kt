@@ -19,12 +19,14 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
 import java.io.IOException
-import java.nio.file.Files
 import com.lonx.lyrico.data.model.log.recordOperation
 import com.lonx.lyrico.data.model.log.withLogOperation
 import com.lonx.lyrico.data.model.log.LogOperation
 import kotlinx.coroutines.currentCoroutineContext
 import java.util.zip.ZipInputStream
+import java.util.UUID
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
 
 data class PluginImportLimits(
     val maxTotalUncompressedBytes: Long = 30L * 1024 * 1024,
@@ -52,7 +54,16 @@ enum class PluginVersionConflict {
     NONE,
     UPDATE,
     OVERWRITE,
-    DOWNGRADE
+    DOWNGRADE;
+
+    companion object {
+        fun between(installed: Int?, candidate: Int): PluginVersionConflict = when {
+            installed == null -> NONE
+            candidate > installed -> UPDATE
+            candidate == installed -> OVERWRITE
+            else -> DOWNGRADE
+        }
+    }
 }
 
 data class PluginInstallResult(
@@ -136,6 +147,9 @@ class SourcePluginInstaller(
     private val appLogRepository: AppLogRepository,
     private val limits: PluginImportLimits = PluginImportLimits()
 ) {
+    // All file/database mutations share this lock, including uninstall and recovery.
+    val mutationMutex = Mutex()
+    private var recovered = false
     private val manifestMetadataSynchronizationMutex = Mutex()
     private var installedManifestMetadataSynchronized = false
 
@@ -144,7 +158,8 @@ class SourcePluginInstaller(
         installRoot: File
     ): PluginImportSession = withContext(Dispatchers.IO) {
         installRoot.mkdirs()
-        val tempDir = File(installRoot, ".import-${System.currentTimeMillis()}")
+        recover(installRoot)
+        val tempDir = File(installRoot, ".import-${UUID.randomUUID()}")
         tempDir.mkdirs()
 
         try {
@@ -225,7 +240,10 @@ class SourcePluginInstaller(
         session: PluginImportSession,
         enabled: Boolean = false,
         selectedRoots: Set<String>? = null,
-        allowDowngrade: Boolean = false
+        allowDowngrade: Boolean = false,
+        expectedInstalledDir: String? = null,
+        discardSession: Boolean = true,
+        onInstalled: (SourcePluginEntity) -> Unit = {}
     ): PluginInstallResult = withContext(Dispatchers.IO) {
         val failed = session.failed.toMutableList()
         try {
@@ -233,33 +251,41 @@ class SourcePluginInstaller(
                 selectedRoots == null || candidate.relativeRootInArchive in selectedRoots
             }
             val installed = selectedCandidates.mapNotNull { candidate ->
-                if (candidate.versionConflict == PluginVersionConflict.DOWNGRADE && !allowDowngrade) {
-                    val failure = candidate.toFailed(
-                        reason = "Import version is lower than installed version: ${candidate.manifest.id}"
-                    )
-                    failed += failure
-                    logInstallFailure("Plugin install rejected", failure)
-                    return@mapNotNull null
+                mutationMutex.withLock {
+                    val current = repository.getPlugin(candidate.manifest.id)
+                    require(expectedInstalledDir == null || current?.pluginDir == expectedInstalledDir) {
+                        "Plugin changed while downloading; check for updates again"
+                    }
+                    if (current != null && candidate.manifest.versionCode < current.versionCode && !allowDowngrade) {
+                        val failure = candidate.toFailed(
+                            reason = "Import version is lower than installed version: ${candidate.manifest.id}"
+                        )
+                        failed += failure
+                        logInstallFailure("Plugin install rejected", failure)
+                        return@withLock null
+                    }
+                    runCatching {
+                        installCandidate(
+                            candidate = candidate,
+                            allCandidates = session.candidates,
+                            installRoot = session.installRoot,
+                            enabled = enabled,
+                            onInstalled = onInstalled
+                        )
+                    }.onFailure { throwable ->
+                        if (throwable is kotlinx.coroutines.CancellationException) throw throwable
+                        val failure = candidate.toFailed(
+                            reason = throwable.message ?: throwable.javaClass.simpleName
+                        )
+                        failed += failure
+                        logInstallerException(
+                            message = "Plugin install failed\nplugin=${candidate.manifest.id}\n" +
+                                    "name=${PluginNames.resolve(candidate.manifest, candidate.pluginRoot)}\nroot=${candidate.relativeRootInArchive}",
+                            throwable = throwable,
+                            relatedId = candidate.manifest.id
+                        )
+                    }.getOrNull()
                 }
-                runCatching {
-                    installCandidate(
-                        candidate = candidate,
-                        allCandidates = session.candidates,
-                        installRoot = session.installRoot,
-                        enabled = enabled
-                    )
-                }.onFailure { throwable ->
-                    val failure = candidate.toFailed(
-                        reason = throwable.message ?: throwable.javaClass.simpleName
-                    )
-                    failed += failure
-                    logInstallerException(
-                        message = "Plugin install failed\nplugin=${candidate.manifest.id}\n" +
-                                "name=${PluginNames.resolve(candidate.manifest, candidate.pluginRoot)}\nroot=${candidate.relativeRootInArchive}",
-                        throwable = throwable,
-                        relatedId = candidate.manifest.id
-                    )
-                }.getOrNull()
             }
             if (installed.isNotEmpty() || failed.isNotEmpty()) {
                 logInstaller(
@@ -273,12 +299,29 @@ class SourcePluginInstaller(
             }
             PluginInstallResult(installed = installed, failed = failed)
         } finally {
-            discardImport(session)
+            if (discardSession) discardImport(session)
         }
     }
 
     fun discardImport(session: PluginImportSession) {
         session.tempDir.deleteRecursively()
+    }
+
+    /** Called once before runtime instances exist. Keep old versions during this process's lifetime. */
+    suspend fun recover(installRoot: File) = mutationMutex.withLock {
+        if (recovered) return@withLock
+        val referenced = repository.getPlugins().map { File(it.pluginDir).canonicalPath }.toSet()
+        fun clean(file: File) {
+            val path = file.canonicalPath
+            if (path in referenced) return
+            if (referenced.any { it.startsWith(path + File.separator) }) {
+                file.listFiles()?.forEach(::clean)
+            } else {
+                runCatching { file.deleteRecursively() }
+            }
+        }
+        installRoot.listFiles()?.forEach(::clean)
+        recovered = true
     }
 
     private fun extractZip(input: InputStream, targetDir: File) {
@@ -377,11 +420,12 @@ class SourcePluginInstaller(
         candidate: PluginInstallCandidate,
         allCandidates: List<PluginInstallCandidate>,
         installRoot: File,
-        enabled: Boolean
+        enabled: Boolean,
+        onInstalled: (SourcePluginEntity) -> Unit
     ): SourcePluginEntity = withLogOperation("plugin-install") {
         val started = System.nanoTime()
         var stage = "copy-to-staging"
-        val targetDir = File(installRoot, candidate.manifest.id)
+        val targetDir = File(installRoot, "${candidate.manifest.id}/${UUID.randomUUID()}")
         val stagingDir = File(installRoot, ".staging-${candidate.manifest.id}-${System.currentTimeMillis()}")
         if (stagingDir.exists()) stagingDir.deleteRecursively()
         stagingDir.mkdirs()
@@ -394,9 +438,8 @@ class SourcePluginInstaller(
             copyPluginRoot(candidate, allCandidates, stagingDir)
             stage = "validate-staging"
             validatePluginSize(stagingDir)
-            if (targetDir.exists()) {
-                stage = "remove-existing-directory"
-                removeExistingPluginDirectory(targetDir)
+            require(targetDir.parentFile!!.isDirectory || targetDir.parentFile!!.mkdirs()) {
+                "Cannot create plugin version directory"
             }
             stage = "move-staging"
             if (!stagingDir.renameTo(targetDir)) {
@@ -406,7 +449,11 @@ class SourcePluginInstaller(
                 stagingDir.deleteRecursively()
             }
             stage = "update-database"
-            upsertInstalledPlugin(candidate.manifest, targetDir, enabled)
+            currentCoroutineContext().ensureActive()
+            // Finish the database commit even if cancellation arrives at this point.
+            withContext(NonCancellable) {
+                upsertInstalledPlugin(candidate.manifest, targetDir, enabled).also(onInstalled)
+            }
         } catch (error: Exception) {
             if (error is kotlinx.coroutines.CancellationException) throw error
             throw IOException("Plugin installation failed: operationId=${currentCoroutineContext()[LogOperation]?.id} stage=$stage plugin=${candidate.manifest.id} " +
@@ -414,28 +461,6 @@ class SourcePluginInstaller(
         } finally {
             if (stagingDir.exists()) stagingDir.deleteRecursively()
         }
-    }
-
-    private fun removeExistingPluginDirectory(directory: File) {
-        var failures = 0
-        val details = mutableListOf<IOException>()
-        fun failed(file: File, error: IOException) {
-            failures++
-            if (details.size < 8) details += IOException(
-                "path=${file.absolutePath} exists=${file.exists()} directory=${file.isDirectory} " +
-                    "readable=${file.canRead()} writable=${file.canWrite()}; ${error.javaClass.simpleName}: ${error.message}", error)
-        }
-        directory.walkBottomUp().onFail { file, error -> failed(file, error) }.forEach { file ->
-            try {
-                Files.deleteIfExists(file.toPath())
-            } catch (error: IOException) {
-                failed(file, error)
-            }
-        }
-        if (failures > 0) throw IOException(
-            "Failed to remove existing plugin directory: ${directory.absolutePath}; failures=$failures; ${details.first().message}",
-            details.first()
-        ).also { error -> details.drop(1).forEach(error::addSuppressed) }
     }
 
     private fun copyPluginRoot(
@@ -511,7 +536,8 @@ class SourcePluginInstaller(
             lyricsSortOrder = existing?.lyricsSortOrder ?: initialSortOrder,
             coverSortOrder = existing?.coverSortOrder ?: initialSortOrder,
             installedAt = existing?.installedAt ?: now,
-            updatedAt = now
+            updatedAt = now,
+            updateUrl = manifest.updateUrl
         )
         repository.upsertPlugin(entity)
         logInstaller(
@@ -533,38 +559,43 @@ class SourcePluginInstaller(
 
     suspend fun synchronizeInstalledPluginManifestMetadata() {
         manifestMetadataSynchronizationMutex.withLock {
-            if (installedManifestMetadataSynchronized) return
+            mutationMutex.withLock {
+                if (installedManifestMetadataSynchronized) return
 
-            withContext(Dispatchers.IO) {
-                repository.getPlugins().forEach { plugin ->
-                    runCatching {
-                        val manifestFile = File(plugin.pluginDir, MANIFEST_FILE)
-                        val manifest = json.decodeFromString<PluginManifest>(manifestFile.readText())
-                        require(manifest.id == plugin.id) {
-                            "Installed manifest id does not match database record: ${plugin.id}"
-                        }
-                        val capabilitiesJson = json.encodeToString(
-                            manifest.capabilities.normalizedPluginCapabilities()
-                        )
-                        if (
-                            manifest.apiVersion != plugin.apiVersion ||
-                            manifest.minHostApiVersion != plugin.minHostApiVersion ||
-                            capabilitiesJson != plugin.capabilitiesJson
-                        ) {
-                            repository.updateManifestContract(
-                                id = plugin.id,
-                                apiVersion = manifest.apiVersion,
-                                minHostApiVersion = manifest.minHostApiVersion,
-                                capabilitiesJson = capabilitiesJson
+                withContext(Dispatchers.IO) {
+                    repository.getPlugins().forEach { plugin ->
+                        runCatching {
+                            val manifestFile = File(plugin.pluginDir, MANIFEST_FILE)
+                            val manifest = json.decodeFromString<PluginManifest>(manifestFile.readText())
+                            require(manifest.id == plugin.id) {
+                                "Installed manifest id does not match database record: ${plugin.id}"
+                            }
+                            val capabilitiesJson = json.encodeToString(
+                                manifest.capabilities.normalizedPluginCapabilities()
                             )
+                            if (
+                                manifest.apiVersion != plugin.apiVersion ||
+                                manifest.minHostApiVersion != plugin.minHostApiVersion ||
+                                capabilitiesJson != plugin.capabilitiesJson ||
+                                manifest.updateUrl != plugin.updateUrl
+                            ) {
+                                repository.updateManifestContract(
+                                    id = plugin.id,
+                                    apiVersion = manifest.apiVersion,
+                                    minHostApiVersion = manifest.minHostApiVersion,
+                                    capabilitiesJson = capabilitiesJson,
+                                    updateUrl = manifest.updateUrl
+                                )
+                            }
+                        }.onFailure { throwable ->
+                            if (throwable is kotlinx.coroutines.CancellationException) throw throwable
+                            Log.w(TAG, "Failed to synchronize manifest metadata for ${plugin.id}", throwable)
                         }
-                    }.onFailure { throwable ->
-                        Log.w(TAG, "Failed to synchronize manifest metadata for ${plugin.id}", throwable)
                     }
                 }
-            }
 
-            installedManifestMetadataSynchronized = true
+                installedManifestMetadataSynchronized = true
+            }
         }
     }
 
@@ -587,6 +618,7 @@ class SourcePluginInstaller(
         }
         require(manifest.name.isNotBlank()) { "Plugin name is required" }
         require(manifest.versionCode >= 1) { "Plugin versionCode must be >= 1" }
+        manifest.updateUrl?.let { PluginCatalogParser.requireUrl(it) }
         require(HostApiRegistry.supportsPluginApiVersion(manifest.apiVersion)) {
             "Unsupported plugin apiVersion: ${manifest.apiVersion} " +
                 "(supported: ${HostApiRegistry.MIN_PLUGIN_PROTOCOL_VERSION}..${HostApiRegistry.PLUGIN_PROTOCOL_VERSION})"
@@ -655,12 +687,7 @@ class SourcePluginInstaller(
     private fun PluginInstallCandidate.versionConflict(
         existing: SourcePluginEntity?
     ): PluginVersionConflict {
-        if (existing == null) return PluginVersionConflict.NONE
-        return when {
-            manifest.versionCode > existing.versionCode -> PluginVersionConflict.UPDATE
-            manifest.versionCode == existing.versionCode -> PluginVersionConflict.OVERWRITE
-            else -> PluginVersionConflict.DOWNGRADE
-        }
+        return PluginVersionConflict.between(existing?.versionCode, manifest.versionCode)
     }
 
     private suspend fun logInstallFailure(message: String, failure: PluginInstallFailed) {

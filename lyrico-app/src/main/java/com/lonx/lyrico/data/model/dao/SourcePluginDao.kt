@@ -67,7 +67,7 @@ interface SourcePluginDao {
 
     @Query(
         "UPDATE source_plugins SET apiVersion = :apiVersion, " +
-            "minHostApiVersion = :minHostApiVersion, capabilitiesJson = :capabilitiesJson, " +
+            "minHostApiVersion = :minHostApiVersion, capabilitiesJson = :capabilitiesJson, updateUrl = :updateUrl, " +
             "updatedAt = :updatedAt WHERE id = :id"
     )
     suspend fun updateManifestContract(
@@ -75,6 +75,7 @@ interface SourcePluginDao {
         apiVersion: Int,
         minHostApiVersion: Int,
         capabilitiesJson: String,
+        updateUrl: String?,
         updatedAt: Long
     )
 

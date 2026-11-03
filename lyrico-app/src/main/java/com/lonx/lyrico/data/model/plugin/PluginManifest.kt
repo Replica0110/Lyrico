@@ -28,7 +28,8 @@ data class PluginManifest(
     val icon: String? = null,
     val capabilities: Set<PluginCapability> = emptySet(),
     val configFields: List<PluginConfigField> = emptyList(),
-    val i18n: PluginI18n? = null
+    val i18n: PluginI18n? = null,
+    val updateUrl: String? = null
 )
 
 @Serializable

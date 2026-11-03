@@ -854,7 +854,6 @@
     <string name="plugin_action_failed">外掛操作失敗：%1$s</string>
     <string name="plugin_action_cannot_open">無法開啟所選檔案</string>
     <string name="plugin_action_none_installable">找不到可安裝的外掛</string>
-    <string name="plugin_action_remove_failed">無法刪除外掛檔案</string>
     <string name="rating_stars_value">%1$d 星</string>
     <string name="log_recording_start">開始記錄</string>
     <string name="log_recording_stop">停止記錄</string>
@@ -884,4 +883,29 @@
     <string name="reproduction_unavailable">重現記錄已失效，請重新記錄</string>
     <string name="reproduction_empty">暫無重現記錄</string>
     <string name="write_permission_retry_failed">授權後仍無法寫入，請從音樂庫開啟檔案後重試</string>
+    <string name="plugin_import_local">本機匯入</string>
+    <string name="plugin_import_online">線上訂閱</string>
+    <string name="plugin_online_url">訂閱連結</string>
+    <string name="plugin_online_fetch">取得</string>
+    <string name="plugin_update">更新</string>
+    <string name="plugin_online_installing">安裝中</string>
+    <string name="plugin_online_retry">重試</string>
+    <string name="plugin_online_incompatible">外掛與目前應用程式不相容</string>
+    <string name="plugin_check_updates">檢查更新</string>
+    <string name="plugin_check_latest">未發現更新</string>
+    <string name="plugin_check_available">發現 %1$d 個外掛更新</string>
+    <string name="plugin_check_failed">%1$d 個更新位址檢查失敗</string>
+    <string name="plugin_update_url">更新位址</string>
+    <string name="plugin_catalog_incompatible_count">不相容（%1$d）</string>
+    <string name="plugin_download_size">下載大小：%1$s</string>
+    <string name="plugin_install_result">已安裝 %1$d 個，失敗 %2$d 個</string>
+    <string name="plugin_task_waiting">等待下載</string>
+    <string name="plugin_task_verifying">校驗中</string>
+    <string name="plugin_task_installed">已安裝</string>
+    <string name="plugin_task_cancelled">已停止</string>
+    <string name="plugin_import_done">完成</string>
+    <string name="plugin_catalog_plugins">外掛程式（%1$d）</string>
+    <string name="plugin_task_failed">失敗</string>
+    <string name="plugin_update_succeeded">%1$s 已更新至 %2$s</string>
+    <string name="plugin_update_failed">%1$s 更新失敗：%2$s</string>
 </resources>

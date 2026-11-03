@@ -14,6 +14,7 @@ import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.repository.SourcePluginRepository
 import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
 import com.lonx.lyrico.plugin.source.PluginImportSession
+import com.lonx.lyrico.plugin.source.PluginInstallResult
 import com.lonx.lyrico.plugin.source.PluginVersionConflict
 import com.lonx.lyrico.plugin.source.SourcePluginInstaller
 import kotlinx.coroutines.Dispatchers
@@ -36,14 +37,31 @@ import com.lonx.lyrico.plugin.i18n.PluginLocales
 import com.lonx.lyrico.plugin.i18n.PluginStrings
 import com.lonx.lyrico.data.model.plugin.PluginManifest
 import kotlinx.serialization.json.Json
+import com.lonx.lyrico.plugin.source.PluginCatalog
+import com.lonx.lyrico.plugin.source.PluginDistributionManager
+import com.lonx.lyrico.plugin.source.PluginRelease
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+
+data class PluginImportTask(
+    val phase: Phase = Phase.WAITING,
+    val percent: Int = 0,
+    val error: String? = null
+) {
+    enum class Phase { WAITING, DOWNLOADING, VERIFYING, INSTALLING, INSTALLED, FAILED, CANCELLED }
+}
 
 sealed interface PluginMessage {
     enum class Status : PluginMessage {
         PACKAGE_SCANNED, INSTALLED, DELETED, NAME_SAVED, NO_PENDING_IMPORT, NO_SELECTION,
-        BUSY, WORKING, TIMED_OUT, CANNOT_OPEN_FILE, NO_INSTALLABLE_PLUGIN, CANNOT_DELETE_FILES
+        BUSY, WORKING, TIMED_OUT, CANNOT_OPEN_FILE, NO_INSTALLABLE_PLUGIN
     }
 
     data class Failure(val reason: String) : PluginMessage
+    data class UpdateCheck(val count: Int, val failures: Int) : PluginMessage
+    data class UpdateResult(val name: String, val version: String, val error: String? = null) : PluginMessage
 }
 
 data class PluginUiState(
@@ -52,7 +70,13 @@ data class PluginUiState(
     val messageVersion: Long = 0,
     val smokeResult: String = "",
     val pendingImport: PluginImportSession? = null,
-    val selectedImportRoots: Set<String> = emptySet()
+    val selectedImportRoots: Set<String> = emptySet(),
+    val onlineCatalog: PluginCatalog? = null,
+    val onlineBusy: Boolean = false,
+    val onlineTasks: Map<String, PluginImportTask> = emptyMap(),
+    val onlineError: String? = null,
+    val importResult: PluginInstallResult? = null,
+    val importError: String? = null
 )
 
 class PluginViewModel(
@@ -60,7 +84,8 @@ class PluginViewModel(
     private val settingsRepository: SettingsRepository,
     private val installer: SourcePluginInstaller,
     private val pluginManager: PluginSearchSourceManager,
-    private val appLogRepository: AppLogRepository
+    private val appLogRepository: AppLogRepository,
+    val online: PluginDistributionManager
 ) : ViewModel() {
     private val manifestJson = Json { ignoreUnknownKeys = true }
     val plugins: StateFlow<List<SourcePluginEntity>> =
@@ -81,11 +106,139 @@ class PluginViewModel(
     private val _uiState = MutableStateFlow(PluginUiState())
     val uiState: StateFlow<PluginUiState> = _uiState.asStateFlow()
     private val actionMutex = Mutex()
+    private var onlineJob: Job? = null
+    private var onlineSessions = mutableMapOf<String, PluginImportSession>()
+    private var manualCheck: Job? = null
+
+    fun checkPluginUpdates() {
+        if (manualCheck?.isActive == true) return
+        publishMessage(PluginMessage.Status.WORKING)
+        manualCheck = viewModelScope.launch {
+            online.awaitUpdateCheck()
+            publishMessage(PluginMessage.UpdateCheck(online.updates.value.size, online.checkFailures))
+        }
+    }
+
+    fun updatePlugin(candidate: com.lonx.lyrico.plugin.source.PluginUpdateState) {
+        online.update(candidate) { result ->
+            publishMessage(PluginMessage.UpdateResult(
+                name = candidate.release.name,
+                version = candidate.release.versionName,
+                error = result.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName }
+            ))
+        }
+    }
+
+    fun fetchCatalog(url: String) {
+        onlineJob?.cancel()
+        _uiState.update { it.copy(onlineBusy = true, onlineCatalog = null, onlineError = null, onlineTasks = emptyMap()) }
+        onlineJob = viewModelScope.launch {
+            try {
+                val catalog = online.client.fetch(url.trim())
+                _uiState.update { it.copy(onlineCatalog = catalog, onlineBusy = false) }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _uiState.update { it.copy(onlineBusy = false, onlineError = error.message) }
+            }
+        }
+    }
+
+    fun installOnline(releases: List<PluginRelease>) {
+        if (_uiState.value.onlineBusy || _uiState.value.isBusy) return
+        val catalog = _uiState.value.onlineCatalog ?: return
+        val selected = releases.distinctBy { it.id }.filter {
+            it in catalog.plugins && it.compatible &&
+                _uiState.value.onlineTasks[it.id]?.phase != PluginImportTask.Phase.INSTALLED
+        }
+        if (selected.isEmpty()) return
+        val sessions = onlineSessions
+        _uiState.update { state -> state.copy(onlineBusy = true, onlineError = null,
+            onlineTasks = state.onlineTasks + selected.associate { it.id to PluginImportTask() }) }
+        onlineJob = viewModelScope.launch {
+            fun update(id: String, task: PluginImportTask) {
+                if (sessions === onlineSessions) _uiState.update {
+                    it.copy(onlineTasks = it.onlineTasks + (id to task))
+                }
+            }
+            try {
+                for (release in selected) {
+                    currentCoroutineContext().ensureActive()
+                    var committed = false
+                    try {
+                        val current = repository.getPlugin(release.id)
+                        if (sessions[release.id] == null) update(release.id,
+                            PluginImportTask(PluginImportTask.Phase.DOWNLOADING))
+                        val session = sessions[release.id] ?: online.prepareDownloads(
+                            listOf(release),
+                            onVerifying = { update(it, PluginImportTask(PluginImportTask.Phase.VERIFYING)) }
+                        ) { id, percent ->
+                            update(id, PluginImportTask(PluginImportTask.Phase.DOWNLOADING, percent))
+                        }.also { sessions[release.id] = it }
+                        currentCoroutineContext().ensureActive()
+                        update(release.id, PluginImportTask(PluginImportTask.Phase.INSTALLING))
+                        val result = installer.installPrepared(
+                            session, enabled = true, discardSession = false,
+                            allowDowngrade = current != null && release.versionCode < current.versionCode,
+                            expectedInstalledDir = current?.pluginDir,
+                            onInstalled = {
+                                committed = true
+                                update(release.id, PluginImportTask(PluginImportTask.Phase.INSTALLED))
+                            }
+                        )
+                        check(result.installed.size == 1) {
+                            result.failed.firstOrNull()?.reason ?: "Plugin installation failed"
+                        }
+                    } catch (error: Exception) {
+                        if (error is CancellationException && error !is TimeoutCancellationException) throw error
+                        if (!committed) update(release.id, PluginImportTask(
+                            PluginImportTask.Phase.FAILED, error = error.message ?: error.javaClass.simpleName))
+                    } finally {
+                        if (committed) sessions.remove(release.id)?.let(installer::discardImport)
+                    }
+                }
+            } finally {
+                if (sessions === onlineSessions) _uiState.update { state -> state.copy(
+                    onlineBusy = false,
+                    onlineTasks = state.onlineTasks.mapValues { (_, task) ->
+                        if (task.phase in setOf(PluginImportTask.Phase.WAITING, PluginImportTask.Phase.DOWNLOADING,
+                                PluginImportTask.Phase.VERIFYING, PluginImportTask.Phase.INSTALLING))
+                            task.copy(phase = PluginImportTask.Phase.CANCELLED) else task
+                    }
+                ) }
+            }
+        }
+    }
+
+    fun stopOnlineImport() { onlineJob?.cancel() }
+
+    fun dismissOnline() {
+        val previousJob = onlineJob
+        val previousSessions = onlineSessions
+        onlineSessions = mutableMapOf()
+        previousJob?.cancel()
+        val cleanup = {
+            previousSessions.values.forEach(installer::discardImport)
+            previousSessions.clear()
+        }
+        if (previousJob != null) previousJob.invokeOnCompletion { cleanup() } else cleanup()
+        _uiState.update { it.copy(onlineBusy = false, onlineCatalog = null, onlineError = null, onlineTasks = emptyMap(),
+            importResult = null, importError = null) }
+    }
 
     init {
         viewModelScope.launch {
             installer.synchronizeInstalledPluginManifestMetadata()
         }
+    }
+
+    override fun onCleared() {
+        val sessions = onlineSessions
+        onlineSessions = mutableMapOf()
+        val job = onlineJob
+        job?.cancel()
+        if (job != null) job.invokeOnCompletion { sessions.values.forEach(installer::discardImport) }
+        else sessions.values.forEach(installer::discardImport)
+        super.onCleared()
     }
 
     fun importPlugin(context: Context, uri: Uri) {
@@ -108,6 +261,8 @@ class PluginViewModel(
                 _uiState.update { state ->
                     state.copy(
                         pendingImport = session,
+                        importResult = null,
+                        importError = null,
                         selectedImportRoots = session.candidates
                             .filter { candidate -> candidate.versionConflict != PluginVersionConflict.DOWNGRADE }
                             .mapTo(mutableSetOf()) { candidate -> candidate.relativeRootInArchive }
@@ -130,61 +285,90 @@ class PluginViewModel(
     }
 
     fun installPendingImport() {
-        val session = _uiState.value.pendingImport ?: run {
+        val state = _uiState.value
+        val session = state.pendingImport ?: run {
             publishMessage(PluginMessage.Status.NO_PENDING_IMPORT)
             return
         }
-
-        val selectedRoots = _uiState.value.selectedImportRoots
-        if (selectedRoots.isEmpty()) {
+        val completedIds = state.importResult?.installed.orEmpty().mapTo(mutableSetOf()) { it.id }
+        val selected = session.candidates.filter {
+            it.relativeRootInArchive in state.selectedImportRoots && it.manifest.id !in completedIds
+        }
+        if (selected.isEmpty()) {
             publishMessage(PluginMessage.Status.NO_SELECTION)
             return
         }
-
-        val allowDowngrade = session.candidates.any { candidate ->
-            candidate.relativeRootInArchive in selectedRoots &&
-                    candidate.versionConflict == PluginVersionConflict.DOWNGRADE
-        }
-
-        runBusy(PluginMessage.Status.INSTALLED) {
-            val result = installer.installPrepared(
-                session = session,
-                enabled = true,
-                selectedRoots = selectedRoots,
-                allowDowngrade = allowDowngrade
-            )
-
-            if (result.installed.isEmpty()) {
-                val failureReason = result.failed.firstOrNull()?.reason ?: "No installable plugin found"
-                logPluginError(
-                    message = "Install failed",
-                    detail = failureReason,
-                    fullDetail = result.failed.joinToString("\n") { "${it.rootPath}: ${it.reason}" }
+        val selectedRoots = selected.mapTo(mutableSetOf()) { it.relativeRootInArchive }
+        val attemptedIds = selected.mapTo(mutableSetOf()) { it.manifest.id }
+        val allowDowngrade = selected.any { it.versionConflict == PluginVersionConflict.DOWNGRADE }
+        _uiState.update { it.copy(importError = null) }
+        runBusy(successMessage = null) {
+            val committed = mutableListOf<SourcePluginEntity>()
+            try {
+                val result = installer.installPrepared(
+                    session = session,
+                    enabled = true,
+                    selectedRoots = selectedRoots,
+                    allowDowngrade = allowDowngrade,
+                    discardSession = false,
+                    onInstalled = { committed += it }
                 )
-                throw PluginActionFailure(PluginMessage.Status.NO_INSTALLABLE_PLUGIN, failureReason)
+                val installed = (state.importResult?.installed.orEmpty() + result.installed).distinctBy { it.id }
+                val failed = (state.importResult?.failed.orEmpty().filter { it.pluginId !in attemptedIds } + result.failed)
+                    .distinctBy { it.pluginId to it.rootPath }
+                val combined = PluginInstallResult(installed, failed)
+                if (failed.isEmpty()) {
+                    installer.discardImport(session)
+                    _uiState.update { it.copy(pendingImport = null, selectedImportRoots = emptySet(),
+                        onlineCatalog = null, importResult = combined, importError = null) }
+                    publishMessage(PluginMessage.Status.INSTALLED)
+                } else {
+                    _uiState.update { it.copy(importResult = combined) }
+                    val installedIds = installed.mapTo(mutableSetOf()) { it.id }
+                    val refreshed = session.candidates.map { candidate ->
+                        val current = repository.getPlugin(candidate.manifest.id)
+                        candidate.copy(existingPlugin = current,
+                            versionConflict = PluginVersionConflict.between(current?.versionCode, candidate.manifest.versionCode))
+                    }
+                    val retryRoots = refreshed.filter { candidate ->
+                        candidate.manifest.id !in installedIds && failed.any { it.pluginId == candidate.manifest.id } &&
+                            (candidate.versionConflict != PluginVersionConflict.DOWNGRADE || allowDowngrade)
+                    }.mapTo(mutableSetOf()) { it.relativeRootInArchive }
+                    _uiState.update { it.copy(pendingImport = session.copy(candidates = refreshed), importResult = combined, selectedImportRoots = retryRoots,
+                        importError = null, message = null, messageVersion = System.nanoTime()) }
+                }
+            } catch (error: Exception) {
+                // A later item may time out after earlier database commits succeeded.
+                val installed = (state.importResult?.installed.orEmpty() + committed).distinctBy { it.id }
+                val installedIds = installed.mapTo(mutableSetOf()) { it.id }
+                _uiState.update { current -> current.copy(
+                    importResult = PluginInstallResult(installed,
+                        state.importResult?.failed.orEmpty().filter { it.pluginId !in installedIds }),
+                    selectedImportRoots = current.selectedImportRoots - session.candidates
+                        .filter { it.manifest.id in installedIds }.map { it.relativeRootInArchive }.toSet()
+                ) }
+                if (error !is CancellationException || error is TimeoutCancellationException) {
+                    _uiState.update { it.copy(importError = error.message ?: error.javaClass.simpleName) }
+                }
+                throw error
             }
         }
     }
-    fun discardPendingImportFiles() {
-        _uiState.value.pendingImport?.let { installer.discardImport(it) }
-    }
-    fun clearPendingImport() {
+    fun dismissPendingImport() {
+        _uiState.value.pendingImport?.let(installer::discardImport)
         _uiState.update {
             it.copy(
                 pendingImport = null,
-                selectedImportRoots = emptySet()
+                selectedImportRoots = emptySet(),
+                importResult = null,
+                importError = null
             )
         }
-    }
-
-    fun dismissPendingImport() {
-        discardPendingImportFiles()
-        clearPendingImport()
     }
 
     fun setEnabled(id: String, sourceType: PluginSourceType, enabled: Boolean) {
         viewModelScope.launch {
-            repository.setEnabled(id, sourceType, enabled)
+            installer.mutationMutex.withLock { repository.setEnabled(id, sourceType, enabled) }
         }
     }
 
@@ -193,22 +377,21 @@ class PluginViewModel(
         sourceType: PluginSourceType
     ) {
         viewModelScope.launch {
-            repository.updateSortOrders(
-                ids = plugins.map { it.id },
-                sourceType = sourceType
-            )
+            installer.mutationMutex.withLock {
+                repository.updateSortOrders(ids = plugins.map { it.id }, sourceType = sourceType)
+            }
         }
     }
 
     fun setCustomName(id: String, name: String) {
         viewModelScope.launch {
-            repository.updateCustomName(id, name)
+            installer.mutationMutex.withLock { repository.updateCustomName(id, name) }
             publishMessage(PluginMessage.Status.NAME_SAVED)
         }
     }
 
 
-    private fun runBusy(successMessage: PluginMessage.Status, block: suspend () -> Unit) {
+    private fun runBusy(successMessage: PluginMessage.Status?, block: suspend () -> Unit) {
         viewModelScope.launch {
             if (actionMutex.isLocked) {
                 publishMessage(PluginMessage.Status.BUSY)
@@ -232,8 +415,8 @@ class PluginViewModel(
                 _uiState.update {
                     it.copy(
                         isBusy = false,
-                        message = successMessage,
-                        messageVersion = System.nanoTime()
+                        message = successMessage ?: it.message,
+                        messageVersion = if (successMessage != null) System.nanoTime() else it.messageVersion
                     )
                 }
             } catch (e: TimeoutCancellationException) {
@@ -281,20 +464,15 @@ class PluginViewModel(
 
     fun uninstallPlugin(id: String) {
         runBusy(PluginMessage.Status.DELETED) {
-            val plugin = repository.getPlugin(id)
-            if (plugin != null) {
-                pluginManager.invalidate(plugin.id)
-                settingsRepository.removePluginSettings(plugin.id)
-                val pluginDir = File(plugin.pluginDir)
-                if (pluginDir.exists()) {
-                    if (!pluginDir.deleteRecursively()) {
-                        throw PluginActionFailure(
-                            PluginMessage.Status.CANNOT_DELETE_FILES,
-                            "Failed to remove plugin files: ${pluginDir.absolutePath}",
-                        )
-                    }
+            online.forget(id)
+            installer.mutationMutex.withLock {
+                val plugin = repository.getPlugin(id)
+                if (plugin != null) {
+                    pluginManager.invalidate(plugin.id)
+                    repository.uninstallPlugin(id)
+                    settingsRepository.removePluginSettings(plugin.id)
+                    // Existing invocations may still use this directory. Recovery removes it next launch.
                 }
-                repository.uninstallPlugin(id)
             }
         }
     }

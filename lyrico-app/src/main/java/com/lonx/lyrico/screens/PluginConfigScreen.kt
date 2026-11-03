@@ -216,6 +216,9 @@ fun PluginConfigScreen(
             if (salt) {
                 ScreenCard {
                     ItemValue(text = typeText, sub = apiText)
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        ItemValue(text = stringResource(R.string.plugin_update_url), sub = uiState.updateUrl ?: "—")
+                    }
                 }
             } else {
                 Card(
@@ -244,6 +247,12 @@ fun PluginConfigScreen(
                             color = MiuixTheme.colorScheme.onSurfaceVariantActions,
                             fontSize = 13.sp
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = stringResource(R.string.plugin_update_url), fontSize = 13.sp,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantActions)
+                        androidx.compose.foundation.text.selection.SelectionContainer {
+                            Text(text = uiState.updateUrl ?: "—", fontSize = 13.sp)
+                        }
                     }
                 }
             }

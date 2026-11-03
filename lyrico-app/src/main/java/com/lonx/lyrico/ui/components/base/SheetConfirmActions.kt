@@ -23,9 +23,10 @@ internal fun SheetConfirmActions(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
     confirmEnabled: Boolean = true,
+    cancelEnabled: Boolean = true,
 ) {
     if (LocalUiEngine.current == UiEngine.SALT) {
-        SaltSheetActions(cancelText, confirmText, onCancel, onConfirm, confirmEnabled)
+        SaltSheetActions(cancelText, confirmText, onCancel, onConfirm, confirmEnabled, cancelEnabled)
         return
     }
     FlowRow(
@@ -34,7 +35,7 @@ internal fun SheetConfirmActions(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         maxItemsInEachRow = if (LocalDensity.current.fontScale >= 1.3f) 1 else 2,
     ) {
-        TextButton(text = cancelText, onClick = onCancel, modifier = Modifier.weight(1f))
+        TextButton(text = cancelText, onClick = onCancel, enabled = cancelEnabled, modifier = Modifier.weight(1f))
         TextButton(
             text = confirmText,
             onClick = onConfirm,

@@ -22,6 +22,7 @@
 | `capabilities` | `string[]` | 否 | `[]` | 插件能力 |
 | `configFields` | `ConfigField[]` | 否 | `[]` | 用户可配置项 |
 | `i18n` | `object \| null` | 否 | `null` | 默认语言与资源路径映射，见[插件国际化](./i18n) |
+| `updateUrl` | `string \| null` | 否 | `null` | 插件自行检查更新所用的绝对 HTTP/HTTPS 目录地址 |
 
 名称、描述和配置界面中的文本都是普通字符串：以 `@` 开头表示引用语言资源里的键，其他内容按字面量显示。规则见[插件国际化](./i18n)。
 
@@ -377,3 +378,35 @@ JS 端读取：`var useProxy = request.config.use_proxy === "true";`
 插件函数通过 `fields` 和 `internal` 两个 JSON 对象返回搜索数据。`fields` 放宿主标准元数据字段（标题、艺术家等），`internal` 放插件私有上下文（平台 ID、token 等）。
 
 详细说明见 [配置与运行时字段](./config-metadata.md)，包括标准字段完整列表、`internal` 大小约束以及主机写入策略。
+
+## 在线目录与更新
+
+本地 ZIP 导入继续保留。manifest 可声明 `updateUrl`，指向下列格式的目录。在线订阅和单插件更新使用同一格式，只有一个插件时也使用 `plugins` 数组。
+
+```json
+{
+  "schemaVersion": 1,
+  "plugins": [
+    {
+      "id": "com.example.music",
+      "name": "Music",
+      "versionCode": 2,
+      "versionName": "1.1.0",
+      "apiVersion": 5,
+      "minHostApiVersion": 4,
+      "downloadUrl": "./com.example.music-1.1.0.zip",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "size": 123456,
+      "changelog": "## 1.1.0\n\n- 修复歌曲搜索结果缺失的问题。"
+    }
+  ]
+}
+```
+
+插件 ID 发布后保持不变，新旧版本只比较 `versionCode`；`schemaVersion` 表示目录格式版本。下载地址可相对于最终目录响应地址解析，manifest 中的 `updateUrl` 必须使用绝对 HTTP/HTTPS 地址。地址不接受内嵌账号密码或片段。
+
+发布时先上传单插件 ZIP，再根据实际产物计算 `size`（字节）和 `sha256`，最后发布目录。`changelog` 可省略；`minHostApiVersion` 默认为 1，其余示例条目字段必填。下载包 manifest 的 ID、版本号、版本名和 API 要求必须与目录一致。
+
+目录仅提供下载信息，不与已安装插件绑定。安装后以包内 manifest 的 `updateUrl` 为准，移除或修改导入链接不会改变已安装插件。后续包会替换这个地址，省略字段即清除旧地址；找不到匹配 ID 时不会改用其他条目更新。
+
+`changelog` 使用 Markdown，显示在插件更新页。官方插件仓库的填写位置和发布步骤见 [发布插件](https://github.com/Replica0110/Lyrico-Plugins#发布插件)。

@@ -84,3 +84,11 @@ Common causes:
 - The plugin API version is incompatible.
 - The entry script is missing or has an unsafe path.
 - The archive or plugin directory exceeds size limits.
+
+## Online import and updates
+
+Open the top-right import menu and choose **Local import** for a ZIP, or **Online subscription** to enter an HTTP/HTTPS catalog URL. After fetching succeeds, the input dialog closes before the plugin list opens. Select plugins and tap Install once to download, verify, and install them. Each item retains its own progress and result; retrying failed items skips successful installations.
+
+When this page opens, installed plugins with an `updateUrl` are checked for updates. New versions show an **Update** button in the plugin item. Tap it to review the version and changelog. Detailed mode shows download progress in the button; compact mode shows it beside the version. The cancel icon stops a download, and failed updates can be retried. The update action is last in detailed mode and first in compact mode.
+
+Import links do not own installed plugins. Updates use each package’s own manifest. Existing packages without an update URL can still be replaced by local ZIP import.

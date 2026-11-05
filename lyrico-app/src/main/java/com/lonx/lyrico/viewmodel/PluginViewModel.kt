@@ -77,7 +77,15 @@ data class PluginUiState(
     val onlineError: String? = null,
     val importResult: PluginInstallResult? = null,
     val importError: String? = null
-)
+) {
+    val importComplete: Boolean
+        get() {
+            val session = pendingImport ?: return false
+            val result = importResult ?: return false
+            val installedIds = result.installed.mapTo(mutableSetOf()) { it.id }
+            return !isBusy && session.candidates.all { it.manifest.id in installedIds }
+        }
+}
 
 class PluginViewModel(
     private val repository: SourcePluginRepository,
@@ -320,7 +328,7 @@ class PluginViewModel(
                 if (failed.isEmpty()) {
                     installer.discardImport(session)
                     _uiState.update { it.copy(pendingImport = null, selectedImportRoots = emptySet(),
-                        onlineCatalog = null, importResult = combined, importError = null) }
+                        importResult = combined, importError = null) }
                     publishMessage(PluginMessage.Status.INSTALLED)
                 } else {
                     _uiState.update { it.copy(importResult = combined) }

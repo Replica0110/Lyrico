@@ -381,7 +381,7 @@ JS 端读取：`var useProxy = request.config.use_proxy === "true";`
 
 ## 在线目录与更新
 
-本地 ZIP 导入继续保留。manifest 可声明 `updateUrl`，指向下列格式的目录。在线订阅和单插件更新使用同一格式，只有一个插件时也使用 `plugins` 数组。
+本地 ZIP 导入继续保留。manifest 可声明 `updateUrl`，指向下列格式的目录。在线安装和单插件更新使用同一格式，只有一个插件时也使用 `plugins` 数组。
 
 ```json
 {

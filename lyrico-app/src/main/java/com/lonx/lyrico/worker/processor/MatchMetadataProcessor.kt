@@ -60,10 +60,19 @@ class MatchMetadataProcessor(
         } ?: throw BatchTaskSkippedException("No config")
 
         val matchConfig = config.matchConfig
+        val enabledSourceOrder = config.enabledSourceOrderIds
         val sources = searchSourceProvider.getSources(PluginSourceType.METADATA)
+            .filter { enabledSourceOrder.isEmpty() || it.id in enabledSourceOrder }
+            .sortedBy { enabledSourceOrder.indexOf(it.id).let { index -> if (index == -1) Int.MAX_VALUE else index } }
 
-        return sources.withSessions {
-            sources.forEach { source ->
+        return sources.withSessions(onUnavailable = { source, error ->
+            logPluginBatchException(
+                message = "Batch metadata match source unavailable\ntask=${task.taskId}\nitem=${item.itemId}\nsource=${source.id}",
+                throwable = error,
+                relatedId = source.id
+            )
+        }) { orderedSources ->
+            orderedSources.forEach { source ->
                 val values = config.sourceSettings[source.id].orEmpty()
                 source.applyConfig(SourceRuntimeConfig(values))
             }
@@ -106,21 +115,10 @@ class MatchMetadataProcessor(
                 )
             )
 
-            val enabledSourceOrder = config.enabledSourceOrderIds
             val queries = MusicMatchUtils.buildSearchQueries(
                 song = song,
                 preferFileName = matchConfig.preferFileName
             )
-
-            val orderedSources = sources
-                .filter { source ->
-                    enabledSourceOrder.isEmpty() || source.id in enabledSourceOrder
-                }
-                .sortedBy { source ->
-                    enabledSourceOrder.indexOf(source.id).let { index ->
-                        if (index == -1) Int.MAX_VALUE else index
-                    }
-                }
 
             var bestMatch: ScoredSearchResult? = null
             var bestMatchDetail: MatchScoreDetail? = null

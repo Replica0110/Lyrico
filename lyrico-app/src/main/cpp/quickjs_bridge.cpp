@@ -110,6 +110,32 @@ std::string exceptionToString(JSContext *ctx) {
     return message.empty() ? "JavaScript execution failed, interrupted, or out of memory" : message;
 }
 
+std::string consumeJavaException(JNIEnv *env) {
+    jthrowable error = env->ExceptionOccurred();
+    env->ExceptionClear();
+    if (error == nullptr) return "Unknown Java exception";
+    std::string message = "Java exception";
+    jclass clazz = env->GetObjectClass(error);
+    jmethodID toString = clazz == nullptr ? nullptr : env->GetMethodID(clazz, "toString", "()Ljava/lang/String;");
+    jstring description = nullptr;
+    if (toString != nullptr && !env->ExceptionCheck()) {
+        description = static_cast<jstring>(env->CallObjectMethod(error, toString));
+        if (!env->ExceptionCheck() && description != nullptr) {
+            const char *chars = env->GetStringUTFChars(description, nullptr);
+            if (chars != nullptr) {
+                message = chars;
+                env->ReleaseStringUTFChars(description, chars);
+            }
+        }
+    }
+    // Formatting the original exception must not leave a second pending JNI exception.
+    if (env->ExceptionCheck()) env->ExceptionClear();
+    if (description != nullptr) env->DeleteLocalRef(description);
+    if (clazz != nullptr) env->DeleteLocalRef(clazz);
+    env->DeleteLocalRef(error);
+    return message;
+}
+
 JSValue hostCall(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv) {
     auto *state = static_cast<QuickJsRuntimeState *>(JS_GetContextOpaque(ctx));
     if (state == nullptr || state->hostApi == nullptr || state->hostCallMethod == nullptr) {
@@ -144,8 +170,8 @@ JSValue hostCall(JSContext *ctx, JSValueConst, int argc, JSValueConst *argv) {
     env->DeleteLocalRef(jPayload);
 
     if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        return JS_ThrowInternalError(ctx, "Host API call failed: %s", name.c_str());
+        const std::string reason = consumeJavaException(env);
+        return JS_ThrowInternalError(ctx, "Host API call failed: %s: %s", name.c_str(), reason.c_str());
     }
     if (result == nullptr) {
         return JS_ThrowInternalError(ctx, "Host API returned null: %s", name.c_str());

@@ -880,8 +880,8 @@
     <string name="reproduction_empty">暫無重現記錄</string>
     <string name="write_permission_retry_failed">授權後仍無法寫入，請從音樂庫開啟檔案後重試</string>
     <string name="plugin_import_local">本機匯入</string>
-    <string name="plugin_import_online">線上訂閱</string>
-    <string name="plugin_online_url">訂閱連結</string>
+    <string name="plugin_import_online">線上安裝</string>
+    <string name="plugin_online_url">外掛目錄連結</string>
     <string name="plugin_online_fetch">取得</string>
     <string name="plugin_update">更新</string>
     <string name="plugin_online_installing">安裝中</string>

@@ -879,8 +879,8 @@
     <string name="reproduction_empty">No recording</string>
     <string name="write_permission_retry_failed">Still unable to write after authorization. Open the file from the library and try again.</string>
     <string name="plugin_import_local">Local import</string>
-    <string name="plugin_import_online">Online subscription</string>
-    <string name="plugin_online_url">Subscription URL</string>
+    <string name="plugin_import_online">Online installation</string>
+    <string name="plugin_online_url">Plugin catalog URL</string>
     <string name="plugin_online_fetch">Fetch</string>
     <string name="plugin_update">Update</string>
     <string name="plugin_online_installing">Installing</string>

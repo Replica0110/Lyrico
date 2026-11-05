@@ -58,8 +58,8 @@ class QuickJsHostApi(
     }
     private var stringsSnapshot: com.lonx.lyrico.plugin.i18n.PluginStrings.Snapshot? = null
 
-    fun beginInvocation() {
-        invocationDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15)
+    fun beginInvocation(timeoutMs: Long) {
+        invocationDeadline = if (timeoutMs > 0) System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs) else 0L
         stringsSnapshot = pluginStrings?.snapshot(com.lonx.lyrico.plugin.i18n.PluginLocales.preferences.value)
     }
     private companion object {
@@ -472,8 +472,10 @@ class QuickJsHostApi(
         requestBuilder.method(method, requestBody)
 
         check(!cancelled.get()) { "Plugin invocation cancelled" }
-        val remainingMs = TimeUnit.NANOSECONDS.toMillis(invocationDeadline - System.nanoTime())
-        check(remainingMs > 0) { "Plugin invocation timed out" }
+        val remainingNanos = invocationDeadline - System.nanoTime()
+        check(invocationDeadline == 0L || remainingNanos > 0) { "Plugin invocation timed out" }
+        val remainingMs = if (invocationDeadline == 0L) 0L else
+            TimeUnit.NANOSECONDS.toMillis(remainingNanos).coerceAtLeast(1L)
         val client = okHttpClient.newBuilder()
             .callTimeout(remainingMs, TimeUnit.MILLISECONDS)
             .followRedirects(payload.booleanOrNull("followRedirects") ?: true)

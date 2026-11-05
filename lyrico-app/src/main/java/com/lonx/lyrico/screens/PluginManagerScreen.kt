@@ -616,11 +616,14 @@ fun PluginManagerScreen(
         onCancel = {
             showImportPreviewSheet = false
         },
-        confirmText = stringResource(if (uiState.importResult?.failed?.isNotEmpty() == true)
-            R.string.plugin_online_retry else R.string.plugin_import_install),
-        confirmEnabled = !uiState.isBusy && uiState.selectedImportRoots.isNotEmpty(),
+        confirmText = stringResource(when {
+            uiState.importComplete -> R.string.plugin_import_done
+            uiState.importResult?.failed?.isNotEmpty() == true -> R.string.plugin_online_retry
+            else -> R.string.plugin_import_install
+        }),
+        confirmEnabled = !uiState.isBusy && (uiState.importComplete || uiState.selectedImportRoots.isNotEmpty()),
         onConfirm = {
-            viewModel.installPendingImport()
+            if (uiState.importComplete) showImportPreviewSheet = false else viewModel.installPendingImport()
         },
         content = {
             val previewState = if (pendingImport != null) uiState else retainedImportState

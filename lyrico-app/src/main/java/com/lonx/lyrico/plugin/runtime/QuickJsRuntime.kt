@@ -6,7 +6,7 @@ import androidx.annotation.Keep
 class QuickJsRuntime(
     memoryLimitBytes: Long = DEFAULT_MEMORY_LIMIT_BYTES,
     stackSizeBytes: Long = DEFAULT_STACK_SIZE_BYTES,
-    timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+    private val timeoutMs: Long = DEFAULT_TIMEOUT_MS,
     private val hostApi: QuickJsHostApi? = QuickJsHostApi()
 ) : PluginJsRuntime {
     @Volatile private var runtimePtr: Long = QuickJsNative.createRuntime(
@@ -23,14 +23,14 @@ class QuickJsRuntime(
     fun eval(script: String): String = eval(script, "<eval>")
 
     override fun eval(script: String, filename: String): String {
-        hostApi?.beginInvocation()
+        hostApi?.beginInvocation(timeoutMs)
         val ptr = runtimePtr
         check(ptr != 0L) { "QuickJS runtime is closed" }
         return QuickJsNative.eval(ptr, script, filename)
     }
 
     override fun call(functionName: String, requestJson: String): String {
-        hostApi?.beginInvocation()
+        hostApi?.beginInvocation(timeoutMs)
         val ptr = runtimePtr
         check(ptr != 0L) { "QuickJS runtime is closed" }
         return QuickJsNative.call(ptr, functionName, requestJson)

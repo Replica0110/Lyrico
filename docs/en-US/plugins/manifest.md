@@ -369,7 +369,7 @@ See [Configuration And Result Fields](./config-metadata.md) for the full standar
 
 ## Online catalogs and updates
 
-Local ZIP import remains supported. A manifest may include `updateUrl`, pointing to a catalog with the format below. Subscription import and individual plugin updates use the same format, including a `plugins` array for a single plugin.
+Local ZIP import remains supported. A manifest may include `updateUrl`, pointing to a catalog with the format below. Online installation and individual plugin updates use the same format, including a `plugins` array for a single plugin.
 
 ```json
 {

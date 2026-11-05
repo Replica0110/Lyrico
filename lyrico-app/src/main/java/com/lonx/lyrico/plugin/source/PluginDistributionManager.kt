@@ -108,7 +108,7 @@ class PluginDistributionManager(
         }
     }
 
-    /** Subscription links are read only; no installed plugin is bound to them. */
+    /** Catalog links are read only; no installed plugin is bound to them. */
     suspend fun prepareDownloads(
         releases: List<PluginRelease>,
         onVerifying: (String) -> Unit = {},

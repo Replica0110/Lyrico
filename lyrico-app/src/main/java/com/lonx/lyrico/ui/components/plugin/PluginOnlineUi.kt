@@ -67,17 +67,18 @@ internal fun PluginOnlineImport(show: Boolean, viewModel: PluginViewModel, onDis
     val state by viewModel.uiState.collectAsState()
     val installed by viewModel.plugins.collectAsState()
     val url = rememberTextFieldState()
-    var selected by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) }
-    var inputClosed by rememberSaveable { mutableStateOf(false) }
     val catalog = state.onlineCatalog
+    var selected by rememberSaveable(catalog) { mutableStateOf<Set<String>>(emptySet()) }
+    // A recreated screen with a loaded catalog has no input dialog left to dismiss.
+    var inputClosed by remember { mutableStateOf(catalog != null) }
     val baseline = remember(catalog) { installed.associateBy { it.id } }
     val focus = remember { FocusRequester() }
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    LaunchedEffect(show) { if (show) inputClosed = false }
     LaunchedEffect(catalog) {
-        selected = emptySet()
-        if (catalog != null) {
+        if (catalog == null) {
+            inputClosed = false
+        } else {
             focusManager.clearFocus()
             keyboard?.hide()
         }

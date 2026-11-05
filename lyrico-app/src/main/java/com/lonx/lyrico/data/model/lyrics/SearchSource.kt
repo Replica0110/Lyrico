@@ -60,8 +60,31 @@ fun SearchSource.isEnabledFor(sourceType: PluginSourceType): Boolean = when (sou
 }
 
 /** Hold each selected source version until a multi-source operation completes. */
-suspend fun <T> List<SearchSource>.withSessions(block: suspend () -> T): T {
-    suspend fun hold(index: Int): T =
-        if (index == size) block() else this[index].withSession { hold(index + 1) }
+suspend fun <T> List<SearchSource>.withSessions(
+    onUnavailable: (suspend (SearchSource, Exception) -> Unit)? = null,
+    block: suspend (List<SearchSource>) -> T
+): T {
+    val available = mutableListOf<SearchSource>()
+    suspend fun hold(index: Int): T {
+        if (index == size) return block(available.toList())
+        val source = this[index]
+        var entered = false
+        try {
+            return source.withSession {
+                entered = true
+                available += source
+                try {
+                    hold(index + 1)
+                } finally {
+                    available.removeAt(available.lastIndex)
+                }
+            }
+        } catch (error: Exception) {
+            // Only acquisition failures may be skipped, never failures in the operation itself.
+            if (entered || error is kotlinx.coroutines.CancellationException || onUnavailable == null) throw error
+            onUnavailable(source, error)
+        }
+        return hold(index + 1)
+    }
     return hold(0)
 }

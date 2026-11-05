@@ -228,4 +228,4 @@ interface SearchSource {
 
 Coroutine cancellation reaches native QuickJS interruption and active HTTP calls. HTTP calls share the remaining invocation budget, and response bodies are limited to 8 MiB.
 
-Failed installations keep their import session for retry in the same Sheet; committed plugins are skipped on retry. Dismissing the import removes temporary files and keeps installed plugins. The catalog root contains only `schemaVersion` and `plugins`; subscription identity is not stored.
+Failed installations keep their import session for retry in the same Sheet; committed plugins are skipped on retry. Dismissing the import removes temporary files and keeps installed plugins. The catalog root contains only `schemaVersion` and `plugins`; the catalog URL is used only for this installation; subsequent updates use the `updateUrl` declared by each plugin.

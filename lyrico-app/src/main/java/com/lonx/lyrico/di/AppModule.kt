@@ -172,7 +172,8 @@ val appModule = module {
         )
     }
     single { SourcePluginInstaller(repository = get(), json = get(), appLogRepository = get()) }
-    single { com.lonx.lyrico.plugin.source.PluginDistributionManager(androidContext(), get(), get(), get()) }
+    single { com.lonx.lyrico.plugin.source.PluginCatalogRepository(get<LyricoDatabase>().pluginSubscriptionDao()) }
+    single { com.lonx.lyrico.plugin.source.PluginDistributionManager(androidContext(), get(), get(), get(), get()) }
     single {
         PluginSearchSourceManager(
             repository = get(),
@@ -211,7 +212,8 @@ val appModule = module {
                 LyricoDatabase.MIGRATION_18_19,
                 LyricoDatabase.MIGRATION_19_20,
                 LyricoDatabase.MIGRATION_20_21,
-                LyricoDatabase.MIGRATION_21_22
+                LyricoDatabase.MIGRATION_21_22,
+                LyricoDatabase.MIGRATION_22_23
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {

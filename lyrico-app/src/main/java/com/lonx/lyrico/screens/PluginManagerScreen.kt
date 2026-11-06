@@ -15,9 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,9 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -166,6 +160,7 @@ private fun PluginMessage.localizedText(): String = when (this) {
         PluginMessage.Status.TIMED_OUT -> R.string.plugin_action_timeout
         PluginMessage.Status.CANNOT_OPEN_FILE -> R.string.plugin_action_cannot_open
         PluginMessage.Status.NO_INSTALLABLE_PLUGIN -> R.string.plugin_action_none_installable
+        PluginMessage.Status.CATALOG_CHANGED -> R.string.plugin_catalog_changed
     })
 }
 
@@ -262,7 +257,7 @@ fun PluginManagerScreen(
     }
 
     LaunchedEffect(pendingImport) {
-        showImportPreviewSheet = pendingImport != null && uiState.onlineCatalog == null
+        showImportPreviewSheet = pendingImport != null
     }
 
     val salt = LocalUiEngine.current == UiEngine.SALT
@@ -287,9 +282,9 @@ fun PluginManagerScreen(
                 onClick = toggleCompactMode
             )
             PluginImportMenu(
-                enabled = !uiState.isBusy && !uiState.onlineBusy,
+                enabled = !uiState.isBusy,
                 onLocal = { importLauncher.launch(arrayOf("*/*")) },
-                onOnline = { viewModel.dismissOnline(); showOnline = true },
+                onOnline = { showOnline = true },
                 onCheckUpdates = viewModel::checkPluginUpdates
             )
         },
@@ -325,10 +320,10 @@ fun PluginManagerScreen(
                     }
 
                     PluginImportMenu(
-                        enabled = !uiState.isBusy && !uiState.onlineBusy,
+                        enabled = !uiState.isBusy,
                         onLocal = { importLauncher.launch(arrayOf("*/*")) },
-                        onOnline = { viewModel.dismissOnline(); showOnline = true },
-                onCheckUpdates = viewModel::checkPluginUpdates
+                        onOnline = { showOnline = true },
+                        onCheckUpdates = viewModel::checkPluginUpdates
                     )
                 },
                 scrollBehavior = topAppBarScrollBehavior
@@ -587,13 +582,13 @@ fun PluginManagerScreen(
         }
     }
 
-    PluginOnlineImport(showOnline, viewModel) { showOnline = false }
+    PluginSubscriptionsSheet(showOnline, viewModel) { showOnline = false }
     PluginUpdateSheet(show = showUpdateSheet, candidate = updateCandidate,
         installed = plugins.firstOrNull { it.id == updateCandidate?.release?.id },
         error = updateCandidate?.error,
         onDismiss = { showUpdateSheet = false },
-        onDismissFinished = { if (!showUpdateSheet) updateCandidate = null }, onConfirm = {
-        updateCandidate?.let(viewModel::updatePlugin)
+        onDismissFinished = { if (!showUpdateSheet) updateCandidate = null }, onConfirm = { selected ->
+        viewModel.updatePlugin(selected)
         showUpdateSheet = false
     })
 
@@ -698,7 +693,6 @@ fun PluginManagerScreen(
     )
 }
 
-
 @Composable
 fun PluginItem(
     plugin: SourcePluginEntity,
@@ -729,8 +723,25 @@ fun PluginItem(
         return
     }
 
-    val secondaryContainer = colorScheme.secondaryContainer.copy(alpha = 0.8f)
-    val actionIconTint = colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f)
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val actionStyle = if (salt) PillButtonDefaults.style(PillButtonSize.Medium)
+        else PillButtonDefaults.style(PillButtonSize.Medium).copy(
+            height = 35.dp,
+            contentPadding = PaddingValues(horizontal = 10.dp),
+            shape = CircleShape,
+            textStyle = MiuixTheme.textStyles.body2.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        )
+    val actionColors = PillButtonDefaults.colors(
+        contentColor = if (salt) SaltTheme.colors.text
+            else colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f),
+        containerColor = if (salt) SaltTheme.colors.text.copy(alpha = 0.08f)
+            else colorScheme.secondaryContainer.copy(alpha = 0.8f)
+    )
+    val dangerColors = PillButtonDefaults.colors(
+        contentColor = if (salt) SaltTheme.colors.error else colorScheme.error,
+        containerColor = if (salt) SaltTheme.colors.error.copy(alpha = 0.12f)
+            else colorScheme.errorContainer.copy(alpha = 0.45f)
+    )
 
     val pluginId = plugin.id
     val pluginName = plugin.displayName
@@ -748,7 +759,7 @@ fun PluginItem(
         mutableStateOf(false)
     }
 
-    if (LocalUiEngine.current == UiEngine.SALT) {
+    if (salt) {
         com.moriafly.salt.ui.Card(modifier = modifier) {
             Column(
                 modifier = Modifier
@@ -842,19 +853,64 @@ fun PluginItem(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        SaltPluginActionButton(
-                            text = stringResource(R.string.plugin_config), icon = LucideIcons.Settings, onClick = onConfig)
-                        SaltPluginActionButton(
-                            text = stringResource(R.string.plugin_custom_name), icon = LucideIcons.Pencil, onClick = onRename)
-                        if (update != null) SaltPluginActionButton(
+                        PillButton(
+                            text = stringResource(R.string.plugin_config),
+                            onClick = onConfig,
+                            style = actionStyle,
+                            colors = actionColors,
+                            leading = {
+                                Icon(
+                                    imageVector = LucideIcons.Settings,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionColors.contentColor(selected = false, enabled = true)
+                                )
+                            }
+                        )
+                        PillButton(
+                            text = stringResource(R.string.plugin_custom_name),
+                            onClick = onRename,
+                            style = actionStyle,
+                            colors = actionColors,
+                            leading = {
+                                Icon(
+                                    imageVector = LucideIcons.Pencil,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionColors.contentColor(selected = false, enabled = true)
+                                )
+                            }
+                        )
+                        if (update != null) PillButton(
                             text = pluginUpdateActionText(update),
-                            icon = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                            onClick = if (update.isDownloading) onCancelUpdate else onUpdate,
                             enabled = !update.isInstalling,
-                            onClick = if (update.isDownloading) onCancelUpdate else onUpdate
+                            style = actionStyle,
+                            colors = actionColors,
+                            leading = {
+                                Icon(
+                                    imageVector = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionColors.contentColor(selected = false, enabled = !update.isInstalling)
+                                )
+                            }
                         )
                     }
-                    SaltPluginActionButton(
-                        text = stringResource(R.string.plugin_uninstall), icon = LucideIcons.Trash, danger = true, onClick = onUninstall)
+                    PillButton(
+                        text = stringResource(R.string.plugin_uninstall),
+                        onClick = onUninstall,
+                        style = actionStyle,
+                        colors = dangerColors,
+                        leading = {
+                            Icon(
+                                imageVector = LucideIcons.Trash,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = dangerColors.contentColor(selected = false, enabled = true)
+                            )
+                        }
+                    )
                 }
             }
         }
@@ -896,7 +952,6 @@ fun PluginItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-
 
                 }
 
@@ -989,22 +1044,64 @@ fun PluginItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PluginActionChip(
-                    text = stringResource(R.string.plugin_config), icon = LucideIcons.Settings,
-                    tint = actionIconTint, background = secondaryContainer, onClick = onConfig)
-                PluginActionChip(
-                    text = stringResource(R.string.plugin_custom_name), icon = LucideIcons.Pencil,
-                    tint = actionIconTint, background = secondaryContainer, onClick = onRename)
-                if (update != null) PluginActionChip(
+                PillButton(
+                    text = stringResource(R.string.plugin_config),
+                    onClick = onConfig,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
+                )
+                PillButton(
+                    text = stringResource(R.string.plugin_custom_name),
+                    onClick = onRename,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Pencil,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
+                )
+                if (update != null) PillButton(
                     text = pluginUpdateActionText(update),
-                    icon = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
-                    tint = actionIconTint, background = secondaryContainer, enabled = !update.isInstalling,
-                    onClick = if (update.isDownloading) onCancelUpdate else onUpdate
+                    onClick = if (update.isDownloading) onCancelUpdate else onUpdate,
+                    enabled = !update.isInstalling,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = !update.isInstalling)
+                        )
+                    }
                 )
             }
-            PluginActionChip(
-                text = stringResource(R.string.plugin_uninstall), icon = LucideIcons.Trash,
-                tint = colorScheme.error, background = colorScheme.errorContainer.copy(alpha = 0.45f), onClick = onUninstall)
+            PillButton(
+                text = stringResource(R.string.plugin_uninstall),
+                onClick = onUninstall,
+                style = actionStyle,
+                colors = dangerColors,
+                leading = {
+                    Icon(
+                        imageVector = LucideIcons.Trash,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = dangerColors.contentColor(selected = false, enabled = true)
+                    )
+                }
+            )
         }
     }
 }
@@ -1029,10 +1126,23 @@ private fun CompactPluginItem(
     val pluginTypeText = plugin.displaySourceTypes
         .map { stringResource(it.labelRes()) }
         .joinToString(" / ")
-    val neutralActionBackground = colorScheme.secondaryContainer.copy(alpha = 0.8f)
-    val neutralActionTint = colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f)
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val actionStyle = PillButtonDefaults.style(PillButtonSize.Small).copy(
+        height = 30.dp, iconOnlyPadding = PaddingValues(6.dp), shape = CircleShape
+    )
+    val actionColors = PillButtonDefaults.colors(
+        contentColor = if (salt) SaltTheme.colors.text
+            else colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f),
+        containerColor = if (salt) SaltTheme.colors.text.copy(alpha = 0.08f)
+            else colorScheme.secondaryContainer.copy(alpha = 0.8f)
+    )
+    val dangerColors = PillButtonDefaults.colors(
+        contentColor = if (salt) SaltTheme.colors.error else colorScheme.error,
+        containerColor = if (salt) SaltTheme.colors.error.copy(alpha = 0.12f)
+            else colorScheme.errorContainer.copy(alpha = 0.45f)
+    )
 
-    if (LocalUiEngine.current == UiEngine.SALT) {
+    if (salt) {
         com.moriafly.salt.ui.Card(modifier = modifier) {
             Row(
                 modifier = Modifier.fillMaxWidth().innerPadding(),
@@ -1081,38 +1191,66 @@ private fun CompactPluginItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Spacer(modifier = Modifier.weight(1f))
-                if (update != null) SaltIconButton(
-                    icon = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
-                    label = pluginUpdateActionText(update),
-                    enabled = !update.isInstalling,
+                if (update != null) PillButton(
+                    text = pluginUpdateActionText(update),
                     onClick = if (update.isDownloading) onCancelUpdate else onUpdate,
-                    size = 30.dp, iconSize = 18.dp,
-                    backgroundColor = SaltTheme.colors.text.copy(alpha = 0.08f)
+                    enabled = !update.isInstalling,
+                    showText = false,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                            contentDescription = pluginUpdateActionText(update),
+                            modifier = Modifier.size(18.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = !update.isInstalling)
+                        )
+                    }
                 )
-                SaltIconButton(
-                    icon = LucideIcons.Settings,
-                    label = stringResource(R.string.plugin_config),
+                PillButton(
+                    text = stringResource(R.string.plugin_config),
                     onClick = onConfig,
-                    size = 30.dp,
-                    iconSize = 18.dp,
-                    backgroundColor = SaltTheme.colors.text.copy(alpha = 0.08f)
+                    showText = false,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Settings,
+                            contentDescription = stringResource(R.string.plugin_config),
+                            modifier = Modifier.size(18.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
                 )
-                SaltIconButton(
-                    icon = LucideIcons.Pencil,
-                    label = stringResource(R.string.plugin_custom_name),
+                PillButton(
+                    text = stringResource(R.string.plugin_custom_name),
                     onClick = onRename,
-                    size = 30.dp,
-                    iconSize = 18.dp,
-                    backgroundColor = SaltTheme.colors.text.copy(alpha = 0.08f)
+                    showText = false,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Pencil,
+                            contentDescription = stringResource(R.string.plugin_custom_name),
+                            modifier = Modifier.size(18.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
                 )
-                SaltIconButton(
-                    icon = LucideIcons.Trash,
-                    label = stringResource(R.string.plugin_uninstall),
+                PillButton(
+                    text = stringResource(R.string.plugin_uninstall),
                     onClick = onUninstall,
-                    tint = SaltTheme.colors.error,
-                    size = 30.dp,
-                    iconSize = 18.dp,
-                    backgroundColor = SaltTheme.colors.error.copy(alpha = 0.12f)
+                    showText = false,
+                    style = actionStyle,
+                    colors = dangerColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Trash,
+                            contentDescription = stringResource(R.string.plugin_uninstall),
+                            modifier = Modifier.size(18.dp),
+                            tint = dangerColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
                 )
             }
         }
@@ -1193,109 +1331,73 @@ private fun CompactPluginItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(modifier = Modifier.weight(1f))
-            if (update != null) CompactPluginActionButton(
-                icon = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
-                contentDescription = pluginUpdateActionText(update),
-                tint = neutralActionTint, background = neutralActionBackground,
+            if (update != null) PillButton(
+                text = pluginUpdateActionText(update),
+                onClick = if (update.isDownloading) onCancelUpdate else onUpdate,
                 enabled = !update.isInstalling,
-                onClick = if (update.isDownloading) onCancelUpdate else onUpdate
+                showText = false,
+                style = actionStyle,
+                colors = actionColors,
+                leading = {
+                    Icon(
+                        imageVector = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                        contentDescription = pluginUpdateActionText(update),
+                        modifier = Modifier.size(18.dp),
+                        tint = actionColors.contentColor(selected = false, enabled = !update.isInstalling)
+                    )
+                }
             )
-            CompactPluginActionButton(
-                icon = LucideIcons.Settings,
-                contentDescription = stringResource(R.string.plugin_config),
-                tint = neutralActionTint,
-                background = neutralActionBackground,
-                onClick = onConfig
+            PillButton(
+                text = stringResource(R.string.plugin_config),
+                onClick = onConfig,
+                showText = false,
+                style = actionStyle,
+                colors = actionColors,
+                leading = {
+                    Icon(
+                        imageVector = LucideIcons.Settings,
+                        contentDescription = stringResource(R.string.plugin_config),
+                        modifier = Modifier.size(18.dp),
+                        tint = actionColors.contentColor(selected = false, enabled = true)
+                    )
+                }
             )
-            CompactPluginActionButton(
-                icon = LucideIcons.Pencil,
-                contentDescription = stringResource(R.string.plugin_custom_name),
-                tint = neutralActionTint,
-                background = neutralActionBackground,
-                onClick = onRename
+            PillButton(
+                text = stringResource(R.string.plugin_custom_name),
+                onClick = onRename,
+                showText = false,
+                style = actionStyle,
+                colors = actionColors,
+                leading = {
+                    Icon(
+                        imageVector = LucideIcons.Pencil,
+                        contentDescription = stringResource(R.string.plugin_custom_name),
+                        modifier = Modifier.size(18.dp),
+                        tint = actionColors.contentColor(selected = false, enabled = true)
+                    )
+                }
             )
-            CompactPluginActionButton(
-                icon = LucideIcons.Trash,
-                contentDescription = stringResource(R.string.plugin_uninstall),
-                tint = colorScheme.error,
-                background = colorScheme.errorContainer.copy(alpha = 0.45f),
-                onClick = onUninstall
+            PillButton(
+                text = stringResource(R.string.plugin_uninstall),
+                onClick = onUninstall,
+                showText = false,
+                style = actionStyle,
+                colors = dangerColors,
+                leading = {
+                    Icon(
+                        imageVector = LucideIcons.Trash,
+                        contentDescription = stringResource(R.string.plugin_uninstall),
+                        modifier = Modifier.size(18.dp),
+                        tint = dangerColors.contentColor(selected = false, enabled = true)
+                    )
+                }
             )
         }
     }
 }
 
-@Composable
-private fun CompactPluginActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    tint: Color,
-    background: Color,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .background(background)
-            .combinedClickable(enabled = enabled, onClick = onClick, onLongClick = null),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(18.dp)
-        )
-    }
-}
-
 private const val PLUGIN_MANAGER_PREFERENCES = "plugin_manager_preferences"
 private const val KEY_COMPACT_MODE = "compact_mode"
-
-@Composable
-private fun PluginActionChip(
-    text: String,
-    icon: ImageVector,
-    tint: Color,
-    background: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true
-) {
-    Row(
-        modifier = modifier
-            .heightIn(min = 35.dp)
-            .clip(CircleShape)
-            .background(background)
-            .combinedClickable(
-                enabled = enabled,
-                onClick = {
-                    onClick()
-                },
-                onLongClick = null
-            )
-            .padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = text,
-            tint = tint,
-            modifier = Modifier.size(20.dp)
-        )
-
-        Text(
-            text = text,
-            color = tint,
-            fontWeight = FontWeight.Medium,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(start = 5.dp, end = 2.dp)
-        )
-    }
-}
 
 /** Salt 的副文案行：类型、版本、API 与作者共用同一语义样式。 */
 @Composable
@@ -1307,37 +1409,6 @@ private fun SaltPluginSubText(text: String, modifier: Modifier = Modifier) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
-    )
-}
-
-/** Salt 的胶囊操作按钮：低强调底色，危险操作走错误色。 */
-@Composable
-private fun SaltPluginActionButton(
-    text: String,
-    icon: ImageVector,
-    danger: Boolean = false,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    val contentColor = if (danger) SaltTheme.colors.error else SaltTheme.colors.text
-    PillButton(
-        text = text,
-        onClick = onClick,
-        enabled = enabled,
-        style = PillButtonDefaults.style(PillButtonSize.Medium),
-        colors = PillButtonDefaults.colors(
-            contentColor = contentColor,
-            containerColor = if (danger) SaltTheme.colors.error.copy(alpha = 0.12f)
-                else SaltTheme.colors.text.copy(alpha = 0.08f),
-        ),
-        leading = {
-            com.moriafly.salt.ui.Icon(
-                painter = rememberVectorPainter(icon),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = contentColor
-            )
-        },
     )
 }
 

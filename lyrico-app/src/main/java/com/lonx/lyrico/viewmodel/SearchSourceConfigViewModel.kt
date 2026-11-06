@@ -28,7 +28,8 @@ data class SearchSourceConfigUiState(
     val isLoading: Boolean = true,
     val saved: Boolean = false,
     val errorMessage: String? = null,
-    val updateUrl: String? = null
+    val updateUrl: String? = null,
+    val installSourceUrl: String? = null
 )
 
 class SearchSourceConfigViewModel(
@@ -48,7 +49,7 @@ class SearchSourceConfigViewModel(
                 }
                 return@launch
             }
-            val pluginUpdateUrl = pluginRepository.getPlugin(pluginId)?.updateUrl
+            val plugin = pluginRepository.getPlugin(pluginId)
             val sourceImpl = sourceWithState.source
             val fields = sourceImpl.configFields
             val valueFields = fields.filter { it.type != PluginConfigFieldType.MARKDOWN }
@@ -61,7 +62,8 @@ class SearchSourceConfigViewModel(
                     title = sourceImpl.name,
                     apiVersion = sourceImpl.apiVersion,
                     minHostApiVersion = sourceImpl.minHostApiVersion,
-                    updateUrl = pluginUpdateUrl,
+                    updateUrl = plugin?.updateUrl,
+                    installSourceUrl = plugin?.installSourceUrl,
                     sourceTypes = sourceImpl.capabilities.displaySourceTypes(),
                     configFields = fields,
                     values = if (it.pluginId == sourceImpl.id && !it.isLoading) it.values else defaults + saved,

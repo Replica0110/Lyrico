@@ -243,6 +243,9 @@ class SourcePluginInstaller(
         allowDowngrade: Boolean = false,
         expectedInstalledDir: String? = null,
         discardSession: Boolean = true,
+        checkInstalledState: Boolean = false,
+        installSourceUrl: String? = null,
+        installSha256: String? = null,
         onInstalled: (SourcePluginEntity) -> Unit = {}
     ): PluginInstallResult = withContext(Dispatchers.IO) {
         val failed = session.failed.toMutableList()
@@ -253,7 +256,7 @@ class SourcePluginInstaller(
             val installed = selectedCandidates.mapNotNull { candidate ->
                 mutationMutex.withLock {
                     val current = repository.getPlugin(candidate.manifest.id)
-                    require(expectedInstalledDir == null || current?.pluginDir == expectedInstalledDir) {
+                    require((!checkInstalledState && expectedInstalledDir == null) || current?.pluginDir == expectedInstalledDir) {
                         "Plugin changed while downloading; check for updates again"
                     }
                     if (current != null && candidate.manifest.versionCode < current.versionCode && !allowDowngrade) {
@@ -270,6 +273,8 @@ class SourcePluginInstaller(
                             allCandidates = session.candidates,
                             installRoot = session.installRoot,
                             enabled = enabled,
+                            installSourceUrl = installSourceUrl,
+                            installSha256 = installSha256,
                             onInstalled = onInstalled
                         )
                     }.onFailure { throwable ->
@@ -421,6 +426,8 @@ class SourcePluginInstaller(
         allCandidates: List<PluginInstallCandidate>,
         installRoot: File,
         enabled: Boolean,
+        installSourceUrl: String?,
+        installSha256: String?,
         onInstalled: (SourcePluginEntity) -> Unit
     ): SourcePluginEntity = withLogOperation("plugin-install") {
         val started = System.nanoTime()
@@ -452,7 +459,7 @@ class SourcePluginInstaller(
             currentCoroutineContext().ensureActive()
             // Finish the database commit even if cancellation arrives at this point.
             withContext(NonCancellable) {
-                upsertInstalledPlugin(candidate.manifest, targetDir, enabled).also(onInstalled)
+                upsertInstalledPlugin(candidate.manifest, targetDir, enabled, installSourceUrl, installSha256).also(onInstalled)
             }
         } catch (error: Exception) {
             if (error is kotlinx.coroutines.CancellationException) throw error
@@ -504,7 +511,9 @@ class SourcePluginInstaller(
     private suspend fun upsertInstalledPlugin(
         manifest: PluginManifest,
         pluginDir: File,
-        enabled: Boolean
+        enabled: Boolean,
+        installSourceUrl: String?,
+        installSha256: String?
     ): SourcePluginEntity {
         val now = System.currentTimeMillis()
         val existing = repository.getPlugin(manifest.id)
@@ -537,7 +546,9 @@ class SourcePluginInstaller(
             coverSortOrder = existing?.coverSortOrder ?: initialSortOrder,
             installedAt = existing?.installedAt ?: now,
             updatedAt = now,
-            updateUrl = manifest.updateUrl
+            updateUrl = manifest.updateUrl,
+            installSourceUrl = installSourceUrl,
+            installSha256 = installSha256
         )
         repository.upsertPlugin(entity)
         logInstaller(

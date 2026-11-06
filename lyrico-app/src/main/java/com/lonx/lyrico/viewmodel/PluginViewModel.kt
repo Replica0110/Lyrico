@@ -37,32 +37,29 @@ import com.lonx.lyrico.plugin.i18n.PluginLocales
 import com.lonx.lyrico.plugin.i18n.PluginStrings
 import com.lonx.lyrico.data.model.plugin.PluginManifest
 import kotlinx.serialization.json.Json
-import com.lonx.lyrico.plugin.source.PluginCatalog
 import com.lonx.lyrico.plugin.source.PluginDistributionManager
 import com.lonx.lyrico.plugin.source.PluginRelease
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-
-data class PluginImportTask(
-    val phase: Phase = Phase.WAITING,
-    val percent: Int = 0,
-    val error: String? = null
-) {
-    enum class Phase { WAITING, DOWNLOADING, VERIFYING, INSTALLING, INSTALLED, FAILED, CANCELLED }
-}
 
 sealed interface PluginMessage {
     enum class Status : PluginMessage {
         PACKAGE_SCANNED, INSTALLED, DELETED, NAME_SAVED, NO_PENDING_IMPORT, NO_SELECTION,
-        BUSY, WORKING, TIMED_OUT, CANNOT_OPEN_FILE, NO_INSTALLABLE_PLUGIN
+        BUSY, WORKING, TIMED_OUT, CANNOT_OPEN_FILE, NO_INSTALLABLE_PLUGIN, CATALOG_CHANGED
     }
 
     data class Failure(val reason: String) : PluginMessage
     data class UpdateCheck(val count: Int, val failures: Int) : PluginMessage
     data class UpdateResult(val name: String, val version: String, val error: String? = null) : PluginMessage
 }
+
+enum class SubscriptionEditorError { DUPLICATE, INVALID_URL, SAVE_FAILED }
+
+data class SubscriptionEditorState(
+    val saving: Boolean = false,
+    val error: SubscriptionEditorError? = null,
+    val savedId: String? = null
+)
 
 data class PluginUiState(
     val isBusy: Boolean = false,
@@ -71,10 +68,6 @@ data class PluginUiState(
     val smokeResult: String = "",
     val pendingImport: PluginImportSession? = null,
     val selectedImportRoots: Set<String> = emptySet(),
-    val onlineCatalog: PluginCatalog? = null,
-    val onlineBusy: Boolean = false,
-    val onlineTasks: Map<String, PluginImportTask> = emptyMap(),
-    val onlineError: String? = null,
     val importResult: PluginInstallResult? = null,
     val importError: String? = null
 ) {
@@ -114,8 +107,6 @@ class PluginViewModel(
     private val _uiState = MutableStateFlow(PluginUiState())
     val uiState: StateFlow<PluginUiState> = _uiState.asStateFlow()
     private val actionMutex = Mutex()
-    private var onlineJob: Job? = null
-    private var onlineSessions = mutableMapOf<String, PluginImportSession>()
     private var manualCheck: Job? = null
 
     fun checkPluginUpdates() {
@@ -123,7 +114,7 @@ class PluginViewModel(
         publishMessage(PluginMessage.Status.WORKING)
         manualCheck = viewModelScope.launch {
             online.awaitUpdateCheck()
-            publishMessage(PluginMessage.UpdateCheck(online.updates.value.size, online.checkFailures))
+            publishMessage(PluginMessage.UpdateCheck(online.checkedUpdateCount, online.checkFailures))
         }
     }
 
@@ -137,116 +128,61 @@ class PluginViewModel(
         }
     }
 
-    fun fetchCatalog(url: String) {
-        onlineJob?.cancel()
-        _uiState.update { it.copy(onlineBusy = true, onlineCatalog = null, onlineError = null, onlineTasks = emptyMap()) }
-        onlineJob = viewModelScope.launch {
+    private val _subscriptionEditor = MutableStateFlow(SubscriptionEditorState())
+    val subscriptionEditor = _subscriptionEditor.asStateFlow()
+
+    fun beginSubscriptionEdit() { if (!_subscriptionEditor.value.saving) _subscriptionEditor.value = SubscriptionEditorState() }
+
+    fun saveSubscription(id: String?, name: String, url: String) {
+        if (_subscriptionEditor.value.saving) return
+        _subscriptionEditor.value = SubscriptionEditorState(saving = true)
+        viewModelScope.launch {
             try {
-                val catalog = online.client.fetch(url.trim())
-                _uiState.update { it.copy(onlineCatalog = catalog, onlineBusy = false) }
+                val source = online.catalogs.save(id, name, url)
+                _subscriptionEditor.value = SubscriptionEditorState(savedId = source.id)
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
-                _uiState.update { it.copy(onlineBusy = false, onlineError = error.message) }
+                _subscriptionEditor.value = SubscriptionEditorState(error = when (error) {
+                    is com.lonx.lyrico.plugin.source.DuplicatePluginSubscription -> SubscriptionEditorError.DUPLICATE
+                    is IllegalArgumentException -> SubscriptionEditorError.INVALID_URL
+                    else -> SubscriptionEditorError.SAVE_FAILED
+                })
+                logPluginError("Subscription save failed", error.message ?: error.javaClass.simpleName)
             }
         }
     }
 
-    fun installOnline(releases: List<PluginRelease>) {
-        if (_uiState.value.onlineBusy || _uiState.value.isBusy) return
-        val catalog = _uiState.value.onlineCatalog ?: return
-        val selected = releases.distinctBy { it.id }.filter {
-            it in catalog.plugins && it.compatible &&
-                _uiState.value.onlineTasks[it.id]?.phase != PluginImportTask.Phase.INSTALLED
-        }
-        if (selected.isEmpty()) return
-        val sessions = onlineSessions
-        _uiState.update { state -> state.copy(onlineBusy = true, onlineError = null,
-            onlineTasks = state.onlineTasks + selected.associate { it.id to PluginImportTask() }) }
-        onlineJob = viewModelScope.launch {
-            fun update(id: String, task: PluginImportTask) {
-                if (sessions === onlineSessions) _uiState.update {
-                    it.copy(onlineTasks = it.onlineTasks + (id to task))
-                }
-            }
-            try {
-                for (release in selected) {
-                    currentCoroutineContext().ensureActive()
-                    var committed = false
-                    try {
-                        val current = repository.getPlugin(release.id)
-                        if (sessions[release.id] == null) update(release.id,
-                            PluginImportTask(PluginImportTask.Phase.DOWNLOADING))
-                        val session = sessions[release.id] ?: online.prepareDownloads(
-                            listOf(release),
-                            onVerifying = { update(it, PluginImportTask(PluginImportTask.Phase.VERIFYING)) }
-                        ) { id, percent ->
-                            update(id, PluginImportTask(PluginImportTask.Phase.DOWNLOADING, percent))
-                        }.also { sessions[release.id] = it }
-                        currentCoroutineContext().ensureActive()
-                        update(release.id, PluginImportTask(PluginImportTask.Phase.INSTALLING))
-                        val result = installer.installPrepared(
-                            session, enabled = true, discardSession = false,
-                            allowDowngrade = current != null && release.versionCode < current.versionCode,
-                            expectedInstalledDir = current?.pluginDir,
-                            onInstalled = {
-                                committed = true
-                                update(release.id, PluginImportTask(PluginImportTask.Phase.INSTALLED))
-                            }
-                        )
-                        check(result.installed.size == 1) {
-                            result.failed.firstOrNull()?.reason ?: "Plugin installation failed"
-                        }
-                    } catch (error: Exception) {
-                        if (error is CancellationException && error !is TimeoutCancellationException) throw error
-                        if (!committed) update(release.id, PluginImportTask(
-                            PluginImportTask.Phase.FAILED, error = error.message ?: error.javaClass.simpleName))
-                    } finally {
-                        if (committed) sessions.remove(release.id)?.let(installer::discardImport)
-                    }
-                }
-            } finally {
-                if (sessions === onlineSessions) _uiState.update { state -> state.copy(
-                    onlineBusy = false,
-                    onlineTasks = state.onlineTasks.mapValues { (_, task) ->
-                        if (task.phase in setOf(PluginImportTask.Phase.WAITING, PluginImportTask.Phase.DOWNLOADING,
-                                PluginImportTask.Phase.VERIFYING, PluginImportTask.Phase.INSTALLING))
-                            task.copy(phase = PluginImportTask.Phase.CANCELLED) else task
-                    }
-                ) }
+    fun deleteSubscription(id: String) = subscriptionMutation { online.catalogs.delete(id) }
+    fun setSubscriptionEnabled(id: String, enabled: Boolean) = subscriptionMutation { online.catalogs.setEnabled(id, enabled) }
+    fun refreshSubscription(url: String) = subscriptionMutation { online.catalogs.refresh(url, force = true).getOrThrow() }
+    private fun subscriptionMutation(action: suspend () -> Unit) {
+        viewModelScope.launch {
+            try { action() } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                publishMessage(PluginMessage.Failure(error.message ?: error.javaClass.simpleName))
             }
         }
     }
 
-    fun stopOnlineImport() { onlineJob?.cancel() }
-
-    fun dismissOnline() {
-        val previousJob = onlineJob
-        val previousSessions = onlineSessions
-        onlineSessions = mutableMapOf()
-        previousJob?.cancel()
-        val cleanup = {
-            previousSessions.values.forEach(installer::discardImport)
-            previousSessions.clear()
+    fun installFromSubscription(id: String, release: PluginRelease, installed: SourcePluginEntity?) {
+        viewModelScope.launch {
+            val source = online.catalogs.getSubscriptions().singleOrNull { it.id == id && it.enabled }
+            val cache = source?.let { item -> online.catalogs.cache.value.singleOrNull { it.url == item.url } }
+            if (source == null || release !in online.catalogs.decode(cache)?.plugins.orEmpty()) {
+                publishMessage(PluginMessage.Status.CATALOG_CHANGED)
+                return@launch
+            }
+            online.install(release, source.url, installed?.pluginDir,
+                allowDowngrade = installed != null && release.versionCode < installed.versionCode) { result ->
+                publishMessage(result.fold({ PluginMessage.Status.INSTALLED }, {
+                    PluginMessage.Failure(it.message ?: it.javaClass.simpleName)
+                }))
+            }
         }
-        if (previousJob != null) previousJob.invokeOnCompletion { cleanup() } else cleanup()
-        _uiState.update { it.copy(onlineBusy = false, onlineCatalog = null, onlineError = null, onlineTasks = emptyMap(),
-            importResult = null, importError = null) }
     }
 
     init {
-        viewModelScope.launch {
-            installer.synchronizeInstalledPluginManifestMetadata()
-        }
-    }
-
-    override fun onCleared() {
-        val sessions = onlineSessions
-        onlineSessions = mutableMapOf()
-        val job = onlineJob
-        job?.cancel()
-        if (job != null) job.invokeOnCompletion { sessions.values.forEach(installer::discardImport) }
-        else sessions.values.forEach(installer::discardImport)
-        super.onCleared()
+        viewModelScope.launch { installer.synchronizeInstalledPluginManifestMetadata() }
     }
 
     fun importPlugin(context: Context, uri: Uri) {

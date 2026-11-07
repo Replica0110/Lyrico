@@ -16,6 +16,7 @@ interface LibraryIndexRepository {
     fun observeAlbumById(albumId: Long): Flow<AlbumEntity?>
     fun observeSongsByAlbumId(albumId: Long): Flow<List<SongEntity>>
     suspend fun getSongsByAlbumId(albumId: Long): List<SongEntity>
+    suspend fun getArtistIdByNormalizedName(normalizedName: String): Long?
     fun searchArtists(query: String): Flow<List<ArtistEntity>>
     fun searchAlbums(query: String): Flow<List<AlbumEntity>>
     suspend fun rebuildAllIndexes()

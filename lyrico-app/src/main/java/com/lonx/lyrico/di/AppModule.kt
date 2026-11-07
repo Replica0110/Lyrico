@@ -295,6 +295,7 @@ val appModule = module {
     viewModel { (albumId: Long) ->
         AlbumDetailViewModel(
             libraryIndexRepository = get(),
+            settingsRepository = get(),
             albumId = albumId
         )
     }

@@ -705,6 +705,10 @@
     <string name="search_section_artists">Artists</string>
     <string name="search_empty">No search results</string>
     <string name="album_detail_title">Album</string>
+    <string name="album_detail_tracks">Songs</string>
+    <string name="album_detail_duration">Duration</string>
+    <string name="album_detail_year">Year</string>
+    <string name="album_detail_contributors">Contributing artists</string>
     <string name="artist_detail_title">Artist</string>
     <string name="library_tab_songs">Songs</string>
     <string name="library_tab_artists">Artists</string>

@@ -3,6 +3,7 @@ package com.lonx.lyrico.ui.components.library
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
@@ -16,13 +17,22 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 internal fun LibraryDetailPageMiuix(
     topBar: @Composable () -> Unit,
     snackbarHost: @Composable () -> Unit,
+    backgroundContent: (@Composable () -> Unit)?,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    top.yukonga.miuix.kmp.basic.Scaffold(
-        topBar = topBar,
-        snackbarHost = snackbarHost,
-        content = content,
-    )
+    Box(Modifier.fillMaxSize()) {
+        backgroundContent?.invoke()
+        top.yukonga.miuix.kmp.basic.Scaffold(
+            topBar = topBar,
+            snackbarHost = snackbarHost,
+            containerColor = if (backgroundContent == null) {
+                MiuixTheme.colorScheme.background
+            } else {
+                Color.Transparent
+            },
+            content = content,
+        )
+    }
 }
 
 @Composable

@@ -21,15 +21,23 @@ internal fun SaltInputDialog(
     cancelText: String,
     confirmText: String,
     hint: String? = null,
+    confirmEnabled: Boolean = true,
+    readOnly: Boolean = false,
+    keyboardOptions: androidx.compose.foundation.text.KeyboardOptions = androidx.compose.foundation.text.KeyboardOptions.Default,
+    status: (@Composable () -> Unit)? = null,
+    show: Boolean = true,
+    onDismissFinished: () -> Unit = {},
 ) {
     SaltConfirmDialog(
-        show = true,
+        show = show,
+        onDismissFinished = onDismissFinished,
         title = title,
         onDismissRequest = onDismissRequest,
         onConfirm = onConfirm,
         cancelText = cancelText,
         confirmText = confirmText,
         dismissOnConfirm = false,
+        confirmEnabled = confirmEnabled,
     ) {
         val focus = remember { FocusRequester() }
         LaunchedEffect(Unit) { focus.requestFocus() }
@@ -38,8 +46,11 @@ internal fun SaltInputDialog(
                 state = state,
                 hint = hint,
                 hintMaxLines = 3,
+                readOnly = readOnly,
+                keyboardOptions = keyboardOptions,
                 modifier = Modifier.focusRequester(focus),
             )
         }
+        status?.invoke()
     }
 }

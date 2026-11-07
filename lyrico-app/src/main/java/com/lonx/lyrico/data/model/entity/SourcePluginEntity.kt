@@ -45,7 +45,11 @@ data class SourcePluginEntity(
     @ColumnInfo(defaultValue = "0")
     val coverSortOrder: Int = 0,
     val installedAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    @ColumnInfo(defaultValue = "NULL")
+    val updateUrl: String? = null,
+    @ColumnInfo(defaultValue = "NULL") val installSourceUrl: String? = null,
+    @ColumnInfo(defaultValue = "NULL") val installSha256: String? = null
 )
 
 val SourcePluginEntity.displayName: String

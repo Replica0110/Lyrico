@@ -19,6 +19,7 @@ fun YesNoBottomSheet(
     cancelText: String = stringResource(R.string.cancel),
     confirmText: String = stringResource(R.string.confirm),
     confirmEnabled: Boolean = true,
+    cancelEnabled: Boolean = true,
     groupContent: Boolean = false,
     scrollContent: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
@@ -33,7 +34,7 @@ fun YesNoBottomSheet(
         groupContent = groupContent,
         scrollContent = scrollContent,
         footer = {
-            SheetConfirmActions(cancelText, confirmText, onCancel, onConfirm, confirmEnabled)
+            SheetConfirmActions(cancelText, confirmText, onCancel, onConfirm, confirmEnabled, cancelEnabled)
         },
         content = content,
     )

@@ -20,6 +20,7 @@ fun YesNoDialog(
     cancelText: String = stringResource(R.string.cancel),
     confirmText: String = stringResource(R.string.confirm),
     confirmEnabled: Boolean = true,
+    dismissOnConfirm: Boolean = true,
 ) {
     when (LocalUiEngine.current) {
         UiEngine.SALT ->
@@ -34,6 +35,7 @@ fun YesNoDialog(
                 cancelText = cancelText,
                 confirmText = confirmText,
                 confirmEnabled = confirmEnabled,
+                dismissOnConfirm = dismissOnConfirm,
             )
         UiEngine.MIUIX ->
             MiuixConfirmDialog(
@@ -47,6 +49,7 @@ fun YesNoDialog(
                 cancelText = cancelText,
                 confirmText = confirmText,
                 confirmEnabled = confirmEnabled,
+                dismissOnConfirm = dismissOnConfirm,
             )
     }
 }

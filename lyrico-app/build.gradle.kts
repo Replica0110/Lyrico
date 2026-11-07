@@ -107,6 +107,9 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
@@ -136,6 +139,9 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation("androidx.work:work-testing:${libs.versions.work.get()}")
     implementation(libs.salt.ui)
     // Project Modules
     implementation(project(":lyrico-audiotag"))

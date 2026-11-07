@@ -118,14 +118,16 @@ class PluginSearchSourceManager(
         return plugins.mapNotNull { plugin ->
             try {
                 val existing = cache[plugin.id]
-                if (existing != null && cachedPlugins[plugin.id] == plugin) {
-                    existing
+                if (existing != null && cachedPlugins[plugin.id]?.pluginDir == plugin.pluginDir) {
+                    existing.updateUserState(plugin)
+                    cachedPlugins[plugin.id] = plugin
+                    existing.snapshot(plugin)
                 } else {
                     existing?.close()
                     factory.create(plugin).also {
                         cache[plugin.id] = it
                         cachedPlugins[plugin.id] = plugin
-                    }
+                    }.snapshot(plugin)
                 }
             } catch (throwable: Exception) {
                 logSourceBuildFailure(plugin, throwable)

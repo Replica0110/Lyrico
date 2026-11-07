@@ -15,9 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,9 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -92,7 +86,8 @@ import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.ui.components.library.LibraryDetailPage
 import com.lonx.lyrico.ui.components.library.LibraryDetailTabs
-import com.lonx.lyrico.ui.components.plugin.PluginIcon
+import com.lonx.lyrico.ui.components.plugin.*
+import com.lonx.lyrico.plugin.source.PluginUpdateState
 import com.lonx.lyrico.ui.components.ItemOrderState
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LocalUiEngine
@@ -144,6 +139,14 @@ import java.io.File
 
 @Composable
 private fun PluginMessage.localizedText(): String = when (this) {
+    is PluginMessage.UpdateResult -> if (error == null)
+        stringResource(R.string.plugin_update_succeeded, name, version)
+    else stringResource(R.string.plugin_update_failed, name, error)
+    is PluginMessage.UpdateCheck -> when {
+        failures > 0 -> stringResource(R.string.plugin_check_failed, failures)
+        count > 0 -> stringResource(R.string.plugin_check_available, count)
+        else -> stringResource(R.string.plugin_check_latest)
+    }
     is PluginMessage.Failure -> stringResource(R.string.plugin_action_failed, reason)
     is PluginMessage.Status -> stringResource(when (this) {
         PluginMessage.Status.PACKAGE_SCANNED -> R.string.plugin_action_scanned
@@ -157,7 +160,7 @@ private fun PluginMessage.localizedText(): String = when (this) {
         PluginMessage.Status.TIMED_OUT -> R.string.plugin_action_timeout
         PluginMessage.Status.CANNOT_OPEN_FILE -> R.string.plugin_action_cannot_open
         PluginMessage.Status.NO_INSTALLABLE_PLUGIN -> R.string.plugin_action_none_installable
-        PluginMessage.Status.CANNOT_DELETE_FILES -> R.string.plugin_action_remove_failed
+        PluginMessage.Status.CATALOG_CHANGED -> R.string.plugin_catalog_changed
     })
 }
 
@@ -182,6 +185,11 @@ fun PluginManagerScreen(
         com.lonx.lyrico.plugin.i18n.PluginLocales.update(localeConfiguration)
     }
     val uiState by viewModel.uiState.collectAsState()
+    val updates by viewModel.online.updates.collectAsState()
+    var showOnline by rememberSaveable { mutableStateOf(false) }
+    var updateCandidate by remember { mutableStateOf<PluginUpdateState?>(null) }
+    var showUpdateSheet by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { viewModel.online.checkUpdates() }
     val pendingImport = uiState.pendingImport
     val context: Context = LocalContext.current
     var selectedTypeTab by rememberSaveable { mutableStateOf(PluginTypeTab.METADATA) }
@@ -242,11 +250,14 @@ fun PluginManagerScreen(
     val nameState = rememberTextFieldState()
     val customNameInput = nameState.text.toString()
     var showImportPreviewSheet by rememberSaveable { mutableStateOf(false) }
+    var retainedImportState by remember { mutableStateOf(uiState) }
+
+    LaunchedEffect(uiState) {
+        if (pendingImport != null) retainedImportState = uiState
+    }
 
     LaunchedEffect(pendingImport) {
-        if (pendingImport != null) {
-            showImportPreviewSheet = true
-        }
+        showImportPreviewSheet = pendingImport != null
     }
 
     val salt = LocalUiEngine.current == UiEngine.SALT
@@ -270,11 +281,11 @@ fun PluginManagerScreen(
                 ),
                 onClick = toggleCompactMode
             )
-            SaltIconButton(
-                icon = LucideIcons.Plus,
-                label = stringResource(R.string.plugin_import_archive),
+            PluginImportMenu(
                 enabled = !uiState.isBusy,
-                onClick = { importLauncher.launch(arrayOf("*/*")) }
+                onLocal = { importLauncher.launch(arrayOf("*/*")) },
+                onOnline = { showOnline = true },
+                onCheckUpdates = viewModel::checkPluginUpdates
             )
         },
         miuixTopBar = {
@@ -308,16 +319,12 @@ fun PluginManagerScreen(
                         )
                     }
 
-                    IconButton(
-                        onClick = {
-                            if (!uiState.isBusy) importLauncher.launch(arrayOf("*/*"))
-                        }
-                    ) {
-                        Icon(
-                            imageVector = LucideIcons.Plus,
-                            contentDescription = null
-                        )
-                    }
+                    PluginImportMenu(
+                        enabled = !uiState.isBusy,
+                        onLocal = { importLauncher.launch(arrayOf("*/*")) },
+                        onOnline = { showOnline = true },
+                        onCheckUpdates = viewModel::checkPluginUpdates
+                    )
                 },
                 scrollBehavior = topAppBarScrollBehavior
             )
@@ -427,7 +434,12 @@ fun PluginManagerScreen(
                             plugin = plugin,
                             compact = compactMode,
                             enabled = plugin.isEnabledFor(selectedTypeTab.sourceType),
-                            updateUrl = "",
+                            update = updates[plugin.id],
+                            onUpdate = {
+                                updateCandidate = updates[plugin.id]
+                                showUpdateSheet = updateCandidate != null
+                            },
+                            onCancelUpdate = { viewModel.online.cancel(plugin.id) },
                             onUninstall = {
                                 pendingUninstallPluginId = plugin.id
                                 showUninstallDialog = true
@@ -570,59 +582,78 @@ fun PluginManagerScreen(
         }
     }
 
+    PluginSubscriptionsSheet(showOnline, viewModel) { showOnline = false }
+    PluginUpdateSheet(show = showUpdateSheet, candidate = updateCandidate,
+        installed = plugins.firstOrNull { it.id == updateCandidate?.release?.id },
+        error = updateCandidate?.error,
+        onDismiss = { showUpdateSheet = false },
+        onDismissFinished = { if (!showUpdateSheet) updateCandidate = null }, onConfirm = { selected ->
+        viewModel.updatePlugin(selected)
+        showUpdateSheet = false
+    })
+
     YesNoBottomSheet(
         show = showImportPreviewSheet,
         scrollContent = true,
+        allowDismiss = !uiState.isBusy,
+        cancelEnabled = !uiState.isBusy,
         title = stringResource(R.string.plugin_import_found_title),
         onDismissRequest = {
-            viewModel.discardPendingImportFiles()
             showImportPreviewSheet = false
         },
         enableNestedScroll = false,
         onDismissFinished = {
             if (!showImportPreviewSheet) {
-                viewModel.clearPendingImport()
+                viewModel.dismissPendingImport()
+                retainedImportState = uiState.copy(pendingImport = null)
             }
         },
         onCancel = {
-            viewModel.discardPendingImportFiles()
             showImportPreviewSheet = false
         },
-        confirmText = stringResource(R.string.plugin_import_install),
-        confirmEnabled = !uiState.isBusy && uiState.selectedImportRoots.isNotEmpty(),
+        confirmText = stringResource(when {
+            uiState.importComplete -> R.string.plugin_import_done
+            uiState.importResult?.failed?.isNotEmpty() == true -> R.string.plugin_online_retry
+            else -> R.string.plugin_import_install
+        }),
+        confirmEnabled = !uiState.isBusy && (uiState.importComplete || uiState.selectedImportRoots.isNotEmpty()),
         onConfirm = {
-            viewModel.installPendingImport()
-            showImportPreviewSheet = false
+            if (uiState.importComplete) showImportPreviewSheet = false else viewModel.installPendingImport()
         },
         content = {
-            pendingImport?.let { session ->
+            val previewState = if (pendingImport != null) uiState else retainedImportState
+            previewState.pendingImport?.let { session ->
+                PluginImportResult(previewState.importResult, previewState.importError)
+                val completedIds = previewState.importResult?.installed.orEmpty().mapTo(mutableSetOf()) { it.id }
+                val remaining = session.candidates.filter { it.manifest.id !in completedIds }
                 Column(
                     modifier = Modifier
                         .fillMaxWidth(),
                 ) {
-                    if (session.candidates.isNotEmpty()) {
+                    if (remaining.isNotEmpty()) {
                         if (salt) ItemOuterTitle(
                             text = stringResource(
                                 R.string.plugin_import_installable_title,
-                                session.candidates.size
+                                remaining.size
                             ),
                         )
                         else SmallTitle(
                             text = stringResource(
                                 R.string.plugin_import_installable_title,
-                                session.candidates.size
+                                remaining.size
                             ),
                             insideMargin = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
                         )
                     }
 
-                    session.candidates.forEach { candidate ->
+                    remaining.forEach { candidate ->
                         val selected =
-                            candidate.relativeRootInArchive in uiState.selectedImportRoots
+                            candidate.relativeRootInArchive in previewState.selectedImportRoots
 
                         PluginImportCandidateItem(
                             candidate = candidate,
                             selected = selected,
+                            enabled = !previewState.isBusy,
                             onCheckedChange = { checked ->
                                 viewModel.setImportCandidateSelected(
                                     candidate.relativeRootInArchive,
@@ -634,7 +665,7 @@ fun PluginManagerScreen(
                     }
                 }
 
-                if (session.failed.isNotEmpty()) {
+                if (previewState.importResult == null && session.failed.isNotEmpty()) {
                     if (salt) ItemOuterTitle(
                         text = stringResource(
                             R.string.plugin_import_failed_title,
@@ -662,409 +693,14 @@ fun PluginManagerScreen(
     )
 }
 
-
-@Composable
-private fun PluginImportCandidateItem(
-    candidate: PluginInstallCandidate,
-    selected: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    val localeTags = androidx.compose.ui.platform.LocalConfiguration.current.locales.toLanguageTags()
-    val manifest by androidx.compose.runtime.produceState(candidate.manifest, candidate, localeTags) {
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching {
-                com.lonx.lyrico.plugin.i18n.PluginStrings.load(candidate.pluginRoot, candidate.manifest)
-                    .snapshot(localeTags.split(',')).localize(candidate.manifest)
-            }.getOrDefault(candidate.manifest)
-        }
-    }
-    val conflictText = candidate.versionConflict.toImportConflictText()
-    val conflictColor = candidate.versionConflict.toImportConflictColor()
-    val iconPath = manifest.icon?.let { File(candidate.pluginRoot, it).absolutePath }
-    val versionText = if (candidate.existingPlugin != null) {
-        "${candidate.existingPlugin.versionName} -> ${manifest.versionName}"
-    } else {
-        manifest.versionName
-    }
-    val locationText = candidate.relativeRootInArchive.ifBlank { "/" }
-    val pluginTypeText = candidate.manifest.capabilities
-        .displaySourceTypes()
-        .map { stringResource(it.labelRes()) }
-        .joinToString(" / ")
-
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        RoundedColumn {
-            Column(
-                Modifier.fillMaxWidth().toggleable(
-                    value = selected,
-                    role = Role.Checkbox,
-                    onValueChange = onCheckedChange,
-                )
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = SaltTheme.dimens.item)
-                        .innerPadding(vertical = false),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    com.moriafly.salt.ui.Icon(
-                        painter = rememberVectorPainter(if (selected) SaltIcons.Check else SaltIcons.Uncheck),
-                        contentDescription = null,
-                        modifier = Modifier.size(SaltTheme.dimens.itemIcon),
-                        tint = SaltTheme.colors.highlight,
-                    )
-                    Spacer(Modifier.width(SaltTheme.dimens.subPadding))
-                    Column(Modifier.weight(1f).innerPadding(horizontal = false)) {
-                        com.moriafly.salt.ui.Text(manifest.name)
-                        Spacer(Modifier.height(2.dp))
-                        com.moriafly.salt.ui.Text(
-                            manifest.id,
-                            style = SaltTheme.textStyles.sub,
-                            color = SaltTheme.colors.subText,
-                        )
-                    }
-                    Spacer(Modifier.width(16.dp))
-                    PluginIcon(
-                        iconPath = iconPath,
-                        contentDescription = null,
-                        size = 34.dp,
-                    )
-                }
-                Column(
-                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    ImportStatusBadge(conflictText, conflictColor)
-                    SaltPluginSubText(stringResource(R.string.plugin_import_version, versionText))
-                    SaltPluginSubText(stringResource(R.string.plugin_type_with_value, pluginTypeText))
-                    SaltPluginSubText(stringResource(R.string.plugin_import_path, locationText))
-                    if (manifest.description.isNotBlank()) {
-                        SaltPluginSubText(stringResource(R.string.plugin_import_description, manifest.description))
-                    }
-                }
-            }
-        }
-        return
-    }
-
-    Card(
-        colors = CardDefaults.defaultColors(
-            color = colorScheme.secondaryContainer,
-        )
-    ) {
-        BasicComponent(
-            insideMargin = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-            onClick = {
-                onCheckedChange(!selected)
-            },
-            startAction = {
-                PluginIcon(
-                    iconPath = iconPath,
-                    contentDescription = manifest.name,
-                    size = 34.dp
-                )
-            },
-            endActions = {
-                Checkbox(
-                    state = if (selected) ToggleableState.On else ToggleableState.Off,
-                    onClick = {
-                        onCheckedChange(!selected)
-                    }
-                )
-            }
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = manifest.name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-
-                ImportStatusBadge(
-                    text = conflictText,
-                    color = conflictColor
-                )
-            }
-
-            Text(
-                text = manifest.id,
-                fontSize = 12.sp,
-                color = colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = stringResource(R.string.plugin_import_version, versionText),
-                fontSize = 12.sp,
-                color = colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stringResource(R.string.plugin_type_with_value, pluginTypeText),
-                fontSize = 12.sp,
-                color = colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stringResource(R.string.plugin_import_path,locationText),
-                fontSize = 12.sp,
-                color = colorScheme.onSurfaceVariantSummary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (manifest.description.isNotBlank()) {
-                Text(
-                    text = stringResource(R.string.plugin_import_description,manifest.description),
-                    fontSize = 12.sp,
-                    color = colorScheme.onSurfaceVariantSummary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-    }
-}
-
-@Composable
-private fun PluginImportFailedItem(
-    failed: PluginInstallFailed
-) {
-    var expanded by rememberSaveable(
-        failed.rootPath,
-        failed.reason,
-        failed.pluginId,
-        failed.versionName
-    ) {
-        mutableStateOf(false)
-    }
-
-    val title = failed.displayName
-
-    val subtitle = buildString {
-        failed.pluginId
-            ?.takeIf { it.isNotBlank() && it != title }
-            ?.let { append(it) }
-
-        failed.versionName
-            ?.takeIf { it.isNotBlank() }
-            ?.let {
-                if (isNotEmpty()) append("\n")
-                append(stringResource(R.string.plugin_import_version))
-                append(" ")
-                append(it)
-            }
-
-        if (failed.rootPath.isNotBlank()) {
-            if (isNotEmpty()) append("\n")
-            append(failed.rootPath)
-        }
-    }
-
-    val versionChange = buildString {
-        val oldVersion = failed.existingVersionName
-        val newVersion = failed.versionName
-        if (!oldVersion.isNullOrBlank() && !newVersion.isNullOrBlank()) {
-            append(oldVersion)
-            append(" -> ")
-            append(newVersion)
-        }
-    }
-
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        RoundedColumn {
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                Item(
-                    onClick = { expanded = !expanded },
-                    text = title,
-                    sub = subtitle.ifBlank { null },
-                    textColor = SaltTheme.colors.error,
-                    subColor = SaltTheme.colors.error.copy(alpha = 0.82f),
-                    tag = if (expanded) stringResource(R.string.plugin_import_collapse)
-                    else stringResource(R.string.plugin_import_expand),
-                    arrowType = ItemArrowType.None,
-                )
-                if (versionChange.isNotBlank()) com.moriafly.salt.ui.Text(
-                    text = versionChange,
-                    style = SaltTheme.textStyles.sub,
-                    color = SaltTheme.colors.error.copy(alpha = 0.82f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.innerPadding(vertical = false)
-                )
-                com.moriafly.salt.ui.Text(
-                    text = failed.reason,
-                    style = SaltTheme.textStyles.sub,
-                    color = SaltTheme.colors.error,
-                    maxLines = if (expanded) Int.MAX_VALUE else 2,
-                    overflow = if (expanded) TextOverflow.Clip else TextOverflow.Ellipsis,
-                    modifier = Modifier.innerPadding(vertical = false)
-                )
-            }
-        }
-        return
-    }
-
-    Card(
-        colors = CardDefaults.defaultColors(
-            color = colorScheme.errorContainer
-        )
-    ) {
-        BasicComponent(
-            onClick = {
-                expanded = !expanded
-            },
-            modifier = Modifier.animateContentSize()
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onErrorContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                failed.conflict?.let { conflict ->
-                    ImportStatusBadge(
-                        text = conflict.toImportConflictText(),
-                        color = colorScheme.error
-                    )
-                }
-
-                Text(
-                    text = if (expanded) {
-                        stringResource(R.string.plugin_import_collapse)
-                    } else {
-                        stringResource(R.string.plugin_import_expand)
-                    },
-                    fontSize = 12.sp,
-                    color = colorScheme.onErrorContainer,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1
-                )
-            }
-
-            if (subtitle.isNotBlank()) {
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = colorScheme.onErrorContainer.copy(alpha = 0.82f),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            if (versionChange.isNotBlank()) {
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = versionChange,
-                    fontSize = 12.sp,
-                    color = colorScheme.onErrorContainer.copy(alpha = 0.82f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = failed.reason,
-                fontSize = 12.sp,
-                color = colorScheme.onErrorContainer,
-                maxLines = if (expanded) Int.MAX_VALUE else 2,
-                overflow = if (expanded) TextOverflow.Clip else TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-
-@Composable
-private fun ImportStatusBadge(
-    text: String,
-    color: Color
-) {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        com.moriafly.salt.ui.Text(
-            text = text,
-            style = SaltTheme.textStyles.sub.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
-            color = color,
-            maxLines = 1,
-            modifier = Modifier.clip(SaltTheme.shapes.small)
-                .background(color.copy(alpha = 0.14f))
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-        )
-        return
-    }
-    Text(
-        text = text,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        color = color,
-        maxLines = 1,
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(color.copy(alpha = 0.14f))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    )
-}
-
-@Composable
-private fun PluginVersionConflict.toImportConflictColor(): Color {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        return when (this) {
-            PluginVersionConflict.NONE, PluginVersionConflict.UPDATE -> SaltTheme.colors.highlight
-            PluginVersionConflict.OVERWRITE -> SaltTheme.colors.subText
-            PluginVersionConflict.DOWNGRADE -> SaltTheme.colors.error
-        }
-    }
-    return when (this) {
-        PluginVersionConflict.NONE -> colorScheme.primary
-        PluginVersionConflict.UPDATE -> colorScheme.primary
-        PluginVersionConflict.OVERWRITE -> colorScheme.onTertiaryContainer
-        PluginVersionConflict.DOWNGRADE -> colorScheme.error
-    }
-}
-
-@Composable
-private fun PluginVersionConflict.toImportConflictText(): String {
-    return when (this) {
-        PluginVersionConflict.NONE ->
-            stringResource(R.string.plugin_import_conflict_new)
-
-        PluginVersionConflict.UPDATE ->
-            stringResource(R.string.plugin_import_conflict_update)
-
-        PluginVersionConflict.OVERWRITE ->
-            stringResource(R.string.plugin_import_conflict_overwrite)
-
-        PluginVersionConflict.DOWNGRADE ->
-            stringResource(R.string.plugin_import_conflict_downgrade)
-    }
-}
-
 @Composable
 fun PluginItem(
     plugin: SourcePluginEntity,
     compact: Boolean,
     enabled: Boolean,
-    updateUrl: String,
+    update: PluginUpdateState?,
+    onUpdate: () -> Unit,
+    onCancelUpdate: () -> Unit,
     onUninstall: () -> Unit,
     onRename: () -> Unit,
     onCheckChanged: (Boolean) -> Unit,
@@ -1073,6 +709,9 @@ fun PluginItem(
 ) {
     if (compact) {
         CompactPluginItem(
+            update = update,
+            onUpdate = onUpdate,
+            onCancelUpdate = onCancelUpdate,
             plugin = plugin,
             enabled = enabled,
             onUninstall = onUninstall,
@@ -1084,8 +723,25 @@ fun PluginItem(
         return
     }
 
-    val secondaryContainer = colorScheme.secondaryContainer.copy(alpha = 0.8f)
-    val actionIconTint = colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f)
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val actionStyle = if (salt) PillButtonDefaults.style(PillButtonSize.Medium)
+        else PillButtonDefaults.style(PillButtonSize.Medium).copy(
+            height = 35.dp,
+            contentPadding = PaddingValues(horizontal = 10.dp),
+            shape = CircleShape,
+            textStyle = MiuixTheme.textStyles.body2.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        )
+    val actionColors = PillButtonDefaults.colors(
+        contentColor = if (salt) SaltTheme.colors.text
+            else colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f),
+        containerColor = if (salt) SaltTheme.colors.text.copy(alpha = 0.08f)
+            else colorScheme.secondaryContainer.copy(alpha = 0.8f)
+    )
+    val dangerColors = PillButtonDefaults.colors(
+        contentColor = if (salt) SaltTheme.colors.error else colorScheme.error,
+        containerColor = if (salt) SaltTheme.colors.error.copy(alpha = 0.12f)
+            else colorScheme.errorContainer.copy(alpha = 0.45f)
+    )
 
     val pluginId = plugin.id
     val pluginName = plugin.displayName
@@ -1098,13 +754,12 @@ fun PluginItem(
         .joinToString(" / ")
 
     val hasDescription = pluginDescription.isNotBlank()
-    val hasUpdateSource = updateUrl.isNotBlank()
 
     var expanded by rememberSaveable(pluginId) {
         mutableStateOf(false)
     }
 
-    if (LocalUiEngine.current == UiEngine.SALT) {
+    if (salt) {
         com.moriafly.salt.ui.Card(modifier = modifier) {
             Column(
                 modifier = Modifier
@@ -1137,11 +792,6 @@ fun PluginItem(
                                 modifier = Modifier.weight(1f, fill = false)
                             )
 
-                            if (hasUpdateSource) {
-                                SaltPluginBadge(
-                                    text = stringResource(R.string.plugin_update_source_configured)
-                                )
-                            }
                         }
 
                         SaltPluginSubText(pluginTypeText)
@@ -1196,30 +846,70 @@ fun PluginItem(
                 Row(
                     modifier = Modifier.fillMaxWidth().innerPadding(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 左侧操作可换行，卸载始终靠右。
                     FlowRow(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        SaltPluginActionButton(
+                        PillButton(
                             text = stringResource(R.string.plugin_config),
-                            icon = LucideIcons.Settings,
-                            onClick = onConfig
+                            onClick = onConfig,
+                            style = actionStyle,
+                            colors = actionColors,
+                            leading = {
+                                Icon(
+                                    imageVector = LucideIcons.Settings,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionColors.contentColor(selected = false, enabled = true)
+                                )
+                            }
                         )
-                        SaltPluginActionButton(
+                        PillButton(
                             text = stringResource(R.string.plugin_custom_name),
-                            icon = LucideIcons.Pencil,
-                            onClick = onRename
+                            onClick = onRename,
+                            style = actionStyle,
+                            colors = actionColors,
+                            leading = {
+                                Icon(
+                                    imageVector = LucideIcons.Pencil,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionColors.contentColor(selected = false, enabled = true)
+                                )
+                            }
+                        )
+                        if (update != null) PillButton(
+                            text = pluginUpdateActionText(update),
+                            onClick = if (update.isDownloading) onCancelUpdate else onUpdate,
+                            enabled = !update.isInstalling,
+                            style = actionStyle,
+                            colors = actionColors,
+                            leading = {
+                                Icon(
+                                    imageVector = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionColors.contentColor(selected = false, enabled = !update.isInstalling)
+                                )
+                            }
                         )
                     }
-                    SaltPluginActionButton(
+                    PillButton(
                         text = stringResource(R.string.plugin_uninstall),
-                        icon = LucideIcons.Trash,
-                        danger = true,
-                        onClick = onUninstall
+                        onClick = onUninstall,
+                        style = actionStyle,
+                        colors = dangerColors,
+                        leading = {
+                            Icon(
+                                imageVector = LucideIcons.Trash,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = dangerColors.contentColor(selected = false, enabled = true)
+                            )
+                        }
                     )
                 }
             }
@@ -1262,12 +952,6 @@ fun PluginItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-
-                    if (hasUpdateSource) {
-                        PluginBadge(
-                            text = stringResource(R.string.plugin_update_source_configured)
-                        )
-                    }
 
                 }
 
@@ -1351,32 +1035,72 @@ fun PluginItem(
         )
 
         Row(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PluginActionChip(
-                text = stringResource(R.string.plugin_config),
-                icon = LucideIcons.Settings,
-                tint = actionIconTint,
-                background = secondaryContainer,
-                onClick = onConfig
-            )
-            PluginActionChip(
-                text = stringResource(R.string.plugin_custom_name),
-                icon = LucideIcons.Pencil,
-                tint = actionIconTint,
-                background = secondaryContainer,
-                onClick = onRename
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            PluginActionChip(
+            FlowRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PillButton(
+                    text = stringResource(R.string.plugin_config),
+                    onClick = onConfig,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
+                )
+                PillButton(
+                    text = stringResource(R.string.plugin_custom_name),
+                    onClick = onRename,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Pencil,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
+                )
+                if (update != null) PillButton(
+                    text = pluginUpdateActionText(update),
+                    onClick = if (update.isDownloading) onCancelUpdate else onUpdate,
+                    enabled = !update.isInstalling,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = !update.isInstalling)
+                        )
+                    }
+                )
+            }
+            PillButton(
                 text = stringResource(R.string.plugin_uninstall),
-                icon = LucideIcons.Trash,
-                tint = colorScheme.error,
-                background = colorScheme.errorContainer.copy(alpha = 0.45f),
-                onClick = onUninstall
+                onClick = onUninstall,
+                style = actionStyle,
+                colors = dangerColors,
+                leading = {
+                    Icon(
+                        imageVector = LucideIcons.Trash,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = dangerColors.contentColor(selected = false, enabled = true)
+                    )
+                }
             )
         }
     }
@@ -1384,6 +1108,9 @@ fun PluginItem(
 
 @Composable
 private fun CompactPluginItem(
+    update: PluginUpdateState?,
+    onUpdate: () -> Unit,
+    onCancelUpdate: () -> Unit,
     plugin: SourcePluginEntity,
     enabled: Boolean,
     onUninstall: () -> Unit,
@@ -1393,13 +1120,29 @@ private fun CompactPluginItem(
     modifier: Modifier = Modifier
 ) {
     val pluginName = plugin.displayName
+    val versionText = if (update?.isDownloading == true) {
+        "${plugin.versionName} · ${update.percent}%"
+    } else plugin.versionName
     val pluginTypeText = plugin.displaySourceTypes
         .map { stringResource(it.labelRes()) }
         .joinToString(" / ")
-    val neutralActionBackground = colorScheme.secondaryContainer.copy(alpha = 0.8f)
-    val neutralActionTint = colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f)
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    val actionStyle = PillButtonDefaults.style(PillButtonSize.Small).copy(
+        height = 30.dp, iconOnlyPadding = PaddingValues(6.dp), shape = CircleShape
+    )
+    val actionColors = PillButtonDefaults.colors(
+        contentColor = if (salt) SaltTheme.colors.text
+            else colorScheme.onSurface.copy(alpha = if (isDarkTheme) 0.7f else 0.9f),
+        containerColor = if (salt) SaltTheme.colors.text.copy(alpha = 0.08f)
+            else colorScheme.secondaryContainer.copy(alpha = 0.8f)
+    )
+    val dangerColors = PillButtonDefaults.colors(
+        contentColor = if (salt) SaltTheme.colors.error else colorScheme.error,
+        containerColor = if (salt) SaltTheme.colors.error.copy(alpha = 0.12f)
+            else colorScheme.errorContainer.copy(alpha = 0.45f)
+    )
 
-    if (LocalUiEngine.current == UiEngine.SALT) {
+    if (salt) {
         com.moriafly.salt.ui.Card(modifier = modifier) {
             Row(
                 modifier = Modifier.fillMaxWidth().innerPadding(),
@@ -1422,7 +1165,7 @@ private fun CompactPluginItem(
                         overflow = TextOverflow.Ellipsis
                     )
                     SaltPluginSubText(pluginTypeText)
-                    SaltPluginSubText(stringResource(R.string.plugin_version_with_value, plugin.versionName))
+                    SaltPluginSubText(stringResource(R.string.plugin_version_with_value, versionText))
                     SaltPluginSubText(
                         text = stringResource(
                             R.string.plugin_api_versions_with_value,
@@ -1448,30 +1191,66 @@ private fun CompactPluginItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Spacer(modifier = Modifier.weight(1f))
-                SaltIconButton(
-                    icon = LucideIcons.Settings,
-                    label = stringResource(R.string.plugin_config),
+                if (update != null) PillButton(
+                    text = pluginUpdateActionText(update),
+                    onClick = if (update.isDownloading) onCancelUpdate else onUpdate,
+                    enabled = !update.isInstalling,
+                    showText = false,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                            contentDescription = pluginUpdateActionText(update),
+                            modifier = Modifier.size(18.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = !update.isInstalling)
+                        )
+                    }
+                )
+                PillButton(
+                    text = stringResource(R.string.plugin_config),
                     onClick = onConfig,
-                    size = 30.dp,
-                    iconSize = 18.dp,
-                    backgroundColor = SaltTheme.colors.text.copy(alpha = 0.08f)
+                    showText = false,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Settings,
+                            contentDescription = stringResource(R.string.plugin_config),
+                            modifier = Modifier.size(18.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
                 )
-                SaltIconButton(
-                    icon = LucideIcons.Pencil,
-                    label = stringResource(R.string.plugin_custom_name),
+                PillButton(
+                    text = stringResource(R.string.plugin_custom_name),
                     onClick = onRename,
-                    size = 30.dp,
-                    iconSize = 18.dp,
-                    backgroundColor = SaltTheme.colors.text.copy(alpha = 0.08f)
+                    showText = false,
+                    style = actionStyle,
+                    colors = actionColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Pencil,
+                            contentDescription = stringResource(R.string.plugin_custom_name),
+                            modifier = Modifier.size(18.dp),
+                            tint = actionColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
                 )
-                SaltIconButton(
-                    icon = LucideIcons.Trash,
-                    label = stringResource(R.string.plugin_uninstall),
+                PillButton(
+                    text = stringResource(R.string.plugin_uninstall),
                     onClick = onUninstall,
-                    tint = SaltTheme.colors.error,
-                    size = 30.dp,
-                    iconSize = 18.dp,
-                    backgroundColor = SaltTheme.colors.error.copy(alpha = 0.12f)
+                    showText = false,
+                    style = actionStyle,
+                    colors = dangerColors,
+                    leading = {
+                        Icon(
+                            imageVector = LucideIcons.Trash,
+                            contentDescription = stringResource(R.string.plugin_uninstall),
+                            modifier = Modifier.size(18.dp),
+                            tint = dangerColors.contentColor(selected = false, enabled = true)
+                        )
+                    }
                 )
             }
         }
@@ -1518,7 +1297,7 @@ private fun CompactPluginItem(
                 )
 
                 Text(
-                    text = stringResource(R.string.plugin_version_with_value, plugin.versionName),
+                    text = stringResource(R.string.plugin_version_with_value, versionText),
                     fontSize = 11.sp,
                     color = colorScheme.onSurfaceVariantSummary,
                     maxLines = 1,
@@ -1552,124 +1331,73 @@ private fun CompactPluginItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(modifier = Modifier.weight(1f))
-            CompactPluginActionButton(
-                icon = LucideIcons.Settings,
-                contentDescription = stringResource(R.string.plugin_config),
-                tint = neutralActionTint,
-                background = neutralActionBackground,
-                onClick = onConfig
+            if (update != null) PillButton(
+                text = pluginUpdateActionText(update),
+                onClick = if (update.isDownloading) onCancelUpdate else onUpdate,
+                enabled = !update.isInstalling,
+                showText = false,
+                style = actionStyle,
+                colors = actionColors,
+                leading = {
+                    Icon(
+                        imageVector = if (update.isDownloading) LucideIcons.Close else LucideIcons.Download,
+                        contentDescription = pluginUpdateActionText(update),
+                        modifier = Modifier.size(18.dp),
+                        tint = actionColors.contentColor(selected = false, enabled = !update.isInstalling)
+                    )
+                }
             )
-            CompactPluginActionButton(
-                icon = LucideIcons.Pencil,
-                contentDescription = stringResource(R.string.plugin_custom_name),
-                tint = neutralActionTint,
-                background = neutralActionBackground,
-                onClick = onRename
+            PillButton(
+                text = stringResource(R.string.plugin_config),
+                onClick = onConfig,
+                showText = false,
+                style = actionStyle,
+                colors = actionColors,
+                leading = {
+                    Icon(
+                        imageVector = LucideIcons.Settings,
+                        contentDescription = stringResource(R.string.plugin_config),
+                        modifier = Modifier.size(18.dp),
+                        tint = actionColors.contentColor(selected = false, enabled = true)
+                    )
+                }
             )
-            CompactPluginActionButton(
-                icon = LucideIcons.Trash,
-                contentDescription = stringResource(R.string.plugin_uninstall),
-                tint = colorScheme.error,
-                background = colorScheme.errorContainer.copy(alpha = 0.45f),
-                onClick = onUninstall
+            PillButton(
+                text = stringResource(R.string.plugin_custom_name),
+                onClick = onRename,
+                showText = false,
+                style = actionStyle,
+                colors = actionColors,
+                leading = {
+                    Icon(
+                        imageVector = LucideIcons.Pencil,
+                        contentDescription = stringResource(R.string.plugin_custom_name),
+                        modifier = Modifier.size(18.dp),
+                        tint = actionColors.contentColor(selected = false, enabled = true)
+                    )
+                }
+            )
+            PillButton(
+                text = stringResource(R.string.plugin_uninstall),
+                onClick = onUninstall,
+                showText = false,
+                style = actionStyle,
+                colors = dangerColors,
+                leading = {
+                    Icon(
+                        imageVector = LucideIcons.Trash,
+                        contentDescription = stringResource(R.string.plugin_uninstall),
+                        modifier = Modifier.size(18.dp),
+                        tint = dangerColors.contentColor(selected = false, enabled = true)
+                    )
+                }
             )
         }
     }
 }
 
-@Composable
-private fun CompactPluginActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    tint: Color,
-    background: Color,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .background(background)
-            .combinedClickable(onClick = onClick, onLongClick = null),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(18.dp)
-        )
-    }
-}
-
-private fun PluginSourceType.labelRes(): Int = when (this) {
-    PluginSourceType.METADATA -> R.string.plugin_type_metadata
-    PluginSourceType.LYRICS -> R.string.plugin_type_lyrics
-    PluginSourceType.COVER -> R.string.plugin_type_cover
-}
-
 private const val PLUGIN_MANAGER_PREFERENCES = "plugin_manager_preferences"
 private const val KEY_COMPACT_MODE = "compact_mode"
-
-@Composable
-private fun PluginBadge(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = text,
-        fontSize = 12.sp,
-        color = colorScheme.onTertiaryContainer.copy(alpha = 0.85f),
-        modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(colorScheme.tertiaryContainer.copy(alpha = 0.6f))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        fontWeight = FontWeight(700),
-        maxLines = 1,
-        softWrap = false
-    )
-}
-
-@Composable
-private fun PluginActionChip(
-    text: String,
-    icon: ImageVector,
-    tint: Color,
-    background: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .heightIn(min = 35.dp)
-            .clip(CircleShape)
-            .background(background)
-            .combinedClickable(
-                onClick = {
-                    onClick()
-                },
-                onLongClick = null
-            )
-            .padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = text,
-            tint = tint,
-            modifier = Modifier.size(20.dp)
-        )
-
-        Text(
-            text = text,
-            color = tint,
-            fontWeight = FontWeight.Medium,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(start = 5.dp, end = 2.dp)
-        )
-    }
-}
 
 /** Salt 的副文案行：类型、版本、API 与作者共用同一语义样式。 */
 @Composable
@@ -1684,47 +1412,10 @@ private fun SaltPluginSubText(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** 小格式徽标：沿用应用约定的字号，只换 Salt 的主题色。 */
 @Composable
-private fun SaltPluginBadge(text: String) {
-    com.moriafly.salt.ui.Text(
-        text = text,
-        color = SaltTheme.colors.highlight,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(SaltTheme.colors.highlight.copy(alpha = 0.14f))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
-    )
-}
-
-/** Salt 的胶囊操作按钮：低强调底色，危险操作走错误色。 */
-@Composable
-private fun SaltPluginActionButton(
-    text: String,
-    icon: ImageVector,
-    danger: Boolean = false,
-    onClick: () -> Unit
-) {
-    val contentColor = if (danger) SaltTheme.colors.error else SaltTheme.colors.text
-    PillButton(
-        text = text,
-        onClick = onClick,
-        style = PillButtonDefaults.style(PillButtonSize.Medium),
-        colors = PillButtonDefaults.colors(
-            contentColor = contentColor,
-            containerColor = if (danger) SaltTheme.colors.error.copy(alpha = 0.12f)
-                else SaltTheme.colors.text.copy(alpha = 0.08f),
-        ),
-        leading = {
-            com.moriafly.salt.ui.Icon(
-                painter = rememberVectorPainter(icon),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = contentColor
-            )
-        },
-    )
+private fun pluginUpdateActionText(update: PluginUpdateState?): String = when (update?.phase) {
+    PluginUpdateState.Phase.DOWNLOADING -> "${update.percent}%"
+    PluginUpdateState.Phase.INSTALLING -> stringResource(R.string.plugin_online_installing)
+    PluginUpdateState.Phase.FAILED -> stringResource(R.string.plugin_online_retry)
+    else -> stringResource(R.string.plugin_update)
 }

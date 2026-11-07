@@ -29,6 +29,7 @@ internal fun MiuixConfirmDialog(
     cancelText: String = stringResource(R.string.cancel),
     confirmText: String = stringResource(R.string.confirm),
     confirmEnabled: Boolean = true,
+    dismissOnConfirm: Boolean = true,
 ) {
     WindowDialog(
         show = show,
@@ -56,7 +57,7 @@ internal fun MiuixConfirmDialog(
                     enabled = confirmEnabled,
                     onClick = {
                         onConfirm()
-                        onDismissRequest()
+                        if (dismissOnConfirm) onDismissRequest()
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.textButtonColorsPrimary(),

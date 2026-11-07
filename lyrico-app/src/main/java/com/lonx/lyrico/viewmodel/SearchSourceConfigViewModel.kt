@@ -27,12 +27,15 @@ data class SearchSourceConfigUiState(
     val validationErrors: Map<String, String> = emptyMap(),
     val isLoading: Boolean = true,
     val saved: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val updateUrl: String? = null,
+    val installSourceUrl: String? = null
 )
 
 class SearchSourceConfigViewModel(
     private val settingsRepository: SettingsRepository,
-    private val searchSourceProvider: SearchSourceProvider
+    private val searchSourceProvider: SearchSourceProvider,
+    private val pluginRepository: com.lonx.lyrico.data.repository.SourcePluginRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchSourceConfigUiState())
     val uiState: StateFlow<SearchSourceConfigUiState> = _uiState.asStateFlow()
@@ -46,6 +49,7 @@ class SearchSourceConfigViewModel(
                 }
                 return@launch
             }
+            val plugin = pluginRepository.getPlugin(pluginId)
             val sourceImpl = sourceWithState.source
             val fields = sourceImpl.configFields
             val valueFields = fields.filter { it.type != PluginConfigFieldType.MARKDOWN }
@@ -58,6 +62,8 @@ class SearchSourceConfigViewModel(
                     title = sourceImpl.name,
                     apiVersion = sourceImpl.apiVersion,
                     minHostApiVersion = sourceImpl.minHostApiVersion,
+                    updateUrl = plugin?.updateUrl,
+                    installSourceUrl = plugin?.installSourceUrl,
                     sourceTypes = sourceImpl.capabilities.displaySourceTypes(),
                     configFields = fields,
                     values = if (it.pluginId == sourceImpl.id && !it.isLoading) it.values else defaults + saved,

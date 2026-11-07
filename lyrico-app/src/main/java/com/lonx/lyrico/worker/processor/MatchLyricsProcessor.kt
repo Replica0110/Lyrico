@@ -80,45 +80,47 @@ class MatchLyricsProcessor(
 
         sources.forEachIndexed { sourceIndex, source ->
             val candidate = try {
-                if (PluginCapability.SEARCH_SONGS in source.capabilities) {
-                    val searchResults = mutableListOf<SongSearchResult>()
-                    for (query in queries) {
-                        searchResults += source.searchSongs(
-                            keyword = query,
-                            separator = config.separator,
-                            pageSize = 3
-                        )
-                    }
-                    val songCandidate = searchResults
-                        .mapIndexed { index, result ->
-                            result to MusicMatchUtils.calculateMatchScore(
-                                result = result,
-                                song = song,
-                                preferFileName = config.matchConfig.preferFileName,
-                                rankIndex = index
+                source.withSession {
+                    if (PluginCapability.SEARCH_SONGS in source.capabilities) {
+                        val searchResults = mutableListOf<SongSearchResult>()
+                        for (query in queries) {
+                            searchResults += source.searchSongs(
+                                keyword = query,
+                                separator = config.separator,
+                                pageSize = 3
                             )
                         }
-                        .maxByOrNull { it.second }
-                    songCandidate?.let { (result, score) ->
-                        source.getLyricsCandidates(result).firstOrNull()?.let { loaded ->
-                            ScoredLyricsCandidate(loaded, source.id, score)
-                        }
-                    }
-                } else {
-                    source.getLyricsCandidates(requestSong, pageSize = 5)
-                        .mapIndexed { index, candidate ->
-                            ScoredLyricsCandidate(
-                                candidate = candidate,
-                                sourceId = source.id,
-                                score = MusicMatchUtils.calculateMatchScore(
-                                    result = candidate.song,
+                        val songCandidate = searchResults
+                            .mapIndexed { index, result ->
+                                result to MusicMatchUtils.calculateMatchScore(
+                                    result = result,
                                     song = song,
                                     preferFileName = config.matchConfig.preferFileName,
                                     rankIndex = index
                                 )
-                            )
+                            }
+                            .maxByOrNull { it.second }
+                        songCandidate?.let { (result, score) ->
+                            source.getLyricsCandidates(result).firstOrNull()?.let { loaded ->
+                                ScoredLyricsCandidate(loaded, source.id, score)
+                            }
                         }
-                        .maxByOrNull { it.score }
+                    } else {
+                        source.getLyricsCandidates(requestSong, pageSize = 5)
+                            .mapIndexed { index, candidate ->
+                                ScoredLyricsCandidate(
+                                    candidate = candidate,
+                                    sourceId = source.id,
+                                    score = MusicMatchUtils.calculateMatchScore(
+                                        result = candidate.song,
+                                        song = song,
+                                        preferFileName = config.matchConfig.preferFileName,
+                                        rankIndex = index
+                                    )
+                                )
+                            }
+                            .maxByOrNull { it.score }
+                    }
                 }
             } catch (throwable: Exception) {
                 if (throwable is CancellationException) throw throwable

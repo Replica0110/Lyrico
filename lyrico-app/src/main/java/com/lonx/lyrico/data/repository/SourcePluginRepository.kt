@@ -16,7 +16,8 @@ interface SourcePluginRepository {
         id: String,
         apiVersion: Int,
         minHostApiVersion: Int,
-        capabilitiesJson: String
+        capabilitiesJson: String,
+        updateUrl: String? = null
     )
     suspend fun uninstallPlugin(id: String)
 }

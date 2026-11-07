@@ -37,9 +37,11 @@ import com.lonx.lyrico.data.model.entity.DEFAULT_PLUGIN_CAPABILITIES_SQL
         AlbumEntity::class,
         AlbumSongCrossRef::class,
         SourcePluginEntity::class,
-        SongCustomTagKeyEntity::class
+        SongCustomTagKeyEntity::class,
+        com.lonx.lyrico.data.model.entity.PluginSubscriptionEntity::class,
+        com.lonx.lyrico.data.model.entity.PluginCatalogCacheEntity::class
     ],
-    version = 21,
+    version = 23,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3),
@@ -63,8 +65,23 @@ abstract class LyricoDatabase : RoomDatabase() {
     abstract fun libraryIndexDao(): LibraryIndexDao
     abstract fun sourcePluginDao(): SourcePluginDao
     abstract fun songCustomTagKeyDao(): SongCustomTagKeyDao
+    abstract fun pluginSubscriptionDao(): com.lonx.lyrico.data.model.dao.PluginSubscriptionDao
 
     companion object {
+        val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS plugin_subscriptions (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, url TEXT NOT NULL, enabled INTEGER NOT NULL, sortOrder INTEGER NOT NULL)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_plugin_subscriptions_url ON plugin_subscriptions(url)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS plugin_catalog_cache (url TEXT NOT NULL PRIMARY KEY, catalogJson TEXT, lastSuccessAt INTEGER, lastAttemptAt INTEGER, error TEXT)")
+                db.execSQL("ALTER TABLE source_plugins ADD COLUMN installSourceUrl TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE source_plugins ADD COLUMN installSha256 TEXT DEFAULT NULL")
+            }
+        }
+        val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE source_plugins ADD COLUMN updateUrl TEXT DEFAULT NULL")
+            }
+        }
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE songs ADD COLUMN replayGainTrackGain TEXT DEFAULT NULL")

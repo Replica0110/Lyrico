@@ -84,7 +84,7 @@ Lyrico 插件系统是一个基于 **QuickJS 嵌入式 JavaScript 引擎** 的�
    - 复制插件根目录下所有文件到暂存目录
    - 自动排除嵌套子插件目录
    - 验证总大小 ≤ **5 MB**（`maxSinglePluginBytes`）
-3. 暂存成功后，替换原有插件目录（如果存在则先删除）
+3. 将暂存文件发布到 `plugins/sources/<pluginId>/<UUID>/` 独立目录，随后提交数据库中的 `pluginDir` 和 `iconPath`。数据库提交失败时旧版本仍有效；旧文件保留到下次进程启动时，按数据库引用清理。
 
 ### 阶段 3：存入数据库
 
@@ -119,7 +119,7 @@ Lyrico 插件系统是一个基于 **QuickJS 嵌入式 JavaScript 引擎** 的�
    - 读取 `manifest.json`
    - 按顺序拼接 JS 脚本：先拼接 `includeDirs` 中所有 `.js` 文件（按路径排序），再拼接入口文件
    - 在脚本头部注入 `include()` 函数实现的 bootstrap
-3. 生成 `ScriptSearchSource` 实例并加入缓存（以插件 ID 为键）
+3. 按插件 ID 缓存 `ScriptSearchSource`，安装目录改变时切换实例；名称、启用状态和排序更新复用原实例
 4. JS 运行时采用 **惰性初始化**：首次调用 `searchSongs`/`getLyrics`/`searchCovers` 时才创建 `QuickJsRuntime` 并执行完整脚本
 
 ### 阶段 5：运行时调用
@@ -144,12 +144,13 @@ Lyrico 插件系统是一个基于 **QuickJS 嵌入式 JavaScript 引擎** 的�
 1. 从 Room 数据库中删除记录
 2. 调用 `PluginSearchSourceManager.invalidate(pluginId)` 关闭运行时
 3. 移除插件对应的用户配置设置
-4. 递归删除 `plugins/sources/<pluginId>/` 目录
+4. 文件留到下次进程启动时清理，避免删除正在执行的旧调用所需的内容
 
 ### 阶段 8：关闭/释放
 
 - `PluginSearchSourceManager.close()` 关闭所有缓存的 `ScriptSearchSource` 实例
-- `ScriptSearchSource.close()` 关闭 QuickJS 运行时并停止专用线程池
+- `ScriptSearchSource.close()` 停止接收新会话，已有会话结束后在所属执行线程销毁 QuickJS，再停止执行器；未使用的实例不会创建执行线程
+- 批量匹配通过 `SearchSource.withSession()` 保留搜索到歌词获取所使用的运行时版本，更新不会中途释放该版本
 - 导入临时目录通过 `SourcePluginInstaller.discardImport()` 清除
 
 ## 导入限制
@@ -220,3 +221,11 @@ interface SearchSource {
     suspend fun searchCovers(keyword, page, pageSize): List<SongSearchResult>
 }
 ```
+
+## 在线分发
+
+`PluginDistributionClient` 解析统一目录，校验 HTTP/HTTPS 下载、字节大小和 SHA-256。`PluginDistributionManager` 按已安装插件自身的 `updateUrl` 合并检查，限制最多三个并行下载任务，并将所有包交给 `SourcePluginInstaller`。在线包必须只包含一个匹配的插件，本地多插件 ZIP 继续支持。格式见 [Manifest](./manifest.md#在线目录与更新)。
+
+协程取消会传递到原生 QuickJS 中断检查及正在执行的 HTTP 请求。HTTP 请求使用当前调用的剩余时间预算，响应体上限为 8 MiB。
+
+安装失败时保留导入会话，在原 Sheet 中显示结果并重试失败项；已提交的插件不会重复安装。取消导入只清理临时文件，保留已安装项。目录根对象只包含 `schemaVersion` 和 `plugins`，目录链接仅用于本次安装；后续更新使用插件自身的 `updateUrl`。

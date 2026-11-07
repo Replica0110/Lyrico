@@ -61,13 +61,15 @@ class SourcePluginRepositoryImpl(
         id: String,
         apiVersion: Int,
         minHostApiVersion: Int,
-        capabilitiesJson: String
+        capabilitiesJson: String,
+        updateUrl: String?
     ) {
         dao.updateManifestContract(
             id = id,
             apiVersion = apiVersion,
             minHostApiVersion = minHostApiVersion,
             capabilitiesJson = capabilitiesJson,
+            updateUrl = updateUrl,
             updatedAt = System.currentTimeMillis()
         )
     }

@@ -54,6 +54,7 @@ import com.lonx.lyrico.ui.components.base.SheetStatisticsRow
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.Item
+import com.lonx.lyrico.ui.components.editor.CustomTagInputDialog
 import com.lonx.lyrico.ui.components.editor.SaltEditorField
 import com.lonx.lyrico.ui.components.editor.rememberEditorTextFieldState
 import com.moriafly.salt.ui.ItemOuterTitle
@@ -132,7 +133,6 @@ import top.yukonga.miuix.kmp.window.WindowDialog
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 
 private enum class BatchEditTab(val labelRes: Int) {
@@ -540,7 +540,6 @@ Box(
             viewModel.getSelectedSongCover(option.sourceUri)?.let { applyCoverSource(it); showSelectedCoverSheet = false }
         } },
         showInfoDialog, { showInfoDialog = false },
-        showAddCustomTagDialog, { showAddCustomTagDialog = false },
         onSaved = { if (uiState.saveSuccess == true) navigator.popBackStack() },
     )
     } else {
@@ -851,64 +850,15 @@ Box(
                 )
             }
 
-
-
         }
     }
+    }
 
-    WindowDialog(
+    CustomTagInputDialog(
         show = showAddCustomTagDialog,
-        title = stringResource(R.string.action_add_custom_tag),
-        onDismissRequest = { showAddCustomTagDialog = false }
-    ) {
-        val newCustomTagKeyState = rememberTextFieldState()
-        val newCustomTagKey = newCustomTagKeyState.text.toString()
-        val newCustomTagValueState = rememberTextFieldState()
-        val newCustomTagValue = newCustomTagValueState.text.toString()
-        Column(modifier = Modifier.fillMaxWidth()) {
-            TextField(
-                state = newCustomTagKeyState,
-                label = stringResource(R.string.label_custom_tag_name),
-                useLabelAsPlaceholder = true,
-                modifier = Modifier.fillMaxWidth(),
-                lineLimits = TextFieldLineLimits.MultiLine(),
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            TextField(
-                state = newCustomTagValueState,
-                label = stringResource(R.string.label_custom_tag_value),
-                useLabelAsPlaceholder = true,
-                modifier = Modifier.fillMaxWidth(),
-                lineLimits = TextFieldLineLimits.MultiLine(),
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = { showAddCustomTagDialog = false },
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(20.dp))
-                TextButton(
-                    text = stringResource(R.string.confirm),
-                    onClick = {
-                        if (newCustomTagKey.isNotBlank()) {
-                            viewModel.addCustomFieldAndShow(
-                                key = newCustomTagKey,
-                                value = newCustomTagValue,
-                            )
-                            showAddCustomTagDialog = false
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
-        }
-    }
-
-    }
+        onDismissRequest = { showAddCustomTagDialog = false },
+        onConfirm = { key, value -> viewModel.addCustomFieldAndShow(key, value) },
+    )
 }
 
 @Composable
@@ -1559,7 +1509,7 @@ private fun SaltBatchOverlays(
     showCovers: Boolean, closeCovers: () -> Unit,
     coversLoading: Boolean, covers: List<BatchEditSelectableCover>, onCover: (BatchEditSelectableCover) -> Unit,
     showInfo: Boolean, closeInfo: () -> Unit,
-    showCustom: Boolean, closeCustom: () -> Unit, onSaved: () -> Unit,
+    onSaved: () -> Unit,
 ) {
     ItemMenuBottomSheet(show = showCoverMenu, label = stringResource(R.string.label_cover), onDismissRequest = closeCoverMenu) {
         ItemMenuAction(stringResource(R.string.batch_edit_cover_change), LucideIcons.ImageAdd, PreferenceIconTone.Appearance) { closeCoverMenu(); onPickCover() }
@@ -1637,21 +1587,5 @@ private fun SaltBatchOverlays(
                 SaltText(stringResource(R.string.batch_matching_failure, state.failureCount))
             }
         }
-    }
-    if (showCustom) {
-        val keyState = rememberTextFieldState()
-        val valueState = rememberTextFieldState()
-        val key = keyState.text.toString()
-        val value = valueState.text.toString()
-        SaltConfirmDialog(true, stringResource(R.string.action_add_custom_tag), closeCustom,
-            onConfirm = {
-                if (key.isNotBlank()) { viewModel.addCustomFieldAndShow(key, value); closeCustom() }
-            }, cancelText = stringResource(R.string.cancel), confirmText = stringResource(R.string.confirm),
-            dismissOnConfirm = false, confirmEnabled = key.isNotBlank(), content = {
-                RoundedColumn(paddingValues = PaddingValues(0.dp)) {
-                    SaltEditorField(stringResource(R.string.label_custom_tag_name), keyState, grouped = false)
-                    SaltEditorField(stringResource(R.string.label_custom_tag_value), valueState, grouped = false)
-                }
-            })
     }
 }

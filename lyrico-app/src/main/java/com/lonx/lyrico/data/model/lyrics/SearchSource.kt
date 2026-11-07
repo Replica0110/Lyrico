@@ -32,6 +32,9 @@ interface SearchSource {
 
     fun applyConfig(config: SourceRuntimeConfig) = Unit
 
+    /** Keep one source version for all calls belonging to a business operation. */
+    suspend fun <T> withSession(block: suspend SearchSource.() -> T): T = block()
+
     suspend fun searchSongs(keyword: String, page: Int = 1, separator: String = "/", pageSize: Int = 20): List<SongSearchResult>
     suspend fun getLyrics(song: SongSearchResult): LyricsResult?
     suspend fun getLyricsCandidates(
@@ -54,4 +57,34 @@ fun SearchSource.isEnabledFor(sourceType: PluginSourceType): Boolean = when (sou
     PluginSourceType.METADATA -> metadataEnabled
     PluginSourceType.LYRICS -> lyricsEnabled
     PluginSourceType.COVER -> coverEnabled
+}
+
+/** Hold each selected source version until a multi-source operation completes. */
+suspend fun <T> List<SearchSource>.withSessions(
+    onUnavailable: (suspend (SearchSource, Exception) -> Unit)? = null,
+    block: suspend (List<SearchSource>) -> T
+): T {
+    val available = mutableListOf<SearchSource>()
+    suspend fun hold(index: Int): T {
+        if (index == size) return block(available.toList())
+        val source = this[index]
+        var entered = false
+        try {
+            return source.withSession {
+                entered = true
+                available += source
+                try {
+                    hold(index + 1)
+                } finally {
+                    available.removeAt(available.lastIndex)
+                }
+            }
+        } catch (error: Exception) {
+            // Only acquisition failures may be skipped, never failures in the operation itself.
+            if (entered || error is kotlinx.coroutines.CancellationException || onUnavailable == null) throw error
+            onUnavailable(source, error)
+        }
+        return hold(index + 1)
+    }
+    return hold(0)
 }

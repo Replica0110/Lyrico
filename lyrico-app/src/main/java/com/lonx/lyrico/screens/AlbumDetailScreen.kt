@@ -963,7 +963,7 @@ private data class AlbumContributor(
 )
 
 private fun formatAlbumDuration(durationMilliseconds: Long): String {
-    val totalSeconds = (durationMilliseconds.coerceAtLeast(0L) / 1000L)
+    val totalSeconds = durationMilliseconds.coerceAtLeast(0L) / 1000L
     val seconds = totalSeconds % 60
     val totalMinutes = totalSeconds / 60
     val minutes = totalMinutes % 60

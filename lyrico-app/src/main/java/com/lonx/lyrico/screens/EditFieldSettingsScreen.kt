@@ -7,8 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -60,6 +58,7 @@ import com.lonx.lyrico.data.editfield.EditFieldListItem
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.editfield.toEditFieldBlocks
 import com.lonx.lyrico.ui.components.ItemOrderState
+import com.lonx.lyrico.ui.components.ChipGrid
 import com.lonx.lyrico.ui.components.ManagedChip
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
@@ -111,6 +110,7 @@ import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.window.WindowListPopup
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 
 /** 内置字段与自定义标签共用一份可排序列表。 */
 @Composable
@@ -316,7 +316,7 @@ fun EditFieldSettingsScreen(
         show = showAddDialog,
         availableKeys = uiState.availableKeys,
         error = uiState.inputError,
-        onAddAvailable = viewModel::addAvailableKey,
+        onClearInputError = viewModel::clearInputError,
         onDismiss = { showAddDialog = false },
         onDismissFinished = viewModel::clearInputError,
         onConfirm = { typed ->
@@ -722,19 +722,22 @@ private fun FieldTagChip(text: String) {
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddCustomTagDialog(
     show: Boolean,
     availableKeys: List<String>,
     error: CustomTagKeyError?,
-    onAddAvailable: (String) -> Unit,
+    onClearInputError: () -> Unit,
     onDismiss: () -> Unit,
     onDismissFinished: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
     val inputState = remember(show) { TextFieldState("") }
     val typed = inputState.text.toString()
+    val onSelectKey: (String) -> Unit = { key ->
+        inputState.setTextAndPlaceCursorAtEnd(key)
+        onClearInputError()
+    }
 
     if (LocalUiEngine.current == UiEngine.SALT) {
         // Salt 弹窗同步销毁，用“曾显示”标记在关闭后补发一次完成回调。
@@ -759,36 +762,7 @@ private fun AddCustomTagDialog(
             cancelText = stringResource(R.string.cancel), confirmText = stringResource(R.string.confirm),
             dismissOnConfirm = false,
         ) {
-            com.moriafly.salt.ui.Text(
-                text = stringResource(
-                    if (availableKeys.isEmpty()) {
-                        R.string.custom_tag_library_empty
-                    } else {
-                        R.string.custom_tag_library_section
-                    }
-                ),
-                color = SaltTheme.colors.subText,
-                style = SaltTheme.textStyles.sub,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-
-            if (availableKeys.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                FlowRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 200.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    availableKeys.forEach { key ->
-                        ManagedChip(text = key, onClick = { onAddAvailable(key) })
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
+            CustomTagSuggestions(availableKeys, onSelectKey)
             RoundedColumn(paddingValues = PaddingValues(0.dp)) {
                 SaltTextInput(
                     state = inputState,
@@ -808,35 +782,7 @@ private fun AddCustomTagDialog(
         onDismissFinished = onDismissFinished,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(
-                    if (availableKeys.isEmpty()) {
-                        R.string.custom_tag_library_empty
-                    } else {
-                        R.string.custom_tag_library_section
-                    }
-                ),
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-            )
-
-            if (availableKeys.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                FlowRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 200.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    availableKeys.forEach { key ->
-                        ManagedChip(text = key, onClick = { onAddAvailable(key) })
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
+            CustomTagSuggestions(availableKeys, onSelectKey)
             TextField(
                 state = inputState,
                 label = stringResource(R.string.custom_tag_key_hint),
@@ -873,4 +819,37 @@ private fun AddCustomTagDialog(
             }
         }
     }
+}
+
+/** 候选标签只填入草稿，统一由对话框的确认操作添加。 */
+@Composable
+private fun CustomTagSuggestions(keys: List<String>, onSelect: (String) -> Unit) {
+    if (keys.isEmpty()) return
+
+    val salt = LocalUiEngine.current == UiEngine.SALT
+    if (salt) {
+        com.moriafly.salt.ui.Text(
+            text = stringResource(R.string.custom_tag_library_section),
+            color = SaltTheme.colors.subText,
+            style = SaltTheme.textStyles.sub,
+        )
+    } else {
+        Text(
+            text = stringResource(R.string.custom_tag_library_section),
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            style = MiuixTheme.textStyles.footnote1,
+        )
+    }
+    Spacer(Modifier.height(8.dp))
+    ChipGrid(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 200.dp)
+            .verticalScroll(rememberScrollState()),
+    ) {
+        keys.forEach { key ->
+            ManagedChip(text = key, onClick = { onSelect(key) })
+        }
+    }
+    Spacer(Modifier.height(16.dp))
 }

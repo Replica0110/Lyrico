@@ -282,7 +282,7 @@ class LibraryIndexRepositoryImpl(
     }
 
     private companion object {
-        const val LIBRARY_INDEX_VERSION = 3
+        const val LIBRARY_INDEX_VERSION = 4
         const val INDEX_REBUILD_BATCH_SIZE = 500
     }
 }

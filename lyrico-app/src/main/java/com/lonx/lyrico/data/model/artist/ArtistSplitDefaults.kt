@@ -2,17 +2,17 @@ package com.lonx.lyrico.data.model.artist
 
 object ArtistSplitDefaults {
     val BUILTIN_SEPARATORS = listOf(
-        BuiltinArtistSeparator("slash", "/", true),
-        BuiltinArtistSeparator("fullwidth_slash", "／", true),
-        BuiltinArtistSeparator("semicolon", ";", true),
-        BuiltinArtistSeparator("fullwidth_semicolon", "；", true),
-        BuiltinArtistSeparator("comma", ",", true),
-        BuiltinArtistSeparator("fullwidth_comma", "，", true),
-        BuiltinArtistSeparator("ideographic_comma", "、", true),
-        BuiltinArtistSeparator("ampersand", "&", false),
-        BuiltinArtistSeparator("feat_dot", " feat. ", false, "feat."),
-        BuiltinArtistSeparator("ft_dot", " ft. ", false, "ft."),
-        BuiltinArtistSeparator("featuring", " featuring ", false, "featuring")
+        BuiltinArtistSeparator("slash", "/"),
+        BuiltinArtistSeparator("fullwidth_slash", "／"),
+        BuiltinArtistSeparator("semicolon", ";"),
+        BuiltinArtistSeparator("fullwidth_semicolon", "；"),
+        BuiltinArtistSeparator("comma", ","),
+        BuiltinArtistSeparator("fullwidth_comma", "，"),
+        BuiltinArtistSeparator("ideographic_comma", "、"),
+        BuiltinArtistSeparator("ampersand", "&"),
+        BuiltinArtistSeparator("feat_dot", " feat. ", "feat."),
+        BuiltinArtistSeparator("ft_dot", " ft. ", "ft."),
+        BuiltinArtistSeparator("featuring", " featuring ", "featuring")
     )
 
     val BUILTIN_NO_SPLIT_ARTISTS = listOf(
@@ -28,14 +28,13 @@ fun String.normalizedArtistKey(): String {
         .lowercase()
 }
 
+fun ArtistSplitConfig.visibleBuiltinSeparators(): List<BuiltinArtistSeparator> =
+    ArtistSplitDefaults.BUILTIN_SEPARATORS.filterNot { it.id in hiddenBuiltinSeparatorIds }
+
 fun ArtistSplitConfig.effectiveSeparators(): List<String> {
-    val builtin = ArtistSplitDefaults.BUILTIN_SEPARATORS
-        .filter { item -> item.id !in hiddenBuiltinSeparatorIds }
-        .filter { item -> builtinSeparatorOverrides[item.id] ?: item.defaultEnabled }
-        .map { it.value }
+    val builtin = visibleBuiltinSeparators().map { it.value }
 
     val custom = customSeparators
-        .filter { it.enabled }
         .map { it.value }
 
     return (builtin + custom)
@@ -55,7 +54,6 @@ fun ArtistSplitConfig.effectiveNoSplitArtistNames(): List<String> {
         .map { it.name }
 
     val custom = customNoSplitArtists
-        .filter { it.enabled }
         .map { it.name }
 
     return (builtin + custom)

@@ -6,7 +6,6 @@ import java.util.UUID
 @Serializable
 data class ArtistSplitConfig(
     val enabled: Boolean = true,
-    val builtinSeparatorOverrides: Map<String, Boolean> = emptyMap(),
     val hiddenBuiltinSeparatorIds: Set<String> = emptySet(),
     val customSeparators: List<CustomArtistSeparator> = emptyList(),
     val builtinNoSplitArtistOverrides: Map<String, Boolean> = emptyMap(),
@@ -16,21 +15,18 @@ data class ArtistSplitConfig(
 @Serializable
 data class CustomArtistSeparator(
     val value: String,
-    val id: String = UUID.randomUUID().toString(),
-    val enabled: Boolean = true
+    val id: String = UUID.randomUUID().toString()
 )
 
 @Serializable
 data class CustomNoSplitArtist(
     val name: String,
-    val id: String = UUID.randomUUID().toString(),
-    val enabled: Boolean = true
+    val id: String = UUID.randomUUID().toString()
 )
 
 data class BuiltinArtistSeparator(
     val id: String,
     val value: String,
-    val defaultEnabled: Boolean,
     val displayName: String = value
 )
 

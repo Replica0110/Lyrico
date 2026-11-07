@@ -61,10 +61,6 @@ class EditFieldSettingsViewModel(
         viewModelScope.launch { configRepository.setComponentOrder(key, codes) }
     }
 
-    fun addAvailableKey(key: String) {
-        viewModelScope.launch { configRepository.addCustomTag(key) }
-    }
-
     suspend fun addCustomTag(input: String): Boolean {
         val normalized = CustomTagKey.normalize(input)
         if (normalized == null) {

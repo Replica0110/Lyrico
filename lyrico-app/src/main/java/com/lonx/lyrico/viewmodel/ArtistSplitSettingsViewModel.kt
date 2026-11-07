@@ -3,10 +3,10 @@ package com.lonx.lyrico.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
-import com.lonx.lyrico.data.model.artist.ArtistSplitDefaults
 import com.lonx.lyrico.data.model.artist.CustomArtistSeparator
 import com.lonx.lyrico.data.model.artist.CustomNoSplitArtist
 import com.lonx.lyrico.data.model.artist.normalizedArtistKey
+import com.lonx.lyrico.data.model.artist.visibleBuiltinSeparators
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,14 +73,6 @@ class ArtistSplitSettingsViewModel(
         updateConfig { it.copy(enabled = enabled) }
     }
 
-    fun setBuiltinSeparatorEnabled(id: String, enabled: Boolean) {
-        updateConfig { config ->
-            config.copy(
-                builtinSeparatorOverrides = config.builtinSeparatorOverrides + (id to enabled)
-            )
-        }
-    }
-
     fun removeBuiltinSeparator(id: String) {
         updateConfig { config ->
             config.copy(
@@ -92,7 +84,6 @@ class ArtistSplitSettingsViewModel(
     fun resetSeparators() {
         updateConfig { config ->
             config.copy(
-                builtinSeparatorOverrides = emptyMap(),
                 hiddenBuiltinSeparatorIds = emptySet(),
                 customSeparators = emptyList()
             )
@@ -137,16 +128,6 @@ class ArtistSplitSettingsViewModel(
         return true
     }
 
-    fun setCustomSeparatorEnabled(id: String, enabled: Boolean) {
-        updateConfig { config ->
-            config.copy(
-                customSeparators = config.customSeparators.map {
-                    if (it.id == id) it.copy(enabled = enabled) else it
-                }
-            )
-        }
-    }
-
     fun removeCustomSeparator(id: String) {
         updateConfig { config ->
             config.copy(customSeparators = config.customSeparators.filterNot { it.id == id })
@@ -183,16 +164,6 @@ class ArtistSplitSettingsViewModel(
             )
         }
         return true
-    }
-
-    fun setCustomNoSplitArtistEnabled(id: String, enabled: Boolean) {
-        updateConfig { config ->
-            config.copy(
-                customNoSplitArtists = config.customNoSplitArtists.map {
-                    if (it.id == id) it.copy(enabled = enabled) else it
-                }
-            )
-        }
     }
 
     fun removeCustomNoSplitArtist(id: String) {
@@ -236,11 +207,7 @@ class ArtistSplitSettingsViewModel(
         if (config.customSeparators.any { it.id != editingId && it.value.trim() == key }) {
             return ArtistSplitValidationError.DUPLICATE
         }
-        val duplicateVisibleBuiltin = ArtistSplitDefaults.BUILTIN_SEPARATORS.any {
-            it.id !in config.hiddenBuiltinSeparatorIds &&
-                (config.builtinSeparatorOverrides[it.id] ?: it.defaultEnabled) &&
-                it.value.trim() == key
-        }
+        val duplicateVisibleBuiltin = config.visibleBuiltinSeparators().any { it.value.trim() == key }
         if (duplicateVisibleBuiltin) {
             return ArtistSplitValidationError.DUPLICATE
         }

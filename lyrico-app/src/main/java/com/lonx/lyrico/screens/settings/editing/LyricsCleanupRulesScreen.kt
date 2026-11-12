@@ -1,6 +1,6 @@
 @file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 
-package com.lonx.lyrico.screens
+package com.lonx.lyrico.screens.settings.editing
 
 import com.lonx.lyrico.ui.components.salt.SaltTextInput
 
@@ -164,7 +164,7 @@ fun LyricsCleanupRulesScreen(
                     }
                 } else {
                     SmallTitle(text = stringResource(R.string.non_lyrics_cleanup_rules_section))
-                    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    Card(modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                         ChipGrid(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
                         ) {

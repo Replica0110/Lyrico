@@ -84,7 +84,7 @@ internal object MiuixSettingsItems : SettingsItemPresentation {
     @Composable
     override fun Group(modifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
         top.yukonga.miuix.kmp.basic.Card(
-            modifier = modifier.padding(horizontal = 12.dp),
+            modifier = modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp),
             content = content,
         )
     }

@@ -48,8 +48,8 @@
 
     <!-- 分组标题 -->
     <string name="section_appearance">外观</string>
-    <string name="section_scan">扫描设置</string>
-    <string name="section_search">搜索设置</string>
+    <string name="section_scan">文件扫描</string>
+    <string name="section_search">结果展示</string>
     <string name="section_lyrics">歌词</string>
     <string name="section_text_processing">文本处理</string>
     <string name="section_other">其他</string>
@@ -60,8 +60,8 @@
     <string name="lyric_index_title">歌词索引</string>
     <string name="lyric_index_summary">用于本地歌词搜索，开启后需重新扫描已有歌曲</string>
     <!-- 扫描 -->
-    <string name="folder_manager">文件夹管理</string>
-    <string name="folder_manage_hint">管理 Lyrico 扫描的音乐文件夹</string>
+    <string name="folder_manager">音频文件夹</string>
+    <string name="folder_manage_hint">用于扫描音频文件</string>
     <string name="folder_found">已发现 %1$d 个文件夹</string>
     <string name="folder_ignored">，已忽略 %1$d 个</string>
     <string name="ignore_short_audio">不扫描 60 秒以下音频</string>
@@ -72,7 +72,7 @@
     <string name="search_loading_more">正在加载更多…</string>
     <string name="search_load_more">加载更多</string>
     <string name="search_load_more_failed">加载失败，点击重试</string>
-    <string name="show_all_search_result_fields">显示全部字段</string>
+    <string name="show_all_search_result_fields">显示空值字段</string>
     <string name="show_all_search_result_fields_summary">在搜索结果详情中显示字段值为空的字段</string>
     <string name="search_result_empty_value">（空）</string>
     <string name="search_source_tab_style">搜索源标签样式</string>
@@ -85,7 +85,7 @@
     <string name="batch_match_prefer_filename">按文件名匹配</string>
     <string name="batch_match_prefer_filename_summary">忽略内置标签，始终以文件名作为匹配依据</string>
     <!-- 歌词 -->
-    <string name="lyric_mode">歌词模式</string>
+    <string name="lyric_mode">歌词格式</string>
     <string name="lyric_line_order">歌词内容顺序</string>
     <string name="lyric_line_order_hint">拖动已启用的歌词内容，调整行式歌词的输出顺序</string>
     <string name="lyric_line_order_drag_handle">拖动排序</string>
@@ -98,8 +98,8 @@
     <string name="translation_hint">歌词中包含翻译</string>
 
     <!-- 元数据 -->
-    <string name="artist_separator">艺术家分隔符</string>
-    <string name="artist_separator_hint">存在多个艺术家时使用</string>
+    <string name="artist_separator">多艺术家分隔符</string>
+    <string name="artist_separator_hint">写入标签时，用于连接多个艺术家名称</string>
     <string name="replay_gain_no_songs">没有可用于回放增益扫描的歌曲</string>
     <string name="action_calculate_replay_gain">计算回放增益</string>
     <string name="replay_gain_calculate_in_progress">中止计算</string>
@@ -117,7 +117,7 @@
     <string name="album_replay_gain_success">已写入 %1$d 首歌的专辑回放增益</string>
     <string name="album_replay_gain_write_permission_required">需要授权才能写入专辑回放增益</string>
     <string name="album_replay_gain_write_failed">写入专辑回放增益失败：%1$s</string>
-    <string name="settings_replay_gain_target_loudness">回放增益参考响度</string>
+    <string name="settings_replay_gain_target_loudness">目标响度</string>
     <string name="settings_replay_gain_target_loudness_summary">计算回放增益时使用的目标响度</string>
     <string name="settings_replay_gain_peak_mode">回放增益峰值类型</string>
     <string name="replay_gain_peak_mode_sample">采样峰值</string>
@@ -185,11 +185,11 @@
     <string name="color_orange">橙色</string>
     <string name="color_pink">粉色</string>
     <string name="color_default">系统默认</string>
-    <string name="monet">莫奈取色</string>
-    <string name="key_color">种子色</string>
+    <string name="monet">莫奈配色</string>
+    <string name="key_color">主题色</string>
     <string name="floating_bottom_bar">悬浮导航栏</string>
     <string name="floating_bottom_bar_summary">在手机端使用悬浮底栏</string>
-    <string name="bar_blur">模糊</string>
+    <string name="bar_blur">导航栏模糊</string>
     <string name="bar_blur_summary">启用顶栏和底栏的模糊效果</string>
     <string name="floating_bar_effect">悬浮导航栏效果</string>
     <string name="floating_bar_effect_none">无</string>
@@ -286,7 +286,7 @@
     <string name="label_custom">自定义</string>
     <!-- 标题 -->
     <string name="label_extension">后缀</string>
-    <string name="folder_manager_title">文件夹管理</string>
+    <string name="folder_manager_title">音频文件夹</string>
 
     <!-- 对话框 -->
     <string name="dialog_remove_folder_title">是否移除此文件夹？</string>
@@ -374,14 +374,14 @@
     <string name="batch_match_cover_config_title">批量封面匹配</string>
     <string name="batch_match_config_concurrency">并发数</string>
 
-    <string name="only_translation_if_available">仅下载翻译歌词</string>
-    <string name="only_translation_if_available_hint">若存在翻译，仅下载翻译歌词（需启用翻译下载）</string>
+    <string name="only_translation_if_available">仅保留翻译歌词</string>
+    <string name="only_translation_if_available_hint">存在翻译时仅保留译文</string>
     <string name="remove_empty_lines">移除空行</string>
     <string name="remove_empty_lines_hint">删除歌词和其他多行文本字段中的空行</string>
 
     <string name="permission_denied_cannot_save">权限被拒绝，无法保存更改</string>
     <string name="import_config">导入设置</string>
-    <string name="section_backup">备份与恢复</string>
+    <string name="section_backup">配置备份</string>
     <string name="export_config">导出设置</string>
     <string name="export_config_hint">把当前设置保存为 JSON 文件</string>
     <string name="import_config_hint">从 JSON 文件恢复设置</string>
@@ -392,7 +392,7 @@
     <string name="import_failed_format">无效的配置文件</string>
 
     <string name="unknown_error">未知错误：%1$s</string>
-    <string name="clear_songs">清空所有歌曲</string>
+    <string name="clear_songs">重置音乐库</string>
     <string name="library_cleared">已清空曲库</string>
     <string name="library_clear_failed">清空曲库失败</string>
 
@@ -759,23 +759,6 @@
     <string name="artist_split_delete_rule_message">删除“%1$s”？重建艺术家索引后生效</string>
     <string name="album_grid_columns_format">%1$d 列</string>
 
-    <!-- QuickJS Test -->
-    <string name="quickjs_test_title">QuickJS 测试</string>
-    <string name="quickjs_test_description">测试说明</string>
-    <string name="quickjs_test_description_summary">运行测试以验证 QuickJS 运行时功能，包括 eval、函数调用、超时处理和内存限制</string>
-    <string name="quickjs_test_run">运行测试</string>
-    
-    <string name="quickjs_test_eval_title">Eval 测试</string>
-    <string name="quickjs_test_eval_desc">测试基础 JavaScript 执行：\"hello\".toUpperCase()</string>
-    
-    <string name="quickjs_test_call_title">函数调用测试</string>
-    <string name="quickjs_test_call_desc">测试使用 JSON 参数调用 JavaScript 函数</string>
-    
-    <string name="quickjs_test_timeout_title">超时测试</string>
-    <string name="quickjs_test_timeout_desc">测试无限循环中断 (while(true){}) - 应在 2 秒后超时</string>
-    
-    <string name="quickjs_test_memory_title">内存限制测试</string>
-    <string name="quickjs_test_memory_desc">测试大数组分配的内存限制（4MB 限制）</string>
     <string name="plugin_empty">未安装插件</string>
     <string name="plugin_import_archive">导入插件</string>
 
@@ -913,7 +896,7 @@
     <string name="plugin_subscription_refresh">刷新</string>
     <string name="plugin_subscription_add">添加订阅</string>
     <string name="plugin_subscription_empty">尚未添加订阅</string>
-    <string name="plugin_subscription_empty_hint">添加插件目录链接，查看并安装其中的插件。</string>
+    <string name="plugin_subscription_empty_hint">添加插件目录链接，查看并安装其中的插件</string>
     <string name="plugin_subscription_disabled">已停用</string>
     <string name="plugin_subscription_refreshing">正在刷新</string>
     <string name="plugin_subscription_fetch_failed">获取失败，请刷新重试</string>
@@ -924,7 +907,7 @@
     <string name="plugin_subscription_enable">启用</string>
     <string name="plugin_subscription_catalog_empty">此订阅暂无插件</string>
     <string name="plugin_subscription_delete">删除订阅</string>
-    <string name="plugin_subscription_delete_hint">删除“%1$s”？已安装的插件将保留。</string>
+    <string name="plugin_subscription_delete_hint">删除“%1$s”？已安装的插件将保留</string>
     <string name="plugin_subscription_plugin_disabled">插件已停用</string>
     <string name="plugin_subscription_name">名称（可选）</string>
     <string name="plugin_subscription_edit">编辑订阅</string>
@@ -933,10 +916,40 @@
     <string name="plugin_subscription_save_failed">保存失败，请重试</string>
     <string name="plugin_catalog_changed">插件列表已发生变化，请刷新后重试</string>
     <string name="plugin_transfer_other_source">正在从 %1$s 安装</string>
-    <string name="plugin_update_source_conflict">同一版本存在不同安装包，请选择来源。</string>
-    <string name="plugin_update_using_cache">来源刷新失败，当前显示上次获取的版本。</string>
+    <string name="plugin_update_source_conflict">同一版本存在不同安装包，请选择来源</string>
+    <string name="plugin_update_using_cache">来源刷新失败，当前显示上次获取的版本</string>
     <string name="plugin_update_source_with_value">来源：%1$s</string>
     <string name="plugin_task_downloading">下载中</string>
     <string name="plugin_install_source">安装来源</string>
     <string name="plugin_subscription_last_updated">上次更新：%1$s</string>
+    <string name="settings_category_appearance">外观设置</string>
+    <string name="settings_category_library">音乐库管理</string>
+    <string name="settings_category_search">在线搜索</string>
+    <string name="settings_category_editing">标签编辑</string>
+    <string name="settings_category_data">数据管理</string>
+    <string name="settings_category_diagnostics">问题排查</string>
+    <string name="settings_section_theme">主题配色</string>
+    <string name="settings_section_interface">界面效果</string>
+    <string name="settings_section_artists">艺术家管理</string>
+    <string name="settings_section_playback">歌曲播放</string>
+    <string name="settings_section_sources">搜索来源</string>
+    <string name="settings_section_lyric_content">歌词内容</string>
+    <string name="settings_section_fields">标签写入</string>
+    <string name="settings_section_loudness">回放增益</string>
+    <string name="settings_section_storage">缓存管理</string>
+    <string name="settings_section_diagnostics">日志记录</string>
+    <string name="settings_section_preferences">应用设置</string>
+    <string name="settings_section_tools">工具</string>
+    <string name="settings_section_help">帮助</string>
+    <string name="settings_section_general">基本设置</string>
+    <string name="settings_section_maintenance">音乐库维护</string>
+    <string name="rebuild_library_indexes">重建音乐库索引</string>
+    <string name="rebuild_library_indexes_summary">根据歌曲记录重新建立艺术家和专辑关联</string>
+    <string name="rebuild_library_indexes_confirmation">将根据现有歌曲记录重建艺术家和专辑索引，不会改写音频文件</string>
+    <string name="library_indexes_rebuilding">正在重建索引…</string>
+    <string name="library_indexes_rebuilt">音乐库索引已重建</string>
+    <string name="library_indexes_rebuild_failed">音乐库索引重建失败</string>
+    <string name="reset_library_summary">清除歌曲记录和扫描目录，保留音频文件</string>
+    <string name="reset_library_confirmation">将清除歌曲记录、扫描目录和音乐库索引，但不删除音频文件。之后需要重新添加音频文件夹，是否继续？</string>
+    <string name="library_resetting">正在重置音乐库…</string>
 </resources>

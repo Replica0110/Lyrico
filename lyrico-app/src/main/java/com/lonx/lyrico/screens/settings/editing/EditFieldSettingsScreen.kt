@@ -1,6 +1,6 @@
 @file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 
-package com.lonx.lyrico.screens
+package com.lonx.lyrico.screens.settings.editing
 
 import com.lonx.lyrico.ui.components.salt.SaltTextInput
 import androidx.compose.foundation.background

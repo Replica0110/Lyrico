@@ -48,8 +48,8 @@
 
     <!-- 分組標題 -->
     <string name="section_appearance">外觀</string>
-    <string name="section_scan">掃描設定</string>
-    <string name="section_search">搜尋設定</string>
+    <string name="section_scan">檔案掃描</string>
+    <string name="section_search">結果顯示</string>
     <string name="section_lyrics">歌詞</string>
     <string name="section_text_processing">文字處理</string>
     <string name="section_other">其他</string>
@@ -60,8 +60,8 @@
     <string name="lyric_index_title">歌詞索引</string>
     <string name="lyric_index_summary">用於本機歌詞搜尋，開啟後需重新掃描已有歌曲</string>
     <!-- 掃描 -->
-    <string name="folder_manager">資料夾管理</string>
-    <string name="folder_manage_hint">管理 Lyrico 掃描的音樂資料夾</string>
+    <string name="folder_manager">音訊資料夾</string>
+    <string name="folder_manage_hint">用於掃描音訊檔案</string>
     <string name="folder_found">已發現 %1$d 個資料夾</string>
     <string name="folder_ignored">，已忽略 %1$d 個</string>
     <string name="ignore_short_audio">不掃描 60 秒以下的音訊</string>
@@ -72,7 +72,7 @@
     <string name="search_loading_more">正在載入更多…</string>
     <string name="search_load_more">載入更多</string>
     <string name="search_load_more_failed">載入失敗，點擊重試</string>
-    <string name="show_all_search_result_fields">顯示全部欄位</string>
+    <string name="show_all_search_result_fields">顯示空值欄位</string>
     <string name="show_all_search_result_fields_summary">在搜尋結果詳細資料中顯示欄位值為空的欄位</string>
     <string name="search_result_empty_value">（空）</string>
     <string name="search_source_tab_style">搜尋來源標籤樣式</string>
@@ -85,7 +85,7 @@
     <string name="batch_match_prefer_filename">依檔名比對</string>
     <string name="batch_match_prefer_filename_summary">忽略內置標籤，一律以檔名作為比對依據</string>
     <!-- 歌詞 -->
-    <string name="lyric_mode">歌詞模式</string>
+    <string name="lyric_mode">歌詞格式</string>
     <string name="lyric_line_order">歌詞內容順序</string>
     <string name="lyric_line_order_hint">拖曳已啟用的歌詞內容，調整行式歌詞的輸出順序</string>
     <string name="lyric_line_order_drag_handle">拖曳排序</string>
@@ -98,8 +98,8 @@
     <string name="translation_hint">歌詞中包含翻譯</string>
 
     <!-- 元數據 -->
-    <string name="artist_separator">演出者分隔符號</string>
-    <string name="artist_separator_hint">存在多位演出者時使用</string>
+    <string name="artist_separator">多位藝術家分隔符</string>
+    <string name="artist_separator_hint">寫入標籤時，用於連接多位藝術家名稱</string>
     <string name="replay_gain_no_songs">沒有可用於回放增益掃描的歌曲</string>
     <string name="action_calculate_replay_gain">計算回放增益</string>
     <string name="replay_gain_calculate_in_progress">中止計算</string>
@@ -117,7 +117,7 @@
     <string name="album_replay_gain_success">已寫入 %1$d 首歌的專輯回放增益</string>
     <string name="album_replay_gain_write_permission_required">需要授權才能寫入專輯回放增益</string>
     <string name="album_replay_gain_write_failed">寫入專輯回放增益失敗：%1$s</string>
-    <string name="settings_replay_gain_target_loudness">回放增益參考響度</string>
+    <string name="settings_replay_gain_target_loudness">目標響度</string>
     <string name="settings_replay_gain_target_loudness_summary">計算回放增益時使用的目標響度</string>
     <string name="settings_replay_gain_peak_mode">回放增益峰值類型</string>
     <string name="replay_gain_peak_mode_sample">取樣峰值</string>
@@ -185,11 +185,11 @@
     <string name="color_orange">橙色</string>
     <string name="color_pink">粉紅色</string>
     <string name="color_default">系統預設</string>
-    <string name="monet">莫內取色</string>
-    <string name="key_color">種子色</string>
+    <string name="monet">莫奈配色</string>
+    <string name="key_color">主題色</string>
     <string name="floating_bottom_bar">懸浮導航欄</string>
     <string name="floating_bottom_bar_summary">在手機上使用懸浮底部導航欄</string>
-    <string name="bar_blur">模糊</string>
+    <string name="bar_blur">導覽列模糊</string>
     <string name="bar_blur_summary">啟用頂欄和底欄的模糊效果</string>
     <string name="floating_bar_effect">懸浮導航欄效果</string>
     <string name="floating_bar_effect_none">無</string>
@@ -286,7 +286,7 @@
     <string name="label_custom">自訂</string>
     <!-- 標題 -->
     <string name="label_extension">副檔名</string>
-    <string name="folder_manager_title">資料夾管理</string>
+    <string name="folder_manager_title">音訊資料夾</string>
 
     <!-- 對話框 -->
     <string name="dialog_remove_folder_title">是否移除此資料夾？</string>
@@ -374,14 +374,14 @@
     <string name="batch_match_cover_config_title">批次封面比對</string>
     <string name="batch_match_config_concurrency">並行數</string>
 
-    <string name="only_translation_if_available">僅下載翻譯歌詞</string>
-    <string name="only_translation_if_available_hint">若存在翻譯，僅下載翻譯歌詞（需啟用翻譯下載）</string>
+    <string name="only_translation_if_available">僅保留翻譯歌詞</string>
+    <string name="only_translation_if_available_hint">有翻譯時僅保留譯文</string>
     <string name="remove_empty_lines">移除空白行</string>
     <string name="remove_empty_lines_hint">刪除歌詞和其他多行文字欄位中的空白行</string>
 
     <string name="permission_denied_cannot_save">權限遭拒，無法儲存變更</string>
     <string name="import_config">匯入設定</string>
-    <string name="section_backup">備份與還原</string>
+    <string name="section_backup">設定備份</string>
     <string name="export_config">匯出設定</string>
     <string name="export_config_hint">將目前設定儲存為 JSON 檔案</string>
     <string name="import_config_hint">從 JSON 檔案還原設定</string>
@@ -392,7 +392,7 @@
     <string name="import_failed_format">無效的設定檔</string>
 
     <string name="unknown_error">未知錯誤：%1$s</string>
-    <string name="clear_songs">清除所有歌曲</string>
+    <string name="clear_songs">重設音樂庫</string>
     <string name="library_cleared">已清空音樂庫</string>
     <string name="library_clear_failed">清空音樂庫失敗</string>
 
@@ -760,22 +760,18 @@
     <string name="album_grid_columns_format">%1$d 欄</string>
 
     <!-- QuickJS 測試 -->
-    <string name="quickjs_test_title">QuickJS 測試</string>
-    <string name="quickjs_test_description">測試說明</string>
-    <string name="quickjs_test_description_summary">執行測試以驗證 QuickJS 執行階段功能，包括 eval、函式呼叫、逾時處理和記憶體限制</string>
-    <string name="quickjs_test_run">執行測試</string>
 
-    <string name="quickjs_test_eval_title">Eval 測試</string>
-    <string name="quickjs_test_eval_desc">測試基礎 JavaScript 執行：\"hello\".toUpperCase()</string>
 
-    <string name="quickjs_test_call_title">函式呼叫測試</string>
-    <string name="quickjs_test_call_desc">測試使用 JSON 參數呼叫 JavaScript 函式</string>
 
-    <string name="quickjs_test_timeout_title">逾時測試</string>
-    <string name="quickjs_test_timeout_desc">測試無限迴圈中斷 (while(true){}) - 應在 2 秒後逾時</string>
 
-    <string name="quickjs_test_memory_title">記憶體限制測試</string>
-    <string name="quickjs_test_memory_desc">測試大型陣列配置的記憶體限制（4MB 限制）</string>
+
+
+
+
+
+
+
+
     <string name="plugin_empty">未安裝外掛</string>
     <string name="plugin_import_archive">匯入外掛</string>
 
@@ -909,7 +905,7 @@
     <string name="plugin_subscription_refresh">重新整理</string>
     <string name="plugin_subscription_add">新增訂閱</string>
     <string name="plugin_subscription_empty">尚未新增訂閱</string>
-    <string name="plugin_subscription_empty_hint">新增外掛目錄連結，查看並安裝其中的外掛。</string>
+    <string name="plugin_subscription_empty_hint">新增外掛目錄連結，查看並安裝其中的外掛</string>
     <string name="plugin_subscription_disabled">已停用</string>
     <string name="plugin_subscription_refreshing">正在重新整理</string>
     <string name="plugin_subscription_fetch_failed">取得失敗，請重新整理後再試</string>
@@ -920,7 +916,7 @@
     <string name="plugin_subscription_enable">啟用</string>
     <string name="plugin_subscription_catalog_empty">此訂閱暫無外掛</string>
     <string name="plugin_subscription_delete">刪除訂閱</string>
-    <string name="plugin_subscription_delete_hint">刪除「%1$s」？已安裝的外掛將保留。</string>
+    <string name="plugin_subscription_delete_hint">刪除「%1$s」？已安裝的外掛將保留</string>
     <string name="plugin_subscription_plugin_disabled">外掛已停用</string>
     <string name="plugin_subscription_name">名稱（選填）</string>
     <string name="plugin_subscription_edit">編輯訂閱</string>
@@ -929,10 +925,40 @@
     <string name="plugin_subscription_save_failed">儲存失敗，請重試</string>
     <string name="plugin_catalog_changed">外掛清單已變更，請重新整理後再試</string>
     <string name="plugin_transfer_other_source">正在從 %1$s 安裝</string>
-    <string name="plugin_update_source_conflict">同一版本存在不同安裝包，請選擇來源。</string>
-    <string name="plugin_update_using_cache">來源重新整理失敗，目前顯示上次取得的版本。</string>
+    <string name="plugin_update_source_conflict">同一版本存在不同安裝包，請選擇來源</string>
+    <string name="plugin_update_using_cache">來源重新整理失敗，目前顯示上次取得的版本</string>
     <string name="plugin_update_source_with_value">來源：%1$s</string>
     <string name="plugin_task_downloading">下載中</string>
     <string name="plugin_install_source">安裝來源</string>
     <string name="plugin_subscription_last_updated">上次更新：%1$s</string>
+    <string name="settings_category_appearance">外觀設定</string>
+    <string name="settings_category_library">音樂庫管理</string>
+    <string name="settings_category_search">線上搜尋</string>
+    <string name="settings_category_editing">標籤編輯</string>
+    <string name="settings_category_data">資料管理</string>
+    <string name="settings_category_diagnostics">問題排查</string>
+    <string name="settings_section_theme">主題配色</string>
+    <string name="settings_section_interface">介面效果</string>
+    <string name="settings_section_artists">藝術家管理</string>
+    <string name="settings_section_playback">歌曲播放</string>
+    <string name="settings_section_sources">搜尋來源</string>
+    <string name="settings_section_lyric_content">歌詞內容</string>
+    <string name="settings_section_fields">標籤寫入</string>
+    <string name="settings_section_loudness">回放增益</string>
+    <string name="settings_section_storage">快取管理</string>
+    <string name="settings_section_diagnostics">記錄擷取</string>
+    <string name="settings_section_preferences">應用設定</string>
+    <string name="settings_section_tools">工具</string>
+    <string name="settings_section_help">說明</string>
+    <string name="settings_section_general">基本設定</string>
+    <string name="settings_section_maintenance">音樂庫維護</string>
+    <string name="rebuild_library_indexes">重建音樂庫索引</string>
+    <string name="rebuild_library_indexes_summary">根據歌曲記錄重新建立藝術家和專輯關聯</string>
+    <string name="rebuild_library_indexes_confirmation">將根據現有歌曲記錄重建藝術家和專輯索引，不會修改音訊檔案</string>
+    <string name="library_indexes_rebuilding">正在重建索引…</string>
+    <string name="library_indexes_rebuilt">音樂庫索引已重建</string>
+    <string name="library_indexes_rebuild_failed">音樂庫索引重建失敗</string>
+    <string name="reset_library_summary">清除歌曲記錄和掃描目錄，保留音訊檔案</string>
+    <string name="reset_library_confirmation">將清除歌曲記錄、掃描目錄和音樂庫索引，但不刪除音訊檔案。之後需要重新加入音訊資料夾，是否繼續？</string>
+    <string name="library_resetting">正在重設音樂庫…</string>
 </resources>

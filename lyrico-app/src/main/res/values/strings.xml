@@ -39,7 +39,7 @@
     <string name="search_loading_more">Loading more…</string>
     <string name="search_load_more">Load more</string>
     <string name="search_load_more_failed">Load failed. Tap to retry</string>
-    <string name="show_all_search_result_fields">Show All Fields</string>
+    <string name="show_all_search_result_fields">Show empty fields</string>
     <string name="show_all_search_result_fields_summary">Show empty fields in search result details</string>
     <string name="search_result_empty_value">(empty)</string>
     <string name="search_source_tab_style">Search source tab style</string>
@@ -68,8 +68,8 @@
     <string name="section_appearance">Appearance</string>
     <string name="lyric_index_title">Lyrics indexing</string>
     <string name="lyric_index_summary">Used for local lyrics search. Rescan existing songs after enabling</string>
-    <string name="section_scan">Scan Settings</string>
-    <string name="section_search">Search Settings</string>
+    <string name="section_scan">File scanning</string>
+    <string name="section_search">Result display</string>
     <string name="section_lyrics">Lyrics</string>
     <string name="section_text_processing">Text Processing</string>
     <string name="section_other">Others</string>
@@ -78,8 +78,8 @@
     <string name="theme_mode">Theme Mode</string>
 
     <!-- Scan -->
-    <string name="folder_manager">Folder Management</string>
-    <string name="folder_manage_hint">Manage folders scanned by Lyrico</string>
+    <string name="folder_manager">Audio folders</string>
+    <string name="folder_manage_hint">Used to scan audio files</string>
     <string name="folder_found">%1$d folders found</string>
     <string name="folder_ignored">, %1$d ignored</string>
     <string name="ignore_short_audio">Ignore audio shorter than 60 seconds</string>
@@ -89,7 +89,7 @@
     <string name="batch_match_prefer_filename">Match by file name</string>
     <string name="batch_match_prefer_filename_summary">Ignore embedded tags and always match by file name</string>
     <!-- Lyrics -->
-    <string name="lyric_mode">Lyric Mode</string>
+    <string name="lyric_mode">Lyric format</string>
     <string name="lyric_line_order">Lyric Line Order</string>
     <string name="lyric_line_order_hint">Drag enabled lyric parts to adjust their output order for line-based formats</string>
     <string name="lyric_line_order_drag_handle">Drag to reorder</string>
@@ -102,8 +102,8 @@
     <string name="translation_hint">Include translations in lyric</string>
 
     <!-- Metadata -->
-    <string name="artist_separator">Artist Separator</string>
-    <string name="artist_separator_hint">Used when multiple artists exist</string>
+    <string name="artist_separator">Multi-artist separator</string>
+    <string name="artist_separator_hint">Used to join multiple artist names when writing tags</string>
     <string name="replay_gain_no_songs">No songs available for ReplayGain scanning</string>
     <string name="action_calculate_replay_gain">Calculate ReplayGain</string>
     <string name="replay_gain_calculate_in_progress">Abort calculation</string>
@@ -121,7 +121,7 @@
     <string name="album_replay_gain_success">Album ReplayGain written to %1$d songs</string>
     <string name="album_replay_gain_write_permission_required">Permission required to write album ReplayGain</string>
     <string name="album_replay_gain_write_failed">Failed to write album ReplayGain: %1$s</string>
-    <string name="settings_replay_gain_target_loudness">ReplayGain reference loudness</string>
+    <string name="settings_replay_gain_target_loudness">Target loudness</string>
     <string name="settings_replay_gain_target_loudness_summary">Target loudness used for ReplayGain calculation</string>
     <string name="settings_replay_gain_peak_mode">ReplayGain peak type</string>
     <string name="replay_gain_peak_mode_sample">Sample peak</string>
@@ -186,11 +186,11 @@
     <string name="color_pink">Pink</string>
     <string name="color_teal">Teal</string>
     <string name="color_default">Default</string>
-    <string name="monet">Monet palette</string>
-    <string name="key_color">Key Color</string>
+    <string name="monet">Monet colors</string>
+    <string name="key_color">Theme color</string>
     <string name="floating_bottom_bar">Floating navigation bar</string>
     <string name="floating_bottom_bar_summary">Use a floating glass bar on phones</string>
-    <string name="bar_blur">Blur</string>
+    <string name="bar_blur">Navigation bar blur</string>
     <string name="bar_blur_summary">Enable blur effect on the top and bottom bars</string>
     <string name="floating_bar_effect">Floating bar effect</string>
     <string name="floating_bar_effect_none">None</string>
@@ -286,7 +286,7 @@
     <string name="label_custom">Custom</string>
     <string name="label_extension">Extension</string>
     <!-- Screen Titles -->
-    <string name="folder_manager_title">Folder Management</string>
+    <string name="folder_manager_title">Audio folders</string>
 
     <!-- Dialogs -->
     <string name="dialog_remove_folder_title">Remove this folder?</string>
@@ -390,13 +390,13 @@
     <string name="batch_match_config_concurrency">Concurrency</string>
 
     <string name="only_translation_if_available">Translated lyrics only</string>
-    <string name="only_translation_if_available_hint">Download only translated lyrics when available. Requires translation download to be enabled</string>
+    <string name="only_translation_if_available_hint">Keep translated lyrics only when a translation is available</string>
     <string name="remove_empty_lines">Remove Empty Lines</string>
     <string name="remove_empty_lines_hint">Remove blank lines from lyrics and other multiline text fields</string>
 
     <string name="permission_denied_cannot_save">Permission denied, changes not saved</string>
     <string name="import_config">Import Settings</string>
-    <string name="section_backup">Backup &amp; Restore</string>
+    <string name="section_backup">Settings backup</string>
     <string name="export_config">Export Settings</string>
     <string name="export_config_hint">Save current settings to a JSON file</string>
     <string name="import_config_hint">Restore settings from a JSON file</string>
@@ -408,7 +408,7 @@
 
     <string name="unknown_error">Unknown error: %1$s</string>
     <string name="unknown_error_simple">Unknown error</string>
-    <string name="clear_songs">Clear All Songs</string>
+    <string name="clear_songs">Reset music library</string>
     <string name="library_cleared">Music library cleared</string>
     <string name="library_clear_failed">Could not clear the music library</string>
 
@@ -752,23 +752,6 @@
     <string name="artist_split_delete_rule_message">Delete "%1$s"? Rebuild the artist index to apply the change</string>
     <string name="album_grid_columns_format">%1$d columns</string>
 
-    <!-- QuickJS Test -->
-    <string name="quickjs_test_title">QuickJS Test</string>
-    <string name="quickjs_test_description">Test Description</string>
-    <string name="quickjs_test_description_summary">Run tests to verify QuickJS runtime functionality including eval, function calls, timeout handling, and memory limits</string>
-    <string name="quickjs_test_run">Run Test</string>
-    
-    <string name="quickjs_test_eval_title">Eval Test</string>
-    <string name="quickjs_test_eval_desc">Test basic JavaScript evaluation: \"hello\".toUpperCase()</string>
-    
-    <string name="quickjs_test_call_title">Function Call Test</string>
-    <string name="quickjs_test_call_desc">Test calling JavaScript functions with JSON parameters</string>
-    
-    <string name="quickjs_test_timeout_title">Timeout Test</string>
-    <string name="quickjs_test_timeout_desc">Test infinite loop interruption (while(true){}) - should timeout in 2 seconds</string>
-    
-    <string name="quickjs_test_memory_title">Memory Limit Test</string>
-    <string name="quickjs_test_memory_desc">Test memory limit enforcement with large array allocation (4MB limit)</string>
     <string name="plugin_empty">No Plugin Installed</string>
     <string name="plugin_import_archive">Import Plugin</string>
 
@@ -860,7 +843,7 @@
     <string name="app_log_export_success">Logs exported</string>
     <string name="app_log_export_failed">Log export failed: %1$s</string>
     <string name="settings_export_downloads_success">Configuration saved to Downloads/Lyrico</string>
-    <string name="reproduction_title">Diagnostics</string>
+    <string name="reproduction_title">Problem diagnosis</string>
     <string name="reproduction_section_recording">Reproduce a problem</string>
     <string name="reproduction_start_hint">Start recording, then return to the affected page</string>
     <string name="reproduction_elapsed">Recording %1$s</string>
@@ -934,4 +917,34 @@
     <string name="plugin_task_downloading">Downloading</string>
     <string name="plugin_install_source">Installation source</string>
     <string name="plugin_subscription_last_updated">Last updated: %1$s</string>
+    <string name="settings_category_appearance">Appearance settings</string>
+    <string name="settings_category_library">Library management</string>
+    <string name="settings_category_search">Online search</string>
+    <string name="settings_category_editing">Tag editing</string>
+    <string name="settings_category_data">Data management</string>
+    <string name="settings_category_diagnostics">Troubleshooting</string>
+    <string name="settings_section_theme">Theme colors</string>
+    <string name="settings_section_interface">Interface effects</string>
+    <string name="settings_section_artists">Artist management</string>
+    <string name="settings_section_playback">Song playback</string>
+    <string name="settings_section_sources">Sources</string>
+    <string name="settings_section_lyric_content">Lyric content</string>
+    <string name="settings_section_fields">Tag writing</string>
+    <string name="settings_section_loudness">ReplayGain</string>
+    <string name="settings_section_storage">Cache management</string>
+    <string name="settings_section_diagnostics">Log recording</string>
+    <string name="settings_section_preferences">App settings</string>
+    <string name="settings_section_tools">Tools</string>
+    <string name="settings_section_help">Help</string>
+    <string name="settings_section_general">General settings</string>
+    <string name="settings_section_maintenance">Library maintenance</string>
+    <string name="rebuild_library_indexes">Rebuild library indexes</string>
+    <string name="rebuild_library_indexes_summary">Rebuild artist and album associations from existing song records</string>
+    <string name="rebuild_library_indexes_confirmation">Rebuild artist and album indexes from the current song records? Audio files will not be changed.</string>
+    <string name="library_indexes_rebuilding">Rebuilding library indexes…</string>
+    <string name="library_indexes_rebuilt">Library indexes rebuilt</string>
+    <string name="library_indexes_rebuild_failed">Could not rebuild library indexes</string>
+    <string name="reset_library_summary">Clear song records and scan folders; keep audio files</string>
+    <string name="reset_library_confirmation">This clears song records, scan folders and library indexes without deleting audio files. Add audio folders again afterward. Continue?</string>
+    <string name="library_resetting">Resetting music library…</string>
 </resources>

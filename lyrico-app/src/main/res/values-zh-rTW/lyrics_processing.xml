@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lyrics_convert">轉換歌詞格式</string>
+    <string name="lyrics_organize">歌詞整理</string>
+    <string name="lyrics_column">第 %1$d 欄</string>
+    <string name="lyrics_column_remove">移除此行</string>
+    <string name="lyrics_two_columns">同一時間有 2 行歌詞時</string>
+    <string name="lyrics_three_columns">同一時間有 3 行歌詞時</string>
+    <string name="lyrics_column_hint">依歌詞原有順序編號，可調整每行順序或移除單行</string>
+    <string name="lyrics_input_line">原第 %1$d 行</string>
+    <string name="lyrics_output_line">保留為第 %1$d 行</string>
+    <string name="lyrics_column_unavailable">未找到多欄歌詞，支援 LRC 歌詞，暫不支援 TTML</string>
+    <string name="lyrics_column_sample">%1$d / %2$d</string>
+    <string name="lyrics_process_title">歌詞處理</string>
+    <string name="lyrics_process_action">處理</string>
+</resources>

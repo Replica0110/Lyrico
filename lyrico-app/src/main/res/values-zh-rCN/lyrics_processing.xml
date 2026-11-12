@@ -9,6 +9,7 @@
     <string name="lyrics_column_hint">按歌词原有顺序编号，可调整每行顺序或移除单行</string>
     <string name="lyrics_input_line">原第 %1$d 行</string>
     <string name="lyrics_output_line">保留为第 %1$d 行</string>
+    <string name="lyrics_column_unavailable">未找到多列歌词，支持 LRC 歌词，暂不支持 TTML</string>
     <string name="lyrics_column_sample">%1$d / %2$d</string>
     <string name="lyrics_process_title">歌词处理</string>
     <string name="lyrics_process_action">处理</string>

@@ -1,6 +1,6 @@
 @file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 
-package com.lonx.lyrico.screens.settings
+package com.lonx.lyrico.screens.settings.data
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

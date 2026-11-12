@@ -312,7 +312,8 @@ val appModule = module {
     viewModel { com.lonx.lyrico.viewmodel.ArtistSelectionViewModel() }
     viewModel { ArtistSplitSettingsViewModel(get(), get()) }
     viewModel { AlbumLibraryViewModel(get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get(), get(), androidContext(), get()) }
+    viewModel { SettingsViewModel(get(), get(), androidContext(), get()) }
+    viewModel { com.lonx.lyrico.screens.settings.diagnostics.DiagnosticsSettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { LyricsSearchViewModel(get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get(), get()) }

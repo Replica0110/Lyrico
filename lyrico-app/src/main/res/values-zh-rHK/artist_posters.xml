@@ -5,7 +5,7 @@
     <string name="artist_poster_file_count">%1$d 張海報</string>
     <string name="artist_poster_folder_status">%1$d 張海報\n%2$d 張比對到音樂庫演出者</string>
     <string name="artist_poster_folder_remove_tip">停止使用此資料夾中的海報，不會刪除檔案</string>
-    <string name="artist_poster_folders">演出者海報</string>
+    <string name="artist_poster_folders">演出者海報資料夾</string>
     <string name="artist_poster_folder_not_selected">未選擇資料夾</string>
     <string name="artist_poster_folder_selected">已選擇資料夾</string>
     <string name="artist_poster_folders_help">**命名規則**\n\n- `演出者.jpg` —— 與演出者名稱完全一致\n- `演出者_live.jpg` —— 演出者名稱後接 `_` 和後綴\n- `AC_DC.jpg`、`AC-DC.jpg`、`AC／DC.jpg` 或 `ACDC.jpg` —— 演出者名稱含有檔名不能出現的字元時（`\\ / : * ? \" &lt; &gt; |`）\n\n支援 JPG、JPEG、PNG、WebP 和 MP4。\n\n僅會尋找所選資料夾中的檔案，並優先比對與演出者名稱完全一致的檔名</string>
@@ -48,4 +48,5 @@
     <string name="artist_poster_select_folder_summary">先選擇海報資料夾，再依藝術家名稱儲存圖片</string>
     <string name="msg_artist_poster_embed_result">已內嵌：%1$d，略過不支援的格式：%2$d，失敗：%3$d</string>
     <string name="artist_poster_embed_current_song_summary">新增至目前歌曲，儲存後寫入音訊檔案</string>
+    <string name="artist_poster_folders_settings_summary">用於讀取和儲存演出者海報</string>
 </resources>

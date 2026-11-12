@@ -1,6 +1,6 @@
 @file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 
-package com.lonx.lyrico.screens
+package com.lonx.lyrico.screens.settings.library
 
 import com.lonx.lyrico.ui.components.ChipGrid
 import com.lonx.lyrico.ui.components.ManagedChip
@@ -251,7 +251,7 @@ fun ArtistSplitSettingsScreen(
             } else {
                 item(key = "config") {
                     SmallTitle(text = stringResource(R.string.artist_split_general_section))
-                    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    Card(modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                         SwitchPreference(
                             startAction = { PreferenceIcon(LucideIcons.Split, PreferenceIconTone.Appearance) },
                             title = stringResource(R.string.artist_split_enabled),
@@ -280,7 +280,7 @@ fun ArtistSplitSettingsScreen(
 
                 item(key = "separators") {
                     SmallTitle(text = stringResource(R.string.section_artist_separators))
-                    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    Card(modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                         separatorRules()
                         Row(
                             modifier = Modifier
@@ -313,7 +313,7 @@ fun ArtistSplitSettingsScreen(
 
                 item(key = "custom_no_split") {
                     SmallTitle(text = stringResource(R.string.section_no_split_artists))
-                    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    Card(modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                         noSplitArtistRules()
                         ArrowPreference(
                             startAction = { PreferenceIcon(LucideIcons.UserPlus, PreferenceIconTone.Library) },

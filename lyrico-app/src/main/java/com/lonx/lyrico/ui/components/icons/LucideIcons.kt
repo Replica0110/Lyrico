@@ -13,6 +13,28 @@ import androidx.compose.ui.unit.dp
  * ISC / MIT; see assets/licenses/lucide.txt.
  */
 internal object LucideIcons {
+
+    // User-supplied Lucide 1.70.0: icons/library-big.svg and icons/life-buoy.svg.
+    // Archive SHA-256: 6a2cb8661b0015af160cac42eb4e2285d69f8850ac2ae8e82671f1cda954718c
+    val LibraryBig: ImageVector by lazy {
+        lucideIcon("library-big",
+            "M4 3h6a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z",
+            "M7 3v18",
+            "M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z",
+        )
+    }
+
+    val LifeBuoy: ImageVector by lazy {
+        lucideIcon("life-buoy",
+            "M22 12a10 10 0 1 1-20 0a10 10 0 0 1 20 0",
+            "m4.93 4.93 4.24 4.24",
+            "m14.83 9.17 4.24-4.24",
+            "m14.83 14.83 4.24 4.24",
+            "m9.17 14.83-4.24 4.24",
+            "M16 12a4 4 0 1 1-8 0a4 4 0 0 1 8 0",
+        )
+    }
+
     // Lucide icons/crown.svg; same license as the existing icons.
     // https://github.com/lucide-icons/lucide/blob/main/icons/crown.svg
     val Crown: ImageVector by lazy {

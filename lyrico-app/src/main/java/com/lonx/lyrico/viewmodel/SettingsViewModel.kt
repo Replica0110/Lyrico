@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
-import com.lonx.lyrico.utils.LibraryScanManager
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.ArtistSeparator
@@ -87,7 +86,6 @@ sealed class SettingsEvent {
 }
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
-    private val libraryScanManager: LibraryScanManager,
     private val appLogRepository: AppLogRepository,
     private val applicationContext: Context,
     private val cacheManager: CacheManager,
@@ -280,14 +278,6 @@ class SettingsViewModel(
         }
     }
 
-    suspend fun clearSongs(): Boolean = try {
-        libraryScanManager.clearLibrary()
-    } catch (error: Exception) {
-        if (error is kotlinx.coroutines.CancellationException) throw error
-        appLogRepository.recordOperation(AppLogType.DATABASE, TAG, "Library reset failed",
-            error.stackTraceToString(), level = AppLogLevel.ERROR)
-        false
-    }
     fun setTranslationEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveTranslationEnabled(enabled)

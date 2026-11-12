@@ -2064,8 +2064,10 @@ private fun CoverSection(
                                     .combinedClickable(
                                         onClick = item.onClick,
                                         onLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            viewerModel = item.source
+                                            item.source?.let { source ->
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                viewerModel = source
+                                            }
                                         }
                                     )
                             ) {
@@ -2183,8 +2185,10 @@ private fun CoverSection(
                                     .combinedClickable(
                                         onClick = item.onClick,
                                         onLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            viewerModel = item.source
+                                            item.source?.let { source ->
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                viewerModel = source
+                                            }
                                         }
                                     )
                             ) {

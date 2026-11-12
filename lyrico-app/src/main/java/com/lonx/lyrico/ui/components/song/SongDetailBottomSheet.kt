@@ -81,6 +81,7 @@ fun SongDetailBottomSheet(
         CoverRequest(song.getUri, song.fileLastModified)
     }
     var showCoverViewer by remember { mutableStateOf(false) }
+    var coverLoaded by remember(coverRequest) { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
     LaunchedEffect(show) {
         if (!show) showCoverViewer = false
@@ -158,14 +159,18 @@ fun SongDetailBottomSheet(
                             .pointerInput(coverRequest) {
                                 detectTapGestures(
                                     onLongPress = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        showCoverViewer = true
+                                        if (coverLoaded) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            showCoverViewer = true
+                                        }
                                     }
                                 )
                             },
                         contentScale = ContentScale.Crop,
                         placeholder = painterResource(R.drawable.ic_album_24dp),
-                        error = painterResource(R.drawable.ic_album_24dp)
+                        error = painterResource(R.drawable.ic_album_24dp),
+                        onSuccess = { coverLoaded = true },
+                        onError = { coverLoaded = false }
                     )
                     Column(
                         modifier = Modifier.weight(1f),
@@ -231,14 +236,18 @@ fun SongDetailBottomSheet(
                         .pointerInput(coverRequest) {
                             detectTapGestures(
                                 onLongPress = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showCoverViewer = true
+                                    if (coverLoaded) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showCoverViewer = true
+                                    }
                                 }
                             )
                         },
                     contentScale = ContentScale.Crop,
                     placeholder = painterResource(R.drawable.ic_album_24dp),
-                    error = painterResource(R.drawable.ic_album_24dp)
+                    error = painterResource(R.drawable.ic_album_24dp),
+                    onSuccess = { coverLoaded = true },
+                    onError = { coverLoaded = false }
                 )
 
                 Column(

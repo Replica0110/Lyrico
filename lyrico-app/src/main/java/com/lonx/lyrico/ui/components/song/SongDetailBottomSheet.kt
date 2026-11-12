@@ -4,6 +4,7 @@ import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.content.ClipData
 import android.text.format.Formatter
 import android.widget.Toast
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,15 +16,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +44,7 @@ import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.model.entity.SongEntity
 import com.lonx.lyrico.data.model.entity.getUri
 import com.lonx.lyrico.data.model.artwork.CoverRequest
+import com.lonx.lyrico.ui.components.cover.CoverViewerDialog
 import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.theme.LocalUiEngine
@@ -68,6 +77,14 @@ fun SongDetailBottomSheet(
         SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     }
     val salt = LocalUiEngine.current == UiEngine.SALT
+    val coverRequest = remember(song.getUri, song.fileLastModified) {
+        CoverRequest(song.getUri, song.fileLastModified)
+    }
+    var showCoverViewer by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(show) {
+        if (!show) showCoverViewer = false
+    }
     val copiedMessage = stringResource(R.string.msg_copied_to_clipboard)
     val copyToClipboard: (String) -> Unit = { text ->
         coroutineScope.launch {
@@ -133,11 +150,19 @@ fun SongDetailBottomSheet(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     AsyncImage(
-                        model = CoverRequest(song.getUri, song.fileLastModified),
+                        model = coverRequest,
                         contentDescription = stringResource(R.string.cd_cover),
                         modifier = Modifier
                             .size(104.dp)
-                            .clip(RoundedCornerShape(12.dp)),
+                            .clip(RoundedCornerShape(12.dp))
+                            .pointerInput(coverRequest) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showCoverViewer = true
+                                    }
+                                )
+                            },
                         contentScale = ContentScale.Crop,
                         placeholder = painterResource(R.drawable.ic_album_24dp),
                         error = painterResource(R.drawable.ic_album_24dp)
@@ -167,6 +192,14 @@ fun SongDetailBottomSheet(
                 }
             }
         }
+
+        if (showCoverViewer) {
+            CoverViewerDialog(
+                model = coverRequest,
+                contentDescription = stringResource(R.string.cd_cover),
+                onDismissRequest = { showCoverViewer = false }
+            )
+        }
         return
     }
 
@@ -190,11 +223,19 @@ fun SongDetailBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 AsyncImage(
-                    model = CoverRequest(song.getUri, song.fileLastModified),
+                    model = coverRequest,
                     contentDescription = stringResource(R.string.cd_cover),
                     modifier = Modifier
                         .size(100.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .clip(RoundedCornerShape(12.dp))
+                        .pointerInput(coverRequest) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showCoverViewer = true
+                                }
+                            )
+                        },
                     contentScale = ContentScale.Crop,
                     placeholder = painterResource(R.drawable.ic_album_24dp),
                     error = painterResource(R.drawable.ic_album_24dp)
@@ -229,6 +270,14 @@ fun SongDetailBottomSheet(
                 }
             }
         }
+    }
+
+    if (showCoverViewer) {
+        CoverViewerDialog(
+            model = coverRequest,
+            contentDescription = stringResource(R.string.cd_cover),
+            onDismissRequest = { showCoverViewer = false }
+        )
     }
 }
 

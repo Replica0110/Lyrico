@@ -50,6 +50,7 @@ import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.artwork.CoverRequest
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.screens.library.LibrarySelectionState
 import com.lonx.lyrico.ui.components.library.LibraryDetailIconButton
@@ -66,6 +67,7 @@ import com.lonx.lyrico.ui.components.bar.SongBatchSelectionActions
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.cover.CoverImage
+import com.lonx.lyrico.ui.components.cover.CoverViewerDialog
 import com.lonx.lyrico.ui.components.library.AlbumReplayGainProgressBottomSheet
 import com.lonx.lyrico.ui.components.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.components.song.SongActionSheets
@@ -137,6 +139,7 @@ fun AlbumDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteAlbumDialog by remember { mutableStateOf(false) }
+    var coverViewerRequest by remember { mutableStateOf<CoverRequest?>(null) }
 
     LaunchedEffect(albumActionsViewModel, context) {
         albumActionsViewModel.events.collect { message ->
@@ -264,7 +267,8 @@ fun AlbumDetailScreen(
                         album = albumName,
                         albumArtist = albumArtist,
                         songCount = songs.size,
-                        coverSong = songs.firstOrNull()
+                        coverSong = songs.firstOrNull(),
+                        onCoverLongClick = { coverViewerRequest = it }
                     )
 
                     LazyColumn(
@@ -391,6 +395,14 @@ fun AlbumDetailScreen(
             onBatchDelete = selectionViewModel::batchDelete,
             onBatchShare = selectionViewModel::batchShare
         )
+
+        coverViewerRequest?.let { request ->
+            CoverViewerDialog(
+                model = request,
+                contentDescription = stringResource(R.string.cd_cover),
+                onDismissRequest = { coverViewerRequest = null }
+            )
+        }
     }
 }
 
@@ -491,7 +503,8 @@ private fun AlbumDetailHeader(
     album: String,
     albumArtist: String?,
     songCount: Int,
-    coverSong: SongEntity?
+    coverSong: SongEntity?,
+    onCoverLongClick: (CoverRequest) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -503,7 +516,9 @@ private fun AlbumDetailHeader(
             uri = coverSong?.uri,
             lastModified = coverSong?.fileLastModified ?: 0L,
             modifier = Modifier.size(80.dp),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            contentDescription = stringResource(R.string.cd_cover),
+            onLongClick = onCoverLongClick
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {

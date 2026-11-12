@@ -2,6 +2,7 @@ package com.lonx.lyrico.ui.components.cover
 
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,7 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
@@ -39,7 +43,8 @@ fun CoverImage(
     fallbackToAny: Boolean = pictureType == AudioPictureType.FrontCover,
     candidates: List<CoverCandidate> = emptyList(),
     artistName: String? = null,
-    contentScale: ContentScale = ContentScale.Crop
+    contentScale: ContentScale = ContentScale.Crop,
+    onLongClick: ((CoverRequest) -> Unit)? = null
 ) {
     val posterSource = rememberArtistPosterSource(enabled = artistName != null)
     val hasSource = (!uri.isNullOrBlank() && uri != "0") || artistName != null
@@ -70,11 +75,26 @@ fun CoverImage(
     var loadFailed by remember(request) { mutableStateOf(false) }
 
     val salt = LocalUiEngine.current == UiEngine.SALT
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = modifier
             .clip(shape)
             .background(
                 if (salt) LyricoColors.coverPlaceholder else MiuixTheme.colorScheme.surfaceVariant
+            )
+            .then(
+                if (onLongClick != null && hasSource && !loadFailed) {
+                    Modifier.pointerInput(request) {
+                        detectTapGestures(
+                            onLongPress = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onLongClick(request)
+                            }
+                        )
+                    }
+                } else {
+                    Modifier
+                }
             ),
         contentAlignment = Alignment.Center
     ) {

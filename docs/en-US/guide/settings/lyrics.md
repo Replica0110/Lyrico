@@ -1,8 +1,10 @@
 # Lyrics Settings
 
-Controls lyric search, format, and write behavior.
+Open **Settings → Tag editing → Lyric content** to configure lyric retrieval and output.
 
-## Lyric Mode
+<a id="lyric-mode"></a>
+
+## Lyric format
 
 Choose the preferred lyric format when searching:
 
@@ -35,6 +37,6 @@ LRC cannot preserve TTML-only structures such as performers, paragraphs and Ruby
 
 ## Notes
 
-Changing the lyric mode, romanization, or translation settings does **not auto-refresh** existing search results. Re-search to apply the new settings.
+Changing the lyric format, romanization, or translation settings does **not auto-refresh** existing search results. Re-search to apply the new settings.
 
 Lyric mode, romanization, and translation settings also do not affect lyrics already saved in audio files.

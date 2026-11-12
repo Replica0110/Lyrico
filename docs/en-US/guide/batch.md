@@ -68,7 +68,7 @@ After selecting at least one song, an **expand button (FAB)** appears at the bot
 
 **Tag Matching** uses enabled metadata sources to write metadata fields such as title, artist and album. Lyrics and covers are handled by separate **Batch Match Lyrics** and **Batch Match Covers** tasks.
 
-Choose the corresponding task in the batch menu, then configure concurrency and write behavior before starting. Each task uses the enablement and priority of its own source type in Plugin Management. Lyrics-only sources can return candidates directly without song search; cover candidates are scored against local song information.
+Choose the corresponding task in the batch menu, then configure concurrency and write behavior before starting. Each task uses the enablement and priority of its own source type in Plugin Manager. Lyrics-only sources can return candidates directly without song search; cover candidates are scored against local song information.
 
 **Full Steps:**
 
@@ -77,24 +77,24 @@ Choose the corresponding task in the batch menu, then configure concurrency and 
 3. Tap the FAB expand button and choose **Tag Matching**.
 4. In the "Batch Match Config" page, review or adjust the **concurrency** setting.
 5. Tap confirm to start the task.
-6. Progress is shown during execution. You can monitor in the progress dialog or later in `Settings` → `Other` → `Task History`.
+6. Progress is shown during execution. You can monitor in the progress dialog or later in `Settings` → `Task History`.
 
 **Before matching, verify:**
 
-- At least one plugin is **enabled** in `Settings` → `Search Settings` → `Plugin Management`.
+- At least one plugin is **enabled** in `Settings` → `Online search` → `Plugin Manager`.
 - Plugin order matches your preference (earlier plugins are tried first).
 - Plugins requiring Token, API Key, region, etc. have their configuration saved.
 - The relevant field write rules are set properly (Complement or Overwrite, not Disabled).
 
 **Concurrency:** Higher concurrency processes faster but is more likely to trigger network failures or rate limiting. If requests fail frequently, lower the concurrency and retry.
 
-**Use filename for matching:** If "Prioritize filename matching" is enabled in `Settings` → `Search Settings`, batch matching ignores existing title and artist tags and uses the filename as the search keyword. This is useful for libraries with messy tags but well-named files.
+**Use filename for matching:** If filename matching is enabled in the batch-match configuration sheet, batch matching ignores existing title and artist tags and uses the filename as the search keyword. This is useful for libraries with messy tags but well-named files.
 
 ---
 
 ## Edit Tags
 
-**Edit Tags** writes the same field values across multiple songs. The Config tab only lists fields enabled for batch editing in [Edit Fields](./settings/metadata.md#edit-fields).
+**Edit Tags** writes the same field values across multiple songs. The Config tab only lists fields enabled for batch editing in [Edit Fields](./settings/editing.md#edit-fields).
 
 **Steps:**
 
@@ -120,7 +120,7 @@ Choose the corresponding task in the batch menu, then configure concurrency and 
 **Other actions:**
 
 - **Cover**: tap the cover area to **Choose Cover from This Device**, **Select cover from selected songs**, **Choose Cover from Same Album**, **Remove Cover**, or **Revert Cover**. Same-album covers require the selected songs to share album and artist, or fill in the album field on the Config tab first.
-- **Custom tags**: choose **Add Custom Tag** in the Config tab's FAB menu, or add and enable tags in [Edit Fields](./settings/metadata.md#edit-fields).
+- **Custom tags**: choose **Add Custom Tag** in the Config tab's FAB menu, or add and enable tags in [Edit Fields](./settings/editing.md#edit-fields).
 - **Edit Fields**: **Edit Fields** in the Config tab's FAB menu opens the field visibility and order settings.
 - **How to use**: **How to use** in the Config tab's FAB menu summarizes these rules.
 
@@ -169,11 +169,11 @@ Songs without lyrics are skipped. Lyrics without word-level timing cannot be con
 1. Select songs, open **Organize lyrics** from the FAB menu, and choose an operation:
    - **Sort by lyric line**: Reorder lines sharing a timestamp or remove a line.
    - **Remove empty lines**: Delete blank or placeholder-only lines.
-   - **Remove non-lyric content**: Remove credits and similar lines using [filtering rules](./settings/metadata.md#non-lyric-content-filtering).
+   - **Remove non-lyric content**: Remove credits and similar lines using [filtering rules](./settings/editing.md#non-lyric-content-rules).
 2. Adjust the operation's settings and concurrency.
 3. Tap **Process** to start. Results are written directly to the files.
 
-View task records under **Settings → Other → Task History → Lyrics processing**.
+View task records under **Settings → Task History → Lyrics processing**.
 
 Sorting uses the same settings as single-song editing; see [Organize Lyrics](./single-song.md#organize-lyrics). Songs without lyrics or with no changes after processing are skipped.
 
@@ -193,7 +193,7 @@ Decoding starts with the system decoder. If that fails, Lyrico automatically ret
 
 Higher concurrency means faster processing but more CPU and memory usage. If the device heats up, lags, or failures increase, lower the concurrency.
 
-The target loudness used for the calculation comes from `Settings` → `Scan Settings` → `ReplayGain reference loudness` (default -18 LUFS).
+The target loudness used for the calculation comes from `Settings` → `Tag editing` → `Target loudness` (default -18 LUFS).
 
 ---
 
@@ -227,7 +227,7 @@ Delete and Share run immediately without creating background tasks.
 
 ## Task History
 
-All batch operations except Delete and Share create background tasks. Access them at `Settings` → `Other` → `Task History`.
+All batch operations except Delete and Share create background tasks. Access them at `Settings` → `Task History`.
 
 - Filter by **task type** and **status**.
 - Statuses include: Queued, Running, Succeeded, Failed, Skipped, Cancelled.

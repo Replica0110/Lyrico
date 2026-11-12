@@ -84,7 +84,7 @@ git submodule update --init --recursive
 
 - `lyrico-app`：Android 应用主模块，包含 UI、音乐库、搜索、插件运行时和业务逻辑。
 - `lyrico-audiotag`：音频标签读写模块，封装底层音频元数据处理能力。
-- `docs`：VitePress 文档站点，覆盖插件使用、插件开发和宿主 API。
+- `docs`：VitePress 文档站点，包含使用指南、设置说明和插件开发文档。
 
 ## 维护取向
 

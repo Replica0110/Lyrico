@@ -1,53 +1,47 @@
-# Appearance
+# Appearance settings
 
-Control Lyrico's interface style, language, theme, colors, and bar effects.
+Open **Settings → Appearance settings**.
 
-## Interface Style
+## General settings
 
-Lyrico has two interface styles:
+### Interface style
 
-- **Miuix** (default)
-- **SaltUI**
+Choose **Miuix** or **SaltUI**. The selected style takes effect immediately.
 
-Switching takes effect immediately; no restart is required, and the whole app uses the selected style.
+### App language
 
-**Blur**, **Floating navigation bar**, and **Floating bar effect** are available only in Miuix. With SaltUI, these three options no longer appear in settings.
+Choose the system language, English, Simplified Chinese, Traditional Chinese (Taiwan) or Traditional Chinese (Hong Kong).
 
-## App Language
+This changes interface text, not song tags.
 
-Choose the language used by Lyrico's interface:
+## Theme colors
 
-- **Follow system**: Use the system language (default).
-- **English**
-- **简体中文**
-- **繁體中文（台灣）**
-- **繁體中文（香港）**
+### Theme Mode
 
-The interface switches immediately; no restart is required. This setting only affects Lyrico's own interface text, not song tag content.
+Choose the system theme, light mode or dark mode.
 
-## Theme Mode
+### Monet colors
 
-Options:
-- **Follow system**: Automatically switch between dark and light based on system settings.
-- **Light mode**: Always use the light theme.
-- **Dark mode**: Always use the dark theme.
+Enable generated colors based on the selected theme color.
 
-## Bar Blur
+### Theme color
 
-When enabled, the top and bottom bars of the library, detail, and settings pages use a background blur, so content stays visible while scrolling underneath.
+Available when Monet colors are enabled. Choose a preset color, or the wallpaper option to use the system wallpaper color.
 
-## Floating Navigation Bar
+## Interface effects
 
-When enabled, phones use a floating bottom bar that is visually separated from the content. This only changes how the bottom navigation bar looks, not what its tabs do.
+This group is available in Miuix.
 
-Once the floating navigation bar is on, you can also set the **Floating bar effect**:
+<a id="bar-blur"></a>
 
-- **None**: No extra effect.
-- **Frosted glass**: The floating bar uses a frosted-glass look.
-- **Liquid glass**: The floating bar uses a liquid-glass look.
+### Navigation bar blur
 
-## Monet Colors
+Enable background blur for top and bottom bars.
 
-If your device supports dynamic colors (Android 12+), enable **Monet palette** to have Lyrico's colors follow your system wallpaper.
+### Floating navigation bar
 
-When Monet palette is disabled, you can manually choose a **Key Color** as the app's theme color. Several preset options are available.
+Use a floating bottom navigation bar on phones. This changes its appearance, not its tabs.
+
+### Floating bar effect
+
+When the floating navigation bar is enabled, choose None, Frosted glass or Liquid glass.

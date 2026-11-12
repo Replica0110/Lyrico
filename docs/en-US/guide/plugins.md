@@ -22,7 +22,7 @@ Plugins are typically distributed as **ZIP archives**. A single ZIP may contain 
 
 **Full Steps:**
 
-1. Go to `Settings` → `Search Settings` → `Plugin Management`.
+1. Go to `Settings` → `Online search` → `Plugin Manager`.
 2. Tap the add button (or "Import Plugin") in the top-right.
 3. In the system file picker, find and select the plugin ZIP file.
 4. Lyrico scans the ZIP and shows a "Plugin Package Found" dialog:
@@ -97,7 +97,7 @@ Troubleshoot in this order:
 3. Are the plugin's **required fields** filled and saved?
 4. Is the network available?
 5. Is batch match **concurrency** too high? (Try lowering it.)
-6. Has the plugin or target platform API changed? (Check `Settings` → `Other` → `App Logs`, filter by "Plugin" or "Network".)
+6. Has the plugin or target platform API changed? (Check `Settings` → `Troubleshooting` → `App Logs`, filter by "Plugin" or "Network".)
 
 ---
 

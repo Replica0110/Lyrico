@@ -27,7 +27,7 @@ The editor contains the following areas. Field order and visibility are configur
 | ReplayGain area | Calculate track gain, track peak, and reference loudness |
 | Custom tags | Manage custom tags (requires adding visible custom tag keys in settings first) |
 
-If a field is missing, check **Settings → Text Processing → Edit Fields**. Hiding a field does not clear its data from the file. See [Edit Fields](./settings/metadata.md#edit-fields).
+If a field is missing, check **Settings → Tag editing → Edit Fields**. Hiding a field does not clear its data from the file. See [Edit Fields](./settings/editing.md#edit-fields).
 
 ## Edit Tags and Save
 
@@ -53,14 +53,14 @@ Use plugins to search online song metadata to fill in title, artist, lyrics, and
 3. Search results are shown under "All" and per-plugin-source tabs.
    - Tap **Load more** at the bottom of the results to load the next page. The “All” tab continues loading every source that still has more results.
 4. Tap a search result to view its metadata and lyrics.
-   - By default, only fields containing values are shown. Enable **Show All Fields** under `Settings` → `Search Settings` to display missing fields as "(empty)".
+   - By default, only fields containing values are shown. Enable **Show empty fields** under `Settings` → `Online search` to display missing fields as "(empty)".
 5. Choose an action:
    - **Apply**: Apply both the selected metadata fields and lyrics to the editor.
    - **Lyrics Only**: Apply only the lyrics to the editor.
 6. Back in the editor, review the content, then tap the **✓** button in the top-right.
 
 ::: tip No search results?
-Check that at least one plugin supporting song search is installed and enabled in `Settings` → `Search Settings` → `Plugin Management`, and that plugin configuration is complete. See [Using Plugins](./plugins.md).
+Check that at least one plugin supporting song search is installed and enabled in `Settings` → `Online search` → `Plugin Manager`, and that plugin configuration is complete. See [Using Plugins](./plugins.md).
 :::
 
 ## Cover Operations
@@ -139,7 +139,7 @@ Open **Lyrics Options → Organize lyrics** and choose an operation:
 
 - **Sort by lyric line**: Reorder lines sharing a timestamp or remove a line. Set the order separately for two-line and three-line groups.
 - **Remove empty lines**: Delete blank or placeholder-only lines.
-- **Remove non-lyric content**: Remove credits using [filtering rules](./settings/metadata.md#non-lyric-content-filtering).
+- **Remove non-lyric content**: Remove credits using [filtering rules](./settings/editing.md#non-lyric-content-rules).
 
 For example, if line 1 contains the original text and line 2 contains the translation, set input line 2 to output line 1 to put the translation first. Line numbers refer to the current order; original text, translation, and romanization are not identified automatically.
 
@@ -157,7 +157,7 @@ ReplayGain normalizes playback volume across different tracks.
 4. Once complete, track gain, track peak, and reference loudness fields are populated in the editor. Existing ReplayGain values can be recalculated to override them.
 5. Tap the **✓** button in the top-right to write these values to the audio file.
 
-The target loudness and peak measurement come from `Settings` → `Scan Settings`. Reference loudness defaults to -18 LUFS. Peak measurement defaults to sample peak and can be changed to true peak. Recalculate the track after changing either setting to update the tag values.
+The target loudness and peak measurement come from `Settings` → `Tag editing` → `ReplayGain`. Reference loudness defaults to -18 LUFS. Peak measurement defaults to sample peak and can be changed to true peak. Recalculate the track after changing either setting to update the tag values.
 
 Lyrico decodes audio with the platform decoder first. If that fails, it retries with the built-in FFmpeg decoder, which only covers **ALAC** and **APE**. The decoded audio is used only to measure loudness: Lyrico is still not a player, and this does not add support for other FFmpeg formats. A damaged ALAC or APE file can still fail.
 

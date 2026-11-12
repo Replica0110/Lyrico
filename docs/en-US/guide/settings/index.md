@@ -1,46 +1,32 @@
-# Settings Overview
+# Settings overview
 
-Lyrico's settings page is organized into categories. This page provides a quick index.
+## App settings
 
-## Setting Categories
+| Page | Groups | Contents |
+| --- | --- | --- |
+| [Appearance settings](./appearance.md) | General settings, Theme colors, Interface effects | Interface style, language, colors and navigation bars |
+| [Library management](./library.md) | File scanning, Artist management, Song playback | Audio folders, lyric indexing, artist rules, poster folder and default player |
+| [Online search](./search.md) | Sources, Result display | Plugins, source tab style, page size and empty fields |
+| [Tag editing](./editing.md) | Tag writing, Lyric content, Text processing, ReplayGain | Editor fields, lyric format, content order, cleanup and analysis parameters |
+| [Data management](./data.md) | Settings backup, Cache management | Export settings, import settings and clear cache |
 
-| Category | Contains | Details |
-|----------|----------|---------|
-| Appearance | Interface style, app language, theme mode, bar blur, floating navigation bar, Monet colors, Key Color | [Appearance](./appearance.md) |
-| Scan Settings | Folder management, artist posters, skip short audio, lyric index, ReplayGain loudness and peak type | [Library & Folders](../library.md) |
-| Search Settings | Plugin management, search source tab style, search limit, show all fields, artist separator, filename matching | [Search Settings](./search.md) |
-| Lyrics | Lyric mode, romanization, translation, translated lyrics only, lyric line order | [Lyrics Settings](./lyrics.md) |
-| Text Processing | Text conversion, artist splitting, edit fields, character mapping | [Text Processing](./metadata.md) |
-| Backup & Restore | Export/import app configuration | [Backup & Restore](./backup.md) |
-| Other | Task history, app logs, cache cleanup | [Maintenance](./maintenance.md) |
+## Tools
 
-## Find By Need
+- [Task History](./maintenance.md#task-history): review batch tasks, filter results and manage records.
+- [Troubleshooting](./diagnostics.md): app logs, problem diagnosis, rebuilding indexes and resetting the library.
 
-| I want to… | Setting to adjust |
-|-------------|---------------------|
-| Switch interface style (Miuix / SaltUI) | [Appearance](./appearance.md#interface-style) |
-| Switch the interface to another language | [Appearance](./appearance.md#app-language) |
-| Switch between dark and light theme | [Appearance](./appearance.md) |
-| Let the top and bottom bars show the background through | [Appearance](./appearance.md#bar-blur) |
-| Change the style of the bottom navigation bar | [Appearance](./appearance.md#floating-navigation-bar) |
-| Get word-timed lyrics instead of plain LRC | [Lyrics Settings](./lyrics.md) |
-| Download translations with lyrics | [Lyrics Settings](./lyrics.md#translation-and-romanization) |
-| Adjust the order of lines at the same timestamp | [Single Song Editing](../single-song.md#organize-lyrics) |
-| Adjust the display order of original, romanization, and translation | [Lyrics Settings](./lyrics.md#lyric-line-order) |
-| Have multi-artist songs listed separately | [Text Processing](./metadata.md#artist-splitting) |
-| Hide unused fields in the editor | [Text Processing](./metadata.md#edit-fields) |
-| View songs by field | [Text Processing](./metadata.md#view-songs-by-field) |
-| Add or manage custom tags | [Text Processing](./metadata.md#custom-tags) |
-| Replace special characters during batch rename | [Text Processing](./metadata.md#character-mapping) |
-| Strip composer/lyricist lines from lyrics | [Text Processing](./metadata.md#non-lyric-content-filtering) |
-| Convert Simplified lyrics to Traditional | [Text Processing](./metadata.md#chinese-text-conversion) |
-| Show or manage an artist poster | [Library & Folders](../library.md#artist-posters) |
-| Make local lyrics searchable | [Library & Folders](../library.md#scan-settings) |
-| Install or configure search plugins | [Search Settings](./search.md#plugin-management) |
-| Adjust how plugin source tabs look | [Search Settings](./search.md#search-source-tab-style) |
-| Adjust the target loudness for ReplayGain calculation | [Library & Folders](../library.md#scan-settings) |
-| Switch ReplayGain between sample peak and true peak | [Library & Folders](../library.md#scan-settings) |
-| Back up plugin and theme settings | [Backup & Restore](./backup.md) |
-| Clear cover search image cache | [Maintenance](./maintenance.md#clear-cache) |
-| Review batch task results | [Maintenance](./maintenance.md#task-history) |
-| Troubleshoot plugin or app errors | [Maintenance](./maintenance.md#app-logs) |
+## Common paths
+
+| Need | Path |
+| --- | --- |
+| Add audio folders | Settings → Library management → Audio folders |
+| Configure artist splitting | Settings → Library management → Artist Split Rules |
+| Manage artist posters | Settings → Library management → Artist poster folder |
+| Install or configure plugins | Settings → Online search → Plugin Manager |
+| Configure editor fields | Settings → Tag editing → Edit Fields |
+| Set lyric content order | Settings → Tag editing → Lyric line order |
+| Configure lyric filtering | Settings → Tag editing → Non-Lyric Content Filtering Rules |
+| Set ReplayGain parameters | Settings → Tag editing → ReplayGain |
+| Import or export settings | Settings → Data management → Import Settings / Export Settings |
+| Record a problem | Settings → Troubleshooting → Problem diagnosis |
+| Repair artist and album associations | Settings → Troubleshooting → Rebuild library indexes |

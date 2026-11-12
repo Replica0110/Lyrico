@@ -1,10 +1,10 @@
-# Library & Folders
+# Audio folder management
 
 Manage music folders that Lyrico scans, and maintain your library.
 
 ## Folder Management
 
-Go to: `Settings` → `Scan Settings` → `Folder Management`.
+Go to: `Settings` → `Library management` → `Audio folders`.
 
 The folder management page has **Folders** and **Songs** tabs for viewing the folder tree and songs within a given scope.
 
@@ -12,7 +12,7 @@ The folder management page has **Folders** and **Songs** tabs for viewing the fo
 
 At the top level, tap the add-folder button in the top bar, select a music folder in the system file picker, and grant access. Lyrico starts scanning automatically after adding.
 
-If `Settings` → `Scan Settings` → `Skip audio under 60 seconds` is enabled, audio files 60 seconds or shorter will be skipped—useful for filtering out notification sounds, short clips, and samples.
+If `Settings` → `Library management` → `Ignore audio shorter than 60 seconds` is enabled, audio files shorter than 60 seconds will be skipped—useful for filtering out notification sounds, short clips, and samples.
 
 ### Open Subfolders
 
@@ -46,7 +46,7 @@ Removes the folder and its song records from Lyrico's library. Local audio files
 
 ## Artist Posters
 
-The Artists list, artist detail page and single-song editor prefer **embedded artwork** that belongs to that artist. Ownership comes from the picture's **description**: the artist named there is the one it belongs to. Old pictures with no description are treated as belonging to the song's only artist. When an artist has no usable embedded picture, Lyrico looks up a poster by **file name** in the poster folder. Go to: `Settings` → `Scan Settings` → `Artist posters`. The row shows **No folder selected** or **Folder selected**.
+The Artists list, artist detail page and single-song editor prefer **embedded artwork** that belongs to that artist. Ownership comes from the picture's **description**: the artist named there is the one it belongs to. Old pictures with no description are treated as belonging to the song's only artist. When an artist has no usable embedded picture, Lyrico looks up a poster by **file name** in the poster folder. Go to: `Settings` → `Library management` → `Artist poster folder`.
 
 ### Choose a Folder
 
@@ -98,14 +98,9 @@ When you add a poster from the artist detail page, **Add local poster to folder*
 
 ## Scan Settings
 
-`Settings` → `Scan Settings` includes:
+Use **Settings → Library management → File scanning** for audio folders, short-audio filtering and lyric indexing. See [Library management](./settings/library.md#file-scanning).
 
-- **Folder Management**: Manage added music folders (same as above).
-- **Artist posters**: Manage the artist poster folder (same as above).
-- **Skip audio under 60 seconds**: When enabled, Lyrico skips audio files ≤ 60 seconds long.
-- **Lyric Index**: When enabled, a lyric index is built during scanning and used for local lyric search. Enabling it makes scanning slower, and after changing the switch existing songs must be rescanned for it to take effect.
-- **ReplayGain reference loudness**: The target loudness used when calculating ReplayGain, **-18 LUFS** by default. Choose from three presets — **-23 LUFS (EBU R128)**, **-18 LUFS (Default)**, **-14 LUFS (Streaming)** — or enter a custom value between **-60 and 0 LUFS**. This setting affects single-song, album, and batch ReplayGain calculations. See [Single Song Editing ReplayGain](./single-song.md#replaygain).
-- **ReplayGain peak type**: Selects the peak measurement written to ReplayGain peak tags. The default **sample peak** matches traditional ReplayGain peak semantics. **True peak** estimates the reconstructed signal through oversampling. Both use 1.0 for digital full scale, but decoded compressed audio can produce a sample peak above 1.0. This setting applies to single-song, album, and batch calculations.
+ReplayGain parameters are under [Tag editing → ReplayGain](./settings/editing.md#replaygain).
 
 ## Folder Permission Issues
 

@@ -24,7 +24,7 @@ Saving writes changes to the audio file itself, not just Lyrico's database. Veri
 
 ### How do I remove songs from the library without deleting files?
 
-Use the **Hide Folder** feature (`Settings` → `Scan Settings` → `Folder Management`) to hide songs from the library without deleting files.
+Use the **Hide Folder** feature (`Settings` → `Library management` → `Audio folders`) to hide songs from the library without deleting files.
 
 For individual songs, move them to a separate folder and hide that folder.
 
@@ -40,7 +40,7 @@ See [Artist posters](./library.md#artist-posters).
 
 **Remove artist posters** deletes that artist's embedded posters and deletes the poster files named after that artist from the poster folder. You can run it from the artist row menu, the multi-select button, or the artist detail page. It cannot be undone.
 
-**Remove folder** is in `Settings` → `Scan Settings` → **Artist posters**. It only stops using the posters in that folder; no files are deleted. Re-add the folder whenever you need it.
+**Remove folder** is in `Settings` → `Library management` → **Artist poster folder**. It only stops using the posters in that folder; no files are deleted. Re-add the folder whenever you need it.
 
 ### I added a poster folder but artists still show no poster?
 
@@ -55,7 +55,7 @@ See [Artist posters](./library.md#artist-posters).
 
 ### One artist got split into several in the artist list?
 
-Artist splitting breaks a multi-artist tag apart by separator; the tags in the audio files themselves are not modified. To keep an artist intact, add its name to the **No-Split Whitelist** under `Settings` → `Text Processing` → `Artist Split Rules`, then rebuild the artist index.
+Artist splitting breaks a multi-artist tag apart by separator; the tags in the audio files themselves are not modified. To keep an artist intact, add its name to the **No-Split Whitelist** under `Settings` → `Library management` → `Artist Split Rules`, then rebuild the artist index.
 
 ## Interface
 
@@ -84,7 +84,7 @@ Check in order:
 2. Does the plugin **support** the current operation? (Some only support song search, not lyrics or covers.)
 3. Does the plugin need a **Token or API Key**? If so, fill it in the plugin configuration.
 4. Is the network available?
-5. Check `Settings` → `Other` → `App Logs`, filter by "Plugin" to see error details.
+5. Check `Settings` → `Troubleshooting` → `App Logs`, filter by "Plugin" to see error details.
 
 ### Plugin ZIP import fails?
 
@@ -121,7 +121,7 @@ Battery optimization or background activity restrictions may pause the app. Chec
 
 Names and locations vary by device and system version. Background activity and battery optimization may need to be configured separately. Allowing continuous background activity may increase battery use.
 
-If tasks still stall, filter **App Logs** by **Batch** under `Settings` → `Other` and include the logs in your report. You can also keep Lyrico in the foreground until the task finishes.
+If tasks still stall, filter **App Logs** by **Batch** under `Settings` → `Troubleshooting` and include the logs in your report. You can also keep Lyrico in the foreground until the task finishes.
 
 References: [Android background optimization](https://developer.android.com/topic/performance/background-optimization), [World Run's OPPO background settings guide](https://donate.wingsforlifeworldrun.com/en/wflwr-app-settings/android/oppo).
 
@@ -132,7 +132,7 @@ Possible reasons:
 - Some songs have empty title/artist, making search keywords invalid.
 - Plugin network requests timing out.
 
-Check per-song failure reasons in `Settings` → `Other` → `Task History`.
+Check per-song failure reasons in `Settings` → `Task History`.
 
 ### Batch rename didn't change filenames?
 
@@ -143,7 +143,7 @@ Check:
 
 ### What if a ReplayGain calculation fails?
 
-Failures show a reason; for batch tasks, check the **Failed** tab under `Settings` → `Other` → `Task History` → **Scan ReplayGain**. One failed song does not stop the rest.
+Failures show a reason; for batch tasks, check the **Failed** tab under `Settings` → `Task History` → **Scan ReplayGain**. One failed song does not stop the rest.
 
 If the file is damaged, the codec is unrecognized, or decoded data is empty, check that the file plays in a player; if it still fails, check **App Logs** filtered to **Batch**.
 
@@ -156,13 +156,13 @@ If the file is damaged, the codec is unrecognized, or decoded data is empty, che
 
 ### How do I convert Traditional Chinese lyrics to Simplified?
 
-Use the "Simplify / Traditionalize" option in the editor's lyrics menu. Or set "Chinese Text Conversion" to "Traditional → Simplified" in `Settings` → `Text Processing` to auto-convert search results.
+Use the "Simplify / Traditionalize" option in the editor's lyrics menu. Or set "Chinese Text Conversion" to "Traditional → Simplified" in `Settings` → `Tag editing` to auto-convert search results.
 
 ## Other
 
 ### The app is using too much storage?
 
-Mainly cover image cache. Go to `Settings` → `Other` → `Clear Cache` to clean up.
+Mainly cover image cache. Go to `Settings` → `Data management` → `Clear Cache` to clean up.
 
 ### Can't save when opening a file shared from another app?
 
@@ -177,4 +177,4 @@ Fix: Grant Lyrico audio access permission in system settings (Settings → Apps 
 
 ### Will my settings be lost after updating?
 
-Not normally. But it's good practice to back up via `Settings` → `Backup & Restore` → `Export Settings` before updating.
+Not normally. But it's good practice to back up via `Settings` → `Data management` → `Export Settings` before updating.

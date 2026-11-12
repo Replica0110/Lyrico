@@ -15,7 +15,7 @@ All scanned songs listed by title by default, with an alphabet sidebar for quick
 
 ### Artists
 
-Artists grouped by name. If artist splitting is enabled (`Settings` → `Text Processing` → `Artist Split Rules`), songs with multiple artists are listed under each artist separately.
+Artists grouped by name. If artist splitting is enabled (`Settings` → `Library management` → `Artist Split Rules`), songs with multiple artists are listed under each artist separately.
 
 Tap an artist to see the artist detail page, which has **Songs** and **Albums** tabs showing all tracks and albums by that artist.
 
@@ -98,7 +98,7 @@ Tap the search icon in the navigation bar to open **Local Search**.
 Local search matches **title, artist, album, and filename** simultaneously. Results are grouped into Artists, Albums, and Songs sections.
 
 ::: warning
-Songs in hidden folders do not appear in normal lists or local search results. To restore visibility, go to `Settings` → `Scan Settings` → `Folder Management`.
+Songs in hidden folders do not appear in normal lists or local search results. To restore visibility, go to `Settings` → `Library management` → `Audio folders`.
 :::
 
 ## Playing Songs

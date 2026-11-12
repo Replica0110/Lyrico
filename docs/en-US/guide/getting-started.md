@@ -34,7 +34,7 @@ Lyrico does not scan your entire device automatically. You need to manually spec
 Once scanning completes, your songs appear in the list. Initial scanning may take a few minutes for large libraries.
 
 ::: tip
-You can add more folders in `Settings` → `Scan Settings` → `Folder Management`. Lyrico only scans folders you explicitly add—it will not scan other directories on your device.
+You can add more folders in `Settings` → `Library management` → `Audio folders`. Lyrico only scans folders you explicitly add—it will not scan other directories on your device.
 :::
 
 ## Browse Your Library
@@ -67,7 +67,7 @@ Lyrico does not include built-in online search. Lyrics, cover, and metadata sear
 **Steps:**
 
 1. Download a plugin ZIP (e.g., from [Lyrico-Plugins](https://github.com/Replica0110/Lyrico-Plugins)).
-2. Go to `Settings` → `Search Settings` → `Plugin Management`.
+2. Go to `Settings` → `Online search` → `Plugin Manager`.
 3. Tap **Import Plugin** and select the downloaded ZIP file.
 4. In the "Plugin Package Found" dialog, check the plugins you want and tap **Install**.
 5. Back in the plugin management list, turn on the plugin's **enable switch**.

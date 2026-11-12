@@ -1,14 +1,16 @@
-# Backup & Restore
+# Settings backup
+
+Open **Settings → Data management → Settings backup**.
 
 ## Export Settings
 
 Export the current app configuration as a JSON file. Includes:
 
 - Interface style (Miuix / SaltUI)
-- Theme mode, Monet colors, Key Color, bar blur, floating navigation bar, and the floating bar effect
+- Theme mode, Monet colors, theme color, navigation bar blur, floating navigation bar, and the floating bar effect
 - Search settings (plugin enabled state, sort order, configuration, search limit, etc.)
-- Lyrics settings (lyric mode, romanization, translation, lyric line order)
-- ReplayGain reference loudness and peak type
+- Lyrics settings (lyric format, romanization, translation, lyric line order)
+- ReplayGain target loudness and peak type
 - Artist split rules
 - Edit field configuration
 - Batch match configuration

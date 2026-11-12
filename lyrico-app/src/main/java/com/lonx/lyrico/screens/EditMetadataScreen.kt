@@ -45,6 +45,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -91,10 +92,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -137,6 +140,7 @@ import com.lonx.lyrico.ui.components.base.ExportDestinationBottomSheet
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
+import com.lonx.lyrico.ui.components.cover.CoverViewerDialog
 import com.lonx.lyrico.ui.components.cover.rememberArtistPosterSource
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle
@@ -1939,6 +1943,8 @@ private fun CoverSection(
     val currentPage = pagerState.currentPage.coerceIn(0, picturePages.lastIndex)
     val currentImageSource = picturePages[currentPage].source
     var imageSize by remember(currentImageSource) { mutableStateOf<Pair<Int, Int>?>(null) }
+    var viewerModel by remember { mutableStateOf<Any?>(null) }
+    val haptic = LocalHapticFeedback.current
 
     // 加载图片尺寸
     LaunchedEffect(currentImageSource) {
@@ -2052,7 +2058,19 @@ private fun CoverSection(
                                 .background(SaltTheme.colors.subText.copy(alpha = 0.1f))
                         ) { page ->
                             val item = picturePages[page]
-                            Box(Modifier.fillMaxSize().clickable { item.onClick() }) {
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .combinedClickable(
+                                        onClick = item.onClick,
+                                        onLongClick = {
+                                            item.source?.let { source ->
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                viewerModel = source
+                                            }
+                                        }
+                                    )
+                            ) {
                                 AsyncImage(
                                     model = item.source,
                                     contentDescription = item.editLabel,
@@ -2164,7 +2182,15 @@ private fun CoverSection(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .clickable { item.onClick() }
+                                    .combinedClickable(
+                                        onClick = item.onClick,
+                                        onLongClick = {
+                                            item.source?.let { source ->
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                viewerModel = source
+                                            }
+                                        }
+                                    )
                             ) {
                                 AsyncImage(
                                     model = item.source,
@@ -2229,6 +2255,14 @@ private fun CoverSection(
                 }
             }
         }
+    }
+
+    viewerModel?.let { model ->
+        CoverViewerDialog(
+            model = model,
+            contentDescription = stringResource(R.string.cd_cover),
+            onDismissRequest = { viewerModel = null }
+        )
     }
 }
 

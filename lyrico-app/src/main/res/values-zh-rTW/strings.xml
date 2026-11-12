@@ -712,6 +712,10 @@
     <string name="search_section_artists">演出者</string>
     <string name="search_empty">沒有搜尋結果</string>
     <string name="album_detail_title">專輯</string>
+    <string name="album_detail_tracks">歌曲</string>
+    <string name="album_detail_duration">時長</string>
+    <string name="album_detail_year">年份</string>
+    <string name="album_detail_contributors">參與創作的演出者</string>
     <string name="artist_detail_title">演出者</string>
     <string name="library_tab_songs">歌曲</string>
     <string name="library_tab_artists">演出者</string>

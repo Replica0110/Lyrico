@@ -263,7 +263,36 @@ interface LibraryIndexDao {
     """)
     fun observeAlbums(): Flow<List<AlbumEntity>>
 
-    @Query("SELECT * FROM albums WHERE id = :albumId LIMIT 1")
+    @Query("""
+        SELECT
+            a.id,
+            a.name,
+            a.albumArtist,
+            a.normalizedKey,
+            a.groupKey,
+            a.sortKey,
+            a.songCount,
+            a.coverSongUri,
+            a.coverSongLastModified,
+            (
+                SELECT TRIM(s.date)
+                FROM album_song AS als
+                INNER JOIN songs AS s ON s.id = als.songId
+                INNER JOIN folders AS f ON f.id = s.folderId
+                WHERE als.albumId = a.id
+                  AND f.isIgnored = 0
+                  AND TRIM(COALESCE(s.date, '')) != ''
+                ORDER BY COALESCE(s.discNumber, 0) ASC,
+                    CAST(NULLIF(s.trackerNumber, '') AS INTEGER) ASC,
+                    s.titleSortKey ASC,
+                    s.fileName ASC
+                LIMIT 1
+            ) AS year,
+            a.updatedAt
+        FROM albums AS a
+        WHERE a.id = :albumId
+        LIMIT 1
+    """)
     fun observeAlbumById(albumId: Long): Flow<AlbumEntity?>
 
     @Query("""

@@ -39,6 +39,7 @@ internal fun LibraryDetailPageSalt(
     selection: LibrarySelectionState?,
     actions: @Composable () -> Unit,
     snackbarHost: @Composable () -> Unit,
+    backgroundContent: (@Composable () -> Unit)?,
     content: @Composable (PaddingValues) -> Unit,
 ) {
 
@@ -56,8 +57,15 @@ internal fun LibraryDetailPageSalt(
                     padding.calculateStartPadding(direction) -
                     padding.calculateEndPadding(direction)
             val compact = width < 360.dp
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(SaltTheme.colors.background)
+            ) {
+                backgroundContent?.invoke()
+            }
             BasicScreen(
-                modifier = Modifier.background(SaltTheme.colors.background).imePadding(),
+                modifier = Modifier.imePadding(),
                 contentPadding = padding,
                 actionButton = {
                     LibraryTopBarTransition(selection, Alignment.CenterStart) { selected ->

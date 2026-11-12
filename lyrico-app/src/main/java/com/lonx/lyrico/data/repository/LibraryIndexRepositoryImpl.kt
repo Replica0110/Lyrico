@@ -59,6 +59,10 @@ class LibraryIndexRepositoryImpl(
         return indexDao.getSongsByAlbumId(albumId)
     }
 
+    override suspend fun getArtistIdByNormalizedName(normalizedName: String): Long? {
+        return indexDao.getArtistIdByNormalizedName(normalizedName)
+    }
+
     override fun searchArtists(query: String): Flow<List<ArtistEntity>> {
         return indexDao.searchArtists(query)
     }

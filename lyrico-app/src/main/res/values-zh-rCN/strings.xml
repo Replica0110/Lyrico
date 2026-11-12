@@ -712,6 +712,10 @@
     <string name="search_section_artists">艺术家</string>
     <string name="search_empty">没有搜索结果</string>
     <string name="album_detail_title">专辑</string>
+    <string name="album_detail_tracks">歌曲</string>
+    <string name="album_detail_duration">时长</string>
+    <string name="album_detail_year">年份</string>
+    <string name="album_detail_contributors">参与创作的艺术家</string>
     <string name="artist_detail_title">艺术家</string>
     <string name="library_tab_songs">歌曲</string>
     <string name="library_tab_artists">艺术家</string>

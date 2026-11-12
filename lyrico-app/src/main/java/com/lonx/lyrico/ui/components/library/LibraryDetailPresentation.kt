@@ -18,6 +18,7 @@ internal fun LibraryDetailPage(
     selection: LibrarySelectionState? = null,
     actions: @Composable () -> Unit = {},
     snackbarHost: @Composable () -> Unit = {},
+    backgroundContent: (@Composable () -> Unit)? = null,
     miuixTopBar: @Composable () -> Unit,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -25,8 +26,8 @@ internal fun LibraryDetailPage(
 
     when (engine) {
         UiEngine.SALT ->
-            LibraryDetailPageSalt(title, onBack, selection, actions, snackbarHost, content)
-        UiEngine.MIUIX -> LibraryDetailPageMiuix(miuixTopBar, snackbarHost, content)
+            LibraryDetailPageSalt(title, onBack, selection, actions, snackbarHost, backgroundContent, content)
+        UiEngine.MIUIX -> LibraryDetailPageMiuix(miuixTopBar, snackbarHost, backgroundContent, content)
     }
 }
 

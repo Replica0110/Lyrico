@@ -4,8 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,8 +31,8 @@ import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 
 /**
- * 全屏查看封面，支持双指缩放和双击放大。
- * 单击空白处或返回键关闭。
+ * 封面全屏查看，用于长按封面时绕过顶部栏、浮层查看完整图片。
+ * 支持双指缩放和双击放大，单击或返回键关闭。
  */
 @Composable
 fun CoverViewerDialog(
@@ -41,20 +42,13 @@ fun CoverViewerDialog(
 ) {
     Dialog(
         onDismissRequest = onDismissRequest,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         val zoomState = rememberZoomState(maxScale = 5f)
         var loading by remember(model) { mutableStateOf(true) }
         var failed by remember(model) { mutableStateOf(false) }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-        ) {
+        Box(Modifier.fillMaxSize().background(Color.Black).safeDrawingPadding()) {
             AsyncImage(
                 model = model,
                 contentDescription = contentDescription,
@@ -105,8 +99,8 @@ fun CoverViewerDialog(
                 onClick = onDismissRequest,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .statusBarsPadding()
                     .padding(8.dp)
+                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
             ) {
                 Icon(
                     imageVector = LucideIcons.Close,

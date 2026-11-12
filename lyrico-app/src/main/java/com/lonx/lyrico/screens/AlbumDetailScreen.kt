@@ -517,7 +517,6 @@ private fun AlbumDetailHeader(
             lastModified = coverSong?.fileLastModified ?: 0L,
             modifier = Modifier.size(80.dp),
             shape = RoundedCornerShape(8.dp),
-            contentDescription = stringResource(R.string.cd_cover),
             onLongClick = onCoverLongClick
         )
         Spacer(modifier = Modifier.width(16.dp))

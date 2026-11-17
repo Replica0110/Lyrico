@@ -1,6 +1,6 @@
 @file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 
-package com.lonx.lyrico.ui.components.poster
+package com.lonx.lyrico.ui.components.image
 
 import android.widget.MediaController
 import android.widget.VideoView
@@ -51,13 +51,13 @@ import com.moriafly.salt.ui.enabledAlpha
 import top.yukonga.miuix.kmp.menu.WindowIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private data class PreviewCrop(val key: String, val media: PosterPreviewMedia, val bitmap: android.graphics.Bitmap)
+private data class PreviewCrop(val key: String, val media: ImageViewerItem, val bitmap: android.graphics.Bitmap)
 
 /**
  * 预览顶栏菜单的一项。Salt 3.0.0-beta02 的 PopupMenuItem 没有禁用参数，
  * 禁用项由调用方通过 enabledAlpha 表达。
  */
-internal data class PosterPreviewMenuAction(
+internal data class ImageViewerMenuAction(
     val title: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val tone: PreferenceIconTone = PreferenceIconTone.Tools,
@@ -67,13 +67,16 @@ internal data class PosterPreviewMenuAction(
 )
 
 @Composable
-internal fun ArtistPosterPreview(
-    items: List<PosterPreviewMedia>,
+internal fun ImageViewer(
+    items: List<ImageViewerItem>,
     initialPage: Int = 0,
     title: (Int) -> String = { items[it].name },
-    onCrop: (Int, android.graphics.Bitmap) -> Unit,
-    editingEnabled: Boolean = true,
-    menuActions: ((Int) -> List<PosterPreviewMenuAction>)? = null,
+    onCrop: ((Int, android.graphics.Bitmap) -> Unit)? = null,
+    cropTitle: String = stringResource(R.string.image_viewer_crop),
+    showShare: Boolean = true,
+    showInfo: Boolean = true,
+    actionsEnabled: Boolean = true,
+    menuActions: ((Int) -> List<ImageViewerMenuAction>)? = null,
     onCurrentChanged: ((Int) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
@@ -84,10 +87,12 @@ internal fun ArtistPosterPreview(
     LaunchedEffect(current.key) { onCurrentChanged?.invoke(currentPage) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val posterReader: com.lonx.lyrico.data.artwork.ArtistPosterReader = org.koin.compose.koinInject()
+    val imageFetcher: com.lonx.lyrico.data.song.tag.ImageBytesFetcher = org.koin.compose.koinInject()
     var chromeVisible by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     val infoProgress = remember { Animatable(0f) }
-    var info by remember { mutableStateOf<PosterMediaInfo?>(null) }
+    var info by remember { mutableStateOf<ImageViewerInfo?>(null) }
     var infoLoading by remember { mutableStateOf(false) }
     var infoError by remember { mutableStateOf(false) }
     var infoRetry by remember { mutableIntStateOf(0) }
@@ -116,16 +121,16 @@ internal fun ArtistPosterPreview(
             try { block() }
             catch (error: CancellationException) { throw error }
             catch (_: Exception) {
-                android.widget.Toast.makeText(context, R.string.artist_poster_preview_error, android.widget.Toast.LENGTH_LONG).show()
+                android.widget.Toast.makeText(context, R.string.image_viewer_error, android.widget.Toast.LENGTH_LONG).show()
             } finally { busy = false }
         }
     }
     LaunchedEffect(current, infoOpen, infoRetry) {
-        if (infoOpen) {
+        if (showInfo && infoOpen) {
             info = null
             infoError = false
             infoLoading = true
-            try { info = withContext(Dispatchers.IO) { current.readInfo(context) } }
+            try { info = withContext(Dispatchers.IO) { current.readInfo(context, posterReader, imageFetcher) } }
             catch (error: CancellationException) { throw error }
             catch (_: Exception) { infoError = true }
             finally { infoLoading = false }
@@ -143,7 +148,7 @@ internal fun ArtistPosterPreview(
                 scope.launch { infoProgress.snapTo(dragPosition) }
             }
             val verticalGesture = Modifier.draggable(
-                state = dragState, orientation = Orientation.Vertical, enabled = dragEnabled,
+                state = dragState, orientation = Orientation.Vertical, enabled = dragEnabled && showInfo,
                 onDragStarted = { infoDragging = true; dragPosition = infoProgress.value; chromeVisible = true },
                 onDragStopped = { velocity ->
                     infoDragging = false
@@ -151,7 +156,7 @@ internal fun ArtistPosterPreview(
                 }
             )
             val progress = infoProgress.value
-            // 压在图片上的黑底/白字渐变与海报合成，不随引擎取色。
+            // 压在图片上的黑底/白字渐变与图片合成，不随引擎取色。
             val salt = LocalUiEngine.current == UiEngine.SALT
             val panelColor = if (salt) SaltTheme.colors.background else MiuixTheme.colorScheme.surface
             val actionBackground = lerp(Color(0xFF202020),
@@ -169,17 +174,17 @@ internal fun ArtistPosterPreview(
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     AndroidView(factory = { videoContext ->
                                         VideoView(videoContext).apply {
-                                            setVideoURI(item.uri.toUri())
+                                            setVideoURI(item.videoUri.toUri())
                                             setMediaController(MediaController(videoContext).also { it.setAnchorView(this) })
                                             setOnPreparedListener { start() }
                                             setOnErrorListener { _, _, _ -> failed = true; true }
                                         }
                                     }, modifier = Modifier.fillMaxSize(), onRelease = { it.stopPlayback() })
-                                    if (failed) Text(stringResource(R.string.artist_poster_preview_error), color = Color.White)
+                                    if (failed) Text(stringResource(R.string.image_viewer_error), color = Color.White)
                                 }
                             }
                         } else {
-                            PosterPreviewImage(item, Modifier.fillMaxSize(), fillProgress = progress,
+                            ViewerImage(item, Modifier.fillMaxSize(), fillProgress = progress,
                                 fullImageSize = fullImageSize, infoImageSize = infoImageSize,
                                 gesturesEnabled = dragEnabled, transitioning = infoDragging || infoProgress.isRunning,
                                 selected = page == currentPage, onTap = ::toggleChrome)
@@ -187,7 +192,7 @@ internal fun ArtistPosterPreview(
                     }
                 }
                 Box(Modifier.fillMaxWidth().height(panelHeight * progress).clipToBounds().background(panelColor)) {
-                    PosterInformation(current, info, infoLoading, infoError, { infoRetry++ }, verticalGesture)
+                    ViewerInformation(current, info, infoLoading, infoError, { infoRetry++ }, verticalGesture)
                 }
             }
             AnimatedVisibility(chromeVisible && progress < 0.02f, modifier = Modifier.align(Alignment.TopCenter),
@@ -196,7 +201,7 @@ internal fun ArtistPosterPreview(
                 Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.8f), Color.Transparent)))
                     .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = ::dismiss, modifier = Modifier.size(48.dp)) {
-                        Icon(LucideIcons.ArrowLeft, stringResource(R.string.artist_poster_back), tint = Color.White)
+                        Icon(LucideIcons.ArrowLeft, stringResource(R.string.action_back), tint = Color.White)
                     }
                     Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
                         Text(title(currentPage), color = Color.White,
@@ -211,7 +216,7 @@ internal fun ArtistPosterPreview(
                             val actions = provideActions(currentPage)
                             Box {
                                 Box(Modifier.size(48.dp).clip(CircleShape)
-                                    .clickable(enabled = !busy && editingEnabled, role = Role.Button,
+                                    .clickable(enabled = !busy && actionsEnabled, role = Role.Button,
                                         onClick = { previewMenuExpanded = true }),
                                     contentAlignment = Alignment.Center) {
                                     com.moriafly.salt.ui.Icon(rememberVectorPainter(LucideIcons.EllipsisVertical),
@@ -245,7 +250,7 @@ internal fun ArtistPosterPreview(
                                     text = action.title, summary = action.summary, enabled = action.enabled,
                                     onClick = action.onClick)
                             })
-                            WindowIconDropdownMenu(entry = entry, enabled = !busy && editingEnabled,
+                            WindowIconDropdownMenu(entry = entry, enabled = !busy && actionsEnabled,
                                 minWidth = 48.dp, minHeight = 48.dp) {
                                 Icon(LucideIcons.EllipsisVertical, stringResource(R.string.cd_more_actions), tint = Color.White)
                             }
@@ -253,47 +258,50 @@ internal fun ArtistPosterPreview(
                     }
                 }
             }
-            AnimatedVisibility(chromeVisible, modifier = Modifier.align(Alignment.BottomCenter),
+            AnimatedVisibility(chromeVisible && (showShare || showInfo || onCrop != null || items.size > 1),
+                modifier = Modifier.align(Alignment.BottomCenter),
                 enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 3 },
                 exit = fadeOut(tween(220)) + slideOutVertically(tween(220)) { it / 3 }) {
                 Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent,
                     lerp(Color.Black.copy(alpha = 0.92f), panelColor, progress))))
                     .padding(top = 16.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     AnimatedVisibility(items.size > 1 && progress < 0.02f, enter = fadeIn(tween(220)), exit = fadeOut(tween(220))) {
-                        PosterThumbnailStrip(items, currentPage, enabled = !busy && crop == null) { index ->
+                        ViewerThumbnailStrip(items, currentPage, enabled = !busy && crop == null) { index ->
                             scope.launch { pager.animateScrollToPage(index) }
                         }
                     }
-                    Row(Modifier.widthIn(max = 420.dp).fillMaxWidth().padding(horizontal = 24.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        PreviewAction(LucideIcons.Share2, stringResource(R.string.action_share), !busy, actionBackground, actionTint) {
-                            action {
-                                val intent = withContext(Dispatchers.IO) { current.shareIntent(context) }
-                                context.startActivity(android.content.Intent.createChooser(intent, null))
+                    Box(Modifier.widthIn(max = 420.dp).fillMaxWidth().height(48.dp).padding(horizontal = 24.dp)) {
+                        Box(Modifier.align(Alignment.CenterStart)) {
+                            if (showShare) PreviewAction(LucideIcons.Share2, stringResource(R.string.action_share), !busy, actionBackground, actionTint) {
+                                action {
+                                    val intent = withContext(Dispatchers.IO) { current.shareIntent(context, posterReader, imageFetcher) }
+                                    context.startActivity(android.content.Intent.createChooser(intent, null))
+                                }
                             }
                         }
-                        if (!current.isVideo) PreviewAction(LucideIcons.Crop, stringResource(R.string.poster_preview_edit),
-                            !busy && editingEnabled, actionBackground, actionTint, wide = true) {
-                            action {
-                                crop = PreviewCrop(current.key, current, requireNotNull(withContext(Dispatchers.IO) { current.readBitmap(context) }))
-                                showCrop = true
+                        Box(Modifier.align(Alignment.Center)) {
+                            if (!current.isVideo && onCrop != null) PreviewAction(LucideIcons.Crop, stringResource(R.string.image_viewer_crop),
+                                !busy && actionsEnabled, actionBackground, actionTint, wide = true) {
+                                action {
+                                    crop = PreviewCrop(current.key, current, requireNotNull(withContext(Dispatchers.IO) { current.readBitmap(context, posterReader, imageFetcher) }))
+                                    showCrop = true
+                                }
                             }
                         }
-                        PreviewAction(LucideIcons.Info, stringResource(R.string.poster_preview_info), !busy,
-                            if (infoOpen) lerp(Color(0xFF202020),
-                                if (salt) SaltTheme.colors.text else MiuixTheme.colorScheme.onSurface,
-                                progress) else actionBackground,
-                            if (infoOpen) lerp(Color.White, panelColor, progress) else actionTint) { setInfo(!infoOpen) }
+                        Box(Modifier.align(Alignment.CenterEnd)) {
+                            if (showInfo) PreviewAction(LucideIcons.Info, stringResource(R.string.image_viewer_info), !busy,
+                                actionBackground, actionTint) { setInfo(!infoOpen) }
+                        }
                     }
                 }
             }
             if (busy) CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            ImageCropperSheet(show = showCrop, bitmap = crop?.bitmap, title = stringResource(R.string.label_crop_artist_image),
+            ImageCropperSheet(show = showCrop, bitmap = crop?.bitmap, title = cropTitle,
                 onCrop = { bitmap ->
                     val target = crop
                     val index = items.indexOfFirst { target != null && it.key == target.key && it == target.media }
-                    if (index >= 0) onCrop(index, bitmap)
-                    else android.widget.Toast.makeText(context, R.string.poster_operation_failed, android.widget.Toast.LENGTH_LONG).show()
+                    if (index >= 0) onCrop?.invoke(index, bitmap)
+                    else android.widget.Toast.makeText(context, R.string.image_viewer_operation_failed, android.widget.Toast.LENGTH_LONG).show()
                     onDismiss()
                 }, onDismissRequest = { showCrop = false }, onDismissFinished = { if (!showCrop) crop = null })
         }

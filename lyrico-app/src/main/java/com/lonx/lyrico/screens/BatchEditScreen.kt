@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.image.PreviewableImage
+
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -81,7 +83,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
@@ -875,8 +876,9 @@ private fun BatchEditCoverOptionItem(
             .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AsyncImage(
+        PreviewableImage(
             model = CoverRequest(option.previewUri.toUri(), option.fileLastModified),
+            onClick = onClick,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -1051,7 +1053,7 @@ private fun BatchEditCoverSection(
     if (LocalUiEngine.current == UiEngine.SALT) {
         Column(Modifier.fillMaxWidth().clickable(onClick = onCoverClick).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (coverUri != null && !isRemoved) AsyncImage(coverUri, null,
+            if (coverUri != null && !isRemoved) PreviewableImage(coverUri, null, onClick = onCoverClick,
                 modifier = Modifier.size(128.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
             else com.moriafly.salt.ui.Icon(androidx.compose.ui.graphics.vector.rememberVectorPainter(LucideIcons.Image),
                 null, modifier = Modifier.size(40.dp), tint = SaltTheme.colors.subText)
@@ -1074,8 +1076,9 @@ private fun BatchEditCoverSection(
                 fontWeight = FontWeight.Medium
             )
         } else if (coverUri != null) {
-            AsyncImage(
+            PreviewableImage(
                 model = coverUri,
+                onClick = onCoverClick,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
@@ -1556,7 +1559,8 @@ private fun SaltBatchOverlays(
             if (!coversLoading) gridItems(covers, key = { "${it.sourceUri}\n${it.fileLastModified}" }) { option ->
                 com.moriafly.salt.ui.Card {
                     Column(Modifier.clickable { onCover(option) }.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        AsyncImage(CoverRequest(option.previewUri.toUri(), option.fileLastModified), null,
+                        PreviewableImage(CoverRequest(option.previewUri.toUri(), option.fileLastModified), null,
+                            onClick = { onCover(option) },
                             modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                         SaltText(option.title, style = SaltTheme.textStyles.sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (option.summary.isNotBlank()) SaltText(option.summary, style = SaltTheme.textStyles.sub,

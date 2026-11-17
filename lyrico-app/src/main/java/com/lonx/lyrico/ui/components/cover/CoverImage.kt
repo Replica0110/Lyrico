@@ -1,5 +1,7 @@
 package com.lonx.lyrico.ui.components.cover
 
+import com.lonx.lyrico.ui.components.image.PreviewableImage
+
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -18,7 +20,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import coil3.compose.AsyncImage
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.data.model.artwork.CoverCandidate
@@ -39,7 +40,10 @@ fun CoverImage(
     fallbackToAny: Boolean = pictureType == AudioPictureType.FrontCover,
     candidates: List<CoverCandidate> = emptyList(),
     artistName: String? = null,
-    contentScale: ContentScale = ContentScale.Crop
+    contentScale: ContentScale = ContentScale.Crop,
+    previewEnabled: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null
 ) {
     val posterSource = rememberArtistPosterSource(enabled = artistName != null)
     val hasSource = (!uri.isNullOrBlank() && uri != "0") || artistName != null
@@ -88,8 +92,11 @@ fun CoverImage(
             )
         }
         if (hasSource) {
-            AsyncImage(
+            PreviewableImage(
                 model = request,
+                previewEnabled = previewEnabled,
+                onClick = onClick,
+                onClickLabel = onClickLabel,
                 contentDescription = contentDescription,
                 modifier = Modifier.matchParentSize(),
                 contentScale = contentScale,

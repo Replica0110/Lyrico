@@ -2,6 +2,10 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.image.ImageViewerItem
+import com.lonx.lyrico.ui.components.image.ImageViewerSource
+import com.lonx.lyrico.ui.components.image.ImageViewer
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,7 +35,7 @@ import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.ui.components.poster.PosterPreviewMenuAction
+import com.lonx.lyrico.ui.components.image.ImageViewerMenuAction
 import com.lonx.lyrico.data.model.artist.ArtistPosterFile
 import com.lonx.lyrico.viewmodel.ArtistPosterFolder
 import com.moriafly.salt.ui.ItemOuterTitle
@@ -281,20 +285,22 @@ private fun PosterPreview(files: List<ArtistPosterFile>, initialPage: Int, revis
     val renameLabel = stringResource(R.string.action_rename)
     val detailsLabel = stringResource(R.string.poster_artist_details)
     val unmatchedLabel = stringResource(R.string.poster_artist_unmatched)
-    com.lonx.lyrico.ui.components.poster.ArtistPosterPreview(
+    ImageViewer(
         items = remember(files, revision) { files.map { file ->
-            com.lonx.lyrico.ui.components.poster.PosterPreviewMedia(file.name, file.uri,
+            ImageViewerItem(file.uri, file.name,
+                ImageViewerSource.Location(file.uri),
                 isVideo = file.name.endsWith(".mp4", true), revision = revision + file.lastModified)
         } }, initialPage = initialPage,
-        editingEnabled = enabled,
+        actionsEnabled = enabled,
+        cropTitle = stringResource(R.string.label_crop_artist_image),
         onCrop = { index, bitmap -> onCrop(files[index], bitmap) },
         menuActions = { index ->
             val file = files[index]
             listOf(
-                PosterPreviewMenuAction(
+                ImageViewerMenuAction(
                     title = renameLabel, icon = LucideIcons.Pencil, tone = PreferenceIconTone.Appearance,
                     enabled = enabled, onClick = { onRename(file) }),
-                PosterPreviewMenuAction(
+                ImageViewerMenuAction(
                     title = detailsLabel, icon = LucideIcons.Users, tone = PreferenceIconTone.Tools,
                     enabled = enabled && file.artistId != null,
                     summary = if (file.artistId == null) unmatchedLabel else null,

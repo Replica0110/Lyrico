@@ -501,6 +501,7 @@ private fun AlbumDetailHeader(
     ) {
         CoverImage(
             uri = coverSong?.uri,
+            previewEnabled = true,
             lastModified = coverSong?.fileLastModified ?: 0L,
             modifier = Modifier.size(80.dp),
             shape = RoundedCornerShape(8.dp)

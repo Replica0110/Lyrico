@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.image.PreviewableImage
+
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.annotation.SuppressLint
 import android.content.ClipData
@@ -70,7 +72,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
@@ -669,8 +670,9 @@ fun SearchResultItem(
                             .clip(RoundedCornerShape(8.dp))
                             .background(LyricoColors.coverPlaceholder)
                     ) {
-                        AsyncImage(
+                        PreviewableImage(
                             model = song.picUrl,
+                            onClick = onClick,
                             contentDescription = song.title,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
@@ -1476,8 +1478,9 @@ private fun SearchResultApplyOptionItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (isCover) AsyncImage(
+            if (isCover) PreviewableImage(
                 model = option.value, contentDescription = stringResource(R.string.cd_cover),
+                onClick = { if (option.enabled) onSelectedChange(!selected) },
                 modifier = Modifier.size(56.dp).clip(RoundedCornerShape(8.dp))
                     .background(LyricoColors.coverPlaceholder), contentScale = ContentScale.Crop,
                 placeholder = rememberTintedPainter(painterResource(R.drawable.ic_album_24dp), LyricoColors.coverPlaceholderIcon),
@@ -1527,8 +1530,9 @@ private fun SearchResultApplyOptionItem(
                     .clip(RoundedCornerShape(8.dp))
                     .background(LyricoColors.coverPlaceholder)
             ) {
-                AsyncImage(
+                PreviewableImage(
                     model = option.value,
+                    onClick = { if (option.enabled) onSelectedChange(!selected) },
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,

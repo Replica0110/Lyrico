@@ -816,12 +816,7 @@
     <string name="poster_artist_unmatched">无法确定艺术家</string>
     <string name="poster_export_embedded">导出内嵌海报到文件夹</string>
     <string name="poster_export_confirm">导出 %1$d 位艺术家的内嵌海报到文件夹，同名海报将替换</string>
-    <string name="poster_pick_folder">先选择海报文件夹</string>
-    <string name="poster_preview_edit">裁剪</string>
-    <string name="poster_preview_info">图片信息</string>
-    <string name="poster_preview_dimensions">尺寸</string>
-    <string name="poster_preview_format">格式</string>
-    <string name="ui_engine">界面风格</string>
+    <string name="poster_pick_folder">先选择海报文件夹</string>    <string name="ui_engine">界面风格</string>
     <string name="common_edit">编辑</string>
     <string name="batch_edit_unchanged_field_label">%1$s（无修改）</string>
     <string name="action_clear_search">清空搜索</string>
@@ -952,4 +947,13 @@
     <string name="reset_library_summary">清除歌曲记录和扫描目录，保留音频文件</string>
     <string name="reset_library_confirmation">将清除歌曲记录、扫描目录和音乐库索引，但不删除音频文件。之后需要重新添加音频文件夹，是否继续？</string>
     <string name="library_resetting">正在重置音乐库…</string>
+    <string name="image_viewer_crop">裁剪图片</string>
+    <string name="image_viewer_info">图片信息</string>
+    <string name="image_viewer_dimensions">尺寸</string>
+    <string name="image_viewer_format">格式</string>
+    <string name="image_viewer_error">无法加载图片</string>
+    <string name="image_viewer_operation_failed">操作失败</string>
+    <string name="image_viewer_source_file">本地图片</string>
+    <string name="image_viewer_source_network">网络图片</string>
+    <string name="image_viewer_view">查看大图</string>
 </resources>

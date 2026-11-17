@@ -1,5 +1,7 @@
 package com.lonx.lyrico.ui.components.song
 
+import com.lonx.lyrico.ui.components.image.PreviewableImage
+
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.content.ClipData
 import android.text.format.Formatter
@@ -29,7 +31,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
@@ -132,9 +133,9 @@ fun SongDetailBottomSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    AsyncImage(
+                    PreviewableImage(
                         model = CoverRequest(song.getUri, song.fileLastModified),
-                        contentDescription = stringResource(R.string.cd_cover),
+                        contentDescription = song.title ?: song.fileName,
                         modifier = Modifier
                             .size(104.dp)
                             .clip(RoundedCornerShape(12.dp)),
@@ -189,9 +190,9 @@ fun SongDetailBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                AsyncImage(
+                PreviewableImage(
                     model = CoverRequest(song.getUri, song.fileLastModified),
-                    contentDescription = stringResource(R.string.cd_cover),
+                    contentDescription = song.title ?: song.fileName,
                     modifier = Modifier
                         .size(100.dp)
                         .clip(RoundedCornerShape(12.dp)),

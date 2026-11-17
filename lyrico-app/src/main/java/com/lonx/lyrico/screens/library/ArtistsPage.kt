@@ -1,5 +1,7 @@
 package com.lonx.lyrico.screens.library
 
+import com.lonx.lyrico.ui.components.image.ImageViewer
+
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.data.model.UiEngine
 import androidx.compose.foundation.layout.Arrangement
@@ -38,7 +40,7 @@ import com.lonx.lyrico.viewmodel.ArtistPosterEditViewModel
 import com.lonx.lyrico.ui.components.poster.ArtistPosterRemovalHost
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.key
-import com.lonx.lyrico.ui.components.poster.previewMedia
+import com.lonx.lyrico.ui.components.poster.viewerItem
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
@@ -458,11 +460,12 @@ fun ArtistsPage(
         }
     }
     previewPoster?.let { source ->
-        com.lonx.lyrico.ui.components.poster.ArtistPosterPreview(
-            items = listOf(source.previewMedia()), title = { source.artistName },
+        ImageViewer(
+            items = listOf(source.viewerItem()), title = { source.artistName },
             onDismiss = { previewPoster = null },
-            editingEnabled = !removalState.isRunning,
-            onCrop = { _, bitmap -> editor.cropPoster(source, bitmap) }
+            actionsEnabled = !removalState.isRunning,
+            cropTitle = stringResource(R.string.label_crop_artist_image),
+                onCrop = { _, bitmap -> editor.cropPoster(source, bitmap) }
         )
     }
     com.lonx.lyrico.ui.components.crop.ImageCropperSheet(

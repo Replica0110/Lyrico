@@ -2,6 +2,8 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.image.PreviewableImage
+
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.annotation.SuppressLint
 import androidx.compose.foundation.LocalIndication
@@ -59,7 +61,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.model.UiEngine
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
@@ -546,8 +547,9 @@ fun CoverGridItem(
                     .aspectRatio(1f)
                     .background(LyricoColors.coverPlaceholder)
             ) {
-                AsyncImage(
+                PreviewableImage(
                     model = cover.url,
+                    onClick = onClick,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit,

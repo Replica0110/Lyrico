@@ -809,12 +809,7 @@
     <string name="poster_artist_unmatched">No unique artist match</string>
     <string name="poster_export_embedded">Export embedded posters</string>
     <string name="poster_export_confirm">Export embedded posters for %1$d artists to the poster folder? Matching posters will be replaced</string>
-    <string name="poster_pick_folder">Select a poster folder first</string>
-    <string name="poster_preview_edit">Crop</string>
-    <string name="poster_preview_info">Image info</string>
-    <string name="poster_preview_dimensions">Dimensions</string>
-    <string name="poster_preview_format">Format</string>
-    <string name="ui_engine">Interface style</string>
+    <string name="poster_pick_folder">Select a poster folder first</string>    <string name="ui_engine">Interface style</string>
     <string name="common_edit">Edit</string>
     <string name="ui_engine_miuix" translatable="false">Miuix</string>
     <string name="ui_engine_salt" translatable="false">SaltUI</string>
@@ -947,4 +942,13 @@
     <string name="reset_library_summary">Clear song records and scan folders; keep audio files</string>
     <string name="reset_library_confirmation">This clears song records, scan folders and library indexes without deleting audio files. Add audio folders again afterward. Continue?</string>
     <string name="library_resetting">Resetting music library…</string>
+    <string name="image_viewer_crop">Crop image</string>
+    <string name="image_viewer_info">Image info</string>
+    <string name="image_viewer_dimensions">Dimensions</string>
+    <string name="image_viewer_format">Format</string>
+    <string name="image_viewer_error">Unable to load image</string>
+    <string name="image_viewer_operation_failed">Operation failed</string>
+    <string name="image_viewer_source_file">Local image</string>
+    <string name="image_viewer_source_network">Network image</string>
+    <string name="image_viewer_view">View full image</string>
 </resources>

@@ -1,7 +1,9 @@
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.image.ImageViewer
+
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.poster.previewMedia
+import com.lonx.lyrico.ui.components.poster.viewerItem
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -427,8 +429,9 @@ fun ArtistDetailScreen(
             }
         )
         previewPoster?.let { source ->
-            com.lonx.lyrico.ui.components.poster.ArtistPosterPreview(
-                items = listOf(source.previewMedia()), title = { source.artistName }, editingEnabled = !removalState.isRunning && !artistPosterState.isRunning,
+            ImageViewer(
+                items = listOf(source.viewerItem()), title = { source.artistName }, actionsEnabled = !removalState.isRunning && !artistPosterState.isRunning,
+                cropTitle = stringResource(R.string.label_crop_artist_image),
                 onCrop = { _, bitmap -> removalViewModel.cropPoster(source, bitmap) },
                 onDismiss = { previewPoster = null }
             )
@@ -584,11 +587,10 @@ private fun ArtistDetailHeader(
                 lastModified = coverLastModified,
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(CircleShape)
-                    .clickable(
-                        onClickLabel = stringResource(R.string.label_set_artist_poster),
-                        onClick = onAvatarClick
-                    ),
+                    .clip(CircleShape),
+                previewEnabled = true,
+                onClick = onAvatarClick,
+                onClickLabel = stringResource(R.string.label_set_artist_poster),
                 shape = CircleShape,
                 contentDescription = artist,
                 pictureType = AudioPictureType.Artist,

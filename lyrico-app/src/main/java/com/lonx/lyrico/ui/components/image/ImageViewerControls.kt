@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.poster
+package com.lonx.lyrico.ui.components.image
 
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.animation.core.animateDpAsState
@@ -56,7 +56,7 @@ internal fun PreviewAction(icon: ImageVector, label: String, enabled: Boolean,
 }
 
 @Composable
-internal fun PosterThumbnailStrip(items: List<PosterPreviewMedia>, currentPage: Int, enabled: Boolean, onSelect: (Int) -> Unit) {
+internal fun ViewerThumbnailStrip(items: List<ImageViewerItem>, currentPage: Int, enabled: Boolean, onSelect: (Int) -> Unit) {
     val state = rememberLazyListState(initialFirstVisibleItemIndex = currentPage)
     val dragged by state.interactionSource.collectIsDraggedAsState()
     var scrubbing by remember { mutableStateOf(false) }
@@ -93,8 +93,8 @@ internal fun PosterThumbnailStrip(items: List<PosterPreviewMedia>, currentPage: 
             horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
             itemsIndexed(items, key = { _, item -> item.key }) { index, item ->
                 val selected = index == currentPage
-                val width by animateDpAsState(if (selected) 64.dp else 28.dp, tween(220), label = "poster-thumbnail-width")
-                val gap by animateDpAsState(if (selected) 8.dp else 2.dp, tween(220), label = "poster-thumbnail-gap")
+                val width by animateDpAsState(if (selected) 64.dp else 28.dp, tween(220), label = "image-thumbnail-width")
+                val gap by animateDpAsState(if (selected) 8.dp else 2.dp, tween(220), label = "image-thumbnail-gap")
                 Box(Modifier.width(width + gap * 2).height(48.dp).clip(RoundedCornerShape(8.dp))
                     .selectable(selected = selected, enabled = enabled, role = Role.Button, onClick = { onSelect(index) }),
                     contentAlignment = Alignment.Center) {
@@ -103,10 +103,10 @@ internal fun PosterThumbnailStrip(items: List<PosterPreviewMedia>, currentPage: 
                         .background(Color(0xFF202020)), contentAlignment = Alignment.Center) {
                         val context = LocalContext.current
                         val request = remember(item) {
-                            ImageRequest.Builder(context).data(if (item.isVideo) ArtistPosterFile(item.uri, item.name, item.revision)
-                                else item.bytes ?: item.uri.toUri()).size(192)
-                                .memoryCacheKey("poster-thumb:${item.key}:${item.revision}:${item.bytes?.contentHashCode()}")
-                                .diskCacheKey("poster-thumb:${item.key}:${item.revision}:${item.bytes?.contentHashCode()}").build()
+                            ImageRequest.Builder(context).data(if (item.isVideo) ArtistPosterFile(item.videoUri, item.name, item.revision)
+                                else item.model).size(192)
+                                .memoryCacheKey("image-thumb:${item.cacheKey}")
+                                .diskCacheKey("image-thumb:${item.cacheKey}").build()
                         }
                         var failed by remember(request) { mutableStateOf(false) }
                         AsyncImage(request, item.name, Modifier.fillMaxSize().padding(if (selected) 2.dp else 0.dp),
@@ -121,7 +121,7 @@ internal fun PosterThumbnailStrip(items: List<PosterPreviewMedia>, currentPage: 
 }
 
 @Composable
-internal fun PosterInformation(item: PosterPreviewMedia, info: PosterMediaInfo?, loading: Boolean, failed: Boolean,
+internal fun ViewerInformation(item: ImageViewerItem, info: ImageViewerInfo?, loading: Boolean, failed: Boolean,
     onRetry: () -> Unit, headerGesture: Modifier) {
     val context = LocalContext.current
     val salt = LocalUiEngine.current == UiEngine.SALT
@@ -143,22 +143,27 @@ internal fun PosterInformation(item: PosterPreviewMedia, info: PosterMediaInfo?,
         when {
             loading -> CircularProgressIndicator(size = 24.dp)
             failed -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (salt) com.moriafly.salt.ui.Text(stringResource(R.string.artist_poster_read_error),
+                if (salt) com.moriafly.salt.ui.Text(stringResource(R.string.image_viewer_error),
                     modifier = Modifier.weight(1f), style = SaltTheme.textStyles.main, color = SaltTheme.colors.text)
-                else Text(stringResource(R.string.artist_poster_read_error), modifier = Modifier.weight(1f))
+                else Text(stringResource(R.string.image_viewer_error), modifier = Modifier.weight(1f))
                 IconButton(onClick = onRetry) { Icon(LucideIcons.RefreshCw, stringResource(R.string.refresh)) }
             }
             info != null -> {
-                if (info.width > 0 && info.height > 0) InformationRow(stringResource(R.string.poster_preview_dimensions), "${info.width} × ${info.height}")
+                if (info.width > 0 && info.height > 0) InformationRow(stringResource(R.string.image_viewer_dimensions), "${info.width} × ${info.height}")
                 info.size?.let { InformationRow(stringResource(R.string.label_file_size), android.text.format.Formatter.formatFileSize(context, it)) }
-                InformationRow(stringResource(R.string.poster_preview_format), info.mime.substringAfter('/').uppercase(java.util.Locale.ROOT))
-                HorizontalDivider()
-                if (salt) com.moriafly.salt.ui.Text(stringResource(if (item.embedded) R.string.label_image_source_embedded else R.string.label_image_source_external),
-                    style = SaltTheme.textStyles.sub, color = SaltTheme.colors.text)
-                else Text(stringResource(if (item.embedded) R.string.label_image_source_embedded else R.string.label_image_source_external),
-                    fontSize = MiuixTheme.textStyles.body2.fontSize)
-                if (salt) com.moriafly.salt.ui.Text(info.source, style = SaltTheme.textStyles.sub, color = summaryColor)
-                else Text(info.source, fontSize = MiuixTheme.textStyles.footnote1.fontSize, color = summaryColor)
+                InformationRow(stringResource(R.string.image_viewer_format), info.mime.substringAfter('/').uppercase(java.util.Locale.ROOT))
+                if (info.origin != ImageOrigin.MEMORY) {
+                    HorizontalDivider()
+                    val sourceLabel = stringResource(when (info.origin) {
+                        ImageOrigin.EMBEDDED -> R.string.label_image_source_embedded
+                        ImageOrigin.NETWORK -> R.string.image_viewer_source_network
+                        else -> R.string.image_viewer_source_file
+                    })
+                    if (salt) com.moriafly.salt.ui.Text(sourceLabel, style = SaltTheme.textStyles.sub, color = SaltTheme.colors.text)
+                    else Text(sourceLabel, fontSize = MiuixTheme.textStyles.body2.fontSize)
+                    if (salt) com.moriafly.salt.ui.Text(info.source, style = SaltTheme.textStyles.sub, color = summaryColor)
+                    else Text(info.source, fontSize = MiuixTheme.textStyles.footnote1.fontSize, color = summaryColor)
+                }
             }
         }
     }
@@ -180,15 +185,15 @@ private fun InformationRow(label: String, value: String) {
 }
 
 @Composable
-internal fun PosterPreviewImage(item: PosterPreviewMedia, modifier: Modifier, fillProgress: Float,
+internal fun ViewerImage(item: ImageViewerItem, modifier: Modifier, fillProgress: Float,
     fullImageSize: Size, infoImageSize: Size, gesturesEnabled: Boolean, transitioning: Boolean,
     selected: Boolean, onTap: () -> Unit) {
     val context = LocalContext.current
     val request = remember(item, fullImageSize) {
-        ImageRequest.Builder(context).data(item.bytes ?: item.uri.toUri())
+        ImageRequest.Builder(context).data(item.model)
             .size(fullImageSize.width.toInt().coerceAtLeast(1), fullImageSize.height.toInt().coerceAtLeast(1))
-            .memoryCacheKey("poster-preview:${item.key}:${item.revision}:${item.bytes?.contentHashCode()}")
-            .diskCacheKey("poster-preview:${item.key}:${item.revision}:${item.bytes?.contentHashCode()}").build()
+            .memoryCacheKey("image-viewer:${item.cacheKey}")
+            .diskCacheKey("image-viewer:${item.cacheKey}").build()
     }
     val scale = remember(fillProgress, fullImageSize, infoImageSize) {
         object : ContentScale {
@@ -223,6 +228,6 @@ internal fun PosterPreviewImage(item: PosterPreviewMedia, modifier: Modifier, fi
             onSuccess = { sourceSize = it.painter.intrinsicSize; loading = false; failed = false },
             onError = { loading = false; failed = true })
         if (loading) CircularProgressIndicator()
-        if (failed) Text(stringResource(R.string.artist_poster_preview_error), color = Color.White)
+        if (failed) Text(stringResource(R.string.image_viewer_error), color = Color.White)
     }
 }

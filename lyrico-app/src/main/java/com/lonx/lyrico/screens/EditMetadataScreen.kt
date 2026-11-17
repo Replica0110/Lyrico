@@ -2,6 +2,12 @@
 
 package com.lonx.lyrico.screens
 
+import com.lonx.lyrico.ui.components.image.PreviewableImage
+import com.lonx.lyrico.ui.components.image.ImageViewerItem
+import com.lonx.lyrico.ui.components.image.resolveForPreview
+import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
+
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
@@ -1937,6 +1943,14 @@ private fun CoverSection(
     val picturePages = pages
     val pagerScope = rememberCoroutineScope()
     val currentPage = pagerState.currentPage.coerceIn(0, picturePages.lastIndex)
+    val viewerCandidates = picturePages.mapIndexedNotNull { index, picture ->
+        ImageViewerItem.from(picture.source, picture.label)?.copy(key = "page:$index")
+    }
+    val viewerItems by key(viewerCandidates) {
+        produceState(emptyList<ImageViewerItem>(), viewerCandidates) {
+            value = viewerCandidates.mapNotNull { it.resolveForPreview(context, posterReader) }
+        }
+    }
     val currentImageSource = picturePages[currentPage].source
     var imageSize by remember(currentImageSource) { mutableStateOf<Pair<Int, Int>?>(null) }
 
@@ -2053,8 +2067,11 @@ private fun CoverSection(
                         ) { page ->
                             val item = picturePages[page]
                             Box(Modifier.fillMaxSize().clickable { item.onClick() }) {
-                                AsyncImage(
+                                PreviewableImage(
                                     model = item.source,
+                                    onClick = item.onClick,
+                                    viewerItems = viewerItems,
+                                    viewerInitialPage = viewerItems.indexOfFirst { it.key == "page:$page" }.coerceAtLeast(0),
                                     contentDescription = item.editLabel,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.matchParentSize(),
@@ -2166,8 +2183,11 @@ private fun CoverSection(
                                     .fillMaxSize()
                                     .clickable { item.onClick() }
                             ) {
-                                AsyncImage(
+                                PreviewableImage(
                                     model = item.source,
+                                    onClick = item.onClick,
+                                    viewerItems = viewerItems,
+                                    viewerInitialPage = viewerItems.indexOfFirst { it.key == "page:$page" }.coerceAtLeast(0),
                                     contentDescription = item.editLabel,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.matchParentSize(),

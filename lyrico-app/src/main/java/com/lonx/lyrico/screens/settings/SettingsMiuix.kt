@@ -148,10 +148,12 @@ internal object MiuixSettingsItems : SettingsItemPresentation {
         summary: String?,
         icon: ImageVector?,
         tone: PreferenceIconTone,
+        enabled: Boolean,
     ) {
         top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
             title = title,
             summary = summary,
+            enabled = enabled,
             items = items,
             selectedIndex = selectedIndex,
             startAction = { icon?.let { PreferenceIcon(it, tone) } },

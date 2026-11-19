@@ -25,6 +25,9 @@ import com.lonx.lyrico.screens.settings.PaletteOption
 import com.lonx.lyrico.screens.settings.SettingsPage
 import com.lonx.lyrico.screens.settings.settingsViewModelWithEvents
 import com.lonx.lyrico.ui.components.getSystemWallpaperColor
+import com.lonx.lyrico.ui.components.blur.isBarBlurSupported
+import com.lonx.lyrico.ui.components.blur.isLiquidGlassSupported
+import com.lonx.lyrico.ui.components.blur.resolveFloatingBarEffect
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.theme.KeyColors
@@ -52,7 +55,12 @@ fun AppearanceSettingsScreen(navigator: DestinationsNavigator) {
     val barBlurEnabled = settingsUiState.barBlurEnabled
     val floatingBottomBarEnabled = settingsUiState.floatingBottomBarEnabled
     val floatingBarEffect = settingsUiState.floatingBarEffect
-    val floatingBarEffectItems = FloatingBarEffect.entries.map { stringResource(it.labelRes) }
+    val floatingBarEffects = if (isLiquidGlassSupported) {
+        listOf(FloatingBarEffect.FROSTED_GLASS, FloatingBarEffect.LIQUID_GLASS)
+    } else {
+        listOf(FloatingBarEffect.FROSTED_GLASS)
+    }
+    val floatingBarEffectItems = floatingBarEffects.map { stringResource(it.labelRes) }
     val monetVisibilityState = remember(settingsUiState.isInitialized) { MutableTransitionState(monetEnable) }
     LaunchedEffect(monetEnable) { monetVisibilityState.targetState = monetEnable }
 
@@ -140,37 +148,37 @@ fun AppearanceSettingsScreen(navigator: DestinationsNavigator) {
                 }
             }
         }
-        if (uiEngine == UiEngine.MIUIX) {
-            item(key = "interface") {
-                SectionTitle(text = stringResource(R.string.settings_section_interface))
-                Group {
-                    Toggle(
-                        icon = LucideIcons.Blend, tone = PreferenceIconTone.Lyrics,
-                        title = stringResource(R.string.bar_blur),
-                        summary = stringResource(R.string.bar_blur_summary),
-                        checked = barBlurEnabled,
-                        onCheckedChange = settingsViewModel::setBarBlurEnabled,
+        item(key = "interface") {
+            SectionTitle(text = stringResource(R.string.settings_section_interface))
+            Group {
+                Toggle(
+                    icon = LucideIcons.Blend, tone = PreferenceIconTone.Lyrics,
+                    title = stringResource(R.string.bar_blur),
+                    summary = stringResource(R.string.bar_blur_summary),
+                    checked = barBlurEnabled && isBarBlurSupported,
+                    enabled = isBarBlurSupported,
+                    onCheckedChange = settingsViewModel::setBarBlurEnabled,
+                )
+                Toggle(
+                    icon = LucideIcons.PanelBottom, tone = PreferenceIconTone.Pink,
+                    title = stringResource(R.string.floating_bottom_bar),
+                    summary = stringResource(R.string.floating_bottom_bar_summary),
+                    checked = floatingBottomBarEnabled,
+                    onCheckedChange = { settingsViewModel.setFloatingBottomBarEnabled(it) }
+                )
+                AnimatedVisibility(visible = floatingBottomBarEnabled && (barBlurEnabled || !isBarBlurSupported)) {
+                    Choice(
+                        icon = LucideIcons.Layers, tone = PreferenceIconTone.Teal,
+                        title = stringResource(R.string.floating_bar_effect),
+                        items = floatingBarEffectItems,
+                        selectedIndex = floatingBarEffects.indexOf(
+                            resolveFloatingBarEffect(barBlurEnabled, floatingBarEffect)
+                        ),
+                        enabled = floatingBarEffects.size > 1,
+                        onSelectedIndexChange = { index ->
+                            settingsViewModel.setFloatingBarEffect(floatingBarEffects[index])
+                        },
                     )
-                    Toggle(
-                        icon = LucideIcons.PanelBottom, tone = PreferenceIconTone.Pink,
-                        title = stringResource(R.string.floating_bottom_bar),
-                        summary = stringResource(R.string.floating_bottom_bar_summary),
-                        checked = floatingBottomBarEnabled,
-                        onCheckedChange = { settingsViewModel.setFloatingBottomBarEnabled(it) }
-                    )
-                    AnimatedVisibility(visible = floatingBottomBarEnabled) {
-                        Choice(
-                            icon = LucideIcons.Layers, tone = PreferenceIconTone.Teal,
-                            title = stringResource(R.string.floating_bar_effect),
-                            items = floatingBarEffectItems,
-                            selectedIndex = floatingBarEffect.ordinal,
-                            onSelectedIndexChange = { index ->
-                                settingsViewModel.setFloatingBarEffect(
-                                    FloatingBarEffect.entries[index]
-                                )
-                            },
-                        )
-                    }
                 }
             }
         }

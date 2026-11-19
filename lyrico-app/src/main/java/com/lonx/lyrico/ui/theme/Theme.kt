@@ -7,6 +7,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import com.lonx.lyrico.data.model.ThemeMode
 import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.ui.components.blur.LocalBarBlurEnabled
+import com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** Both palettes remain available to shared content during the UI migration. */
@@ -19,13 +21,16 @@ fun LyricoTheme(
     content: @Composable () -> Unit,
 ) {
     val indication = ripple()
+    val barBlurEnabled = rememberBarBlurEnabled()
     LyricoMiuixTheme(colorMode, keyColor, monetEnabled) {
-        LyricoSaltTheme(colorMode, MiuixTheme.colorScheme.primary, monetEnabled, indication) {
-            CompositionLocalProvider(
-                LocalUiEngine provides uiEngine,
-                LocalIndication provides indication,
-                content = content,
-            )
+        CompositionLocalProvider(LocalBarBlurEnabled provides barBlurEnabled) {
+            LyricoSaltTheme(colorMode, MiuixTheme.colorScheme.primary, monetEnabled, indication) {
+                CompositionLocalProvider(
+                    LocalUiEngine provides uiEngine,
+                    LocalIndication provides indication,
+                    content = content,
+                )
+            }
         }
     }
 }

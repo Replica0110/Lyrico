@@ -73,6 +73,7 @@ internal interface SettingsItemPresentation {
         summary: String? = null,
         icon: ImageVector? = null,
         tone: PreferenceIconTone = PreferenceIconTone.Tools,
+        enabled: Boolean = true,
     )
 
     @Composable

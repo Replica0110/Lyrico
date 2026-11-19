@@ -143,6 +143,8 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation("androidx.work:work-testing:${libs.versions.work.get()}")
     implementation(libs.salt.ui)
+    implementation(libs.haze.blur)
+    implementation(libs.haze.glass)
     // Project Modules
     implementation(project(":lyrico-audiotag"))
 
@@ -163,7 +165,6 @@ dependencies {
     implementation(libs.miuix.preference.android)
     implementation(libs.miuix.ui.android)
     implementation(libs.lottie.compose)
-    implementation(libs.miuix.blur.android)
     implementation(libs.coil.compose)
     implementation(libs.zoomable)
     implementation(libs.coil.network.okhttp)

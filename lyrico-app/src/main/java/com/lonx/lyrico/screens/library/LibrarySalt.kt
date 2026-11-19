@@ -2,6 +2,10 @@
 
 package com.lonx.lyrico.screens.library
 
+import com.lonx.lyrico.ui.components.blur.BlurredBar
+import com.lonx.lyrico.ui.components.blur.blurSource
+import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
+import com.lonx.lyrico.ui.components.blur.resolveFloatingBarEffect
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.background
@@ -13,8 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -23,10 +28,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
+import com.lonx.lyrico.data.model.FloatingBarEffect
 import com.lonx.lyrico.ui.components.LocalScaffoldIncludesBottomPadding
 import com.lonx.lyrico.ui.components.LocalScaffoldIncludesStartPadding
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
+import com.lonx.lyrico.ui.components.library.ContentBreathingRoom
+import com.lonx.lyrico.ui.components.salt.SaltFloatingNavigationBar
+import com.lonx.lyrico.ui.components.salt.SaltFloatingNavigationBarItem
 import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.scaffoldPageWindowInsets
 import com.moriafly.salt.ui.*
@@ -35,6 +44,9 @@ import com.moriafly.salt.ui.popup.PopupMenu
 import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.moriafly.salt.ui.popup.rememberPopupState
 import com.moriafly.salt.ui.screen.BasicScreen
+import com.lonx.lyrico.ui.components.salt.glass.GlassEffect
+import com.lonx.lyrico.ui.components.salt.glass.glassSource
+import com.lonx.lyrico.ui.components.salt.glass.rememberGlassSource
 
 @Composable
 internal fun SaltLibraryPage(
@@ -187,12 +199,24 @@ internal fun LibraryHomeSalt(
     tabs: List<LibraryTab>,
     selectedTab: LibraryTab,
     rail: Boolean,
+    floatingBottomBarEnabled: Boolean,
+    floatingBarEffect: FloatingBarEffect,
+    barBlurEnabled: Boolean,
     onTabSelected: (LibraryTab) -> Unit,
     onBottomPaddingChange: (androidx.compose.ui.unit.Dp) -> Unit,
     content: @Composable () -> Unit,
 ) {
     val systemBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    SideEffect { onBottomPaddingChange(if (rail) 0.dp else 56.dp + systemBottom) }
+    val density = LocalDensity.current
+    var floatingBarHeight by remember(density, systemBottom) {
+        mutableStateOf(56.dp + 12.dp + systemBottom)
+    }
+    val bottomContentPadding = when {
+        rail -> 0.dp
+        floatingBottomBarEnabled -> floatingBarHeight + ContentBreathingRoom
+        else -> 56.dp + systemBottom
+    }
+    SideEffect { onBottomPaddingChange(bottomContentPadding) }
     CompositionLocalProvider(
         LocalIndication provides SaltTheme.configs.indication,
         LocalOverscrollFactory provides CupertinoOverscrollEffectFactory(),
@@ -220,7 +244,7 @@ internal fun LibraryHomeSalt(
                             val color =
                                 if (tab == selectedTab) SaltTheme.colors.highlight
                                 else SaltTheme.colors.subText
-                            Icon(rememberVectorPainter(tab.saltIcon), null, tint = color)
+                            Icon(rememberVectorPainter(tab.icon), null, tint = color)
                             Text(
                                 stringResource(tab.titleRes),
                                 color = color,
@@ -238,17 +262,64 @@ internal fun LibraryHomeSalt(
                     )
                 }
             }
-        } else {
-            Column(Modifier.fillMaxSize().background(SaltTheme.colors.background)) {
-                Box(Modifier.weight(1f)) {
+        } else if (floatingBottomBarEnabled) {
+            val source = rememberGlassSource()
+            val surfaceColor = SaltTheme.colors.background
+            val surfaceEffect = when (resolveFloatingBarEffect(barBlurEnabled, floatingBarEffect)) {
+                FloatingBarEffect.FROSTED_GLASS -> GlassEffect.Blur
+                FloatingBarEffect.LIQUID_GLASS -> GlassEffect.Regular()
+                FloatingBarEffect.NONE -> GlassEffect.Solid(lightColor = surfaceColor, darkColor = surfaceColor)
+            }
+            val needsSource = surfaceEffect !is GlassEffect.Solid
+            Box(Modifier.fillMaxSize().background(SaltTheme.colors.background)) {
+                Box(
+                    Modifier.fillMaxSize().then(
+                        if (needsSource) Modifier.glassSource(source) else Modifier
+                    )
+                ) {
                     CompositionLocalProvider(
                         LocalScaffoldIncludesBottomPadding provides false,
-                        LocalLibraryBottomContentPadding provides 0.dp,
+                        LocalLibraryBottomContentPadding provides bottomContentPadding,
                         content = content,
                     )
                 }
-                Box(Modifier.background(SaltTheme.colors.subBackground).navigationBarsPadding()) {
-                    BottomBar {
+                SaltFloatingNavigationBar(
+                    modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged {
+                        floatingBarHeight = with(density) { it.height.toDp() }
+                    },
+                    source = source,
+                    effect = surfaceEffect,
+                ) {
+                    tabs.forEach { tab ->
+                        SaltFloatingNavigationBarItem(
+                            selected = tab == selectedTab,
+                            onClick = { onTabSelected(tab) },
+                            icon = tab.icon,
+                            label = stringResource(tab.titleRes),
+                        )
+                    }
+                }
+            }
+        } else {
+            val backdrop = rememberBarBlurBackdrop(enabled = barBlurEnabled)
+            Box(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize().blurSource(backdrop).background(SaltTheme.colors.background)) {
+                    CompositionLocalProvider(
+                        LocalScaffoldIncludesBottomPadding provides false,
+                        LocalLibraryBottomContentPadding provides bottomContentPadding,
+                        content = content,
+                    )
+                }
+                BlurredBar(
+                    backdrop = backdrop,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    atTop = false,
+                    surfaceColor = if (backdrop == null) SaltTheme.colors.subBackground else SaltTheme.colors.background,
+                ) {
+                    BottomBar(
+                        modifier = Modifier.navigationBarsPadding(),
+                        backgroundColor = androidx.compose.ui.graphics.Color.Transparent,
+                    ) {
                         tabs.forEach { tab ->
                             Column(
                                 Modifier.weight(1f)
@@ -265,7 +336,7 @@ internal fun LibraryHomeSalt(
                                     if (tab == selectedTab) SaltTheme.colors.highlight
                                     else SaltTheme.colors.subText
                                 Icon(
-                                    rememberVectorPainter(tab.saltIcon),
+                                    rememberVectorPainter(tab.icon),
                                     null,
                                     modifier = Modifier.size(24.dp),
                                     tint = color,
@@ -285,11 +356,3 @@ internal fun LibraryHomeSalt(
         }
     }
 }
-
-private val LibraryTab.saltIcon: ImageVector
-    get() =
-        when (this) {
-            LibraryTab.Songs -> LucideIcons.Music
-            LibraryTab.Artists -> LucideIcons.Users
-            LibraryTab.Albums -> LucideIcons.Disc
-        }

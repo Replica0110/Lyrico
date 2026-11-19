@@ -1,12 +1,10 @@
 package com.lonx.lyrico.ui.components.library
 
-import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -19,25 +17,27 @@ import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.NavigationRail
 import top.yukonga.miuix.kmp.basic.NavigationRailItem
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.lonx.lyrico.ui.components.blur.BarBlurBackdrop
+import com.lonx.lyrico.ui.components.salt.glass.GlassSource
 
 @Composable
-fun LibraryBottomNavigationBar(
+internal fun LibraryBottomNavigationBar(
     tabs: List<LibraryTab>,
     selectedTab: LibraryTab,
     onTabSelected: (LibraryTab) -> Unit,
     modifier: Modifier = Modifier,
-    backdrop: LayerBackdrop? = null,
+    backdrop: BarBlurBackdrop? = null,
 ) {
     val haptic = LocalHapticFeedback.current
     BlurredBar(
         backdrop = backdrop,
         modifier = Modifier.fillMaxWidth(),
+        atTop = false,
     ) {
         NavigationBar(
             modifier = modifier,
             color = Color.Transparent,
+            showDivider = backdrop == null,
         ) {
             tabs.forEach { tab ->
                 NavigationBarItem(
@@ -80,12 +80,12 @@ fun LibraryNavigationRail(
 }
 
 /**
- * 手机端悬浮底栏。模糊和液态玻璃都需要 Android 13+ 的 RenderEffect，
- * 不支持时自动降级为描边样式。
+ * 手机端悬浮底栏，按当前栏位效果使用 Haze。
  */
+@OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 @Composable
-fun LibraryBlurBottomBar(
-    backdrop: LayerBackdrop?,
+internal fun LibraryBlurBottomBar(
+    backdrop: GlassSource?,
     effect: FloatingBarEffect,
     tabs: List<LibraryTab>,
     selectedTab: LibraryTab,
@@ -106,11 +106,10 @@ fun LibraryBlurBottomBar(
             BlurNavigationBarItemV2(
                 index = index,
                 selected = tab == selectedTab,
-                onClick = {},
                 icon = {
                     Icon(
                         imageVector = tab.icon,
-                        contentDescription = stringResource(tab.titleRes),
+                        contentDescription = null,
                         modifier = Modifier.size(22.dp),
                     )
                 },
@@ -119,10 +118,3 @@ fun LibraryBlurBottomBar(
         }
     }
 }
-
-private val LibraryTab.icon: ImageVector
-    get() = when (this) {
-        LibraryTab.Songs -> LucideIcons.Music
-        LibraryTab.Artists -> LucideIcons.Users
-        LibraryTab.Albums -> LucideIcons.Disc
-    }

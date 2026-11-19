@@ -37,8 +37,8 @@ internal class DampedDragAnimation(
     private val initialScale: Float,
     private val pressedScale: Float,
     private val canDrag: (Offset) -> Boolean = { true },
-    private val onDragStarted: DampedDragAnimation.(Offset) -> Unit,
     private val onDragStopped: DampedDragAnimation.() -> Unit,
+    private val onDragCancelled: DampedDragAnimation.() -> Unit,
     private val onDrag: DampedDragAnimation.(IntSize, Offset) -> Unit,
 ) {
     private val valueAnimationSpec = spring(1f, 1000f, visibilityThreshold)
@@ -70,16 +70,13 @@ internal class DampedDragAnimation(
 
     val modifier: Modifier = Modifier.pointerInput(Unit) {
         inspectDragGestures(
-            onDragStart = { down ->
-                onDragStarted(down.position)
-                press()
-            },
+            onDragStart = { press() },
             onDragEnd = {
                 onDragStopped()
                 release()
             },
             onDragCancel = {
-                onDragStopped()
+                onDragCancelled()
                 release()
             },
         ) { change, dragAmount ->
@@ -140,19 +137,26 @@ internal class DampedDragAnimation(
     }
 }
 
-internal suspend fun PointerInputScope.inspectDragGestures(
-    onDragStart: (PointerInputChange) -> Unit = {},
-    onDragEnd: (PointerInputChange) -> Unit = {},
-    onDragCancel: () -> Unit = {},
+private suspend fun PointerInputScope.inspectDragGestures(
+    onDragStart: () -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
     onDrag: (PointerInputChange, Offset) -> Unit,
 ) {
     awaitEachGesture {
         val initialDown = awaitFirstDown(false, PointerEventPass.Initial)
-        val down = awaitFirstDown(false)
-        onDragStart(down)
-        onDrag(initialDown, Offset.Zero)
-        val upEvent = drag(initialDown.id) { change -> onDrag(change, change.positionChange()) }
-        if (upEvent == null) onDragCancel() else onDragEnd(upEvent)
+        awaitFirstDown(false)
+        onDragStart()
+        var completed = false
+        try {
+            val upEvent = drag(initialDown.id) { change -> onDrag(change, change.positionChange()) }
+            if (upEvent != null) {
+                completed = true
+                onDragEnd()
+            }
+        } finally {
+            if (!completed) onDragCancel()
+        }
     }
 }
 

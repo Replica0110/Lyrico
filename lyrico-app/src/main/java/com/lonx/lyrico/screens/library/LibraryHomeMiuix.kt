@@ -1,8 +1,13 @@
 package com.lonx.lyrico.screens.library
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import com.lonx.lyrico.ui.components.blur.resolveFloatingBarEffect
+import com.lonx.lyrico.ui.components.salt.glass.glassSource
+import com.lonx.lyrico.ui.components.salt.glass.rememberGlassSource
+import com.moriafly.salt.ui.UnstableSaltUiApi
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -12,7 +17,9 @@ import com.lonx.lyrico.ui.components.blur.*
 import com.lonx.lyrico.ui.components.library.*
 import com.lonx.lyrico.ui.components.scaffoldBottomPadding
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+@OptIn(UnstableSaltUiApi::class)
 @Composable
 internal fun LibraryHomeMiuix(
     tabs: List<LibraryTab>,
@@ -25,10 +32,8 @@ internal fun LibraryHomeMiuix(
     onBottomPaddingChange: (Dp) -> Unit,
     content: @Composable (Modifier) -> Unit,
 ) {
-    val floatingBackdrop =
-        rememberBlurBackdrop(
-            enableBlur = floatingBottomBarEnabled && floatingBarEffect != FloatingBarEffect.NONE
-        )
+    val effect = resolveFloatingBarEffect(barBlurEnabled, floatingBarEffect)
+    val floatingBackdrop = rememberGlassSource().takeIf { effect != FloatingBarEffect.NONE }
     val standardBottomBackdrop =
         rememberBarBlurBackdrop(enabled = barBlurEnabled && !floatingBottomBarEnabled)
     val systemBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -52,7 +57,6 @@ internal fun LibraryHomeMiuix(
                 CompositionLocalProvider(
                     LocalScaffoldIncludesStartPadding provides false,
                     LocalLibraryBottomContentPadding provides 0.dp,
-                    LocalBarBlurEnabled provides barBlurEnabled,
                 ) {
                     content(Modifier.fillMaxSize())
                 }
@@ -62,10 +66,13 @@ internal fun LibraryHomeMiuix(
                 onBottomPaddingChange(floatingContentPadding)
             }
 
-            Box(modifier = Modifier.fillMaxSize().blurSource(floatingBackdrop)) {
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .background(MiuixTheme.colorScheme.surface)
+                    .then(if (floatingBackdrop != null) Modifier.glassSource(floatingBackdrop) else Modifier),
+            ) {
                 CompositionLocalProvider(
                     LocalLibraryBottomContentPadding provides floatingContentPadding,
-                    LocalBarBlurEnabled provides barBlurEnabled,
                 ) {
                     content(Modifier.fillMaxSize())
                 }
@@ -74,7 +81,7 @@ internal fun LibraryHomeMiuix(
             LibraryBlurBottomBar(
                 modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
                 backdrop = floatingBackdrop,
-                effect = floatingBarEffect,
+                effect = effect,
                 tabs = tabs,
                 selectedTab = selectedTab,
                 onTabSelected = onTabSelected,
@@ -101,7 +108,6 @@ internal fun LibraryHomeMiuix(
                         // lists reserve this same space at their end instead.
                         LocalLibraryBottomContentPadding provides
                             scaffoldBottomPadding(paddingValues),
-                        LocalBarBlurEnabled provides barBlurEnabled,
                     ) {
                         content(
                             Modifier.fillMaxSize()

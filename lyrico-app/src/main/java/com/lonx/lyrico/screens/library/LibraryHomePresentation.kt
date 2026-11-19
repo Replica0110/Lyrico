@@ -27,6 +27,9 @@ internal fun LibraryHomePresentation(
                 tabs,
                 selectedTab,
                 useNavigationRail,
+                floatingBottomBarEnabled,
+                floatingBarEffect,
+                barBlurEnabled,
                 onTabSelected,
                 onBottomPaddingChange,
             ) {

@@ -121,10 +121,12 @@ internal object SaltSettingsItems : SettingsItemPresentation {
         summary: String?,
         icon: ImageVector?,
         tone: PreferenceIconTone,
+        enabled: Boolean,
     ) {
         ItemDropdown(
             text = title,
             sub = summary,
+            enabled = enabled,
             value = items.getOrNull(selectedIndex).orEmpty(),
             iconPainter = icon?.let { rememberVectorPainter(it) },
             iconColor = tone.color(),

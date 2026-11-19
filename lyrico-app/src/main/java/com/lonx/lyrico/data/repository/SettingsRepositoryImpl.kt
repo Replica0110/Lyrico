@@ -75,7 +75,6 @@ internal fun encodeArtistPosterFolder(uri: String?): String =
 object SettingsDefaults {
     const val MONET_ENABLE: Boolean = false
     const val FLOATING_BOTTOM_BAR_ENABLED: Boolean = true
-    const val BAR_BLUR_ENABLED: Boolean = false
     val FLOATING_BAR_EFFECT = FloatingBarEffect.NONE
     val KEY_THEME_COLOR = null
     val CONVERSION_MODE = ConversionMode.NONE
@@ -421,9 +420,13 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     override val barBlurEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.BAR_BLUR_ENABLED]
-                ?: SettingsDefaults.BAR_BLUR_ENABLED
+            preferences.resolveBarBlurEnabled()
         }
+    // Preserve an explicit bar setting. Older profiles with only a floating effect inherit it.
+    private fun Preferences.resolveBarBlurEnabled(): Boolean =
+        this[PreferencesKeys.BAR_BLUR_ENABLED]
+            ?: (resolveFloatingBarEffect() != FloatingBarEffect.NONE)
+
     override val floatingBarEffect: Flow<FloatingBarEffect>
         get() = context.settingsDataStore.data.map { it.resolveFloatingBarEffect() }
 
@@ -882,8 +885,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 ?: SettingsDefaults.MONET_ENABLE,
             floatingBottomBarEnabled = prefs[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED]
                 ?: SettingsDefaults.FLOATING_BOTTOM_BAR_ENABLED,
-            barBlurEnabled = prefs[PreferencesKeys.BAR_BLUR_ENABLED]
-                ?: SettingsDefaults.BAR_BLUR_ENABLED,
+            barBlurEnabled = prefs.resolveBarBlurEnabled(),
             floatingBarEffect = prefs.resolveFloatingBarEffect().name,
             keyThemeColor = prefs[PreferencesKeys.KEY_THEME_COLOR] ?: SettingsDefaults.KEY_THEME_COLOR,
 

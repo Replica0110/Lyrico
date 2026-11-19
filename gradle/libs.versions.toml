@@ -25,7 +25,8 @@ room = "2.8.5"
 work = "2.12.0"
 tinypinyin = "2.0.3"
 miuix = "0.9.4"
-saltUi = "3.0.0-beta03"
+saltUi = "3.0.0"
+haze = "2.1.0"
 lottie = "6.7.1"
 zoomable = "2.16.0"
 junit = "4.13.2"
@@ -35,6 +36,8 @@ robolectric = "4.17"
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 salt-ui = { module = "io.github.moriafly:salt-ui", version.ref = "saltUi" }
+haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
+haze-glass = { module = "dev.chrisbanes.haze:haze-glass", version.ref = "haze" }
 zoomable = { module = "net.engawapg.lib:zoomable", version.ref = "zoomable" }
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 aboutlibraries-compose-core = { module = "com.mikepenz:aboutlibraries-compose-core", version.ref = "aboutLibraries" }
@@ -57,7 +60,6 @@ compose-destinations-ksp = { module = "io.github.raamcosta.compose-destinations:
 lazycolumnscrollbar = { module = "com.github.nanihadesuka:LazyColumnScrollbar", version.ref = "lazycolumnscrollbar" }
 miuix-preference-android = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }
 miuix-ui-android = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
-miuix-blur-android = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
 opencc4j = { module = "com.github.houbb:opencc4j", version.ref = "opencc4j" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 tinypinyin = { module = "com.github.promeg:tinypinyin", version.ref = "tinypinyin" }

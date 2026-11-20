@@ -163,7 +163,7 @@ internal fun ArtistPosterPickerHost(
             else Toast.makeText(context, permissionMessage, Toast.LENGTH_SHORT).show()
         }
     }
-    com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+    com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet(
         show = show,
         label = stringResource(R.string.artist_poster_destination_title),
         enableNestedScroll = false,

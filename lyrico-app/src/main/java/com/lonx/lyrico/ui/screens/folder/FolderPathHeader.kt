@@ -19,9 +19,9 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.domain.folder.FolderBreadcrumb
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.button.PillButton
+import com.lonx.lyrico.ui.components.button.PillButtonDefaults
+import com.lonx.lyrico.ui.components.button.PillButtonSize
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme

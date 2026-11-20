@@ -36,7 +36,7 @@ import com.lonx.lyrico.data.db.entity.BatchTaskEntity
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.data.batch.BatchTaskStatus
 import com.lonx.lyrico.data.batch.BatchTaskType
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop

@@ -18,8 +18,8 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.batch.BatchTaskType
 import com.lonx.lyrico.data.export.ExportDestination
-import com.lonx.lyrico.ui.components.base.ExportDestinationBottomSheet
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.sheet.ExportDestinationBottomSheet
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle

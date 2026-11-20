@@ -21,7 +21,7 @@ import com.lonx.lyrico.data.db.entity.FolderEntity
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.domain.folder.FolderTreeNode
 import com.lonx.lyrico.domain.folder.folderDisplayName
-import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
+import com.lonx.lyrico.ui.components.progress.AppLinearProgressIndicator
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon

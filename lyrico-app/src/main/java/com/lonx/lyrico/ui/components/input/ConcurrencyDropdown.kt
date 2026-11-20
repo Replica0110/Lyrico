@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.input
 
 import androidx.compose.runtime.Composable
 import com.lonx.lyrico.data.settings.UiEngine

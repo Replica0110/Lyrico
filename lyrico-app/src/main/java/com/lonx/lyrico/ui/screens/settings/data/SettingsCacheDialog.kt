@@ -21,7 +21,7 @@ internal fun SettingsCacheDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    com.lonx.lyrico.ui.components.base.YesNoDialog(
+    com.lonx.lyrico.ui.components.dialog.YesNoDialog(
         show = show,
         title = stringResource(R.string.clear_cache),
         content = {

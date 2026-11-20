@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.sheet
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector

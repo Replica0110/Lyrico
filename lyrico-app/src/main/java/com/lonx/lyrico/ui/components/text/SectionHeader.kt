@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.text
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.progress
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

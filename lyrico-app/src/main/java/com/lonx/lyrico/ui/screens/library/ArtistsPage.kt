@@ -52,7 +52,7 @@ import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.SelectionTopAppBar
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.components.bar.rememberAlphabetSideBarScrollController
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
@@ -388,7 +388,7 @@ fun ArtistsPage(
         }
     ) { paddingValues -> pageContent(paddingValues) }
 
-    com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+    com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet(
         show = showArtistMenu, label = menuArtist?.name.orEmpty(), enableNestedScroll = false,
         onDismissRequest = { showArtistMenu = false },
         onDismissFinished = { if (!showArtistMenu) menuArtist = null }

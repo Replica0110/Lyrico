@@ -32,7 +32,7 @@ import com.lonx.lyrico.data.song.library.AlbumSortInfo
 import com.lonx.lyrico.data.song.library.SortOrder
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.rememberAlphabetSideBarScrollController
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop

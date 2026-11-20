@@ -23,7 +23,7 @@ import com.lonx.lyrico.data.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.lyrics.visibleLyricLineTracks
 import com.lonx.lyrico.data.text.ConversionMode
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone

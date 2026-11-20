@@ -40,7 +40,7 @@ import com.lonx.lyrico.ui.components.update.UpdateDialog
 import com.lonx.lyrico.data.settings.ThemeColor
 import com.lonx.lyrico.ui.theme.color
 import com.lonx.lyrico.ui.theme.LyricoTheme
-import com.lonx.lyrico.ui.update.UpdateManager
+import com.lonx.lyrico.ui.update.UpdatePromptCoordinator
 import com.lonx.lyrico.ui.screens.library.SongListViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -182,8 +182,8 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
 
                 onDispose {}
             }
-            val updateManager: UpdateManager = koinInject()
-            val updateState by updateManager.state.collectAsState()
+            val updatePromptCoordinator: UpdatePromptCoordinator = koinInject()
+            val updateState by updatePromptCoordinator.state.collectAsState()
             val context = this
 
             LyricoTheme(
@@ -193,7 +193,7 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
                 keyColor = keyColor.color
             ) {
                 LaunchedEffect(Unit) {
-                    updateManager.effect.collect { effect ->
+                    updatePromptCoordinator.effect.collect { effect ->
                         val message = context.getString(
                             effect.messageRes,
                             *effect.formatArgs.toTypedArray()
@@ -218,12 +218,12 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
                             versionName = releaseInfo.versionName,
                             onConfirm = {
                                 openBrowser(this@MainActivity, releaseInfo.url)
-                                updateManager.dismissUpdateDialog()
+                                updatePromptCoordinator.dismissUpdateDialog()
                             },
                             onDismissRequest = {
-                                updateManager.dismissUpdateDialog()
+                                updatePromptCoordinator.dismissUpdateDialog()
                             },
-                            onDismissFinished = updateManager::resetUpdateState,
+                            onDismissFinished = updatePromptCoordinator::resetUpdateState,
                             releaseNote = releaseInfo.releaseNotes,
                         )
                     }

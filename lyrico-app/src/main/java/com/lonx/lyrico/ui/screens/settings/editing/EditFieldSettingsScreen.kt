@@ -35,7 +35,7 @@ import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.editfield.toEditFieldBlocks
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.ItemOrderState
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop

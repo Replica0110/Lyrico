@@ -26,9 +26,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.button.PillButton
+import com.lonx.lyrico.ui.components.button.PillButtonDefaults
+import com.lonx.lyrico.ui.components.button.PillButtonSize
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.editor.EditorSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons

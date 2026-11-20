@@ -24,8 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.data.artwork.ArtistPosterFile
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
@@ -242,7 +242,7 @@ fun ArtistPosterFoldersScreen(navigator: DestinationsNavigator) {
             }
         }
         val file = actionFile
-        com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+        com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet(
             show = showFileMenu, label = file?.name.orEmpty(), enableNestedScroll = false,
             onDismissRequest = { showFileMenu = false }
         ) {

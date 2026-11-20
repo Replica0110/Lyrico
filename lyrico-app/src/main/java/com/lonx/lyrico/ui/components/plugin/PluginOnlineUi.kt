@@ -12,7 +12,7 @@ import com.lonx.lyrico.data.db.entity.SourcePluginEntity
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.plugin.distribution.PluginUpdateOption
 import com.lonx.lyrico.plugin.distribution.PluginUpdateState
-import com.lonx.lyrico.ui.components.base.*
+import com.lonx.lyrico.ui.components.sheet.YesNoBottomSheet
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.theme.LocalUiEngine

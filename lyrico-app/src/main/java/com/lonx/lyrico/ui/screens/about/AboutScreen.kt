@@ -53,7 +53,7 @@ import com.lonx.lyrico.App.Companion.TELEGRAM_GROUP_LINK
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.ui.update.UpdateEffect
+import com.lonx.lyrico.ui.update.UpdatePromptEffect
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
@@ -117,7 +117,7 @@ fun AboutScreen(
         }
     }
     val updateEffect by viewModel.updateEffect.collectAsStateWithLifecycle(
-        initialValue = UpdateEffect(R.string.about_check_update_default)
+        initialValue = UpdatePromptEffect(R.string.about_check_update_default)
     )
     val contributors by viewModel.contributors.collectAsStateWithLifecycle()
     val loading by viewModel.loadingContributors.collectAsStateWithLifecycle()

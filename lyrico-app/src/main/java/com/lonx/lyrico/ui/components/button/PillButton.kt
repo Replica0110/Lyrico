@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.button
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.base.LyricsOffsetField
+import com.lonx.lyrico.ui.components.lyrics.LyricsOffsetField
 import com.lonx.lyrico.ui.components.editor.EditorSheet
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine

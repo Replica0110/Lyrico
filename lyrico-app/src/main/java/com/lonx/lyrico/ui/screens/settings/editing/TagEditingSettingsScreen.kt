@@ -17,7 +17,7 @@ import com.lonx.lyrico.data.lyrics.LyricFormat
 import com.lonx.lyrico.data.lyrics.visibleLyricLineTracks
 import com.lonx.lyrico.ui.screens.settings.SettingsPage
 import com.lonx.lyrico.ui.screens.settings.settingsViewModelWithEvents
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.lyrics.LyricLineOrderBottomSheetContent

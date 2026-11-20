@@ -11,8 +11,8 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.lyrics.LyricFormat
 import com.lonx.lyrico.data.lyrics.LyricsOperation
 import com.lonx.lyrico.data.lyrics.LyricsColumnMapping
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
-import com.lonx.lyrico.ui.components.base.SheetConfirmActions
+import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
+import com.lonx.lyrico.ui.components.sheet.SheetConfirmActions
 import com.lonx.lyrico.ui.components.lyrics.LyricsColumnOrderSettings
 import com.lonx.lyrico.ui.components.lyrics.LyricsConcurrency
 import com.lonx.lyrico.ui.components.lyrics.LyricsOperationContent

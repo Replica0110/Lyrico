@@ -11,7 +11,7 @@ import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.search.SongSearchRepository
 import com.lonx.lyrico.data.song.scan.LibraryScanManager
-import com.lonx.lyrico.ui.update.UpdateManager
+import com.lonx.lyrico.ui.update.UpdatePromptCoordinator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,7 +48,7 @@ class SongListViewModel(
     private val songLibraryRepository: SongLibraryRepository,
     private val songSearchRepository: SongSearchRepository,
     private val settingsRepository: SettingsRepository,
-    private val updateManager: UpdateManager,
+    private val updatePromptCoordinator: UpdatePromptCoordinator,
     private val libraryScanManager: LibraryScanManager,
     folderRepository: LibraryFolderRepository
 ) : ViewModel() {
@@ -96,7 +96,7 @@ class SongListViewModel(
             val checkUpdateEnabled = settingsRepository.checkUpdateEnabled.first()
             if (checkUpdateEnabled) {
                 Log.d(TAG, "检查更新")
-                updateManager.checkForUpdate()
+                updatePromptCoordinator.checkForUpdate()
             }
         }
     }

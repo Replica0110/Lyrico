@@ -57,11 +57,11 @@ import com.lonx.lyrico.data.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.song.search.LyricsSearchResult
 import com.lonx.lyrico.ui.UiMessage
 import com.lonx.lyrico.ui.components.bar.SearchBar
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
-import com.lonx.lyrico.ui.components.base.SheetActionBar
+import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
+import com.lonx.lyrico.ui.components.button.PillButton
+import com.lonx.lyrico.ui.components.button.PillButtonDefaults
+import com.lonx.lyrico.ui.components.button.PillButtonSize
+import com.lonx.lyrico.ui.components.sheet.SheetActionBar
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind

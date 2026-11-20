@@ -36,7 +36,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.editfield.toEditFieldBlocks
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.ui.components.base.LyricsOffsetField
+import com.lonx.lyrico.ui.components.lyrics.LyricsOffsetField
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.dialog.salt.SaltConfirmDialog
 import com.lonx.lyrico.ui.components.editor.CustomTagInputDialog

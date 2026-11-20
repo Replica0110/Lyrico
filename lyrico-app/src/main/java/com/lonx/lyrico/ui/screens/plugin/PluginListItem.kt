@@ -40,9 +40,9 @@ import com.lonx.lyrico.data.db.entity.displaySourceTypes
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.data.plugin.displaySourceTypes
 import com.lonx.lyrico.plugin.distribution.PluginUpdateState
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.button.PillButton
+import com.lonx.lyrico.ui.components.button.PillButtonDefaults
+import com.lonx.lyrico.ui.components.button.PillButtonSize
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.plugin.PluginIcon
 import com.lonx.lyrico.ui.components.plugin.labelRes

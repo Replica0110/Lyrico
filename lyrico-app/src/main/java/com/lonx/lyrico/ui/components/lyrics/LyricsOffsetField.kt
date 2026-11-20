@@ -1,6 +1,6 @@
 @file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.lyrics
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring

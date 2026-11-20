@@ -69,9 +69,9 @@ import com.lonx.lyrico.data.song.search.SongSearchResult
 import com.lonx.lyrico.domain.match.MusicMatchUtils
 import com.lonx.lyrico.ui.UiMessage
 import com.lonx.lyrico.ui.components.bar.SearchBar
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.button.PillButton
+import com.lonx.lyrico.ui.components.button.PillButtonDefaults
+import com.lonx.lyrico.ui.components.button.PillButtonSize
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.image.PreviewableImage

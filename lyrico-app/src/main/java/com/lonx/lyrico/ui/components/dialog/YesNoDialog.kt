@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.dialog
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource

@@ -1,6 +1,6 @@
 @file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
 
-package com.lonx.lyrico.ui.components.base
+package com.lonx.lyrico.ui.components.sheet
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column

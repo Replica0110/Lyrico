@@ -24,7 +24,7 @@ import com.lonx.lyrico.data.song.search.LocalLyricSearchResult
 import com.lonx.lyrico.data.song.search.LocalSearchField
 import com.lonx.lyrico.ui.components.album.AlbumListItem
 import com.lonx.lyrico.ui.components.artist.ArtistListItemContent
-import com.lonx.lyrico.ui.components.base.SectionHeader
+import com.lonx.lyrico.ui.components.text.SectionHeader
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.ui.components.library.SelectableLibraryItem

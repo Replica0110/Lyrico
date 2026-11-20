@@ -30,7 +30,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.platform.player.AudioPlayerApp
 import com.lonx.lyrico.platform.player.AudioPlayerApps
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
+import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.theme.LocalUiEngine

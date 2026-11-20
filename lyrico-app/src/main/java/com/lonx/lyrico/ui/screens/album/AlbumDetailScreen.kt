@@ -46,7 +46,7 @@ import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.button.AppIconButton
 import com.lonx.lyrico.ui.components.cover.CoverImage
 import com.lonx.lyrico.ui.components.icons.LucideIcons

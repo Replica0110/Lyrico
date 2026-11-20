@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.input.salt.SaltTextInput
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField

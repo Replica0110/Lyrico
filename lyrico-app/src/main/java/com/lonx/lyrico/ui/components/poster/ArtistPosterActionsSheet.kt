@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
 
 /** Artist poster actions; local images share one entry and a separate destination choice. */
 @Composable
@@ -28,7 +28,7 @@ fun ArtistPosterActionsSheet(
     onExportEmbedded: () -> Unit,
     enabled: Boolean = true
 ) {
-    com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+    com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet(
         show = show, label = stringResource(R.string.label_artist_image_options),
         enableNestedScroll = false, onDismissRequest = onDismissRequest
     ) {

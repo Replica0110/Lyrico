@@ -82,10 +82,10 @@ import com.lonx.lyrico.domain.poster.ArtistPosterPages
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.ui.UiMessage
-import com.lonx.lyrico.ui.components.base.ExportDestinationBottomSheet
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.sheet.ExportDestinationBottomSheet
+import com.lonx.lyrico.ui.components.button.PillButton
+import com.lonx.lyrico.ui.components.button.PillButtonDefaults
+import com.lonx.lyrico.ui.components.button.PillButtonSize
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
@@ -1459,7 +1459,7 @@ Box(modifier = Modifier.fillMaxSize()) {
             }
         },
     )
-    com.lonx.lyrico.ui.components.base.YesNoDialog(
+    com.lonx.lyrico.ui.components.dialog.YesNoDialog(
         show = pendingPosterFileDelete != null,
         title = stringResource(R.string.dialog_delete_file_title),
         summary = stringResource(R.string.dialog_delete_file_content, pendingPosterFileDelete?.name.orEmpty()),

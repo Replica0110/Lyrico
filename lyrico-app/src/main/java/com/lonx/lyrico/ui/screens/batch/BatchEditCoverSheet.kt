@@ -32,8 +32,8 @@ import androidx.core.net.toUri
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.artwork.CoverRequest
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
-import com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
+import com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone

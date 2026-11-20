@@ -9,8 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
-import com.lonx.lyrico.ui.components.base.ConcurrencyDropdown
+import com.lonx.lyrico.ui.components.sheet.YesNoBottomSheet
+import com.lonx.lyrico.ui.components.input.ConcurrencyDropdown
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme

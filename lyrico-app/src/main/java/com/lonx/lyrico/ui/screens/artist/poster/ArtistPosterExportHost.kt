@@ -11,7 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 
 @Composable
 fun ArtistPosterExportHost(viewModel: ArtistPosterEditViewModel, pendingIds: Set<Long>, onDismiss: () -> Unit) {

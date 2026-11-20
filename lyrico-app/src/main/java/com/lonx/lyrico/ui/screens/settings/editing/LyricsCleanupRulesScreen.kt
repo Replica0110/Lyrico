@@ -32,7 +32,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.ChipGrid
 import com.lonx.lyrico.ui.components.ManagedChip
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop

@@ -6,7 +6,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.SettingsRepository
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import java.io.IOException
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject

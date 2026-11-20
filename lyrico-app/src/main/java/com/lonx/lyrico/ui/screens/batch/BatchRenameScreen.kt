@@ -46,9 +46,9 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.domain.rename.RenamePreview
 import com.lonx.lyrico.domain.rename.TagField
-import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
-import com.lonx.lyrico.ui.components.base.SheetProgressAction
-import com.lonx.lyrico.ui.components.base.SheetStatisticsRow
+import com.lonx.lyrico.ui.components.progress.AppLinearProgressIndicator
+import com.lonx.lyrico.ui.components.sheet.SheetProgressAction
+import com.lonx.lyrico.ui.components.sheet.SheetStatisticsRow
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.editor.rememberEditorTextFieldState
 import com.lonx.lyrico.ui.components.icons.LucideIcons

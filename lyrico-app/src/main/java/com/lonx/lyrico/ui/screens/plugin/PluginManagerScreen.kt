@@ -58,8 +58,8 @@ import com.lonx.lyrico.data.plugin.PluginSourceType
 import com.lonx.lyrico.data.plugin.supportsSourceType
 import com.lonx.lyrico.plugin.distribution.PluginUpdateState
 import com.lonx.lyrico.ui.components.ItemOrderState
-import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.sheet.YesNoBottomSheet
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.dialog.salt.SaltConfirmDialog
 import com.lonx.lyrico.ui.components.dialog.salt.SaltInputDialog

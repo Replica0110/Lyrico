@@ -11,7 +11,7 @@ import com.lonx.lyrico.App.Companion.REPO_NAME
 import com.lonx.lyrico.data.contributor.ContributorInfo
 import com.lonx.lyrico.data.contributor.GitHubContributorRepository
 import com.lonx.lyrico.data.settings.SettingsRepository
-import com.lonx.lyrico.ui.update.UpdateManager
+import com.lonx.lyrico.ui.update.UpdatePromptCoordinator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +29,7 @@ enum class ProVersionTapResult { NONE, ACTIVATED, CONFIRM_DEACTIVATION }
 
 class AboutViewModel(
     private val settingsRepository: SettingsRepository,
-    private val updateManager: UpdateManager,
+    private val updatePromptCoordinator: UpdatePromptCoordinator,
     private val contributorRepository: GitHubContributorRepository
 ) : ViewModel() {
     val proActivated = settingsRepository.proActivated
@@ -54,7 +54,7 @@ class AboutViewModel(
         settingsRepository.checkUpdateEnabled
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
-    val updateEffect = updateManager.effect
+    val updateEffect = updatePromptCoordinator.effect
     private val _contributors = MutableStateFlow<List<ContributorInfo>>(emptyList())
     val contributors: StateFlow<List<ContributorInfo>> = _contributors
 
@@ -80,7 +80,7 @@ class AboutViewModel(
 
     fun checkUpdate() {
         viewModelScope.launch {
-            updateManager.checkForUpdate()
+            updatePromptCoordinator.checkForUpdate()
         }
     }
     fun loadContributors() {

@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.lyrics.LyricsOperation
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
 import com.lonx.lyrico.ui.components.editor.EditorSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone

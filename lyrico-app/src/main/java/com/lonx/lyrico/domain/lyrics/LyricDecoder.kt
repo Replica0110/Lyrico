@@ -3,6 +3,7 @@ package com.lonx.lyrico.domain.lyrics
 import com.lonx.lyrico.data.lyrics.LyricFormat
 import com.lonx.lyrico.data.lyrics.LyricsResult
 import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
+import com.lonx.lyrico.domain.lyrics.document.toLyricsResult
 
 object LyricDecoder {
     fun detectFormat(lyricsText: String): LyricFormat? {
@@ -87,7 +88,7 @@ object LyricDecoder {
         val format = detectFormat(lyricsText) ?: return null
         return runCatching {
             LyricsDocumentPipeline.parse(lyricsText, format)?.let { document ->
-                with(LyricsDocumentPipeline) { document.toLyricsResult() }
+                document.toLyricsResult()
             }
         }.getOrNull()
     }

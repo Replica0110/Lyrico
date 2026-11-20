@@ -15,8 +15,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
-import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
+import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
+import com.lonx.lyrico.ui.components.progress.AppLinearProgressIndicator
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.screens.artist.ArtistPosterEmbedUiState
 import com.moriafly.salt.ui.SaltTheme
@@ -47,7 +47,7 @@ fun ArtistPosterProgressSheet(
     val salt = LocalUiEngine.current == UiEngine.SALT
     ActionBottomSheet(
         saltFooter = {
-            com.lonx.lyrico.ui.components.base.SheetProgressAction(
+            com.lonx.lyrico.ui.components.sheet.SheetProgressAction(
                 running = state.isRunning, onAbort = onCancel,
                 onClose = {
                     if (state.permissionIntentSender != null) onGrantPermission() else onDismissRequest()

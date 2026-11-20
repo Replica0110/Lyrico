@@ -50,8 +50,7 @@ import com.lonx.lyrico.data.song.tag.ImageBytesFetcher
 import com.lonx.lyrico.data.song.tag.ImageMimeTypeDetector
 import com.lonx.lyrico.data.song.tag.PictureMutationResolver
 import com.lonx.lyrico.data.song.tag.TagMapBuilder
-import com.lonx.lyrico.ui.update.UpdateManager
-import com.lonx.lyrico.ui.update.UpdateManagerImpl
+import com.lonx.lyrico.ui.update.UpdatePromptCoordinator
 import com.lonx.lyrico.diagnostics.ProblemReproductionRecorder
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
 import com.lonx.lyrico.domain.song.usecase.ReadAudioTagsUseCase
@@ -199,7 +198,7 @@ val appModule = module {
     single { NetworkLoggingInterceptor(get(), get()) }
     // 工具类
 
-    single<UpdateManager> { UpdateManagerImpl(get(), get()) }
+    single { UpdatePromptCoordinator(get(), get()) }
     single { MediaScanner(androidContext()) }
     single { ReplayGainScanner(androidContext(), get()) }
     // 数据库和存储库

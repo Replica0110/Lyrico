@@ -56,7 +56,7 @@ import com.lonx.lyrico.domain.folder.folderDisplayName
 import com.lonx.lyrico.platform.storage.UriUtils
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.scaffold.PageScaffold

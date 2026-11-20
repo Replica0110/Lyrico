@@ -31,8 +31,8 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.batch.BatchMatchConfig
 import com.lonx.lyrico.data.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.metadata.MetadataWriteMode
-import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
-import com.lonx.lyrico.ui.components.base.ConcurrencyDropdown
+import com.lonx.lyrico.ui.components.sheet.YesNoBottomSheet
+import com.lonx.lyrico.ui.components.input.ConcurrencyDropdown
 
 import com.moriafly.salt.ui.enabledAlpha
 import com.moriafly.salt.ui.icons.Check

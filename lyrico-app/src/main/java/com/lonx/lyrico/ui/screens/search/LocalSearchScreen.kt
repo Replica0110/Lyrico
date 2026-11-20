@@ -47,9 +47,9 @@ import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.button.PillButton
+import com.lonx.lyrico.ui.components.button.PillButtonDefaults
+import com.lonx.lyrico.ui.components.button.PillButtonSize
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.scaffold.PageScaffold
 import com.lonx.lyrico.ui.components.scaffold.scaffoldTopAppBarInsetsPadding

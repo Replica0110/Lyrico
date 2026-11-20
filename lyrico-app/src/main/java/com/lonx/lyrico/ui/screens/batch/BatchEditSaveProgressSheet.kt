@@ -20,9 +20,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
-import com.lonx.lyrico.ui.components.base.SheetProgressAction
-import com.lonx.lyrico.ui.components.base.SheetStatisticsRow
+import com.lonx.lyrico.ui.components.progress.AppLinearProgressIndicator
+import com.lonx.lyrico.ui.components.sheet.SheetProgressAction
+import com.lonx.lyrico.ui.components.sheet.SheetStatisticsRow
 import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
 import com.lonx.lyrico.ui.components.sheet.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.theme.LocalUiEngine

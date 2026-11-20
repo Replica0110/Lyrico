@@ -17,8 +17,8 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.domain.poster.ArtistPictureEntry
 import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
-import com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
+import com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
@@ -260,7 +260,7 @@ fun ArtistPosterMenu(
 
     if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
         val request = state.pickerRequest
-        com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+        com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet(
             show = request != null,
             label = stringResource(if (request?.picksArtist == true) R.string.label_select_artist
                 else R.string.label_select_artist_image),
@@ -268,7 +268,7 @@ fun ArtistPosterMenu(
         ) {
             if (request?.picksArtist == true) artists.forEach { name ->
                 val count = ArtistPosterGrouping.countFor(entries, name)
-                com.lonx.lyrico.ui.components.base.ItemMenuAction(
+                com.lonx.lyrico.ui.components.sheet.ItemMenuAction(
                     title = name, icon = LucideIcons.UserSwitch,
                     summary = when {
                         count > 1 -> stringResource(R.string.label_artist_image_count, count)
@@ -355,7 +355,7 @@ private fun ArtistPicturePickerItems(
                 name
             }
         if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
-            com.lonx.lyrico.ui.components.base.ItemMenuAction(
+            com.lonx.lyrico.ui.components.sheet.ItemMenuAction(
                 title = title, icon = LucideIcons.Image, onClick = { onPick(entry) })
         } else ArrowPreference(
             title = title,

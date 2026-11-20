@@ -7,7 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.search.SearchSourceTabStyle
+import com.lonx.lyrico.data.song.search.SearchSourceTabStyle
 import com.lonx.lyrico.ui.screens.settings.SettingsPage
 import com.lonx.lyrico.ui.screens.settings.settingsViewModelWithEvents
 import com.lonx.lyrico.ui.components.icons.LucideIcons

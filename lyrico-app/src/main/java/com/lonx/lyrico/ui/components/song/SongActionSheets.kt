@@ -137,7 +137,7 @@ private fun RenameSongDialog(
             }
         },
         content = {
-            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
+            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
                 com.moriafly.salt.ui.RoundedColumn(
                     paddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)
                 ) {

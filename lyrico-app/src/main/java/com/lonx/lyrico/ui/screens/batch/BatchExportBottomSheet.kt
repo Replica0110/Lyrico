@@ -17,8 +17,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.batch.BatchTaskType
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.base.SheetStatisticsRow
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator

@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.editor.RatingStars
 import com.lonx.lyrico.ui.components.editor.SaltEditorField

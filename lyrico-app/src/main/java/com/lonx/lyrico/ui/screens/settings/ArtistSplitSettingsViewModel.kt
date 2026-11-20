@@ -2,13 +2,13 @@ package com.lonx.lyrico.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
-import com.lonx.lyrico.data.model.artist.CustomArtistSeparator
-import com.lonx.lyrico.data.model.artist.CustomNoSplitArtist
-import com.lonx.lyrico.data.model.artist.normalizedArtistKey
-import com.lonx.lyrico.data.model.artist.visibleBuiltinSeparators
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.ArtistSplitConfig
+import com.lonx.lyrico.data.settings.CustomArtistSeparator
+import com.lonx.lyrico.data.settings.CustomNoSplitArtist
+import com.lonx.lyrico.domain.artist.normalizedArtistKey
+import com.lonx.lyrico.domain.artist.visibleBuiltinSeparators
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

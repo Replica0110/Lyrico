@@ -3,21 +3,21 @@ package com.lonx.lyrico.ui.screens.search
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
-import com.lonx.lyrico.data.model.plugin.PluginCapability
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
-import com.lonx.lyrico.data.model.search.SearchSourceTabStyle
-import com.lonx.lyrico.data.model.search.SongSearchResult
-import com.lonx.lyrico.data.model.text.ConversionMode
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricLineTrack
+import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsResult
+import com.lonx.lyrico.data.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.plugin.PluginCapability
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.defaultPluginFieldProcessConfig
+import com.lonx.lyrico.data.song.search.SearchSourceTabStyle
+import com.lonx.lyrico.data.song.search.SongSearchResult
+import com.lonx.lyrico.data.text.ConversionMode
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.search.SearchSource
 import com.lonx.lyrico.domain.lyrics.LyricEncoder
 import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
@@ -675,7 +675,7 @@ class SearchViewModel(
     }
 
     private fun getSearchSources(
-        searchConfig: com.lonx.lyrico.data.model.search.SearchConfig?,
+        searchConfig: com.lonx.lyrico.data.song.search.SearchConfig?,
         allSources: List<SearchSource>
     ): List<SearchSource> {
         if (searchConfig == null) return emptyList()

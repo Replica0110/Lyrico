@@ -5,9 +5,9 @@ import com.lonx.lyrico.plugin.requirePluginUrl
 import android.content.Context
 import com.lonx.lyrico.data.db.entity.PluginCatalogCacheEntity
 import com.lonx.lyrico.data.db.entity.SourcePluginEntity
-import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogType
 import com.lonx.lyrico.data.plugin.SourcePluginRepository
-import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.log.AppLogRepository
 import com.lonx.lyrico.plugin.install.PluginImportSession
 import com.lonx.lyrico.plugin.install.PluginInstallCandidate
 import com.lonx.lyrico.plugin.install.SourcePluginInstaller

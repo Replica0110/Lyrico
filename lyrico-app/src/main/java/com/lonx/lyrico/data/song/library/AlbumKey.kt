@@ -1,6 +1,6 @@
 package com.lonx.lyrico.data.song.library
 
-import com.lonx.lyrico.data.model.artist.normalizedArtistKey
+import com.lonx.lyrico.domain.artist.normalizedArtistKey
 
 fun normalizedAlbumKey(
     album: String,

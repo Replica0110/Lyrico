@@ -25,9 +25,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.plugin.displaySourceTypes
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.displaySourceTypes
 import com.lonx.lyrico.plugin.install.PluginInstallCandidate
 import com.lonx.lyrico.plugin.install.PluginInstallFailed
 import com.lonx.lyrico.plugin.install.PluginInstallResult

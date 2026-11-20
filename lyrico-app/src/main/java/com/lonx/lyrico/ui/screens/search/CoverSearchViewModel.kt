@@ -4,12 +4,12 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.search.SearchSourceTabStyle
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.song.search.SearchSourceTabStyle
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.search.SearchSource
 import com.lonx.lyrico.plugin.source.SearchSourceConfigApplier
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -488,7 +488,7 @@ class CoverSearchViewModel(
         "${source.id}\u0000$id\u0000$url"
 
     private fun getSearchSources(
-        searchConfig: com.lonx.lyrico.data.model.search.SearchConfig?,
+        searchConfig: com.lonx.lyrico.data.song.search.SearchConfig?,
         allSources: List<SearchSource>
     ): List<SearchSource> {
         if (searchConfig == null) return emptyList()

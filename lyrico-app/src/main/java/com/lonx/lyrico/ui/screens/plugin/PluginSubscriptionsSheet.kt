@@ -54,7 +54,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.PluginSubscriptionEntity
 import com.lonx.lyrico.data.db.entity.SourcePluginEntity
 import com.lonx.lyrico.data.db.entity.isEnabledAnywhere
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.plugin.distribution.PluginCatalog
 import com.lonx.lyrico.plugin.distribution.PluginRelease
 import com.lonx.lyrico.plugin.distribution.PluginTransferState

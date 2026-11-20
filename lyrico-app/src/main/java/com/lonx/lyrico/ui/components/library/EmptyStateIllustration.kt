@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme

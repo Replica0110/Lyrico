@@ -58,8 +58,8 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.artwork.ArtistPosterReader
 import com.lonx.lyrico.data.artwork.CoverSourceType
 import com.lonx.lyrico.data.artwork.getCoverSourceType
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.artwork.CoverRequest
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.artwork.CoverRequest
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
 import com.lonx.lyrico.ui.components.PagerDotsIndicator
 import com.lonx.lyrico.ui.components.image.ImageViewerItem

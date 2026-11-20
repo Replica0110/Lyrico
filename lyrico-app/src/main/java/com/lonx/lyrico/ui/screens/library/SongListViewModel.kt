@@ -1,17 +1,17 @@
 package com.lonx.lyrico.ui.screens.library
 
-import com.lonx.lyrico.data.model.library.SongSortInfo
+import com.lonx.lyrico.data.song.library.SongSortInfo
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.repository.LibraryFolderRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.model.search.LocalSearchType
+import com.lonx.lyrico.data.song.library.LibraryFolderRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
+import com.lonx.lyrico.data.song.search.LocalSearchType
 import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.search.SongSearchRepository
 import com.lonx.lyrico.data.song.scan.LibraryScanManager
-import com.lonx.lyrico.data.update.UpdateManager
+import com.lonx.lyrico.ui.update.UpdateManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

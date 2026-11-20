@@ -14,7 +14,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 

@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
+import com.lonx.lyrico.data.settings.FloatingBarEffect
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarTransition
 import com.lonx.lyrico.ui.components.bar.salt.SaltFloatingNavigationBar

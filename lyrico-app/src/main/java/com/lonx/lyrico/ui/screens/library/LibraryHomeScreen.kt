@@ -20,8 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.FloatingBarEffect
+import com.lonx.lyrico.data.settings.SettingsRepository
 
 import com.lonx.lyrico.ui.screens.artist.ArtistBatchSelectionActions
 import com.lonx.lyrico.ui.screens.batch.SongBatchSelectionActions

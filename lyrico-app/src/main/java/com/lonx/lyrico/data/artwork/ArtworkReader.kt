@@ -4,8 +4,6 @@ import android.content.ContentResolver
 import android.net.Uri
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.rw.AudioTagReader
-import com.lonx.lyrico.data.model.artwork.CoverCandidate
-import com.lonx.lyrico.data.model.artwork.CoverRequest
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

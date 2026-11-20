@@ -2,7 +2,7 @@ package com.lonx.lyrico.plugin.distribution
 
 import com.lonx.lyrico.plugin.requirePluginUrl
 
-import com.lonx.lyrico.data.model.plugin.PluginManifest
+import com.lonx.lyrico.data.plugin.PluginManifest
 import com.lonx.lyrico.plugin.runtime.HostApiRegistry
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

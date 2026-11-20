@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.base.SheetStatisticsRow
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
@@ -64,7 +64,7 @@ fun BatchLyricsFormatBottomSheet(
                     modifier = Modifier.padding(bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (batchLyricsFormatUiState.operation == com.lonx.lyrico.data.model.lyrics.LyricsOperation.CONVERT) {
+                    if (batchLyricsFormatUiState.operation == com.lonx.lyrico.data.lyrics.LyricsOperation.CONVERT) {
                         val targetFormatText = stringResource(
                             R.string.current_target_format,
                             batchLyricsFormatUiState.targetFormat?.let { stringResource(it.labelRes) }.orEmpty()

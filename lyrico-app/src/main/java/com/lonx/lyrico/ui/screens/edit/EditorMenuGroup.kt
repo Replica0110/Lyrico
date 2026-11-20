@@ -3,7 +3,7 @@ package com.lonx.lyrico.ui.screens.edit
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.RoundedColumn
 import top.yukonga.miuix.kmp.basic.Card

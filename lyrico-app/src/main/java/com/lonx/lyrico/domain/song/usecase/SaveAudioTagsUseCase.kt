@@ -3,11 +3,11 @@ package com.lonx.lyrico.domain.song.usecase
 import android.content.IntentSender
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.recordOperation
-import com.lonx.lyrico.data.model.log.withLogOperation
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.recordOperation
+import com.lonx.lyrico.data.log.withLogOperation
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagMutation
 import com.lonx.lyrico.data.song.tag.AudioTagMutationFactory

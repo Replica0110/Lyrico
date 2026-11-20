@@ -8,10 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.App.Companion.OWNER_ID
 import com.lonx.lyrico.App.Companion.REPO_NAME
-import com.lonx.lyrico.data.model.contributor.ContributorInfo
-import com.lonx.lyrico.data.repository.GhContributorRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.update.UpdateManager
+import com.lonx.lyrico.data.contributor.ContributorInfo
+import com.lonx.lyrico.data.contributor.GitHubContributorRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
+import com.lonx.lyrico.ui.update.UpdateManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +30,7 @@ enum class ProVersionTapResult { NONE, ACTIVATED, CONFIRM_DEACTIVATION }
 class AboutViewModel(
     private val settingsRepository: SettingsRepository,
     private val updateManager: UpdateManager,
-    private val contributorRepository: GhContributorRepository
+    private val contributorRepository: GitHubContributorRepository
 ) : ViewModel() {
     val proActivated = settingsRepository.proActivated
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)

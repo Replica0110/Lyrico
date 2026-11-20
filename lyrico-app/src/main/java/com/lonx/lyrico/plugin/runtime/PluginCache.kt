@@ -1,7 +1,7 @@
 package com.lonx.lyrico.plugin.runtime
 
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

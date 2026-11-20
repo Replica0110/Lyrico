@@ -27,16 +27,21 @@ Android 应用模块的代码按下表归入 `com.lonx.lyrico` 下的对应包�
 | `ui/components/<role>` | 多个页面共用的视觉控件，按 `scaffold`、`bar`、`dialog`、`sheet`、`input`、`button`、`progress`、`text`、`tabs`、`image` 等职责归类；共享视觉效果归 `effect`。主题专用实现放在对应职责的 `salt`、`miuix` 子包；少量紧密配对的实现可同包使用主题后缀 |
 | `ui`（根） | 跨页面共享的 UI 状态与文本，例如 `UiMessage`、`SharedSelectionManager` |
 | `ui/theme` | 主题入口、调色板、排版和主题适配 |
+| `ui/update` | 跨页面更新提示的展示状态、事件与协调 |
 | `domain/<feature>` | 按业务职责组织规则和用例。歌词解析、转换和写出规则归 `domain/lyrics`。简单读写可直接调用仓库 |
 | `data/song/<feature>` | 歌曲文件、扫描、索引查询和标签数据访问。扫描队列、枚举目录和扫描仓库归 `data/song/scan` |
-| `data/song/search`、`data/plugin` | 前者承载歌曲搜索仓库、搜索源接口与会话管理；后者承载已安装插件的数据访问。包含搜索行为的接口不放在 `data/model` |
+| `data/song/search`、`data/plugin` | 前者承载歌曲搜索仓库、搜索源接口、会话及结果类型；后者承载已安装插件的数据访问、清单、运行配置和字段处理配置 |
 | `data/artwork`、`data/artwork/coil` | 封面与海报数据读取及其 Coil 加载适配 |
 | `data/editfield` | 标签编辑字段的定义、注册和配置存取 |
 | `data/db` | Room 的 DAO、实体、查询投影和迁移。移动数据库入口前核对 schema 导出目录及迁移定义 |
-| `data/dto/<contract>` | 协议和文件格式的序列化边界，例如 GitHub 响应和设置备份 |
-| `data/model/<feature>` | 按功能归类的共享数据类型。单个页面、Worker 或数据源专用的类型放在使用者旁 |
-| `data/repository`、`data/network` | 跨功能仓库和共享网络基础设施。已有专属功能包的仓库及数据转换放在该功能包 |
+| `data/settings`、`data/settings/backup` | 设置仓库、偏好键、默认值及持久化配置；备份子包承载备份文件类型及其与偏好存储的映射 |
+| `data/log`、`data/batch` | 分别承载日志存储、记录入口与脱敏，以及批量任务存储、任务状态和匹配配置。任务执行由 `worker` 负责 |
+| `data/update`、`data/contributor` | 更新与贡献者数据访问、外部响应类型及应用侧数据类型。更新对话框状态归 `ui/update` |
+| `data/lyrics`、`data/metadata`、`data/rename` | 歌词数据与文档结构、标签字段与写入策略配置、重命名及字符映射配置；转换、应用和重命名规则归对应 `domain` 功能 |
+| `data/cache`、`data/export`、`data/text` | 缓存管理及分类、导出目的地类型、繁简转换模式等各自功能的数据与配置 |
+| `data/network` | 跨功能共用的网络基础设施，例如请求日志拦截器 |
 | `platform/<capability>` | 按系统能力组织的适配，如 `player` 或 `storage` |
+| `platform/player` | 外部播放器发现、Intent 构建与启动、系统选择器回退 |
 | `plugin/runtime`、`plugin/source`、`plugin/i18n` | 分别承载脚本执行与宿主 API、插件搜索源适配及运行配置应用、插件本地化 |
 | `plugin/install`、`plugin/distribution` | 分别承载插件包导入、安装事务与恢复，以及订阅目录、下载校验和更新协调。已安装记录的 DAO 和实体归 `data/db` |
 | `worker/processor` | 各类后台任务的执行逻辑。可同时用于前台的业务规则放在所属功能 |
@@ -44,6 +49,7 @@ Android 应用模块的代码按下表归入 `com.lonx.lyrico` 下的对应包�
 ### 归属与依赖规则
 
 - 新增代码先按职责查找已有功能包。页面与页面状态放在 `ui/screens/<feature>`，DAO 与实体放在 `data/db`，辅助函数跟随使用它的功能；不以 `utils` 等通用名称集中无关职责。表中未覆盖的职责，先明确归属并补充规则。
+- `data` 按功能组织，仓库、共享数据类型和映射跟随功能所有者，不按 `repository`、`model` 或 `dto` 再建集中分类。外部响应 DTO 与应用模型在契约或用途不同时分别保留，放在负责解析的功能内；页面、Worker 或数据源独用的类型跟随使用者。
 - `ui/components` 只放视觉控件及其展示参数，不持有页面状态或 ViewModel；同时不反向依赖 `ui/screens`。控件需要消费某个页面的状态时，控件随该页面归入 `ui/screens/<feature>`，由使用方组合。仅供一处使用的面板即使外观通用，也跟随它的页面。
 - 按共同的**变化原因**归类。先明确谁创建、谁修改、谁消费，再找最小的共同所有者。同一职责的少量文件可直接放在该包下，只有形成独立职责时才增加子包。辅助函数跟随所有者。
 - UI 消费状态和业务接口。领域和数据代码避免依赖 Compose 布局、主题色和页面类型。新边界优先通过模块内的包和可见性表达。新增顶层包或 Gradle 模块时，说明其负责的独立能力。

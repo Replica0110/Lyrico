@@ -8,26 +8,25 @@ import com.lonx.lyrico.data.artwork.ArtistPosterReader
 import com.lonx.lyrico.data.cache.CacheManager
 import com.lonx.lyrico.data.db.LyricoDatabase
 import com.lonx.lyrico.data.editfield.EditFieldConfigRepository
-import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.batch.BatchTaskType
 import com.lonx.lyrico.data.network.NetworkLoggingInterceptor
 import com.lonx.lyrico.data.plugin.SourcePluginRepository
 import com.lonx.lyrico.data.plugin.SourcePluginRepositoryImpl
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.AppLogRepositoryImpl
-import com.lonx.lyrico.data.repository.BatchTaskRepository
-import com.lonx.lyrico.data.repository.BatchTaskRepositoryImpl
-import com.lonx.lyrico.data.repository.CustomTagKeyRepository
-import com.lonx.lyrico.data.repository.GhContributorRepository
-import com.lonx.lyrico.data.repository.GhContributorRepositoryImpl
-import com.lonx.lyrico.data.repository.LibraryFolderRepository
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.LibraryIndexRepositoryImpl
-import com.lonx.lyrico.data.repository.PlaybackRepository
-import com.lonx.lyrico.data.repository.PlaybackRepositoryImpl
-import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
-import com.lonx.lyrico.data.repository.UpdateRepository
-import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.log.AppLogRepositoryImpl
+import com.lonx.lyrico.data.batch.BatchTaskRepository
+import com.lonx.lyrico.data.batch.BatchTaskRepositoryImpl
+import com.lonx.lyrico.data.editfield.CustomTagKeyRepository
+import com.lonx.lyrico.data.contributor.GitHubContributorRepository
+import com.lonx.lyrico.data.contributor.GitHubContributorRepositoryImpl
+import com.lonx.lyrico.data.song.library.LibraryFolderRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepositoryImpl
+import com.lonx.lyrico.platform.player.ExternalPlayerLauncher
+import com.lonx.lyrico.data.settings.SettingsRepository
+import com.lonx.lyrico.data.settings.SettingsRepositoryImpl
+import com.lonx.lyrico.data.update.UpdateRepository
+import com.lonx.lyrico.data.update.UpdateRepositoryImpl
 import com.lonx.lyrico.data.song.file.AudioFileAccess
 import com.lonx.lyrico.data.song.file.SongFileRepository
 import com.lonx.lyrico.data.song.file.SongFileRepositoryImpl
@@ -51,8 +50,8 @@ import com.lonx.lyrico.data.song.tag.ImageBytesFetcher
 import com.lonx.lyrico.data.song.tag.ImageMimeTypeDetector
 import com.lonx.lyrico.data.song.tag.PictureMutationResolver
 import com.lonx.lyrico.data.song.tag.TagMapBuilder
-import com.lonx.lyrico.data.update.UpdateManager
-import com.lonx.lyrico.data.update.UpdateManagerImpl
+import com.lonx.lyrico.ui.update.UpdateManager
+import com.lonx.lyrico.ui.update.UpdateManagerImpl
 import com.lonx.lyrico.diagnostics.ProblemReproductionRecorder
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
 import com.lonx.lyrico.domain.song.usecase.ReadAudioTagsUseCase
@@ -245,7 +244,7 @@ val appModule = module {
     single { CustomTagKeyRepository(get()) }
     single { EditFieldConfigRepository(androidContext()) }
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
-    single<PlaybackRepository> { PlaybackRepositoryImpl(get()) }
+    single { ExternalPlayerLauncher(get()) }
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
     single { LibraryOperationLock() }
     single { LibraryFolderRepository(get(), get(), androidContext(), get(), get()) }
@@ -275,7 +274,7 @@ val appModule = module {
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
     single<AppLogRepository> { AppLogRepositoryImpl(get(), get(), get()) }
     single { ProblemReproductionRecorder(get(), get(), get(), get(), get()) }
-    single<GhContributorRepository> { GhContributorRepositoryImpl(get(), get()) }
+    single<GitHubContributorRepository> { GitHubContributorRepositoryImpl(get(), get()) }
     single { BatchTaskScheduler(androidContext(), get()) }
     single { LyricsFormatProcessor(get(), get(), get()) }
     single { ReplayGainProcessor(get(), get(), get(), get(), get(), get()) }

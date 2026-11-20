@@ -52,9 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
-import com.lonx.lyrico.data.model.search.LyricsSearchResult
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.song.search.LyricsSearchResult
 import com.lonx.lyrico.ui.UiMessage
 import com.lonx.lyrico.ui.components.bar.SearchBar
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet

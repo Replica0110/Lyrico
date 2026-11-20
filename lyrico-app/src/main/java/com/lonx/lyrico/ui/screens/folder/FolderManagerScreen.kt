@@ -60,10 +60,10 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.FolderEntity
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.library.SongSortBy
-import com.lonx.lyrico.data.model.library.SongSortInfo
-import com.lonx.lyrico.data.model.library.SortOrder
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.song.library.SongSortBy
+import com.lonx.lyrico.data.song.library.SongSortInfo
+import com.lonx.lyrico.data.song.library.SortOrder
 import com.lonx.lyrico.platform.storage.UriUtils
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar

@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.db.dao
 
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query

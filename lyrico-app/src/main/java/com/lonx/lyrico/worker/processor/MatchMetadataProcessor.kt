@@ -5,20 +5,20 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.db.entity.BatchTaskEntity
 import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.batch.BatchMatchConfig
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.model.metadata.MetadataApplyPolicy
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
-import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
-import com.lonx.lyrico.data.model.metadata.StandardPluginField
-import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
-import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.batch.BatchMatchConfig
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.metadata.MetadataApplyPolicy
+import com.lonx.lyrico.data.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.metadata.MetadataWriteMode
+import com.lonx.lyrico.data.metadata.StandardPluginField
+import com.lonx.lyrico.data.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.defaultPluginFieldProcessConfig
+import com.lonx.lyrico.data.plugin.SourceRuntimeConfig
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.search.SearchSource
 import com.lonx.lyrico.data.song.search.withSessions
@@ -297,7 +297,7 @@ class MatchMetadataProcessor(
                                 LyricEncoder.encode(
                                     result = processed,
                                     config = lyricConfig.copy(
-                                        conversionMode = com.lonx.lyrico.data.model.text.ConversionMode.NONE
+                                        conversionMode = com.lonx.lyrico.data.text.ConversionMode.NONE
                                     )
                                 )
                             }

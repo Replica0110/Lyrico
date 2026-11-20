@@ -63,9 +63,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.search.LyricsSearchResult
-import com.lonx.lyrico.data.model.search.SearchSourceTabStyle
-import com.lonx.lyrico.data.model.search.SongSearchResult
+import com.lonx.lyrico.data.song.search.LyricsSearchResult
+import com.lonx.lyrico.data.song.search.SearchSourceTabStyle
+import com.lonx.lyrico.data.song.search.SongSearchResult
 import com.lonx.lyrico.domain.match.MusicMatchUtils
 import com.lonx.lyrico.ui.UiMessage
 import com.lonx.lyrico.ui.components.bar.SearchBar
@@ -127,7 +127,7 @@ fun SearchResultsScreen(
     val songSearchState = rememberTextFieldState(initialText = keyword ?: uiState.searchKeyword)
     val pagerState = rememberPagerState { uiState.availableSources.size + 1 }
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
 
     /**
      * 外部 keyword 触发搜索
@@ -595,7 +595,7 @@ fun SearchResultItem(
 ) {
 
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
     var imageSize by remember(song.picUrl) { mutableStateOf<Pair<Int, Int>?>(null) }
 
     LaunchedEffect(song.picUrl) {
@@ -823,7 +823,7 @@ fun SearchResultItem(
 @Composable
 private fun searchResultTitleStyle(): TextStyle {
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
     return if (salt) com.moriafly.salt.ui.SaltTheme.textStyles.main.copy(fontSize = 15.sp)
     else MiuixTheme.textStyles.body1
 }
@@ -831,7 +831,7 @@ private fun searchResultTitleStyle(): TextStyle {
 @Composable
 private fun searchResultSecondaryStyle(): TextStyle {
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
     return if (salt) com.moriafly.salt.ui.SaltTheme.textStyles.sub.copy(fontSize = 11.sp)
     else MiuixTheme.textStyles.footnote2
 }
@@ -842,7 +842,7 @@ private fun SearchResultMetadataText(
     maxLines: Int = 1
 ) {
     if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-        com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+        com.lonx.lyrico.data.settings.UiEngine.SALT
     ) {
         com.moriafly.salt.ui.Text(
             text = text,
@@ -884,7 +884,7 @@ private fun SearchResultBadge(
     modifier: Modifier = Modifier
 ) {
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
@@ -979,7 +979,7 @@ fun SourcePillTabRow(
     modifier: Modifier = Modifier
 ) {
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
     val scrollState = rememberScrollState()
     val bringIntoViewRequesters = remember(tabs.size) {
         List(tabs.size) { BringIntoViewRequester() }
@@ -1049,7 +1049,7 @@ private fun SourcePillTabIcon(
     when {
         tab.imageVector != null -> {
             if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-                com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+                com.lonx.lyrico.data.settings.UiEngine.SALT
             ) {
                 com.moriafly.salt.ui.Icon(
                     painter = androidx.compose.ui.graphics.vector.rememberVectorPainter(tab.imageVector),

@@ -28,9 +28,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.batch.BatchMatchConfig
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
-import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
+import com.lonx.lyrico.data.batch.BatchMatchConfig
+import com.lonx.lyrico.data.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.metadata.MetadataWriteMode
 import com.lonx.lyrico.ui.components.base.YesNoBottomSheet
 import com.lonx.lyrico.ui.components.base.ConcurrencyDropdown
 
@@ -106,7 +106,7 @@ fun BatchMatchConfigBottomSheet(
         scrollContent = false,
         content = {
             if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-                com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+                com.lonx.lyrico.data.settings.UiEngine.SALT
             ) {
                 // 配置整体滚动；字段列表在分组中限高后独立滚动。
                 Column(
@@ -311,7 +311,7 @@ private fun BatchMatchTargetItem(
     onModeToggle: () -> Unit
 ) {
     if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-        com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+        com.lonx.lyrico.data.settings.UiEngine.SALT
     ) {
         // SaltUI 没有「带尾部开关的勾选行」，用官方勾选图标 + Switcher 组合出同一语义。
         Row(

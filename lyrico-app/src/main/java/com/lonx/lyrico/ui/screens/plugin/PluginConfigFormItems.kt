@@ -26,10 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.plugin.PluginConfigField
-import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
-import com.lonx.lyrico.data.model.plugin.isSatisfied
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.plugin.PluginConfigField
+import com.lonx.lyrico.data.plugin.PluginConfigFieldType
+import com.lonx.lyrico.data.plugin.isSatisfied
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.editor.rememberEditorTextFieldState
 import com.lonx.lyrico.ui.components.icons.LucideIcons

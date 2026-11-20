@@ -9,13 +9,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.lyrics.LyricsOperation
+import com.lonx.lyrico.data.lyrics.LyricsOperation
 import com.lonx.lyrico.ui.components.base.ItemMenuAction
 import com.lonx.lyrico.ui.components.editor.EditorSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.lyrics.LyricsOrganizationMenu
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.ItemSwitcher
 import top.yukonga.miuix.kmp.preference.SwitchPreference

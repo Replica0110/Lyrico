@@ -1,7 +1,7 @@
 package com.lonx.lyrico.plugin.runtime
 
 import android.util.Base64
-import com.lonx.lyrico.data.model.log.LogOperation
+import com.lonx.lyrico.data.log.LogOperation
 import com.lonx.lyrico.data.network.PluginRequestLogContext
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit

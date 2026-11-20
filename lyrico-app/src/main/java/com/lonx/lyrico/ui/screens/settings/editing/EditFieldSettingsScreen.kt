@@ -53,7 +53,7 @@ import com.lonx.lyrico.data.editfield.EditFieldDefinition
 import com.lonx.lyrico.data.editfield.EditFieldListItem
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.editfield.toEditFieldBlocks
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.ChipGrid
 import com.lonx.lyrico.ui.components.ItemOrderState
 import com.lonx.lyrico.ui.components.ManagedChip

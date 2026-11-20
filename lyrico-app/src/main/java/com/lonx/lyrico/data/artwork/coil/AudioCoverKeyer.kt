@@ -2,7 +2,7 @@ package com.lonx.lyrico.data.artwork.coil
 
 import coil3.key.Keyer
 import coil3.request.Options
-import com.lonx.lyrico.data.model.artwork.CoverRequest
+import com.lonx.lyrico.data.artwork.CoverRequest
 
 class AudioCoverKeyer: Keyer<CoverRequest> {
     override fun key(data: CoverRequest, options: Options): String {

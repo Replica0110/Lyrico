@@ -2,8 +2,8 @@ package com.lonx.lyrico.ui.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.search.SongSearchRepository
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow

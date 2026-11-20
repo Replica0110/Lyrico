@@ -1,6 +1,6 @@
 package com.lonx.lyrico.worker.processor
 
-import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.batch.BatchTaskType
 
 class BatchTaskProcessorFactory(
     private val processors: Map<BatchTaskType, BatchTaskProcessor>

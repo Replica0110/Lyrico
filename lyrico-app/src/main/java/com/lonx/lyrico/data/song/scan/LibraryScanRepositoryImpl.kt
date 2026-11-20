@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.song.scan
 
-import com.lonx.lyrico.data.model.log.recordOperation
-import com.lonx.lyrico.data.model.log.withLogOperation
+import com.lonx.lyrico.data.log.recordOperation
+import com.lonx.lyrico.data.log.withLogOperation
 
 import android.content.Context
 import android.util.Log
@@ -10,11 +10,11 @@ import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.data.db.LyricoDatabase
 
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.mapper.SongMetadataMapper
 import com.lonx.lyrico.data.song.search.LyricFtsIndexer
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions

@@ -1,16 +1,16 @@
 package com.lonx.lyrico.ui.screens.batch
 
-import com.lonx.lyrico.data.model.lyrics.LyricsOperation
-import com.lonx.lyrico.data.model.lyrics.LyricsFormatConfig
+import com.lonx.lyrico.data.lyrics.LyricsOperation
+import com.lonx.lyrico.data.lyrics.LyricsFormatConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.batch.BatchTaskStatus
-import com.lonx.lyrico.data.model.batch.BatchTaskType
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
-import com.lonx.lyrico.data.model.lyrics.LyricsColumnMapping
-import com.lonx.lyrico.data.repository.BatchTaskRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.batch.BatchTaskStatus
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsProcessingOptions
+import com.lonx.lyrico.data.lyrics.LyricsColumnMapping
+import com.lonx.lyrico.data.batch.BatchTaskRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import kotlinx.coroutines.Job

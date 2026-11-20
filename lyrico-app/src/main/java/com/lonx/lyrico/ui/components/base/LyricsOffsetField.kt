@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.dialog.salt.SaltConfirmDialog
 import com.lonx.lyrico.ui.components.input.salt.SaltTextInput
 import com.lonx.lyrico.ui.theme.LocalUiEngine
@@ -357,7 +357,7 @@ fun LyricsOffsetInputDialog(
     val isValid = value != null && value in minOffset..maxOffset
     val rangeHint = stringResource(R.string.lyrics_offset_input_hint, minOffset, maxOffset)
 
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
         SaltConfirmDialog(
             show = show, title = stringResource(R.string.label_lyrics_offset),
             onDismissRequest = onDismiss, onConfirm = { value?.let(onConfirm) },

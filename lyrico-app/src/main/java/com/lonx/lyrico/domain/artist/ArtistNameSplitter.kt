@@ -1,10 +1,10 @@
 package com.lonx.lyrico.domain.artist
 
-import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
-import com.lonx.lyrico.data.model.artist.effectiveNoSplitArtistNames
-import com.lonx.lyrico.data.model.artist.effectiveNoSplitArtists
-import com.lonx.lyrico.data.model.artist.effectiveSeparators
-import com.lonx.lyrico.data.model.artist.normalizedArtistKey
+import com.lonx.lyrico.data.settings.ArtistSplitConfig
+import com.lonx.lyrico.domain.artist.effectiveNoSplitArtistNames
+import com.lonx.lyrico.domain.artist.effectiveNoSplitArtists
+import com.lonx.lyrico.domain.artist.effectiveSeparators
+import com.lonx.lyrico.domain.artist.normalizedArtistKey
 
 object ArtistNameSplitter {
     fun splitArtists(

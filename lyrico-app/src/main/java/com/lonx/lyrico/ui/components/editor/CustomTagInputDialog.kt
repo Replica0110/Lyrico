@@ -20,7 +20,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.input.salt.SaltTextInput
 import com.lonx.lyrico.ui.theme.LocalUiEngine

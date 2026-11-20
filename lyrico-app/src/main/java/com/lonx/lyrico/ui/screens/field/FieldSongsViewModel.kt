@@ -1,7 +1,7 @@
 package com.lonx.lyrico.ui.screens.field
 
-import com.lonx.lyrico.data.model.library.SortOrder
-import com.lonx.lyrico.data.model.library.SongSortBy
+import com.lonx.lyrico.data.song.library.SortOrder
+import com.lonx.lyrico.data.song.library.SongSortBy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.ui.SharedSelectionManager
@@ -9,7 +9,7 @@ import com.lonx.lyrico.data.editfield.EditFieldConfig
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.domain.metadata.isTargetBlank
-import com.lonx.lyrico.data.repository.CustomTagKeyRepository
+import com.lonx.lyrico.data.editfield.CustomTagKeyRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import kotlinx.coroutines.CancellationException

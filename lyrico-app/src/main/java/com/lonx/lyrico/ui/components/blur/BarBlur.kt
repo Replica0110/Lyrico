@@ -27,8 +27,8 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.FloatingBarEffect
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.ui.components.scaffold.scaffoldTopAppBarInsetsPadding
 import com.moriafly.salt.ui.verticalEdge
 import dev.chrisbanes.haze.HazeInput

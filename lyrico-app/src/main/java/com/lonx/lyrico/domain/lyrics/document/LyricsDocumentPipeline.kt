@@ -1,35 +1,35 @@
 package com.lonx.lyrico.domain.lyrics.document
 
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
 
 import com.github.houbb.opencc4j.util.ZhConverterUtil
-import com.lonx.lyrico.data.model.text.ConversionMode
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.model.lyrics.LyricsAgentEntry
-import com.lonx.lyrico.data.model.lyrics.LyricsLine
-import com.lonx.lyrico.data.model.lyrics.LyricsMetadataElement
-import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
-import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.lyrics.LyricsRubySyllable
-import com.lonx.lyrico.data.model.lyrics.LyricsWord
-import com.lonx.lyrico.data.model.lyrics.isWordByWord
-import com.lonx.lyrico.data.model.lyrics.document.LyricsDocument
-import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentLine
-import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentWord
-import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentRubySyllable
-import com.lonx.lyrico.data.model.lyrics.document.LyricsMetadata
-import com.lonx.lyrico.data.model.lyrics.document.LyricsTrack
-import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
-import com.lonx.lyrico.data.model.lyrics.document.LyricsAgentType
-import com.lonx.lyrico.data.model.lyrics.document.LyricsAgent
-import com.lonx.lyrico.data.model.lyrics.document.ExtensionElement
-import com.lonx.lyrico.data.model.lyrics.document.ExtensionMap
-import com.lonx.lyrico.data.model.lyrics.document.QualifiedName
-import com.lonx.lyrico.data.model.plugin.ResolvedFieldProcessRule
+import com.lonx.lyrico.data.text.ConversionMode
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricLineTrack
+import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsAgentEntry
+import com.lonx.lyrico.data.lyrics.LyricsLine
+import com.lonx.lyrico.data.lyrics.LyricsMetadataElement
+import com.lonx.lyrico.data.lyrics.LyricsPayloadType
+import com.lonx.lyrico.data.lyrics.LyricsResult
+import com.lonx.lyrico.data.lyrics.LyricsRubySyllable
+import com.lonx.lyrico.data.lyrics.LyricsWord
+import com.lonx.lyrico.data.lyrics.isWordByWord
+import com.lonx.lyrico.data.lyrics.document.LyricsDocument
+import com.lonx.lyrico.data.lyrics.document.LyricsDocumentLine
+import com.lonx.lyrico.data.lyrics.document.LyricsDocumentWord
+import com.lonx.lyrico.data.lyrics.document.LyricsDocumentRubySyllable
+import com.lonx.lyrico.data.lyrics.document.LyricsMetadata
+import com.lonx.lyrico.data.lyrics.document.LyricsTrack
+import com.lonx.lyrico.data.lyrics.document.LyricsTrackType
+import com.lonx.lyrico.data.lyrics.document.LyricsAgentType
+import com.lonx.lyrico.data.lyrics.document.LyricsAgent
+import com.lonx.lyrico.data.lyrics.document.ExtensionElement
+import com.lonx.lyrico.data.lyrics.document.ExtensionMap
+import com.lonx.lyrico.data.lyrics.document.QualifiedName
+import com.lonx.lyrico.data.plugin.ResolvedFieldProcessRule
 
 object LyricsDocumentPipeline {
     private const val NS_TTM = "http://www.w3.org/ns/ttml#metadata"
@@ -117,7 +117,7 @@ object LyricsDocumentPipeline {
         showTranslation: Boolean = true,
         showRomanization: Boolean = true,
         onlyTranslationIfAvailable: Boolean = false,
-        lineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder,
+        lineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.lyrics.DefaultLyricLineOrder,
         normalizeWhitespace: Boolean = false,
         removeEmptyLines: Boolean = false,
         removeTagLineKeywords: List<String> = emptyList(),
@@ -319,7 +319,7 @@ object LyricsDocumentPipeline {
         }
     }
 
-    private fun com.lonx.lyrico.data.model.lyrics.LyricsLine.toDocumentLine(): LyricsDocumentLine {
+    private fun com.lonx.lyrico.data.lyrics.LyricsLine.toDocumentLine(): LyricsDocumentLine {
         val extensionMap = ExtensionMap(
             attributes = extensions.map { (name, value) -> name.toQualifiedName() to value }.toMap()
         )
@@ -524,7 +524,7 @@ interface LyricsFormatWriter {
     val format: LyricFormat
     fun write(
         document: LyricsDocument,
-        lineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder
+        lineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.lyrics.DefaultLyricLineOrder
     ): String
 }
 

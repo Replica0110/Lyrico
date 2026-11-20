@@ -1,10 +1,10 @@
 package com.lonx.lyrico.worker.processor
 
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.batch.BatchTaskType
-import com.lonx.lyrico.data.model.text.ConversionMode
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.text.ConversionMode
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricRenderConfig
 import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
 import com.lonx.lyrico.data.db.entity.BatchTaskEntity
 import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
@@ -17,7 +17,7 @@ import com.lonx.lyrico.domain.lyrics.LyricDecoder
 import com.lonx.lyrico.domain.lyrics.LyricEncoder
 import com.lonx.lyrico.domain.lyrics.LyricsColumnSorter
 import com.lonx.lyrico.domain.lyrics.LyricsTextCleanup
-import com.lonx.lyrico.data.model.lyrics.LyricsFormatConfig
+import com.lonx.lyrico.data.lyrics.LyricsFormatConfig
 import kotlinx.serialization.json.Json
 
 class LyricsFormatProcessor(

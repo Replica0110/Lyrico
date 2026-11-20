@@ -5,31 +5,31 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.artist.ArtistSeparator
-import com.lonx.lyrico.data.model.cache.CacheCategory
-import com.lonx.lyrico.data.model.text.ConversionMode
-import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
-import com.lonx.lyrico.data.model.replaygain.ReplayGainPeakMode
-import com.lonx.lyrico.data.model.replaygain.ReplayGainSettings
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
-import com.lonx.lyrico.data.model.appearance.ThemeMode
-import com.lonx.lyrico.data.model.search.SearchSourceTabStyle
-import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.settings.ArtistSeparator
+import com.lonx.lyrico.data.cache.CacheCategory
+import com.lonx.lyrico.data.text.ConversionMode
+import com.lonx.lyrico.data.settings.FloatingBarEffect
+import com.lonx.lyrico.data.settings.ReplayGainPeakMode
+import com.lonx.lyrico.data.settings.ReplayGainSettings
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsProcessingOptions
+import com.lonx.lyrico.data.plugin.PluginMetadataFieldWriteRule
+import com.lonx.lyrico.data.settings.ThemeMode
+import com.lonx.lyrico.data.song.search.SearchSourceTabStyle
+import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.lonx.lyrico.data.model.artist.toArtistSeparator
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.model.appearance.ThemeColor
+import com.lonx.lyrico.data.settings.toArtistSeparator
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.settings.ThemeColor
 import com.lonx.lyrico.data.cache.CacheManager
 import com.lonx.lyrico.ui.UiMessage
 import com.lonx.lyrico.platform.storage.DownloadsFileWriter
-import com.lonx.lyrico.data.model.log.recordOperation
+import com.lonx.lyrico.data.log.recordOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +49,7 @@ data class SettingsUiState(
     val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
-    val lyricLineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder,
+    val lyricLineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.lyrics.DefaultLyricLineOrder,
     val translationEnabled: Boolean = false,
     val lyricIndexEnabled: Boolean = false,
     val ignoreShortAudio: Boolean = false,
@@ -119,8 +119,8 @@ class SettingsViewModel(
 
     private data class SettingsBaseState(
         val lyric: LyricRenderConfig,
-        val search: com.lonx.lyrico.data.model.search.SearchConfig,
-        val theme: com.lonx.lyrico.data.model.appearance.ThemeConfig,
+        val search: com.lonx.lyrico.data.song.search.SearchConfig,
+        val theme: com.lonx.lyrico.data.settings.ThemeConfig,
         val ignoreShortAudio: Boolean,
         val lyricsTagLineKeywords: List<String>,
         val metadataFieldRules: List<PluginMetadataFieldWriteRule>,

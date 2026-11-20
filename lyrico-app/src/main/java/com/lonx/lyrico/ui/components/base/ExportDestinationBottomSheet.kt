@@ -13,8 +13,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.export.ExportDestination
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.export.ExportDestination
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone

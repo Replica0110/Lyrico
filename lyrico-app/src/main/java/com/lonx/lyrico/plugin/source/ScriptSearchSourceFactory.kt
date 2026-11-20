@@ -2,8 +2,8 @@ package com.lonx.lyrico.plugin.source
 
 import com.lonx.lyrico.data.db.entity.SourcePluginEntity
 import com.lonx.lyrico.data.db.entity.displayName
-import com.lonx.lyrico.data.model.plugin.PluginManifest
-import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.plugin.PluginManifest
+import com.lonx.lyrico.data.log.AppLogRepository
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
 import kotlinx.coroutines.Dispatchers

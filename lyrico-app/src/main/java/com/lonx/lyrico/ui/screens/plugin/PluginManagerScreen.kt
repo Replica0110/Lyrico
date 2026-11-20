@@ -65,10 +65,10 @@ import com.lonx.lyrico.data.db.entity.displayName
 import com.lonx.lyrico.data.db.entity.displaySourceTypes
 import com.lonx.lyrico.data.db.entity.isEnabledFor
 import com.lonx.lyrico.data.db.entity.sortOrderFor
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.plugin.displaySourceTypes
-import com.lonx.lyrico.data.model.plugin.supportsSourceType
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.displaySourceTypes
+import com.lonx.lyrico.data.plugin.supportsSourceType
 import com.lonx.lyrico.plugin.distribution.PluginUpdateState
 import com.lonx.lyrico.ui.components.ItemOrderState
 import com.lonx.lyrico.ui.components.base.PillButton

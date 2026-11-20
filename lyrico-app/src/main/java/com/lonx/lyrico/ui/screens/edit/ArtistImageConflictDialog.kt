@@ -18,7 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.dialog.salt.SaltBasicDialog
 import com.lonx.lyrico.ui.components.dialog.salt.SaltDialogButton
 import com.lonx.lyrico.ui.components.dialog.salt.SaltDialogTitle

@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.editfield
 
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.metadata.MetadataFieldTarget
 
 /** 内置字段的稳定代码、文案、默认顺序与显隐定义。 */
 object EditFieldRegistry {

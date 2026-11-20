@@ -1,12 +1,11 @@
 package com.lonx.lyrico.data.song.search
 
-import com.lonx.lyrico.data.model.lyrics.LyricsCandidateResult
-import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.plugin.PluginCapability
-import com.lonx.lyrico.data.model.plugin.PluginConfigField
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.search.SongSearchResult
-import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
+import com.lonx.lyrico.data.lyrics.LyricsCandidateResult
+import com.lonx.lyrico.data.lyrics.LyricsResult
+import com.lonx.lyrico.data.plugin.PluginCapability
+import com.lonx.lyrico.data.plugin.PluginConfigField
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.SourceRuntimeConfig
 
 interface SearchSource {
     val id: String

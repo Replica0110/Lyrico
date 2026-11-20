@@ -1,13 +1,13 @@
 package com.lonx.lyrico.ui.screens.library
 
-import com.lonx.lyrico.data.model.library.SortOrder
+import com.lonx.lyrico.data.song.library.SortOrder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.library.ArtistSortBy
-import com.lonx.lyrico.data.model.library.ArtistSortInfo
+import com.lonx.lyrico.data.song.library.ArtistSortBy
+import com.lonx.lyrico.data.song.library.ArtistSortInfo
 import com.lonx.lyrico.data.db.entity.ArtistEntity
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.scan.LibraryScanManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

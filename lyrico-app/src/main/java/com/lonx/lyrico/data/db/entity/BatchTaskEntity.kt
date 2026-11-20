@@ -3,8 +3,8 @@ package com.lonx.lyrico.data.db.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.lonx.lyrico.data.model.batch.BatchTaskStatus
-import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.batch.BatchTaskStatus
+import com.lonx.lyrico.data.batch.BatchTaskType
 
 @Entity(
     tableName = "batch_tasks",

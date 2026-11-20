@@ -2,8 +2,8 @@ package com.lonx.lyrico.ui.screens.batch
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.filename.CharacterMappingConfig
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.rename.CharacterMappingConfig
+import com.lonx.lyrico.data.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -48,10 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.AppLogEntity
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.LogRetentionOption
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.LogRetentionOption
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
@@ -741,7 +741,7 @@ private fun DetailRow(
 
 private val AppLogEntity.displayRelatedId: String?
     get() = relatedId?.let {
-        if (level <= AppLogLevel.INFO) com.lonx.lyrico.data.model.log.LogFileReference.compact(it) else it
+        if (level <= AppLogLevel.INFO) com.lonx.lyrico.data.log.LogFileReference.compact(it) else it
     }
 
 private fun AppLogEntity.formatForCopy(): String = buildString {

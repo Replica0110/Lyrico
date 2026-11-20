@@ -22,8 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.artist.ArtistPosterFile
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.artwork.ArtistPosterFile
 import com.lonx.lyrico.ui.components.base.ItemMenuAction
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar

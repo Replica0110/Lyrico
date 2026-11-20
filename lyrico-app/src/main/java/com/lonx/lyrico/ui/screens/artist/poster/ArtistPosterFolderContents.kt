@@ -29,14 +29,14 @@ import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.image.ImageViewerMenuAction
-import com.lonx.lyrico.data.model.artist.ArtistPosterFile
+import com.lonx.lyrico.data.artwork.ArtistPosterFile
 
 import com.moriafly.salt.ui.ItemValue
 import com.moriafly.salt.ui.SaltTheme

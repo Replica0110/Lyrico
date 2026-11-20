@@ -1,10 +1,10 @@
 package com.lonx.lyrico.data.song.scan
 
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.repository.LibraryFolderRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.song.library.LibraryFolderRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow

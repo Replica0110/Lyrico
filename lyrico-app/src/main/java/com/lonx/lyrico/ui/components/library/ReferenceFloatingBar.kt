@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
-import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
+import com.lonx.lyrico.data.settings.FloatingBarEffect
 import com.lonx.lyrico.ui.components.effect.glass.GlassEffect
 import com.lonx.lyrico.ui.components.effect.glass.GlassSource
 import com.lonx.lyrico.ui.components.effect.glass.glass

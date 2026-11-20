@@ -41,11 +41,11 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.ArtistEntity
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.artwork.CoverCandidate
-import com.lonx.lyrico.data.model.library.ArtistSortBy
-import com.lonx.lyrico.data.model.library.ArtistSortInfo
-import com.lonx.lyrico.data.model.library.SortOrder
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.artwork.CoverCandidate
+import com.lonx.lyrico.data.song.library.ArtistSortBy
+import com.lonx.lyrico.data.song.library.ArtistSortInfo
+import com.lonx.lyrico.data.song.library.SortOrder
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
 import com.lonx.lyrico.ui.components.artist.ArtistListItemContent
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar

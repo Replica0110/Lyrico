@@ -6,7 +6,7 @@ import com.lonx.lyrico.data.editfield.CustomTagKey
 import com.lonx.lyrico.data.editfield.EditFieldConfigRepository
 import com.lonx.lyrico.data.editfield.EditFieldListItem
 import com.lonx.lyrico.data.db.dao.CustomTagKeyCount
-import com.lonx.lyrico.data.repository.CustomTagKeyRepository
+import com.lonx.lyrico.data.editfield.CustomTagKeyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine

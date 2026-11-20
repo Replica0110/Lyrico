@@ -8,8 +8,6 @@ import com.lonx.lyrico.data.db.dao.ArtistSearchRow
 import com.lonx.lyrico.data.db.dao.SongDao
 import com.lonx.lyrico.data.db.dao.SongFieldValue
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.search.LocalLyricSearchResult
-import com.lonx.lyrico.data.model.search.LocalSearchType
 import com.lonx.lyrico.domain.lyrics.LyricsSearchTextExtractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow

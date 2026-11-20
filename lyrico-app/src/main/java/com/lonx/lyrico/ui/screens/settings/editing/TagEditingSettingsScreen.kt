@@ -10,11 +10,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.artist.ArtistSeparator
-import com.lonx.lyrico.data.model.text.ConversionMode
-import com.lonx.lyrico.data.model.replaygain.ReplayGainPeakMode
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.visibleLyricLineTracks
+import com.lonx.lyrico.data.settings.ArtistSeparator
+import com.lonx.lyrico.data.text.ConversionMode
+import com.lonx.lyrico.data.settings.ReplayGainPeakMode
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.visibleLyricLineTracks
 import com.lonx.lyrico.ui.screens.settings.SettingsPage
 import com.lonx.lyrico.ui.screens.settings.settingsViewModelWithEvents
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet

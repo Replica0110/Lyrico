@@ -2,15 +2,15 @@ package com.lonx.lyrico.domain.lyrics
 
 import android.annotation.SuppressLint
 import com.github.houbb.opencc4j.util.ZhConverterUtil
-import com.lonx.lyrico.data.model.text.ConversionMode
-import com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricFormat.*
-import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.model.lyrics.LyricsLine
-import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.lyrics.isRaw
+import com.lonx.lyrico.data.text.ConversionMode
+import com.lonx.lyrico.data.lyrics.DefaultLyricLineOrder
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricFormat.*
+import com.lonx.lyrico.data.lyrics.LyricLineTrack
+import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsLine
+import com.lonx.lyrico.data.lyrics.LyricsResult
+import com.lonx.lyrico.data.lyrics.isRaw
 import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
 
 object LyricEncoder {

@@ -3,7 +3,7 @@ package com.lonx.lyrico.domain.poster
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.artistPictureTypes
 import com.lonx.audiotag.model.type
-import com.lonx.lyrico.data.model.artist.normalizedArtistKey
+import com.lonx.lyrico.domain.artist.normalizedArtistKey
 
 /**
  * 一张艺术家图片及其归属。

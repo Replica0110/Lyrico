@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.AlbumEntity
 import com.lonx.lyrico.ui.components.cover.CoverImage
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
 import com.moriafly.salt.ui.SaltTheme

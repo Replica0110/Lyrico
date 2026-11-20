@@ -67,8 +67,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.editfield.toEditFieldBlocks
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.artwork.CoverRequest
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.artwork.CoverRequest
 import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
 import com.lonx.lyrico.ui.components.base.ItemMenuAction
 import com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet

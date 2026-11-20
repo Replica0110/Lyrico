@@ -1,6 +1,6 @@
 package com.lonx.lyrico.ui.screens.search
 
-import com.lonx.lyrico.data.model.search.SongSearchResult
+import com.lonx.lyrico.data.song.search.SongSearchResult
 
 internal data class SearchPageMergeResult(
     val results: List<SongSearchResult>,

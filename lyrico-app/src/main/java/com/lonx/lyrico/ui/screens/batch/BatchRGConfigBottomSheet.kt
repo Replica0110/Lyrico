@@ -24,7 +24,7 @@ fun BatchRGConfigBottomSheet(
 ) {
     var concurrency by remember { mutableIntStateOf(initialConcurrency) }
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
     val tempConcurrency = remember(initialConcurrency) {
         mutableIntStateOf(initialConcurrency)
     }

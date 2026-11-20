@@ -2,8 +2,6 @@ package com.lonx.lyrico.data.song.library
 
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.library.SongSortBy
-import com.lonx.lyrico.data.model.library.SortOrder
 import kotlinx.coroutines.flow.Flow
 
 interface SongLibraryRepository {

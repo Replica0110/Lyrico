@@ -1,7 +1,7 @@
 package com.lonx.lyrico.worker
 
-import com.lonx.lyrico.data.model.batch.BatchTaskType
-import com.lonx.lyrico.data.model.lyrics.LyricsFormatConfig
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.lyrics.LyricsFormatConfig
 import com.lonx.lyrico.worker.processor.BatchExportTaskConfig
 import com.lonx.lyrico.worker.processor.EditTagsTaskConfig
 import com.lonx.lyrico.worker.processor.MatchMetadataTaskConfig

@@ -1,6 +1,6 @@
 package com.lonx.lyrico.platform.audio
 
-import com.lonx.lyrico.data.model.replaygain.ReplayGainPeakMode
+import com.lonx.lyrico.data.settings.ReplayGainPeakMode
 import java.nio.ByteBuffer
 
 class LibEbuR128(

@@ -52,8 +52,8 @@ import com.lonx.lyrico.App.Companion.REPO_NAME
 import com.lonx.lyrico.App.Companion.TELEGRAM_GROUP_LINK
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.update.UpdateEffect
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.ui.update.UpdateEffect
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop

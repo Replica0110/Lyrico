@@ -5,8 +5,8 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.lonx.audiotag.model.frontCoverOrFallback
-import com.lonx.lyrico.data.model.export.ExportDestination
-import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.export.ExportDestination
+import com.lonx.lyrico.data.batch.BatchTaskType
 import com.lonx.lyrico.data.db.entity.BatchTaskEntity
 import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions

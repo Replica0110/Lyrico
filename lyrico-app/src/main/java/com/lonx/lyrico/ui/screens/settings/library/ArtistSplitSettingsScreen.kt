@@ -34,10 +34,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.artist.CustomArtistSeparator
-import com.lonx.lyrico.data.model.artist.CustomNoSplitArtist
-import com.lonx.lyrico.data.model.artist.visibleBuiltinSeparators
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.settings.CustomArtistSeparator
+import com.lonx.lyrico.data.settings.CustomNoSplitArtist
+import com.lonx.lyrico.domain.artist.visibleBuiltinSeparators
 import com.lonx.lyrico.ui.components.ChipGrid
 import com.lonx.lyrico.ui.components.ManagedChip
 import com.lonx.lyrico.ui.components.base.YesNoDialog

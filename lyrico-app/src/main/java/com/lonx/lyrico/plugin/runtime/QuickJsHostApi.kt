@@ -1,9 +1,9 @@
 package com.lonx.lyrico.plugin.runtime
 
 import android.util.Base64
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
 import androidx.annotation.Keep
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

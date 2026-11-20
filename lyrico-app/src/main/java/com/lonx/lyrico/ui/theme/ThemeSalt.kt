@@ -4,7 +4,7 @@ import androidx.compose.foundation.Indication
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import com.lonx.lyrico.data.model.appearance.ThemeMode
+import com.lonx.lyrico.data.settings.ThemeMode
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.screen.BasicScreenStyle

@@ -1,7 +1,7 @@
 package com.lonx.lyrico.plugin.source
 
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.plugin.supportsSourceType
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.supportsSourceType
 import com.lonx.lyrico.data.song.search.SearchSource
 import com.lonx.lyrico.data.song.search.isEnabledFor
 import kotlinx.coroutines.flow.Flow

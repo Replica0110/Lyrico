@@ -46,7 +46,7 @@ fun LyricsPreviewPane(
     contentPadding: PaddingValues = PaddingValues(12.dp),
 ) {
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
     Box(modifier = modifier.fillMaxWidth()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             when {

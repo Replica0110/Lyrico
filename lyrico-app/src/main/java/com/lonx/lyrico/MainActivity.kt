@@ -1,8 +1,8 @@
 package com.lonx.lyrico
 
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
 
 import android.Manifest
 import android.app.Activity
@@ -33,14 +33,14 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.lonx.lyrico.App.Companion.ACTION_EDIT_TAG
-import com.lonx.lyrico.data.model.appearance.ThemeMode
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.ThemeMode
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.ui.components.update.UpdateDialog
-import com.lonx.lyrico.data.model.appearance.ThemeColor
+import com.lonx.lyrico.data.settings.ThemeColor
 import com.lonx.lyrico.ui.theme.color
 import com.lonx.lyrico.ui.theme.LyricoTheme
-import com.lonx.lyrico.data.update.UpdateManager
+import com.lonx.lyrico.ui.update.UpdateManager
 import com.lonx.lyrico.ui.screens.library.SongListViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel

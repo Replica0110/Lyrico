@@ -1,17 +1,17 @@
 package com.lonx.lyrico.platform.audio
 
 import android.content.Context
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.recordOperation
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.recordOperation
 import android.media.AudioFormat
 import android.media.MediaCodec
 import android.media.MediaCodecList
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import androidx.core.net.toUri
-import com.lonx.lyrico.data.model.replaygain.ReplayGainPeakMode
+import com.lonx.lyrico.data.settings.ReplayGainPeakMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive

@@ -1,8 +1,8 @@
 package com.lonx.lyrico.data.artwork
 
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

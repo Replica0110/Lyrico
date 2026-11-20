@@ -26,7 +26,7 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.moriafly.salt.ui.SaltTheme

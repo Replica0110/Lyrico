@@ -27,7 +27,7 @@ import com.lonx.lyrico.ui.screens.settings.SettingsItemPresentation
 import com.lonx.lyrico.ui.screens.settings.SaltSettingsItems
 import com.lonx.lyrico.ui.screens.settings.MiuixSettingsItems
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.platform.player.AudioPlayerApp
 import com.lonx.lyrico.platform.player.AudioPlayerApps
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet

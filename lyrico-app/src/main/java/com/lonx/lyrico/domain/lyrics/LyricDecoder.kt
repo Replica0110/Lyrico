@@ -1,7 +1,7 @@
 package com.lonx.lyrico.domain.lyrics
 
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsResult
 import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
 
 object LyricDecoder {

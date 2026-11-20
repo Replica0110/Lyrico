@@ -18,7 +18,7 @@ fun ItemMenuBottomSheet(
     enableNestedScroll: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
         SaltMenuBottomSheet(
             show = show,
             label = label,

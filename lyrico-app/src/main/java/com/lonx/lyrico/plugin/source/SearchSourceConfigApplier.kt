@@ -1,7 +1,7 @@
 package com.lonx.lyrico.plugin.source
 
-import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.plugin.SourceRuntimeConfig
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.search.SearchSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

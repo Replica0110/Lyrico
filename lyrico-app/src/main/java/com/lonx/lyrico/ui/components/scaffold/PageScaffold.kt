@@ -3,7 +3,7 @@ package com.lonx.lyrico.ui.components.scaffold
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import top.yukonga.miuix.kmp.basic.ScrollBehavior

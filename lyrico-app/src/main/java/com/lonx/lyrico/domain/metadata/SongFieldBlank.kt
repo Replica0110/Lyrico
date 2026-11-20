@@ -1,7 +1,7 @@
 package com.lonx.lyrico.domain.metadata
 
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.metadata.MetadataFieldTarget
 
 /**
  * 库内歌曲记录是否**没有**某个字段的值。

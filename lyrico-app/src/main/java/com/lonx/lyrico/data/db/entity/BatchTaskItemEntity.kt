@@ -3,7 +3,7 @@ package com.lonx.lyrico.data.db.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.lonx.lyrico.data.model.batch.BatchTaskStatus
+import com.lonx.lyrico.data.batch.BatchTaskStatus
 
 @Entity(
     tableName = "batch_task_items",

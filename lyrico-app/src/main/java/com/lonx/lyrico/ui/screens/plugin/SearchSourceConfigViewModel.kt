@@ -2,12 +2,12 @@ package com.lonx.lyrico.ui.screens.plugin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.plugin.PluginConfigField
-import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.plugin.displaySourceTypes
-import com.lonx.lyrico.data.model.plugin.isSatisfied
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.plugin.PluginConfigField
+import com.lonx.lyrico.data.plugin.PluginConfigFieldType
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.displaySourceTypes
+import com.lonx.lyrico.data.plugin.isSatisfied
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

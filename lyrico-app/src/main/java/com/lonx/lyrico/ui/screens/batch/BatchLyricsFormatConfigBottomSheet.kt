@@ -8,9 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricsOperation
-import com.lonx.lyrico.data.model.lyrics.LyricsColumnMapping
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsOperation
+import com.lonx.lyrico.data.lyrics.LyricsColumnMapping
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.SheetConfirmActions
 import com.lonx.lyrico.ui.components.lyrics.LyricsColumnOrderSettings

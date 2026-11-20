@@ -14,10 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.filename.CharacterMappingRule
-import com.lonx.lyrico.data.model.filename.ReplacementCharOption
-import com.lonx.lyrico.data.model.filename.toReplacementOption
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.rename.CharacterMappingRule
+import com.lonx.lyrico.data.rename.ReplacementCharOption
+import com.lonx.lyrico.data.rename.toReplacementOption
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.scaffold.PageScaffold
 import com.lonx.lyrico.ui.components.scaffold.pageScroll

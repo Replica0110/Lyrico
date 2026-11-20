@@ -9,7 +9,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.SharedSelectionManager
 import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.db.entity.getUri
-import com.lonx.lyrico.data.repository.PlaybackRepository
+import com.lonx.lyrico.platform.player.ExternalPlayerLauncher
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
 import com.lonx.lyrico.domain.song.usecase.RenameSongUseCase
 import kotlinx.coroutines.launch
@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 class SongSelectionViewModel(
     private val deleteSongsUseCase: DeleteSongsUseCase,
     private val renameSongUseCase: RenameSongUseCase,
-    private val playbackRepository: PlaybackRepository,
+    private val externalPlayerLauncher: ExternalPlayerLauncher,
     private val selectionManager: SharedSelectionManager
 ) : ViewModel() {
 
@@ -57,7 +57,7 @@ class SongSelectionViewModel(
     }
 
     fun play(context: Context, song: SongEntity) {
-        viewModelScope.launch { playbackRepository.play(context, song.getUri) }
+        viewModelScope.launch { externalPlayerLauncher.launch(context, song.getUri) }
     }
 
     fun delete(song: SongEntity) {

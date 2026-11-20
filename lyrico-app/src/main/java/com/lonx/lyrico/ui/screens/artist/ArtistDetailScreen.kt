@@ -49,8 +49,8 @@ import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.AlbumEntity
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.artwork.CoverCandidate
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.artwork.CoverCandidate
 import com.lonx.lyrico.ui.components.album.AlbumListItem
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar

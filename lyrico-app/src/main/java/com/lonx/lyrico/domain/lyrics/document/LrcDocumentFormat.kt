@@ -1,14 +1,14 @@
 package com.lonx.lyrico.domain.lyrics.document
 
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.model.lyrics.document.LyricsDocument
-import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentLine
-import com.lonx.lyrico.data.model.lyrics.document.LyricsDocumentWord
-import com.lonx.lyrico.data.model.lyrics.document.LyricsMetadata
-import com.lonx.lyrico.data.model.lyrics.document.LyricsTrack
-import com.lonx.lyrico.data.model.lyrics.document.LyricsTrackType
-import com.lonx.lyrico.data.model.lyrics.normalizedLyricLineOrder
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricLineTrack
+import com.lonx.lyrico.data.lyrics.document.LyricsDocument
+import com.lonx.lyrico.data.lyrics.document.LyricsDocumentLine
+import com.lonx.lyrico.data.lyrics.document.LyricsDocumentWord
+import com.lonx.lyrico.data.lyrics.document.LyricsMetadata
+import com.lonx.lyrico.data.lyrics.document.LyricsTrack
+import com.lonx.lyrico.data.lyrics.document.LyricsTrackType
+import com.lonx.lyrico.data.lyrics.normalizedLyricLineOrder
 import com.lonx.lyrico.domain.lyrics.LyricFormatter
 
 object PlainLrcParser : LyricsFormatParser {

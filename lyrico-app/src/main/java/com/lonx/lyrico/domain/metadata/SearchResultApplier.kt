@@ -2,10 +2,10 @@ package com.lonx.lyrico.domain.metadata
 
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.metadata.MetadataApplyPolicy
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
-import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
-import com.lonx.lyrico.data.model.metadata.StandardPluginField
+import com.lonx.lyrico.data.metadata.MetadataApplyPolicy
+import com.lonx.lyrico.data.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.metadata.MetadataWriteMode
+import com.lonx.lyrico.data.metadata.StandardPluginField
 
 object SearchResultApplier {
     fun applyFields(

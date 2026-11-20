@@ -9,7 +9,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
+import com.lonx.lyrico.data.settings.FloatingBarEffect
 import com.lonx.lyrico.ui.components.blur.BarBlurBackdrop
 import com.lonx.lyrico.ui.components.blur.BlurredBar
 import com.lonx.lyrico.ui.components.effect.glass.GlassSource

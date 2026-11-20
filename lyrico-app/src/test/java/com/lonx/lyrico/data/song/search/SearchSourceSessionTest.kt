@@ -1,7 +1,6 @@
 package com.lonx.lyrico.data.song.search
 
-import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.search.SongSearchResult
+import com.lonx.lyrico.data.lyrics.LyricsResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals

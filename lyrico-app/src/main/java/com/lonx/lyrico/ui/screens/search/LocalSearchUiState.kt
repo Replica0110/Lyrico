@@ -3,7 +3,7 @@ package com.lonx.lyrico.ui.screens.search
 import com.lonx.lyrico.data.db.entity.AlbumEntity
 import com.lonx.lyrico.data.db.entity.ArtistEntity
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.search.LocalLyricSearchResult
+import com.lonx.lyrico.data.song.search.LocalLyricSearchResult
 
 data class LocalSearchUiState(
     val query: String = "",

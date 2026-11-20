@@ -28,26 +28,26 @@ import com.lonx.lyrico.data.editfield.CustomTagKey
 import com.lonx.lyrico.data.editfield.EditFieldConfigRepository
 import com.lonx.lyrico.data.editfield.EditFieldDefinition
 import com.lonx.lyrico.data.editfield.EditFieldScene
-import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.recordOperation
-import com.lonx.lyrico.data.model.lyrics.LyricFormat
-import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
-import com.lonx.lyrico.data.model.metadata.MetadataApplyPolicy
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
-import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
-import com.lonx.lyrico.data.model.metadata.StandardPluginField
-import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
-import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
-import com.lonx.lyrico.data.model.search.LyricsSearchResult
-import com.lonx.lyrico.data.model.search.sanitizeStandardFields
-import com.lonx.lyrico.data.model.text.ConversionMode
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.PlaybackRepository
-import com.lonx.lyrico.data.repository.SettingsDefaults
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.ArtistSplitConfig
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.recordOperation
+import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsProcessingOptions
+import com.lonx.lyrico.data.metadata.MetadataApplyPolicy
+import com.lonx.lyrico.data.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.metadata.MetadataWriteMode
+import com.lonx.lyrico.data.metadata.StandardPluginField
+import com.lonx.lyrico.data.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.plugin.defaultPluginFieldProcessConfig
+import com.lonx.lyrico.data.song.search.LyricsSearchResult
+import com.lonx.lyrico.data.song.search.sanitizeStandardFields
+import com.lonx.lyrico.data.text.ConversionMode
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.platform.player.ExternalPlayerLauncher
+import com.lonx.lyrico.data.settings.SettingsDefaults
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.domain.artist.ArtistNameSplitter
 import com.lonx.lyrico.domain.lyrics.LyricDecoder
@@ -137,7 +137,7 @@ class EditMetadataViewModel(
     private val readAudioTagsUseCase: ReadAudioTagsUseCase,
     private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val settingsRepository: SettingsRepository,
-    private val playbackRepository: PlaybackRepository,
+    private val externalPlayerLauncher: ExternalPlayerLauncher,
     private val replayGainScanner: ReplayGainScanner,
     private val appLogRepository: AppLogRepository,
     private val editFieldConfigRepository: EditFieldConfigRepository,
@@ -1578,7 +1578,7 @@ class EditMetadataViewModel(
 
     fun play(context: Context) {
         val uriStr = currentSong?.uri ?: currentSongUri ?: return
-        viewModelScope.launch { playbackRepository.play(context, uriStr.toUri()) }
+        viewModelScope.launch { externalPlayerLauncher.launch(context, uriStr.toUri()) }
     }
 
     /** 获取同专辑歌曲封面，优先同专辑且同歌手的结果。 */

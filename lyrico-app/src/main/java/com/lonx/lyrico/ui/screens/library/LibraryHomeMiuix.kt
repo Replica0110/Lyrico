@@ -7,7 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
+import com.lonx.lyrico.data.settings.FloatingBarEffect
 import com.lonx.lyrico.ui.components.blur.*
 import com.lonx.lyrico.ui.components.blur.resolveFloatingBarEffect
 import com.lonx.lyrico.ui.components.effect.glass.glassSource

@@ -10,7 +10,7 @@ import coil3.fetch.Fetcher
 import coil3.fetch.FetchResult
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
-import com.lonx.lyrico.data.model.artwork.CoverRequest
+import com.lonx.lyrico.data.artwork.CoverRequest
 import okio.Buffer
 
 class AudioCoverFetcher(

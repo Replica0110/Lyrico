@@ -3,10 +3,10 @@ package com.lonx.lyrico.data.db.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.lonx.lyrico.data.model.plugin.PluginCapability
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.plugin.normalizedPluginCapabilities
-import com.lonx.lyrico.data.model.plugin.displaySourceTypes
+import com.lonx.lyrico.data.plugin.PluginCapability
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.normalizedPluginCapabilities
+import com.lonx.lyrico.data.plugin.displaySourceTypes
 import kotlinx.serialization.json.Json
 
 const val DEFAULT_PLUGIN_CAPABILITIES_JSON = "[\"searchSongs\"]"

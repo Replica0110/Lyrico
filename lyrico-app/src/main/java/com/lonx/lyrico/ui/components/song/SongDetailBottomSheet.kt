@@ -32,8 +32,8 @@ import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.db.entity.getUri
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.artwork.CoverRequest
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.artwork.CoverRequest
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.image.PreviewableImage

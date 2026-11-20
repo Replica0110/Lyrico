@@ -2,11 +2,11 @@ package com.lonx.lyrico.ui.screens.settings.diagnostics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.recordOperation
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.recordOperation
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
 import com.lonx.lyrico.data.song.scan.LibraryScanManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

@@ -1,6 +1,6 @@
 package com.lonx.lyrico.worker.processor
 
-import com.lonx.lyrico.data.model.filename.CharacterMappingRule
+import com.lonx.lyrico.data.rename.CharacterMappingRule
 import com.lonx.lyrico.data.db.entity.BatchTaskEntity
 import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository

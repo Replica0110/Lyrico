@@ -1,16 +1,16 @@
 package com.lonx.lyrico.domain.plugin
 
-import com.lonx.lyrico.data.model.lyrics.LyricsLine
-import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
-import com.lonx.lyrico.data.model.plugin.PluginFieldProcessConfig
-import com.lonx.lyrico.data.model.plugin.PluginFieldValueType
-import com.lonx.lyrico.data.model.plugin.PluginMetadataField
-import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
-import com.lonx.lyrico.data.model.plugin.ResolvedFieldProcessRule
-import com.lonx.lyrico.data.model.plugin.resolveFieldProcessRule
-import com.lonx.lyrico.data.model.plugin.valueType
-import com.lonx.lyrico.data.model.text.ConversionMode
+import com.lonx.lyrico.data.lyrics.LyricsLine
+import com.lonx.lyrico.data.lyrics.LyricsResult
+import com.lonx.lyrico.data.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.plugin.PluginFieldProcessConfig
+import com.lonx.lyrico.data.plugin.PluginFieldValueType
+import com.lonx.lyrico.data.plugin.PluginMetadataField
+import com.lonx.lyrico.data.plugin.PluginMetadataFieldWriteRule
+import com.lonx.lyrico.data.plugin.ResolvedFieldProcessRule
+import com.lonx.lyrico.data.plugin.resolveFieldProcessRule
+import com.lonx.lyrico.data.plugin.valueType
+import com.lonx.lyrico.data.text.ConversionMode
 import com.lonx.lyrico.domain.lyrics.LyricEncoder
 import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
 

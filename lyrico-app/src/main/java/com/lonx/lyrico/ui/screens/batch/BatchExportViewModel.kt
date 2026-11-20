@@ -3,10 +3,10 @@ package com.lonx.lyrico.ui.screens.batch
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.export.ExportDestination
-import com.lonx.lyrico.data.model.batch.BatchTaskStatus
-import com.lonx.lyrico.data.model.batch.BatchTaskType
-import com.lonx.lyrico.data.repository.BatchTaskRepository
+import com.lonx.lyrico.data.export.ExportDestination
+import com.lonx.lyrico.data.batch.BatchTaskStatus
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.batch.BatchTaskRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import com.lonx.lyrico.worker.processor.BatchExportTaskConfig

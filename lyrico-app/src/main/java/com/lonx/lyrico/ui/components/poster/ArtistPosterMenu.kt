@@ -258,7 +258,7 @@ fun ArtistPosterMenu(
         }
     }
 
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
         val request = state.pickerRequest
         com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
             show = request != null,
@@ -354,7 +354,7 @@ private fun ArtistPicturePickerItems(
             } else {
                 name
             }
-        if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
+        if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
             com.lonx.lyrico.ui.components.base.ItemMenuAction(
                 title = title, icon = LucideIcons.Image, onClick = { onPick(entry) })
         } else ArrowPreference(

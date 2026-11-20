@@ -1,6 +1,6 @@
 package com.lonx.lyrico.worker
 
-import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.batch.BatchTaskType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -32,7 +32,7 @@ internal fun LibraryAlbumSurface(modifier: Modifier, onClick: () -> Unit,
     val onLongPress = onLongClick?.let { action ->
         { view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); action() }
     }
-    if (LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
+    if (LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
         val shape = CardDefaults.shape
         Card(shape = shape, modifier = modifier.fillMaxWidth().clip(shape)
             .combinedClickable(onClick = onClick, onLongClick = onLongPress)) {

@@ -16,10 +16,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
-import com.lonx.lyrico.data.model.appearance.ThemeMode
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.FloatingBarEffect
+import com.lonx.lyrico.data.settings.ThemeMode
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.ui.screens.settings.PaletteOption
 import com.lonx.lyrico.ui.screens.settings.SettingsPage
 import com.lonx.lyrico.ui.screens.settings.settingsViewModelWithEvents
@@ -29,7 +29,7 @@ import com.lonx.lyrico.ui.components.blur.isLiquidGlassSupported
 import com.lonx.lyrico.ui.components.blur.resolveFloatingBarEffect
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.data.model.appearance.ThemeColor
+import com.lonx.lyrico.data.settings.ThemeColor
 import com.lonx.lyrico.ui.theme.color
 import com.lonx.lyrico.ui.theme.nameResId
 import com.lonx.lyrico.ui.theme.LocalUiEngine

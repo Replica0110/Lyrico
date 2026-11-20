@@ -5,9 +5,9 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.util.Log
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
 
 /** One child of a SAF tree, as returned by [SafDocuments.children]. */
 data class SafDocumentRow(

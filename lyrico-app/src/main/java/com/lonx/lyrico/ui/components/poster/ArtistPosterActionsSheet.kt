@@ -43,7 +43,7 @@ fun ArtistPosterActionsSheet(
         // SaltUI 3.0.0-beta02 无进度控件，用 Material3 回退并取 Salt 颜色。
         if (posterLoading) {
             if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-                com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+                com.lonx.lyrico.data.settings.UiEngine.SALT
             ) {
                 Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
                 androidx.compose.material3.CircularProgressIndicator(

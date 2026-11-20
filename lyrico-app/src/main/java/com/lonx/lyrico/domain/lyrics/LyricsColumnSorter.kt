@@ -1,7 +1,7 @@
 package com.lonx.lyrico.domain.lyrics
 
 import java.security.MessageDigest
-import com.lonx.lyrico.data.model.lyrics.LyricsColumnMapping
+import com.lonx.lyrico.data.lyrics.LyricsColumnMapping
 
 object LyricsColumnSorter {
     private val timestamp = Regex("""\[(\d{1,9}):(\d{2})(?:[.:](\d{1,3}))?]""")

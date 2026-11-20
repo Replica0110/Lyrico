@@ -1,6 +1,6 @@
 package com.lonx.lyrico.domain.rename
 
-import com.lonx.lyrico.data.model.filename.CharacterMappingRule
+import com.lonx.lyrico.data.rename.CharacterMappingRule
 
 /** 按映射规则清理文件名中的非法字符。 */
 object FileNameSanitizer {

@@ -8,8 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult

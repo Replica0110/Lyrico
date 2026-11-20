@@ -1,14 +1,14 @@
 package com.lonx.lyrico.ui.screens.folder
 
-import com.lonx.lyrico.data.model.library.SongSortInfo
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.song.library.SongSortInfo
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.db.entity.FolderEntity
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.repository.LibraryFolderRepository
+import com.lonx.lyrico.data.song.library.LibraryFolderRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.scan.LibraryScanManager
 import kotlinx.coroutines.CoroutineScope

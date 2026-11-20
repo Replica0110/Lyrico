@@ -1,7 +1,7 @@
 package com.lonx.lyrico.ui.screens.search
 
 import androidx.annotation.StringRes
-import com.lonx.lyrico.data.model.plugin.PluginCapability
+import com.lonx.lyrico.data.plugin.PluginCapability
 import com.lonx.lyrico.data.song.search.SearchSource
 
 data class SearchSourceUiModel(

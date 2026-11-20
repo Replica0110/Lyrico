@@ -1,8 +1,7 @@
 package com.lonx.lyrico.domain.rename
 
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.filename.CharacterMappingRule
-import com.lonx.lyrico.data.model.rename.RenamePreview
+import com.lonx.lyrico.data.rename.CharacterMappingRule
 import java.io.File
 
 object RenameEngine {

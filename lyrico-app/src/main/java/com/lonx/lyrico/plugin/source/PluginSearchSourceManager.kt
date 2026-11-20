@@ -7,11 +7,11 @@ import com.lonx.lyrico.data.db.entity.displayName
 import com.lonx.lyrico.data.db.entity.isEnabledAnywhere
 import com.lonx.lyrico.data.db.entity.isEnabledFor
 import com.lonx.lyrico.data.db.entity.sortOrderFor
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
-import com.lonx.lyrico.data.model.plugin.supportsSourceType
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.plugin.PluginSourceType
+import com.lonx.lyrico.data.plugin.supportsSourceType
 import com.lonx.lyrico.data.plugin.SourcePluginRepository
-import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.log.AppLogRepository
 import com.lonx.lyrico.data.song.search.SearchSource
 import com.lonx.lyrico.plugin.i18n.PluginLocales
 import com.lonx.lyrico.plugin.i18n.PluginNames

@@ -2,7 +2,6 @@ package com.lonx.lyrico.data.cache
 
 import android.content.Context
 import coil3.imageLoader
-import com.lonx.lyrico.data.model.cache.CacheCategory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient

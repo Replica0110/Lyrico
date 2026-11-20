@@ -37,7 +37,7 @@ fun FolderManagementItem(
     isLoading: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
         val popup = com.moriafly.salt.ui.popup.rememberPopupState()
         com.moriafly.salt.ui.RoundedColumn {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

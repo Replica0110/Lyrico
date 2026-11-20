@@ -15,8 +15,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.lyrics.*
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.lyrics.*
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.ConcurrencyDropdown
 import com.lonx.lyrico.ui.components.base.PillButton

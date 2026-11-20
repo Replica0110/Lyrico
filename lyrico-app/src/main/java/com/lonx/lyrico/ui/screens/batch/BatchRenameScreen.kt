@@ -43,8 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.rename.RenamePreview
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.domain.rename.RenamePreview
 import com.lonx.lyrico.domain.rename.TagField
 import com.lonx.lyrico.ui.components.base.AppLinearProgressIndicator
 import com.lonx.lyrico.ui.components.base.SheetProgressAction

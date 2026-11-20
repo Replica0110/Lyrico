@@ -8,7 +8,7 @@ import com.lonx.lyrico.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 
 /** Shared settings definitions; native controls live in SettingsSalt/SettingsMiuix. */

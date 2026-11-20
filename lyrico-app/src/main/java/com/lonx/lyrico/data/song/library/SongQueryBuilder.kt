@@ -2,9 +2,6 @@ package com.lonx.lyrico.data.song.library
 
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
-import com.lonx.lyrico.data.model.library.SongSortBy
-import com.lonx.lyrico.data.model.library.SongSortInfo
-import com.lonx.lyrico.data.model.library.SortOrder
 
 object SongQueryBuilder {
 

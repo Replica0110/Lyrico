@@ -4,8 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
-import com.lonx.lyrico.data.model.batch.BatchTaskStatus
-import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.batch.BatchTaskStatus
+import com.lonx.lyrico.data.batch.BatchTaskType
 import com.lonx.lyrico.data.db.entity.BatchTaskEntity
 import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
 import kotlinx.coroutines.flow.Flow

@@ -5,8 +5,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.ThemeColor
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.ThemeColor
+import com.lonx.lyrico.data.settings.UiEngine
 import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.Dark

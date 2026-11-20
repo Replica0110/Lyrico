@@ -1,7 +1,7 @@
 package com.lonx.lyrico.domain.match
 
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.search.SongSearchResult
+import com.lonx.lyrico.data.song.search.SongSearchResult
 import kotlin.math.abs
 import kotlin.math.sqrt
 

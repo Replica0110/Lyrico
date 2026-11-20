@@ -3,7 +3,7 @@ package com.lonx.lyrico.ui.components.base
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.dialog.miuix.MiuixConfirmDialog
 import com.lonx.lyrico.ui.components.dialog.salt.SaltConfirmDialog
 import com.lonx.lyrico.ui.theme.LocalUiEngine

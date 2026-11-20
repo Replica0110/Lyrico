@@ -4,9 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import java.io.OutputStream
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
 
 object SafSiblingFileWriter {
 

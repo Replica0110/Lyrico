@@ -2,10 +2,10 @@ package com.lonx.lyrico.ui.screens.batch
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lonx.lyrico.data.model.batch.BatchTaskStatus
-import com.lonx.lyrico.data.model.batch.BatchTaskType
-import com.lonx.lyrico.data.repository.BatchTaskRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.batch.BatchTaskStatus
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.batch.BatchTaskRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.ui.UiMessage
 import com.lonx.lyrico.worker.BatchTaskScheduler

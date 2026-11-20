@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.db.entity.BatchTaskEntity
 import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
-import com.lonx.lyrico.data.repository.BatchTaskRepository
+import com.lonx.lyrico.data.batch.BatchTaskRepository
 import com.lonx.lyrico.worker.BatchTaskScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

@@ -49,9 +49,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
-import com.lonx.lyrico.data.model.metadata.StandardPluginField
-import com.lonx.lyrico.data.model.search.SongSearchResult
+import com.lonx.lyrico.data.metadata.MetadataFieldTarget
+import com.lonx.lyrico.data.metadata.StandardPluginField
+import com.lonx.lyrico.data.song.search.SongSearchResult
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
@@ -104,7 +104,7 @@ internal fun SearchResultApplyBottomSheet(
     onApply: (song: SongSearchResult, lyrics: String?, targets: Set<MetadataFieldTarget>) -> Unit
 ) {
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-        com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+        com.lonx.lyrico.data.settings.UiEngine.SALT
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val applyPagerState = rememberPagerState { if (supportsLyrics) 2 else 1 }
@@ -376,7 +376,7 @@ private fun ApplySheetPillTabs(
         stringResource(R.string.label_lyrics)
     )
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -410,7 +410,7 @@ private fun SearchResultApplyDataPage(
     selectedTargets: Set<MetadataFieldTarget>,
     onSelectedTargetsChange: (Set<MetadataFieldTarget>) -> Unit
 ) {
-    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+    val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT
     val listContent: @Composable () -> Unit = {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -462,7 +462,7 @@ private fun SearchResultApplyLyricsPage(
     onOpenLyricsConfig: () -> Unit,
     onCopyLyrics: () -> Unit
 ) {
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
         // 歌词选中行和歌词正文是同一个 Item：同一个 RoundedColumn，不再拆成两块。
         com.moriafly.salt.ui.RoundedColumn(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -506,7 +506,7 @@ private fun SearchResultApplyLyricsPage(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-                    com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+                    com.lonx.lyrico.data.settings.UiEngine.SALT
             Column(modifier = Modifier.weight(1f)) {
                 if (salt) {
                     com.moriafly.salt.ui.Text(
@@ -605,7 +605,7 @@ private fun SearchResultApplyOptionItem(
 ) {
     val isCover = option.target == MetadataFieldTarget.COVER
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
 
     if (salt) {
         Row(

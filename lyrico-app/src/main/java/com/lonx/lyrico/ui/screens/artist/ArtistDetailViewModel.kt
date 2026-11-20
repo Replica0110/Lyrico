@@ -11,12 +11,12 @@ import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
+import com.lonx.lyrico.data.settings.ArtistSplitConfig
 import com.lonx.lyrico.data.db.entity.AlbumEntity
 import com.lonx.lyrico.data.db.entity.ArtistEntity
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.domain.artist.ArtistNameSplitter
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase

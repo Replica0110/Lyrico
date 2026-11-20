@@ -2,7 +2,6 @@ package com.lonx.lyrico.data.plugin
 
 import com.lonx.lyrico.data.db.dao.SourcePluginDao
 import com.lonx.lyrico.data.db.entity.SourcePluginEntity
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import kotlinx.coroutines.flow.Flow
 
 class SourcePluginRepositoryImpl(

@@ -16,8 +16,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.SongEntity
-import com.lonx.lyrico.data.model.batch.BatchTaskType
-import com.lonx.lyrico.data.model.export.ExportDestination
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.export.ExportDestination
 import com.lonx.lyrico.ui.components.base.ExportDestinationBottomSheet
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 

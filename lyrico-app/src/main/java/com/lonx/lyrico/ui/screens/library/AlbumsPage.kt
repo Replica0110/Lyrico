@@ -26,10 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.AlbumEntity
-import com.lonx.lyrico.data.model.appearance.UiEngine
-import com.lonx.lyrico.data.model.library.AlbumSortBy
-import com.lonx.lyrico.data.model.library.AlbumSortInfo
-import com.lonx.lyrico.data.model.library.SortOrder
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.song.library.AlbumSortBy
+import com.lonx.lyrico.data.song.library.AlbumSortInfo
+import com.lonx.lyrico.data.song.library.SortOrder
 import com.lonx.lyrico.ui.components.bar.AlphabetSideBar
 import com.lonx.lyrico.ui.components.bar.rememberAlphabetSideBarScrollController
 import com.lonx.lyrico.ui.components.base.YesNoDialog

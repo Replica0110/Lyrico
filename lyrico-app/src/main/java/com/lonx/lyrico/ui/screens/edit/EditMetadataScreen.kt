@@ -406,7 +406,7 @@ fun EditMetadataScreen(
                         } else {
                             null
                         },
-                        onClick = { artistPosterMenu.open(entry) },
+                        onClick = { artistPosterMenu.open(entry, page.artistName) },
                         onRevertClick = {
                             val previousPictures = editingTagData?.pictures.orEmpty()
                             viewModel.revertArtistImages()
@@ -1307,7 +1307,7 @@ Box(modifier = Modifier.fillMaxSize()) {
                 icon = LucideIcons.Users,
                 onClick = {
                     isFabMenuExpanded = false
-                    // 从菜单进来时没有指定海报，多张时需要用户自己选
+                    // 通用入口沿用当前海报位；在封面页时由用户选择目标。
                     artistPosterMenu.open()
                 }
             )
@@ -1664,6 +1664,7 @@ Box(modifier = Modifier.fillMaxSize()) {
         entries = artistPictureEntries,
         currentEntry = currentArtistPage?.entry,
         currentPageIsArtistSlot = currentArtistPage != null,
+        currentArtistName = currentArtistPage?.artistName,
         onSetPoster = { addPosterArtistName = it },
         onRemove = { viewModel.removeArtistImage(it) },
         onExport = { viewModel.exportArtistImage(context, it) },

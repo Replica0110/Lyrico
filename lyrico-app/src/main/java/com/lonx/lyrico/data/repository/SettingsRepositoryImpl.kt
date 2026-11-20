@@ -1,8 +1,6 @@
 package com.lonx.lyrico.data.repository
 
 import android.content.Context
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
@@ -41,8 +39,7 @@ import com.lonx.lyrico.data.model.library.AlbumSortInfo
 import com.lonx.lyrico.data.model.library.ArtistSortBy
 import com.lonx.lyrico.data.model.library.ArtistSortInfo
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
-import com.lonx.lyrico.ui.theme.KeyColor
-import com.lonx.lyrico.ui.theme.KeyColors
+import com.lonx.lyrico.data.model.appearance.ThemeColor
 import com.lonx.lyrico.data.model.library.SongSortBy
 import com.lonx.lyrico.data.model.library.SongSortInfo
 import com.lonx.lyrico.data.model.library.SortOrder
@@ -397,16 +394,9 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 }
             }
         }
-    override val keyColor: Flow<KeyColor>
+    override val keyColor: Flow<ThemeColor>
         get() = context.settingsDataStore.data.map { preferences ->
-            if (preferences.contains(PreferencesKeys.KEY_THEME_COLOR)) {
-                val savedColorInt = preferences[PreferencesKeys.KEY_THEME_COLOR]!!
-                val savedColor = Color(savedColorInt)
-                KeyColors.find { it.color == savedColor } ?: KeyColors.first()
-            } else {
-                // 如果没有保存过，说明是“系统默认”
-                KeyColors.first()
-            }
+            ThemeColor.fromArgb(preferences[PreferencesKeys.KEY_THEME_COLOR])
         }
     override val monetEnable: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
@@ -740,13 +730,13 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun saveKeyColor(selectedKeyColor: KeyColor) {
+    override suspend fun saveKeyColor(selectedKeyColor: ThemeColor) {
         context.settingsDataStore.edit { preferences ->
-            if (selectedKeyColor.color == null) {
+            if (selectedKeyColor.argb == null) {
                 // 如果选了“系统默认”，直接移除保存的值
                 preferences.remove(PreferencesKeys.KEY_THEME_COLOR)
             } else {
-                preferences[PreferencesKeys.KEY_THEME_COLOR] = selectedKeyColor.color.toArgb()
+                preferences[PreferencesKeys.KEY_THEME_COLOR] = selectedKeyColor.argb
             }
         }
     }

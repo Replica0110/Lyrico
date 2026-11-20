@@ -46,14 +46,17 @@ class ArtistPosterMenuState {
     /** 直接点某张海报打开菜单时记住它，省得再让用户选一次。 */
     private var activePicture by mutableStateOf<AudioPicture?>(null)
 
+    private var activeArtistName by mutableStateOf<String?>(null)
+
     /**
      * 打开操作菜单。
      *
-     * [entry] 是用户点的那张海报；从悬浮菜单按钮进来时传 `null`，此时目标退回到当前
-     * 正在看的那一页。注意关闭菜单**不能**清空它——菜单项是先关面板再执行动作的。
+     * [entry] 是用户点的内嵌海报，[artistName] 保留空海报位或外置海报位的艺术家。
+     * 通用入口不指定目标，沿用当前页。关闭菜单时保留目标，供菜单关闭后的动作使用。
      */
-    fun open(entry: ArtistPictureEntry? = null) {
+    fun open(entry: ArtistPictureEntry? = null, artistName: String? = entry?.artist) {
         activePicture = entry?.picture
+        activeArtistName = artistName
         showOptions = true
     }
 
@@ -76,6 +79,13 @@ class ArtistPosterMenuState {
     internal fun activeEntry(entries: List<ArtistPictureEntry>): ArtistPictureEntry? {
         val picture = activePicture ?: return null
         return entries.firstOrNull { it.picture === picture }
+    }
+
+    internal fun artistForAdding(artists: List<String>, currentArtistName: String?): String? {
+        val target = activeArtistName ?: currentArtistName
+        val targetKey = target?.let(ArtistPosterGrouping::ownerKeyOf)
+        return artists.firstOrNull { ArtistPosterGrouping.ownerKeyOf(it) == targetKey }
+            ?: artists.singleOrNull()
     }
 }
 
@@ -106,7 +116,8 @@ internal sealed interface PosterPickerRequest {
  * @param entries 标签里当前的艺术家图片，全部都会显示出来
  * @param currentEntry 当前正在看的那一页对应的内嵌图片，菜单默认就作用于它
  * @param currentPageIsArtistSlot 当前页是不是一个艺术家海报位（否则是封面页）
- * @param onSetPoster 用户选好艺术家之后，由调用方打开系统图片选择器
+ * @param currentArtistName 当前海报位的艺术家；无内嵌图片时也保留归属
+ * @param onSetPoster 确定艺术家后，由调用方打开保存位置与选图流程
  */
 @Composable
 fun ArtistPosterMenu(
@@ -115,6 +126,7 @@ fun ArtistPosterMenu(
     entries: List<ArtistPictureEntry>,
     currentEntry: ArtistPictureEntry?,
     currentPageIsArtistSlot: Boolean,
+    currentArtistName: String?,
     onSetPoster: (artistName: String) -> Unit,
     onRemove: (target: AudioPicture) -> Unit,
     onExport: (target: AudioPicture) -> Unit,
@@ -158,11 +170,12 @@ fun ArtistPosterMenu(
     val canActOnEmbedded = if (currentPageIsArtistSlot) currentEntry != null else entries.isNotEmpty()
 
     fun chooseLocalImage() {
+        val artistName = state.artistForAdding(artists, currentArtistName)
         when {
             // 艺术家字段空着就没法归属，提示用户先填，而不是写入一张没有归属的海报
             artists.isEmpty() -> onMissingArtist()
-            artists.size > 1 -> state.ask(PosterPickerRequest.SetPoster)
-            else -> onSetPoster(artists.first())
+            artistName != null -> onSetPoster(artistName)
+            else -> state.ask(PosterPickerRequest.SetPoster)
         }
     }
 

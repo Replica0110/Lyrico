@@ -25,8 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.lonx.lyrico.data.model.artist.toArtistSeparator
 import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.ui.theme.KeyColor
-import com.lonx.lyrico.ui.theme.KeyColors
+import com.lonx.lyrico.data.model.appearance.ThemeColor
 import com.lonx.lyrico.data.cache.CacheManager
 import com.lonx.lyrico.ui.UiMessage
 import com.lonx.lyrico.platform.storage.DownloadsFileWriter
@@ -64,7 +63,7 @@ data class SettingsUiState(
     val floatingBottomBarEnabled: Boolean = true,
     val barBlurEnabled: Boolean = false,
     val floatingBarEffect: FloatingBarEffect = FloatingBarEffect.NONE,
-    val keyColor: KeyColor = KeyColors[1],
+    val keyColor: ThemeColor = ThemeColor.BLUE,
     val onlyTranslationIfAvailable: Boolean = false,
     val removeEmptyLines: Boolean = true,
     val categorizedCacheSize: Map<CacheCategory, Long> = emptyMap(),
@@ -312,7 +311,7 @@ class SettingsViewModel(
         }
     }
 
-    fun setKeyColor(selectedMode: KeyColor) {
+    fun setKeyColor(selectedMode: ThemeColor) {
         viewModelScope.launch {
             settingsRepository.saveKeyColor(selectedMode)
         }

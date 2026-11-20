@@ -19,7 +19,7 @@ import com.lonx.lyrico.data.model.appearance.ThemeMode
 import com.lonx.lyrico.data.model.library.AlbumSortInfo
 import com.lonx.lyrico.data.model.library.ArtistSortInfo
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
-import com.lonx.lyrico.ui.theme.KeyColor
+import com.lonx.lyrico.data.model.appearance.ThemeColor
 import com.lonx.lyrico.data.model.library.SongSortInfo
 import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
 import kotlinx.coroutines.flow.Flow
@@ -66,7 +66,7 @@ interface SettingsRepository {
     val uiEngine: Flow<UiEngine>
     suspend fun saveUiEngine(engine: UiEngine)
     val themeMode: Flow<ThemeMode>
-    val keyColor: Flow<KeyColor>
+    val keyColor: Flow<ThemeColor>
     val monetEnable: Flow<Boolean>
     val floatingBottomBarEnabled: Flow<Boolean>
     val barBlurEnabled: Flow<Boolean>
@@ -110,7 +110,7 @@ interface SettingsRepository {
     suspend fun saveSearchSourceTabStyle(style: SearchSourceTabStyle)
     suspend fun saveShowAllSearchResultFields(enabled: Boolean)
     suspend fun saveThemeMode(mode: ThemeMode)
-    suspend fun saveKeyColor(selectedKeyColor: KeyColor)
+    suspend fun saveKeyColor(selectedKeyColor: ThemeColor)
     suspend fun saveMonetEnable(enabled: Boolean)
     suspend fun saveFloatingBottomBarEnabled(enabled: Boolean)
     suspend fun saveBarBlurEnabled(enabled: Boolean)

@@ -1,14 +1,11 @@
 package com.lonx.lyrico.ui.screens.edit
 
 import android.app.RecoverableSecurityException
-import android.content.ContentValues
 import android.content.Context
 import android.content.IntentSender
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
@@ -24,7 +21,7 @@ import com.lonx.audiotag.model.replacePicture
 import com.lonx.audiotag.model.type
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.artwork.ArtistPosterFileWriter
-import com.lonx.lyrico.data.artwork.CoverSourceType
+import com.lonx.lyrico.data.artwork.ArtworkFiles
 import com.lonx.lyrico.data.artwork.getCoverSourceType
 import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.editfield.CustomTagKey
@@ -70,7 +67,6 @@ import com.lonx.lyrico.platform.audio.ReplayGainError
 import com.lonx.lyrico.platform.audio.ReplayGainScanner
 import com.lonx.lyrico.platform.storage.SafSiblingFileWriter
 import com.lonx.lyrico.ui.UiMessage
-import java.io.OutputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -451,7 +447,7 @@ class EditMetadataViewModel(
     }
 
     fun updateCover(bitmap: Bitmap) {
-        val byteArray = bitmap.toJpegBytes()
+        val byteArray = ArtworkFiles.encodeJpeg(bitmap)
         val audioPicture = AudioPicture(
             data = byteArray,
             mimeType = "image/jpeg",
@@ -557,7 +553,7 @@ class EditMetadataViewModel(
 
     /** 裁剪结果：替换某一张艺术家图片的数据，保留它的归属描述。 */
     fun replaceArtistImage(bitmap: Bitmap, target: AudioPicture) {
-        val bytes = bitmap.toJpegBytes()
+        val bytes = ArtworkFiles.encodeJpeg(bitmap)
         updateArtistPictures { pictures, _ ->
             ArtistPosterEdits.replaceData(pictures, target, bytes, "image/jpeg")
         }
@@ -645,12 +641,8 @@ class EditMetadataViewModel(
         val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val resolver = appContext.contentResolver
-                val bytes = resolver.openInputStream(uri)?.use { inputStream ->
-                    inputStream.readBytes()
-                }
-
-                if (bytes == null) {
+                val image = ArtworkFiles.readLocal(appContext, uri)
+                if (image == null) {
                     recordMetadataFailure(
                         message = "Failed to read image source",
                         relatedId = currentSongUri,
@@ -660,9 +652,7 @@ class EditMetadataViewModel(
                     return@launch
                 }
 
-                val mimeType = resolver.getType(uri)?.takeIf { it.startsWith("image/") }
-                    ?: "image/jpeg"
-                onResult(bytes, mimeType)
+                onResult(image.bytes, image.mimeType)
             } catch (e: Exception) {
                 Log.e(TAG, "读取图片失败: $uri", e)
                 recordMetadataException(
@@ -674,12 +664,6 @@ class EditMetadataViewModel(
             }
         }
     }
-
-    private fun Bitmap.toJpegBytes(): ByteArray =
-        java.io.ByteArrayOutputStream().use { stream ->
-            compress(Bitmap.CompressFormat.JPEG, 100, stream)
-            stream.toByteArray()
-        }
 
     private fun EditMetadataUiState.withUpdatedFrontCover(
         displaySource: Any?,
@@ -747,16 +731,7 @@ class EditMetadataViewModel(
                     return@launch
                 }
 
-                SafSiblingFileWriter.write(
-                    context = context,
-                    sourceDocumentUri = audioUri,
-                    mimeType = "image/jpeg",
-                    fileName = getCoverFileName()
-                ) { outputStream ->
-                    if (!writePictureSource(context, outputStream, source)) {
-                        throw IllegalStateException("Cover source stream unavailable")
-                    }
-                }
+                ArtworkFiles.writeNextToAudio(context, audioUri, getCoverFileName(), source)
                 _uiState.update { it.copy(exportCoverResult = true) }
             } catch (e: Exception) {
                 Log.e(TAG, "导出封面到音频同目录失败", e)
@@ -792,9 +767,7 @@ class EditMetadataViewModel(
                     onResult(false)
                     return@launch
                 }
-                val wrotePicture = context.contentResolver.openOutputStream(destinationUri, "wt")
-                    ?.use { outputStream -> writePictureSource(context, outputStream, source) }
-                    ?: false
+                val wrotePicture = ArtworkFiles.writeToUri(context, destinationUri, source)
                 if (!wrotePicture) {
                     recordMetadataFailure(
                         message = "$failureLogMessage: source stream unavailable",
@@ -841,27 +814,9 @@ class EditMetadataViewModel(
                     return@launch
                 }
 
-                val filename = "${filenamePrefix}_${System.currentTimeMillis()}.jpg"
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                    put(
-                        MediaStore.MediaColumns.RELATIVE_PATH,
-                        Environment.DIRECTORY_PICTURES + "/" + albumName
-                    )
-                }
-
-                val resolver = context.contentResolver
-                val destUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-
-                if (destUri != null) {
-                    val wrotePicture = resolver.openOutputStream(destUri)?.use { outputStream ->
-                        writePictureSource(context, outputStream, source)
-                    } ?: false
-
-                    if (wrotePicture) {
-                        onResult(true)
-                    } else {
+                when (ArtworkFiles.writeToGallery(context, source, albumName, filenamePrefix)) {
+                    ArtworkFiles.GalleryWriteResult.WRITTEN -> onResult(true)
+                    ArtworkFiles.GalleryWriteResult.SOURCE_UNAVAILABLE -> {
                         recordMetadataFailure(
                             message = "$failureLogMessage: source stream unavailable",
                             relatedId = currentSongUri,
@@ -869,13 +824,14 @@ class EditMetadataViewModel(
                         )
                         onResult(false)
                     }
-                } else {
-                    recordMetadataFailure(
-                        message = "$failureLogMessage: MediaStore insert returned null",
-                        relatedId = currentSongUri,
-                        detail = "Destination image URI could not be created."
-                    )
-                    onResult(false)
+                    ArtworkFiles.GalleryWriteResult.DESTINATION_UNAVAILABLE -> {
+                        recordMetadataFailure(
+                            message = "$failureLogMessage: MediaStore insert returned null",
+                            relatedId = currentSongUri,
+                            detail = "Destination image URI could not be created."
+                        )
+                        onResult(false)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "导出图片失败: $filenamePrefix", e)
@@ -1422,54 +1378,6 @@ class EditMetadataViewModel(
                 _uiState.update { it.copy(exportLyricsResult = false) }
             }
         }
-    }
-
-    private fun writePictureSource(
-        context: Context,
-        outputStream: OutputStream,
-        source: Any
-    ): Boolean = when (getCoverSourceType(source)) {
-        CoverSourceType.BYTE_ARRAY -> {
-            outputStream.write(source as ByteArray)
-            true
-        }
-
-        CoverSourceType.NETWORK_URL -> {
-            java.net.URL(source.toString().trim()).openStream().use { inputStream ->
-                inputStream.copyTo(outputStream)
-            }
-            true
-        }
-
-        CoverSourceType.CONTENT_OR_FILE_URI,
-        CoverSourceType.URI -> {
-            val sourceUri = when (source) {
-                is Uri -> source
-                is String -> source.trim().toUri()
-                else -> null
-            }
-            sourceUri?.let {
-                context.contentResolver.openInputStream(it)?.use { inputStream ->
-                    inputStream.copyTo(outputStream)
-                    true
-                }
-            } ?: false
-        }
-
-        CoverSourceType.FILE_PATH -> {
-            java.io.FileInputStream(source.toString().trim()).use { inputStream ->
-                inputStream.copyTo(outputStream)
-            }
-            true
-        }
-
-        CoverSourceType.BITMAP -> (source as Bitmap).compress(
-            Bitmap.CompressFormat.JPEG,
-            100,
-            outputStream
-        )
-
-        CoverSourceType.UNSUPPORTED -> false
     }
 
     fun exportLyricsToAudioDirectory(context: Context) {

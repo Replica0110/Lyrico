@@ -37,7 +37,8 @@ import com.lonx.lyrico.data.model.appearance.ThemeMode
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.ui.components.update.UpdateDialog
-import com.lonx.lyrico.ui.theme.KeyColors
+import com.lonx.lyrico.data.model.appearance.ThemeColor
+import com.lonx.lyrico.ui.theme.color
 import com.lonx.lyrico.ui.theme.LyricoTheme
 import com.lonx.lyrico.data.update.UpdateManager
 import com.lonx.lyrico.ui.screens.library.SongListViewModel
@@ -154,7 +155,7 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
                 initialValue = false
             )
             val keyColor by settingsRepository.keyColor.collectAsStateWithLifecycle(
-                initialValue = KeyColors.first()
+                initialValue = ThemeColor.DEFAULT
             )
             val darkMode = when (themeMode) {
                 ThemeMode.DARK -> true

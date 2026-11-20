@@ -29,7 +29,9 @@ import com.lonx.lyrico.ui.components.blur.isLiquidGlassSupported
 import com.lonx.lyrico.ui.components.blur.resolveFloatingBarEffect
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.theme.KeyColors
+import com.lonx.lyrico.data.model.appearance.ThemeColor
+import com.lonx.lyrico.ui.theme.color
+import com.lonx.lyrico.ui.theme.nameResId
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -124,10 +126,10 @@ fun AppearanceSettingsScreen(navigator: DestinationsNavigator) {
                     onCheckedChange = settingsViewModel::setMonetEnable
                 )
                 AnimatedVisibility(visibleState = monetVisibilityState) {
-                    val currentSelectedIndex = KeyColors.indexOf(currentKeyColor).let {
+                    val currentSelectedIndex = ThemeColor.entries.indexOf(currentKeyColor).let {
                         if (it == -1) 0 else it
                     }
-                    val options = KeyColors.map { keyColor ->
+                    val options = ThemeColor.entries.map { keyColor ->
                         PaletteOption(
                             title = stringResource(keyColor.nameResId),
                             color = keyColor.color ?: getSystemWallpaperColor(context),
@@ -140,7 +142,7 @@ fun AppearanceSettingsScreen(navigator: DestinationsNavigator) {
                         icon = LucideIcons.Palette, tone = PreferenceIconTone.Appearance,
                         title = stringResource(R.string.key_color),
                         onSelectedIndexChange = {
-                            val selectedKeyColor = KeyColors[it]
+                            val selectedKeyColor = ThemeColor.entries[it]
                             settingsViewModel.setKeyColor(selectedKeyColor)
                         }
                     )

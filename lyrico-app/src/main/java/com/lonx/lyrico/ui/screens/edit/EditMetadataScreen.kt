@@ -6,8 +6,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -16,44 +14,25 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -62,29 +41,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import coil3.compose.AsyncImage
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.model.AudioTagData
@@ -94,8 +65,6 @@ import com.lonx.audiotag.model.type
 import com.lonx.lyrico.ExternalAudioEditHost
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.artwork.ArtistPosterReader
-import com.lonx.lyrico.data.artwork.CoverSourceType
-import com.lonx.lyrico.data.artwork.getCoverSourceType
 import com.lonx.lyrico.data.editfield.EditFieldDefinition
 import com.lonx.lyrico.data.editfield.EditFieldKind
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
@@ -113,10 +82,7 @@ import com.lonx.lyrico.domain.poster.ArtistPosterPages
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.ui.UiMessage
-import com.lonx.lyrico.ui.components.PagerDotsIndicator
 import com.lonx.lyrico.ui.components.base.ExportDestinationBottomSheet
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
-import com.lonx.lyrico.ui.components.base.LyricsOffsetField
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
@@ -125,37 +91,21 @@ import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.cover.rememberArtistPosterSource
-import com.lonx.lyrico.ui.components.dialog.salt.SaltBasicDialog
-import com.lonx.lyrico.ui.components.dialog.salt.SaltDialogButton
-import com.lonx.lyrico.ui.components.dialog.salt.SaltDialogTitle
 import com.lonx.lyrico.ui.components.editor.CustomTagInputDialog
-import com.lonx.lyrico.ui.components.editor.EditorSheet
-import com.lonx.lyrico.ui.components.editor.SaltEditorField
-import com.lonx.lyrico.ui.components.editor.SaltEditorUndoAction
 import com.lonx.lyrico.ui.components.editor.rememberEditorTextFieldState
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
 import com.lonx.lyrico.ui.components.getBitmap
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.image.ImageViewerItem
-import com.lonx.lyrico.ui.components.image.PreviewableImage
-import com.lonx.lyrico.ui.components.image.resolveForPreview
-import com.lonx.lyrico.ui.components.lyrics.LyricsOrganizationMenu
 import com.lonx.lyrico.ui.components.lyrics.LyricsProcessingSheet
-import com.lonx.lyrico.ui.components.lyrics.saltLyricsReadingStyle
 import com.lonx.lyrico.ui.components.poster.ArtistPosterMenu
 import com.lonx.lyrico.ui.components.poster.rememberArtistPosterMenuState
-import com.lonx.lyrico.ui.components.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffold.PageScaffold
 import com.lonx.lyrico.ui.components.scaffold.pageScroll
 import com.lonx.lyrico.ui.components.scaffold.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.scaffold.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.ui.theme.LyricoColors
-import com.moriafly.salt.ui.ItemSwitcher
-import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -166,16 +116,11 @@ import com.ramcosta.composedestinations.generated.destinations.SearchResultsDest
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.result.ResultRecipient
 import com.ramcosta.composedestinations.result.onResult
-import java.net.URL
-import kotlin.apply
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -187,16 +132,7 @@ import top.yukonga.miuix.kmp.basic.SnackbarHostState
 import top.yukonga.miuix.kmp.basic.SnackbarResult
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TextField
-import top.yukonga.miuix.kmp.basic.TextFieldDefaults
-import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.window.WindowDialog
-
-private const val LIMITED_LYRICS_INPUT_MAX_LINES = 30
-
-/** 艺术家海报描述对不上任何艺术家时，角标的警示底色。 */
-private val ArtistImageUnmatchedBadgeColor = Color(0xFFB45309).copy(alpha = 0.9f)
 
 @SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(
@@ -669,97 +605,97 @@ fun EditMetadataScreen(
         return
     }
 
-    val titleState = rememberMetadataTextFieldState(
+    val titleState = rememberEditorTextFieldState(
         value = editingTagData?.title.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(title = it) } }
     )
 
-    val artistState = rememberMetadataTextFieldState(
+    val artistState = rememberEditorTextFieldState(
         value = editingTagData?.artist.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(artist = it) } }
     )
 
-    val albumArtistState = rememberMetadataTextFieldState(
+    val albumArtistState = rememberEditorTextFieldState(
         value = editingTagData?.albumArtist.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(albumArtist = it) } }
     )
 
-    val albumState = rememberMetadataTextFieldState(
+    val albumState = rememberEditorTextFieldState(
         value = editingTagData?.album.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(album = it) } }
     )
 
-    val dateState = rememberMetadataTextFieldState(
+    val dateState = rememberEditorTextFieldState(
         value = editingTagData?.date.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(date = it) } }
     )
 
-    val languageState = rememberMetadataTextFieldState(
+    val languageState = rememberEditorTextFieldState(
         value = editingTagData?.language.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(language = it) } }
     )
 
-    val genreState = rememberMetadataTextFieldState(
+    val genreState = rememberEditorTextFieldState(
         value = editingTagData?.genre.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(genre = it) } }
     )
 
-    val trackNumberState = rememberMetadataTextFieldState(
+    val trackNumberState = rememberEditorTextFieldState(
         value = editingTagData?.trackNumber.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(trackNumber = it) } }
     )
 
-    val discNumberState = rememberMetadataTextFieldState(
+    val discNumberState = rememberEditorTextFieldState(
         value = editingTagData?.discNumber?.toString().orEmpty(),
         onValueChange = { viewModel.updateTag { copy(discNumber = it.toIntOrNull()) } }
     )
 
-    val composerState = rememberMetadataTextFieldState(
+    val composerState = rememberEditorTextFieldState(
         value = editingTagData?.composer.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(composer = it) } }
     )
 
-    val lyricistState = rememberMetadataTextFieldState(
+    val lyricistState = rememberEditorTextFieldState(
         value = editingTagData?.lyricist.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(lyricist = it) } }
     )
 
-    val copyrightState = rememberMetadataTextFieldState(
+    val copyrightState = rememberEditorTextFieldState(
         value = editingTagData?.copyright.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(copyright = it) } }
     )
 
-    val commentState = rememberMetadataTextFieldState(
+    val commentState = rememberEditorTextFieldState(
         value = editingTagData?.comment.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(comment = it) } }
     )
 
-    val replayGainTrackGainState = rememberMetadataTextFieldState(
+    val replayGainTrackGainState = rememberEditorTextFieldState(
         value = editingTagData?.replayGainTrackGain.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(replayGainTrackGain = it) } }
     )
 
-    val replayGainTrackPeakState = rememberMetadataTextFieldState(
+    val replayGainTrackPeakState = rememberEditorTextFieldState(
         value = editingTagData?.replayGainTrackPeak.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(replayGainTrackPeak = it) } }
     )
 
-    val replayGainAlbumGainState = rememberMetadataTextFieldState(
+    val replayGainAlbumGainState = rememberEditorTextFieldState(
         value = editingTagData?.replayGainAlbumGain.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(replayGainAlbumGain = it) } }
     )
 
-    val replayGainAlbumPeakState = rememberMetadataTextFieldState(
+    val replayGainAlbumPeakState = rememberEditorTextFieldState(
         value = editingTagData?.replayGainAlbumPeak.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(replayGainAlbumPeak = it) } }
     )
 
-    val replayGainReferenceLoudnessState = rememberMetadataTextFieldState(
+    val replayGainReferenceLoudnessState = rememberEditorTextFieldState(
         value = editingTagData?.replayGainReferenceLoudness.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(replayGainReferenceLoudness = it) } }
     )
 
-    val lyricsState = rememberMetadataTextFieldState(
+    val lyricsState = rememberEditorTextFieldState(
         value = editingTagData?.lyrics.orEmpty(),
         onValueChange = { viewModel.updateTag { copy(lyrics = it) } }
     )
@@ -1333,124 +1269,60 @@ Box(modifier = Modifier.fillMaxSize()) {
     }
 }
     // 歌词操作
-    EditorSheet(
+    LyricsActionSheet(
         show = showLyricsActionBottomSheet,
-        enableNestedScroll = false,
-        title = stringResource(R.string.action_lyrics_options),
-        onDismissRequest = { showLyricsActionBottomSheet = false }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            EditorMenuGroup {
-                if (lyricsSearchSources.isNotEmpty()) {
-                    ItemMenuAction(
-                        icon = LucideIcons.Search, tone = PreferenceIconTone.Appearance,
-                        title = stringResource(R.string.action_search_lyrics),
-                        onClick = {
-                            showLyricsActionBottomSheet = false
-                            navigator.navigate(
-                                SearchLyricsDestination(
-                                    title = editingTagData?.title.orEmpty(),
-                                    artist = editingTagData?.artist.orEmpty(),
-                                    album = editingTagData?.album.orEmpty(),
-                                    date = editingTagData?.date.orEmpty()
-                                )
-                            )
-                        }
-                    )
-                }
-                ItemMenuAction(
-                        icon = LucideIcons.FileDown, tone = PreferenceIconTone.Tools,
-                    title = stringResource(R.string.action_import_lyrics),
-                    onClick = {
-                        showLyricsActionBottomSheet = false
-                        lyricsFileLauncher.launch(arrayOf("*/*"))
-                    }
+        onDismissRequest = { showLyricsActionBottomSheet = false },
+        hasLyricsSearchSources = lyricsSearchSources.isNotEmpty(),
+        onSearchLyrics = {
+            showLyricsActionBottomSheet = false
+            navigator.navigate(
+                SearchLyricsDestination(
+                    title = editingTagData?.title.orEmpty(),
+                    artist = editingTagData?.artist.orEmpty(),
+                    album = editingTagData?.album.orEmpty(),
+                    date = editingTagData?.date.orEmpty()
                 )
-                editingTagData?.lyrics?.let {
-                    ItemMenuAction(
-                        icon = LucideIcons.FileUp, tone = PreferenceIconTone.Library,
-                        title = stringResource(R.string.action_export_lyrics),
-                        onClick = {
-                            showLyricsActionBottomSheet = false
-                            showLyricsExportDestinationSheet = true
-                        }
-                    )
-                    ItemMenuAction(
-                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Lyrics,
-                        title = stringResource(R.string.chinese_conversion_mode_simplified_to_traditional),
-                        onClick = {
-                            showLyricsActionBottomSheet = false
-                            viewModel.convertLyrics(ConversionMode.SIMPLIFIED_TO_TRADITIONAL)
-                        }
-                    )
-                    ItemMenuAction(
-                        icon = LucideIcons.Languages, tone = PreferenceIconTone.Pink,
-                        title = stringResource(R.string.chinese_conversion_mode_traditional_to_simplified),
-                        onClick = {
-                            showLyricsActionBottomSheet = false
-                            viewModel.convertLyrics(ConversionMode.TRADITIONAL_TO_SIMPLIFIED)
-                        }
-                    )
-
-                    ItemMenuAction(
-                        icon = LucideIcons.Timing, tone = PreferenceIconTone.Teal,
-                        title = stringResource(R.string.offset_adjust_hint),
-                        onClick = {
-                            showLyricsActionBottomSheet = false
-                            viewModel.prepareLyricsOffset()
-                            showOffsetSheet = true
-                        }
-                    )
-                    ItemMenuAction(
-                        icon = LucideIcons.Convert, tone = PreferenceIconTone.Orange,
-                        title = stringResource(R.string.lyrics_convert),
-                        onClick = {
-                            showLyricsActionBottomSheet = false
-                            lyricsOperation = LyricsOperation.CONVERT
-                            showLyricsProcessingSheet = true
-                        }
-                    )
-                    LyricsOrganizationMenu(onSelect = { operation ->
-                        showLyricsActionBottomSheet = false
-                        lyricsOperation = operation
-                        showLyricsProcessingSheet = true
-                    }) { open ->
-                        ItemMenuAction(
-                        icon = LucideIcons.Sort, tone = PreferenceIconTone.Appearance,
-                            title = stringResource(R.string.lyrics_organize), onClick = open)
-                    }
-                    ItemMenuAction(
-                        icon = LucideIcons.Captions, tone = PreferenceIconTone.Tools,
-                        title = stringResource(R.string.action_view_plain_lyrics),
-                        onClick = {
-                            showLyricsActionBottomSheet = false
-                            showPlainLyricsSheet = true
-                        }
-                    )
-                }
-                if (salt) ItemSwitcher(
-                    iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(LucideIcons.Captions),
-                    iconColor = PreferenceIconTone.Appearance.color(),
-                    text = stringResource(R.string.limit_lyrics_input_lines),
-                    sub = stringResource(R.string.limit_lyrics_input_lines_hint),
-                    state = limitLyricsInputLines,
-                    onChange = { viewModel.setLimitLyricsInputLines(it) }
-                ) else SwitchPreference(
-                    startAction = { com.lonx.lyrico.ui.components.icons.PreferenceIcon(LucideIcons.Captions, PreferenceIconTone.Appearance) },
-                    title = stringResource(R.string.limit_lyrics_input_lines),
-                    summary = stringResource(R.string.limit_lyrics_input_lines_hint),
-                    checked = limitLyricsInputLines,
-                    onCheckedChange = { enabled ->
-                        viewModel.setLimitLyricsInputLines(enabled)
-                    }
-                )
-            }
-        }
-    }
+            )
+        },
+        onImportLyrics = {
+            showLyricsActionBottomSheet = false
+            lyricsFileLauncher.launch(arrayOf("*/*"))
+        },
+        hasLyrics = editingTagData?.lyrics != null,
+        onExportLyrics = {
+            showLyricsActionBottomSheet = false
+            showLyricsExportDestinationSheet = true
+        },
+        onConvertSimplifiedToTraditional = {
+            showLyricsActionBottomSheet = false
+            viewModel.convertLyrics(ConversionMode.SIMPLIFIED_TO_TRADITIONAL)
+        },
+        onConvertTraditionalToSimplified = {
+            showLyricsActionBottomSheet = false
+            viewModel.convertLyrics(ConversionMode.TRADITIONAL_TO_SIMPLIFIED)
+        },
+        onAdjustOffset = {
+            showLyricsActionBottomSheet = false
+            viewModel.prepareLyricsOffset()
+            showOffsetSheet = true
+        },
+        onConvertFormat = {
+            showLyricsActionBottomSheet = false
+            lyricsOperation = LyricsOperation.CONVERT
+            showLyricsProcessingSheet = true
+        },
+        onOrganizeLyrics = { operation ->
+            showLyricsActionBottomSheet = false
+            lyricsOperation = operation
+            showLyricsProcessingSheet = true
+        },
+        onViewPlainLyrics = {
+            showLyricsActionBottomSheet = false
+            showPlainLyricsSheet = true
+        },
+        limitLyricsInputLines = limitLyricsInputLines,
+        onLimitLyricsInputLinesChange = { viewModel.setLimitLyricsInputLines(it) }
+    )
     // 歌词文本预览
     var plainLyricsShowRomanization by remember { mutableStateOf(true) }
     var plainLyricsShowTranslation by remember { mutableStateOf(true) }
@@ -1458,186 +1330,79 @@ Box(modifier = Modifier.fillMaxSize()) {
         showRomanization = plainLyricsShowRomanization,
         showTranslation = plainLyricsShowTranslation
     )
-    EditorSheet(
+    LyricsPreviewSheet(
         show = showPlainLyricsSheet,
-        enableNestedScroll = false,
-        tools = {
-            if (salt) SaltIconButton(LucideIcons.Copy, stringResource(R.string.action_copy_lyrics), {
-                showPlainLyricsSheet = false
-                if (!plainLyrics.isNullOrEmpty()) scope.launch {
+        onDismissRequest = { showPlainLyricsSheet = false },
+        plainLyrics = plainLyrics,
+        showRomanization = plainLyricsShowRomanization,
+        onShowRomanizationChange = { plainLyricsShowRomanization = it },
+        showTranslation = plainLyricsShowTranslation,
+        onShowTranslationChange = { plainLyricsShowTranslation = it },
+        onCopyLyrics = {
+            showPlainLyricsSheet = false
+            if (!plainLyrics.isNullOrEmpty()) {
+                scope.launch {
                     clipboardManager.setClipEntry(ClipEntry(ClipData.newPlainText("copy plain lyrics", plainLyrics)))
                 }
-            }) else IconButton(
-                onClick = {
-                    showPlainLyricsSheet = false
-                    if (!plainLyrics.isNullOrEmpty()) {
-                        scope.launch {
-                            val clipData =
-                                ClipData.newPlainText("copy plain lyrics", plainLyrics)
-                            val clipEntry = ClipEntry(clipData)
-                            clipboardManager.setClipEntry(clipEntry)
-                        }
-                    }
-                }
-            ) {
-                Icon(
-                    imageVector = LucideIcons.Copy,
-                    contentDescription = null
-                )
-            }
-        },
-        title = stringResource(R.string.label_plain_lyrics),
-        onDismissRequest = { showPlainLyricsSheet = false }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(),
-        ) {
-            val plainLyricsScrollState = rememberScrollState()
-            // 歌词正文自成一组卡片；音译/译文是独立按钮，留在卡片外。
-            val lyricsBody: @Composable ColumnScope.() -> Unit = {
-                Box(
-                    modifier = Modifier
-                        .then(if (salt) Modifier.weight(1f, fill = false) else Modifier)
-                        .heightIn(min = 30.dp, max = 420.dp)
-                        .fillMaxWidth()
-                        .verticalScroll(plainLyricsScrollState)
-                ) {
-                    SelectionContainer(
-                        modifier = Modifier
-                            .padding(vertical = 12.dp)
-                            .fillMaxWidth()
-                    ) {
-                        if (salt) com.moriafly.salt.ui.Text(
-                            text = plainLyrics ?: stringResource(R.string.lyrics_empty),
-                            // RoundedColumn 不提供内容内边距，这里自带一档。
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            style = saltLyricsReadingStyle(),
-                        ) else Text(
-                            style = MiuixTheme.textStyles.body2,
-                            text = plainLyrics ?: stringResource(R.string.lyrics_empty),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            }
-            if (salt) RoundedColumn { lyricsBody() } else lyricsBody()
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (salt) Modifier.padding(horizontal = 16.dp, vertical = 8.dp) else Modifier)
-                    .horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                PlainLyricsToggleChip(
-                    text = stringResource(R.string.roma),
-                    selected = plainLyricsShowRomanization,
-                    onClick = { plainLyricsShowRomanization = !plainLyricsShowRomanization }
-                )
-                PlainLyricsToggleChip(
-                    text = stringResource(R.string.translation),
-                    selected = plainLyricsShowTranslation,
-                    onClick = { plainLyricsShowTranslation = !plainLyricsShowTranslation }
-                )
             }
         }
-    }
+    )
     // 封面操作
-    EditorSheet(
+    CoverOptionsSheet(
         show = showCoverOptionsSheet,
-        enableNestedScroll = false,
-        title = stringResource(R.string.label_cover_options),
-        onDismissRequest = { showCoverOptionsSheet = false }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            EditorMenuGroup {
-                if (coverSearchSources.isNotEmpty()) {
-                    ItemMenuAction(
-                        icon = LucideIcons.ImageSearch, tone = PreferenceIconTone.Library,
-                        title = stringResource(R.string.action_search_cover),
-                        onClick = {
-                            val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
-                                if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
-                                else "${editingTagData.title} ${editingTagData.artist}"
-                            } else {
-                                uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
-                            }
-                            showCoverOptionsSheet = false
-                            navigator.navigate(SearchCoverDestination(keyword))
-                        }
-                    )
-                }
-                ItemMenuAction(
-                        icon = LucideIcons.ImageAdd, tone = PreferenceIconTone.Lyrics,
-                    title = stringResource(R.string.label_change_cover),
-                    onClick = {
-                        showCoverOptionsSheet = false
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
-                    }
+        onDismissRequest = { showCoverOptionsSheet = false },
+        hasCoverSearchSources = coverSearchSources.isNotEmpty(),
+        onSearchCover = {
+            val keyword = if (!editingTagData?.title.isNullOrEmpty()) {
+                if (editingTagData.artist.isNullOrEmpty()) editingTagData.title!!
+                else "${editingTagData.title} ${editingTagData.artist}"
+            } else {
+                uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
+            }
+            showCoverOptionsSheet = false
+            navigator.navigate(SearchCoverDestination(keyword))
+        },
+        onChangeCover = {
+            showCoverOptionsSheet = false
+            photoPickerLauncher.launch(
+                PickVisualMediaRequest(
+                    ActivityResultContracts.PickVisualMedia.ImageOnly
                 )
-                ItemMenuAction(
-                        icon = LucideIcons.Disc, tone = PreferenceIconTone.Pink,
-                    title = stringResource(R.string.label_select_same_album_cover),
-                    onClick = {
-                        showCoverOptionsSheet = false
-                        viewModel.loadSameAlbumCovers()
-                    }
-                )
-                ItemMenuAction(
-                        icon = LucideIcons.Trash, tone = PreferenceIconTone.Danger,
-                    title = stringResource(R.string.label_remove_cover),
-                    onClick = {
-                        showCoverOptionsSheet = false
-                        viewModel.removeFrontCover()
-                    }
-                )
-                if (uiState.coverUri != null || uiState.originalCover != null) {
-                    ItemMenuAction(
-                        icon = LucideIcons.Download, tone = PreferenceIconTone.Teal,
-                        title = stringResource(R.string.label_save_cover),
-                        onClick = {
-                            showCoverOptionsSheet = false
-                            showCoverExportDestinationSheet = true
-                        }
-                    )
-                    ItemMenuAction(
-                        icon = LucideIcons.Crop, tone = PreferenceIconTone.Orange,
-                        title = stringResource(R.string.label_crop_cover),
-                        onClick = {
-                            showCoverOptionsSheet = false
-                            val sourceData = uiState.coverUri ?: uiState.originalCover
+            )
+        },
+        onSelectSameAlbumCover = {
+            showCoverOptionsSheet = false
+            viewModel.loadSameAlbumCovers()
+        },
+        onRemoveCover = {
+            showCoverOptionsSheet = false
+            viewModel.removeFrontCover()
+        },
+        canExportOrCropCover = uiState.coverUri != null || uiState.originalCover != null,
+        onExportCover = {
+            showCoverOptionsSheet = false
+            showCoverExportDestinationSheet = true
+        },
+        onCropCover = {
+            showCoverOptionsSheet = false
+            val sourceData = uiState.coverUri ?: uiState.originalCover
 
-                            if (sourceData != null) {
-                                scope.launch(Dispatchers.IO) {
-                                    val bitmap = getBitmap(context, sourceData)
-                                    withContext(Dispatchers.Main) {
-                                        if (bitmap != null) {
-                                            cropRequest = CropRequest.Cover
-                                            bitmapToCrop = bitmap
-                                            showCropSheet = true
-                                        } else {
-                                            snackbarHostState.showSnackbar(context.getString(R.string.msg_read_cover_failed)) // "无法读取封面图片"
-                                        }
-                                    }
-                                }
-                            }
+            if (sourceData != null) {
+                scope.launch(Dispatchers.IO) {
+                    val bitmap = getBitmap(context, sourceData)
+                    withContext(Dispatchers.Main) {
+                        if (bitmap != null) {
+                            cropRequest = CropRequest.Cover
+                            bitmapToCrop = bitmap
+                            showCropSheet = true
+                        } else {
+                            snackbarHostState.showSnackbar(context.getString(R.string.msg_read_cover_failed)) // "无法读取封面图片"
                         }
-                    )
+                    }
                 }
             }
-
         }
-    }
+    )
 
     /** 重新绑定：目标艺术家已有海报时，等用户选「交换归属」还是「直接替换」。 */
     var pendingRebind by remember { mutableStateOf<PendingRebind?>(null) }
@@ -1721,114 +1486,24 @@ Box(modifier = Modifier.fillMaxSize()) {
         onDismissFinished = { if (!showCropSheet) bitmapToCrop = null }
     )
     // 偏移调整 BottomSheet
-    EditorSheet(
+    LyricsOffsetSheet(
         show = showOffsetSheet,
-        enableNestedScroll = false,
-        title = stringResource(R.string.offset_adjust_hint),
-        onDismissRequest = { showOffsetSheet = false }
-    ) {
-        if (salt) Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-            RoundedColumn {
-                SelectionContainer {
-                    com.moriafly.salt.ui.Text(editingTagData?.lyrics.orEmpty(),
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)
-                            .verticalScroll(rememberScrollState()).padding(16.dp),
-                        style = SaltTheme.textStyles.sub)
-                }
-            }
-            RoundedColumn { LyricsOffsetField(offset = currentShiftOffset,
-                onOffsetChange = { viewModel.applyLyricsOffset(it) }, modifier = Modifier.padding(vertical = 12.dp)) }
-        } else Column(
-            modifier = Modifier
-                .padding(bottom = 32.dp)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-        ) {
-            Card(
-                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .heightIn(max = 300.dp)
-                        .padding(horizontal = 8.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = editingTagData?.lyrics ?: "",
-                        style = MiuixTheme.textStyles.footnote1
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-
-            Card(
-                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
-                modifier = Modifier.padding(top = 12.dp)
-            ) {
-                LyricsOffsetField(
-                    offset = currentShiftOffset,
-                    onOffsetChange = { viewModel.applyLyricsOffset(it) },
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-            }
-        }
-    }
-    // 添加自定义标签 dialog
+        onDismissRequest = { showOffsetSheet = false },
+        lyricsText = editingTagData?.lyrics.orEmpty(),
+        currentOffset = currentShiftOffset,
+        onOffsetChange = { viewModel.applyLyricsOffset(it) }
+    )
     // 目标艺术家已有海报：交换归属，还是把原来那张替换掉
-    pendingRebind?.let { pending ->
-        if (salt) SaltBasicDialog(onDismissRequest = { pendingRebind = null }) {
-            Column(Modifier.fillMaxWidth()) {
-                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                    com.lonx.lyrico.ui.components.dialog.salt.SaltDialogTitle(stringResource(R.string.label_artist_image_conflict_title, pending.artistName))
-                    com.moriafly.salt.ui.Text(stringResource(R.string.label_artist_image_conflict_message),
-                        style = SaltTheme.textStyles.main, color = SaltTheme.colors.text)
-                }
-                Spacer(Modifier.height(16.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
-                    maxItemsInEachRow = if (androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.3f) 1 else 2) {
-                    com.lonx.lyrico.ui.components.dialog.salt.SaltDialogButton(text = stringResource(R.string.label_artist_image_swap), modifier = Modifier.weight(1f),
-                        appearance = com.moriafly.salt.ui.ButtonAppearance.Subtle,
-                        onClick = { pendingRebind = null; applyRebind(pending.target, pending.artistName, swap = true) })
-                    com.lonx.lyrico.ui.components.dialog.salt.SaltDialogButton(text = stringResource(R.string.label_artist_image_replace), modifier = Modifier.weight(1f),
-                        onClick = { pendingRebind = null; applyRebind(pending.target, pending.artistName) })
-                }
-            }
-        } else WindowDialog(
-            show = true,
-            title = stringResource(R.string.label_artist_image_conflict_title, pending.artistName),
-            onDismissRequest = { pendingRebind = null }
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(R.string.label_artist_image_conflict_message),
-                    style = MiuixTheme.textStyles.footnote1,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(
-                        text = stringResource(R.string.label_artist_image_swap),
-                        onClick = {
-                            pendingRebind = null
-                            applyRebind(pending.target, pending.artistName, swap = true)
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(Modifier.width(20.dp))
-                    TextButton(
-                        text = stringResource(R.string.label_artist_image_replace),
-                        onClick = {
-                            pendingRebind = null
-                            applyRebind(pending.target, pending.artistName)
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColorsPrimary(),
-                    )
-                }
-            }
+    ArtistImageConflictDialog(
+        pending = pendingRebind,
+        onDismissRequest = { pendingRebind = null },
+        onSwap = { target, artistName ->
+            applyRebind(target, artistName, swap = true)
+        },
+        onReplace = { target, artistName ->
+            applyRebind(target, artistName, swap = false)
         }
-    }
+    )
 
     CustomTagInputDialog(
         show = showAddCustomTagDialog,
@@ -1845,765 +1520,4 @@ Box(modifier = Modifier.fillMaxSize()) {
             showLyricsProcessingSheet = false
         }
     )
-
-}
-
-@Composable
-private fun PlainLyricsToggleChip(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        // Salt 原生 Small 是 40dp + 正文字号，和 Miuix 分支的 30dp 胶囊差太多。
-        PillButton(text = text, selected = selected, onClick = onClick,
-            style = PillButtonDefaults.style(PillButtonSize.Medium))
-        return
-    }
-
-    val background = if (selected) {
-        MiuixTheme.colorScheme.primary
-    } else {
-        MiuixTheme.colorScheme.secondaryContainer
-    }
-    val contentColor = if (selected) {
-        MiuixTheme.colorScheme.onPrimary
-    } else {
-        MiuixTheme.colorScheme.onSurfaceVariantActions
-    }
-
-    Box(
-        modifier = Modifier
-            .height(30.dp)
-            .clip(RoundedCornerShape(50))
-            .background(background)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MiuixTheme.textStyles.footnote1,
-            color = contentColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-/** 等待用户决定「交换归属」还是「直接替换」的一次重新绑定。 */
-private data class PendingRebind(val target: AudioPicture, val artistName: String)
-
-/** 当前正在裁剪的目标。 */
-private sealed interface CropRequest {
-    data object Cover : CropRequest
-
-    /** 只替换这一张艺术家图片的数据，保留它的归属。 */
-    data class ArtistImage(val target: AudioPicture) : CropRequest
-    data class ExternalArtistImage(val target: ResolvedArtistPoster.File) : CropRequest
-}
-
-/** 这张艺术家海报和原始标签里的同名海报是否已经不同（新增或数据/描述被改过）。 */
-private fun isArtistPictureModified(
-    picture: AudioPicture,
-    originals: List<AudioPicture>
-): Boolean = originals.none {
-    it.type == picture.type &&
-        it.description == picture.description &&
-        it.data.contentEquals(picture.data)
-}
-
-private data class PicturePagerItem(
-    val label: String,
-    val editLabel: String,
-    val source: Any?,
-    val isModified: Boolean,
-    /** 描述对不上任何已有艺术家，标签会用警示色提示。 */
-    val isUnmatched: Boolean = false,
-    /** 图片来源说明（内嵌在标签里 / 来自外置海报文件夹），显示在尺寸旁边。 */
-    val sourceLabel: String? = null,
-    val onClick: () -> Unit,
-    val onRevertClick: () -> Unit
-)
-
-@Composable
-private fun CoverSection(
-    coverUri: Any?,
-    title: String,
-    artist: String,
-    pages: List<PicturePagerItem>,
-    pagerState: PagerState,
-) {
-    val surfaceVariant = MiuixTheme.colorScheme.surfaceVariant
-    val onSurface = MiuixTheme.colorScheme.onSurface
-    val onSurfaceDim = MiuixTheme.colorScheme.onSurfaceVariantSummary
-    val context = LocalContext.current
-    val posterReader: ArtistPosterReader = org.koin.compose.koinInject()
-    val picturePages = pages
-    val pagerScope = rememberCoroutineScope()
-    val currentPage = pagerState.currentPage.coerceIn(0, picturePages.lastIndex)
-    val viewerCandidates = picturePages.mapIndexedNotNull { index, picture ->
-        ImageViewerItem.from(picture.source, picture.label)?.copy(key = "page:$index")
-    }
-    val viewerItems by key(viewerCandidates) {
-        produceState(emptyList<ImageViewerItem>(), viewerCandidates) {
-            value = viewerCandidates.mapNotNull { it.resolveForPreview(context, posterReader) }
-        }
-    }
-    val currentImageSource = picturePages[currentPage].source
-    var imageSize by remember(currentImageSource) { mutableStateOf<Pair<Int, Int>?>(null) }
-
-    // 加载图片尺寸
-    LaunchedEffect(currentImageSource) {
-        if (currentImageSource != null) {
-            imageSize = withContext(Dispatchers.IO) {
-                try {
-                    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-
-                    if (currentImageSource is CoverRequest) {
-                        // 外置海报是文件夹里的文件，UI 手里没有字节：按文件名读出来量一下尺寸。
-                        // 只有当前这一页会走到这里，读的是与取图相同的那份文件。
-                        val bytes = posterReader.resolve(currentImageSource)?.bytes
-                        if (bytes != null && bytes.isNotEmpty()) {
-                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-                        }
-                    } else {
-                        when (getCoverSourceType(currentImageSource)) {
-                            CoverSourceType.BYTE_ARRAY -> {
-                                val bytes = currentImageSource as ByteArray
-                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-                            }
-
-                            CoverSourceType.BITMAP -> {
-                                val bitmap = currentImageSource as Bitmap
-                                return@withContext bitmap.width to bitmap.height
-                            }
-
-                            CoverSourceType.NETWORK_URL -> {
-                                val source = currentImageSource.toString().trim()
-                                URL(source).openStream().use { stream ->
-                                    BitmapFactory.decodeStream(stream, null, options)
-                                }
-                            }
-
-                            CoverSourceType.CONTENT_OR_FILE_URI,
-                            CoverSourceType.URI -> {
-                                val uri = when (currentImageSource) {
-                                    is Uri -> currentImageSource
-                                    is String -> currentImageSource.trim().toUri()
-                                    else -> null
-                                }
-                                uri?.let {
-                                    context.contentResolver.openInputStream(it)?.use { stream ->
-                                        BitmapFactory.decodeStream(stream, null, options)
-                                    }
-                                }
-                            }
-
-                            CoverSourceType.FILE_PATH -> {
-                                BitmapFactory.decodeFile(currentImageSource.toString().trim(), options)
-                            }
-
-                            CoverSourceType.UNSUPPORTED -> null
-                        }
-                    }
-
-                    if (options.outWidth > 0 && options.outHeight > 0) {
-                        options.outWidth to options.outHeight
-                    } else {
-                        null
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-            }
-        } else {
-            imageSize = null
-        }
-    }
-
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        // 两个引擎共用图片角标排列，尺寸与来源分行显示。
-        RoundedColumn {
-            Box(Modifier.fillMaxWidth().height(220.dp)) {
-                AsyncImage(
-                    model = currentImageSource ?: coverUri,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer { alpha = 0.15f }
-                )
-
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    SaltTheme.colors.subBackground.copy(alpha = 0.6f),
-                                    SaltTheme.colors.subBackground.copy(alpha = 0.95f)
-                                )
-                            )
-                        )
-                )
-
-                Row(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier
-                                .size(160.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(SaltTheme.colors.subText.copy(alpha = 0.1f))
-                        ) { page ->
-                            val item = picturePages[page]
-                            Box(Modifier.fillMaxSize().clickable { item.onClick() }) {
-                                PreviewableImage(
-                                    model = item.source,
-                                    onClick = item.onClick,
-                                    viewerItems = viewerItems,
-                                    viewerInitialPage = viewerItems.indexOfFirst { it.key == "page:$page" }.coerceAtLeast(0),
-                                    contentDescription = item.editLabel,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.matchParentSize(),
-                                    placeholder = painterResource(id = R.drawable.ic_album_24dp),
-                                    error = painterResource(id = R.drawable.ic_album_24dp)
-                                )
-                                PictureOverlayBadges(item, page == currentPage, imageSize)
-                            }
-                        }
-                        if (picturePages.size > 1) {
-                            Spacer(Modifier.height(8.dp))
-                            PagerDotsIndicator(
-                                pageCount = picturePages.size,
-                                currentPage = currentPage,
-                                activeColor = SaltTheme.colors.text,
-                                inactiveColor = SaltTheme.colors.subText.copy(alpha = 0.4f),
-                                pageDescriptions = picturePages.map { it.label },
-                                onPageClick = { target ->
-                                    pagerScope.launch { pagerState.animateScrollToPage(target) }
-                                }
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.width(16.dp))
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        com.moriafly.salt.ui.Text(
-                            text = title.ifEmpty { stringResource(R.string.edit_metadata_default_title) },
-                            style = SaltTheme.textStyles.main,
-                            color = SaltTheme.colors.text,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (artist.isNotEmpty()) {
-                            com.moriafly.salt.ui.Text(
-                                text = artist,
-                                style = SaltTheme.textStyles.sub,
-                                color = SaltTheme.colors.subText,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        return
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-            ) {
-
-                AsyncImage(
-                    model = currentImageSource ?: coverUri,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer { alpha = 0.15f }
-                )
-
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    surfaceVariant.copy(alpha = 0.6f),
-                                    surfaceVariant.copy(alpha = 0.95f)
-                                )
-                            )
-                        )
-                )
-                Row(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier
-                                .size(160.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MiuixTheme.colorScheme.onSurfaceContainerVariant)
-                        ) { page ->
-                            val item = picturePages[page]
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable { item.onClick() }
-                            ) {
-                                PreviewableImage(
-                                    model = item.source,
-                                    onClick = item.onClick,
-                                    viewerItems = viewerItems,
-                                    viewerInitialPage = viewerItems.indexOfFirst { it.key == "page:$page" }.coerceAtLeast(0),
-                                    contentDescription = item.editLabel,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.matchParentSize(),
-                                    placeholder = rememberTintedPainter(
-                                        painter = painterResource(id = R.drawable.ic_album_24dp),
-                                        tint = LyricoColors.coverPlaceholderIcon
-                                    ),
-                                    error = rememberTintedPainter(
-                                        painter = painterResource(id = R.drawable.ic_album_24dp),
-                                        tint = LyricoColors.coverPlaceholderIcon
-                                    )
-                                )
-
-                                PictureOverlayBadges(item, page == currentPage, imageSize)
-                            }
-                        }
-                        if (picturePages.size > 1) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            PagerDotsIndicator(
-                                pageCount = picturePages.size,
-                                currentPage = currentPage,
-                                pageDescriptions = picturePages.map { it.label },
-                                onPageClick = { target ->
-                                    pagerScope.launch { pagerState.animateScrollToPage(target) }
-                                }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = title.ifEmpty { "未知曲目" },
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = onSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        if (artist.isNotEmpty()) {
-                            Text(
-                                text = artist,
-                                fontSize = 13.sp,
-                                color = onSurfaceDim,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** 类型与撤销分列上方，尺寸、来源分行放在下方；各角标随内容收缩。 */
-@Composable
-private fun BoxScope.PictureOverlayBadges(
-    item: PicturePagerItem,
-    isCurrentPage: Boolean,
-    imageSize: Pair<Int, Int>?,
-) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(6.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-            Box(Modifier.weight(1f)) {
-                PictureBadge(
-                    text = item.label,
-                    background = if (item.isUnmatched) ArtistImageUnmatchedBadgeColor
-                        else Color.Black.copy(alpha = 0.6f),
-                )
-            }
-            AnimatedVisibility(
-                visible = item.isModified,
-                enter = scaleIn() + fadeIn(),
-                exit = scaleOut() + fadeOut(),
-            ) {
-                Box(
-                    modifier = Modifier.padding(start = 4.dp)
-                        .clip(CircleShape)
-                        .background(LyricoColors.modifiedBadgeBackground.copy(alpha = 0.95f))
-                        .clickable { item.onRevertClick() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                ) {
-                    PictureBadgeText(
-                        text = stringResource(R.string.action_undo),
-                        color = LyricoColors.modifiedText,
-                    )
-                }
-            }
-        }
-        val info = listOfNotNull(
-            imageSize?.takeIf { isCurrentPage }?.let { "${it.first}×${it.second}" },
-            // 外部文件是候选来源；成功读到图片尺寸后才确认展示，避免空位误报来源。
-            item.sourceLabel?.takeIf { isCurrentPage && imageSize != null },
-        ).joinToString("\n")
-        if (info.isNotEmpty()) PictureBadge(text = info, fontSize = 9.sp)
-    }
-}
-
-@Composable
-private fun PictureBadge(
-    text: String,
-    modifier: Modifier = Modifier,
-    background: Color = Color.Black.copy(alpha = 0.6f),
-    fontSize: TextUnit = 10.sp,
-) {
-    Box(modifier.background(background, RoundedCornerShape(4.dp))
-        .padding(horizontal = 6.dp, vertical = 2.dp)) {
-        PictureBadgeText(text, Color.White, fontSize)
-    }
-}
-
-/** 角标文字：按当前引擎取原生文本控件，字号、字重与颜色保持一致。 */
-@Composable
-private fun PictureBadgeText(text: String, color: Color, fontSize: TextUnit = 10.sp) {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        com.moriafly.salt.ui.Text(
-            text = text,
-            color = color,
-            fontSize = fontSize,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    } else {
-        Text(
-            text = text,
-            color = color,
-            fontSize = fontSize,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun RatingField(rating: Int?, onRatingChange: (Int) -> Unit) {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        RoundedColumn {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                com.moriafly.salt.ui.Text(
-                    stringResource(R.string.label_rating),
-                    style = SaltTheme.textStyles.sub.copy(fontSize = 14.sp, lineHeight = 20.sp),
-                    color = SaltTheme.colors.subText,
-                )
-                com.lonx.lyrico.ui.components.editor.RatingStars(rating, onRatingChange)
-            }
-        }
-    } else {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
-        ) {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    stringResource(R.string.label_rating),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextFieldDefaults.textFieldColors().labelColor,
-                )
-                com.lonx.lyrico.ui.components.editor.RatingStars(rating, onRatingChange)
-            }
-        }
-    }
-}
-
-@Composable
-private fun MetadataInputField(
-    label: String,
-    state: TextFieldState,
-    modifier: Modifier = Modifier,
-    isModified: Boolean = false,
-    onRevert: () -> Unit,
-    isMultiline: Boolean = false,
-    limitMultilineLines: Boolean = false,
-    actionButtons: @Composable RowScope.() -> Unit = {}
-) {
-    val fieldLabel = label + if (isModified) {
-        "(" + stringResource(R.string.status_modified) + ")"
-    } else {
-        ""
-    }
-
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        SaltEditorField(label = fieldLabel, state = state, modifier = modifier,
-            lineLimits = if (isMultiline) TextFieldLineLimits.MultiLine(
-                minHeightInLines = 10,
-                maxHeightInLines = if (limitMultilineLines) LIMITED_LYRICS_INPUT_MAX_LINES else Int.MAX_VALUE
-            ) else TextFieldLineLimits.SingleLine,
-            actions = {
-                SaltEditorUndoAction(visible = isModified, onUndo = onRevert)
-                actionButtons()
-            })
-        return
-    }
-
-    val colors = TextFieldDefaults.textFieldColors(
-        borderColor = if (isModified) {
-            LyricoColors.modifiedBorder
-        } else {
-            MiuixTheme.colorScheme.primary
-        }
-    )
-
-    if (isMultiline) {
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Spacer(modifier = Modifier.weight(1f))
-
-                AnimatedVisibility(
-                    visible = isModified,
-                    enter = slideInHorizontally(initialOffsetX = { it / 2 }) + fadeIn(),
-                    exit = slideOutHorizontally(targetOffsetX = { it / 2 }) + fadeOut()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(LyricoColors.modifiedBadgeBackground.copy(alpha = 0.8f))
-                            .clickable { onRevert() }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.action_undo_changes),
-                            fontSize = 11.sp,
-                            color = LyricoColors.modifiedText,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-                actionButtons()
-            }
-
-            TextField(
-                state = state,
-                textStyle = MiuixTheme.textStyles.body2,
-                modifier = Modifier.fillMaxWidth(),
-                label = fieldLabel,
-                colors = colors,
-                lineLimits = TextFieldLineLimits.MultiLine(
-                    minHeightInLines = 10,
-                    maxHeightInLines = if (limitMultilineLines) {
-                        LIMITED_LYRICS_INPUT_MAX_LINES
-                    } else {
-                        Int.MAX_VALUE
-                    }
-                )
-            )
-        }
-    } else {
-        TextField(
-            state = state,
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            label = fieldLabel,
-            colors = colors,
-            trailingIcon = if (isModified) {
-                {
-                    IconButton(onClick = onRevert) {
-                        Icon(
-                            imageVector = LucideIcons.Undo,
-                            contentDescription = "Undo"
-                        )
-                    }
-                }
-            } else {
-                null
-            }
-        )
-    }
-}
-
-@Composable
-private fun CustomMetadataFieldEditor(
-    field: CustomTagField,
-    isModified: Boolean,
-    onValueChange: (String) -> Unit,
-    onRemove: () -> Unit,
-    onRevert: () -> Unit
-) {
-    val fieldState = rememberMetadataTextFieldState(
-        value = field.value,
-        onValueChange = onValueChange
-    )
-
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        SaltEditorField(label = field.key, state = fieldState, actions = {
-            SaltEditorUndoAction(visible = isModified, onUndo = onRevert)
-            SaltIconButton(LucideIcons.Trash, stringResource(R.string.action_delete), onRemove,
-                tint = SaltTheme.colors.error, size = 32.dp, iconSize = 18.dp)
-        })
-        return
-    }
-    Column(modifier = Modifier.padding(vertical = 6.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isModified) {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(LyricoColors.modifiedBadgeBackground.copy(alpha = 0.8f))
-                        .clickable { onRevert() }
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.action_undo_changes),
-                        fontSize = 11.sp,
-                        color = LyricoColors.modifiedText,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(
-                    6.dp,
-                    Alignment.End
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(MiuixTheme.colorScheme.primary)
-                        .clickable {
-                            onRemove()
-                        }
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.action_delete),
-                        fontSize = 11.sp,
-                        color = MiuixTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-        }
-
-        MetadataInputField(
-            label = field.key,
-            state = fieldState,
-            isModified = false,
-            onRevert = onRevert
-        )
-    }
-}
-
-@Composable
-private fun rememberMetadataTextFieldState(
-    value: String,
-    onValueChange: (String) -> Unit
-): TextFieldState = rememberEditorTextFieldState(value, onValueChange)
-
-private data class SimpleTextField(
-    val state: TextFieldState,
-    val valueOf: (AudioTagData) -> String?,
-    val write: AudioTagData.(String?) -> AudioTagData,
-)
-
-private fun editedValue(data: AudioTagData?, field: SimpleTextField): String =
-    data?.let(field.valueOf).orEmpty()
-
-@Composable
-private fun EditorMenuGroup(content: @Composable ColumnScope.() -> Unit) {
-    if (LocalUiEngine.current == UiEngine.SALT) RoundedColumn(content = content)
-    else Card(colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)) {
-        Column(content = content)
-    }
-}
-
-/** 比较两个字符串是否相等，将 null 和空字符串视为相等。 */
-private fun String?.isEqualIgnoringBlank(other: String?): Boolean {
-    val thisBlank = this.isNullOrBlank()
-    val otherBlank = other.isNullOrBlank()
-    return if (thisBlank && otherBlank) {
-        true
-    } else if (!thisBlank && !otherBlank) {
-        this == other
-    } else {
-        false
-    }
 }

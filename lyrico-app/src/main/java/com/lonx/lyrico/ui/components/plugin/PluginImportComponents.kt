@@ -2,22 +2,16 @@
 
 package com.lonx.lyrico.ui.components.plugin
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.animation.animateContentSize
-import com.moriafly.salt.ui.Item
-import com.moriafly.salt.ui.ItemArrowType
-import com.moriafly.salt.ui.RoundedColumn
-import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import com.lonx.lyrico.plugin.source.PluginInstallFailed
-import com.lonx.lyrico.plugin.source.PluginInstallResult
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,19 +25,25 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.plugin.source.PluginVersionConflict
-import com.lonx.lyrico.plugin.source.PluginInstallCandidate
+import com.lonx.lyrico.data.model.appearance.UiEngine
 import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.model.plugin.displaySourceTypes
+import com.lonx.lyrico.plugin.install.PluginInstallCandidate
+import com.lonx.lyrico.plugin.install.PluginInstallFailed
+import com.lonx.lyrico.plugin.install.PluginInstallResult
+import com.lonx.lyrico.plugin.install.PluginVersionConflict
 import com.lonx.lyrico.ui.theme.LocalUiEngine
+import com.moriafly.salt.ui.Item
+import com.moriafly.salt.ui.ItemArrowType
+import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.innerPadding
-import com.moriafly.salt.ui.icons.SaltIcons
 import com.moriafly.salt.ui.icons.Check
+import com.moriafly.salt.ui.icons.SaltIcons
 import com.moriafly.salt.ui.icons.Uncheck
+import com.moriafly.salt.ui.innerPadding
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 
 /** Shared by local import preview, online selection and update summary. */
 @Composable
@@ -203,14 +203,11 @@ internal fun PluginImportCandidateItem(
     )
 }
 
-
-
 internal fun PluginSourceType.labelRes(): Int = when (this) {
     PluginSourceType.METADATA -> R.string.plugin_type_metadata
     PluginSourceType.LYRICS -> R.string.plugin_type_lyrics
     PluginSourceType.COVER -> R.string.plugin_type_cover
 }
-
 
 @Composable
 internal fun PluginImportFailedItem(
@@ -370,8 +367,6 @@ internal fun PluginImportFailedItem(
         }
     }
 }
-
-
 
 @Composable
 internal fun PluginSheetError(message: String) {

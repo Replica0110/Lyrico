@@ -8,8 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.salt.SaltSheetActions
+import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.ui.components.sheet.salt.SaltSheetActions
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.TextButton

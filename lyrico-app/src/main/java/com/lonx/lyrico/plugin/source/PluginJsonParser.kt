@@ -9,11 +9,11 @@ import com.lonx.lyrico.data.model.lyrics.LyricsPayloadType
 import com.lonx.lyrico.data.model.lyrics.LyricsResult
 import com.lonx.lyrico.data.model.lyrics.LyricsRubySyllable
 import com.lonx.lyrico.data.model.lyrics.LyricsWord
-import com.lonx.lyrico.data.model.lyrics.SongSearchResult
+import com.lonx.lyrico.data.model.search.SongSearchResult
 import com.lonx.lyrico.data.model.lyrics.isWordByWord
-import com.lonx.lyrico.data.model.lyrics.sanitizePluginInternal
-import com.lonx.lyrico.data.model.lyrics.sanitizeStandardFields
-import com.lonx.lyrico.utils.lyrics.document.TtmlTime
+import com.lonx.lyrico.data.model.search.sanitizePluginInternal
+import com.lonx.lyrico.data.model.search.sanitizeStandardFields
+import com.lonx.lyrico.domain.lyrics.document.TtmlTime
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull

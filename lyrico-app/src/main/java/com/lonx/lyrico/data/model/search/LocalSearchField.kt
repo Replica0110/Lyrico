@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.model.search
 
 import androidx.annotation.StringRes
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 
 /** Text-searchable built-in metadata fields shown as dedicated local-search tabs. */

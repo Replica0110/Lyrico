@@ -1,6 +1,6 @@
 package com.lonx.lyrico.data.repository
 
-import com.lonx.lyrico.data.model.UpdateCheckResult
+import com.lonx.lyrico.data.model.update.UpdateCheckResult
 
 interface UpdateRepository {
     suspend fun checkForUpdate(

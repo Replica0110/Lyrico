@@ -2,8 +2,8 @@ package com.lonx.lyrico.data.repository
 
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.lyrico.data.editfield.CustomTagKey
-import com.lonx.lyrico.data.model.dao.CustomTagKeyCount
-import com.lonx.lyrico.data.model.dao.SongCustomTagKeyDao
+import com.lonx.lyrico.data.db.dao.CustomTagKeyCount
+import com.lonx.lyrico.data.db.dao.SongCustomTagKeyDao
 import kotlinx.coroutines.flow.Flow
 
 class CustomTagKeyRepository(

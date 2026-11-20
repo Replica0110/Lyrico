@@ -33,8 +33,8 @@ import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.library.LibraryDetailText
-import com.lonx.lyrico.ui.components.library.LibraryDetailTextTone
+import com.lonx.lyrico.ui.components.text.AppText
+import com.lonx.lyrico.ui.components.text.AppTextTone
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -121,9 +121,9 @@ internal fun SponsorQrCodeSheet(show: Boolean, method: SponsorMethod, onDismissR
                             },
                         ),
                 )
-                LibraryDetailText(
+                AppText(
                     if (saving) stringResource(R.string.sponsor_saving) else saveHint,
-                    tone = LibraryDetailTextTone.Secondary,
+                    tone = AppTextTone.Secondary,
                 )
                 if (method == SponsorMethod.AFDIAN) {
                     PillButton(

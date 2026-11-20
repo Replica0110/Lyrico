@@ -1,7 +1,6 @@
 package com.lonx.lyrico.data.song.mapper
 
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.utils.SortKeyUtils
+import com.lonx.lyrico.data.db.entity.SongEntity
 
 class SortKeyUpdater {
     fun update(song: SongEntity): SongEntity {

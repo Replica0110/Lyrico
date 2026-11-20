@@ -2,12 +2,11 @@
 
 package com.lonx.lyrico.ui.components.song
 
-import com.lonx.lyrico.ui.components.salt.SaltTextInput
-
-
 import android.content.Intent
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -16,13 +15,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.input.salt.SaltTextInput
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
 
 @Composable
 fun SongActionSheets(
@@ -139,7 +137,7 @@ private fun RenameSongDialog(
             }
         },
         content = {
-            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
                 com.moriafly.salt.ui.RoundedColumn(
                     paddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)
                 ) {

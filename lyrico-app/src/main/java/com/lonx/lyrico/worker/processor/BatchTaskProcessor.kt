@@ -1,7 +1,7 @@
 package com.lonx.lyrico.worker.processor
 
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
 
 interface BatchTaskProcessor {
     suspend fun process(

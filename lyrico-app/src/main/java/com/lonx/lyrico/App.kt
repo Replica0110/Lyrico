@@ -13,15 +13,16 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import com.lonx.lyrico.worker.BatchTaskScheduler
-import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.data.model.appearance.ThemeMode
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.di.appModule
-import com.lonx.lyrico.utils.coil.AudioCoverFetcher
-import com.lonx.lyrico.utils.coil.AudioCoverKeyer
+import com.lonx.lyrico.data.artwork.coil.AudioCoverFetcher
+import com.lonx.lyrico.data.artwork.coil.AudioCoverKeyer
+import com.lonx.lyrico.data.artwork.coil.PosterFileFetcherFactory
 import com.moriafly.salt.ui.app.SaltApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -117,7 +118,7 @@ class App : SaltApplication(), SingletonImageLoader.Factory {
         return ImageLoader.Builder(context)
             .components {
                 add(AudioCoverKeyer())
-                add(com.lonx.lyrico.utils.coil.PosterFileFetcherFactory())
+                add(PosterFileFetcherFactory())
                 add(AudioCoverFetcher.Factory(
                     context.contentResolver,
                     org.koin.core.context.GlobalContext.get().get()

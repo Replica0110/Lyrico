@@ -1,9 +1,9 @@
 package com.lonx.lyrico.data.song.mapper
 
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.SongFile
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.utils.LyricsSearchTextExtractor
+import com.lonx.lyrico.data.song.scan.SongFile
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.domain.lyrics.LyricsSearchTextExtractor
 
 class SongMetadataMapper(
     private val sortKeyUpdater: SortKeyUpdater

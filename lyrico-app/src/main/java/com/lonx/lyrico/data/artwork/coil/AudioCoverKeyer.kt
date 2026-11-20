@@ -1,0 +1,22 @@
+package com.lonx.lyrico.data.artwork.coil
+
+import coil3.key.Keyer
+import coil3.request.Options
+import com.lonx.lyrico.data.model.artwork.CoverRequest
+
+class AudioCoverKeyer: Keyer<CoverRequest> {
+    override fun key(data: CoverRequest, options: Options): String {
+        // 提取文件路径作为主键，结合时间戳生成唯一缓存键
+        val path = data.uri.path ?: data.uri.toString()
+        return CoverRequest.getCacheKey(
+            path = path,
+            timestamp = data.lastUpdate,
+            pictureType = data.pictureType,
+            fallbackPictureTypes = data.fallbackPictureTypes,
+            fallbackToAny = data.fallbackToAny,
+            candidates = data.candidates,
+            skipEmbeddedPictures = data.skipEmbeddedPictures
+        ) + "@external:" + listOf(data.artistName, data.artistPosterFolders, data.artistPosterRevision).toString() +
+            if (data.artistName != null) "@artist-source:2" else ""
+    }
+}

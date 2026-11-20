@@ -1,6 +1,6 @@
 package com.lonx.lyrico.data.model.plugin
 
-import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.text.ConversionMode
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import kotlinx.serialization.Serializable
 

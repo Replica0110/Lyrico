@@ -2,9 +2,9 @@ package com.lonx.lyrico.data.repository
 
 import android.util.Log
 import com.lonx.lyrico.BuildConfig
-import com.lonx.lyrico.data.dto.GitHubReleaseDTO
-import com.lonx.lyrico.data.dto.ReleaseInfo
-import com.lonx.lyrico.data.model.UpdateCheckResult
+import com.lonx.lyrico.data.dto.github.GitHubReleaseDto
+import com.lonx.lyrico.data.model.update.ReleaseInfo
+import com.lonx.lyrico.data.model.update.UpdateCheckResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -46,13 +46,11 @@ class UpdateRepositoryImpl(
                     throw IOException("HTTP ${response.code}")
                 }
 
-                val release = json.decodeFromStream<GitHubReleaseDTO>(
+                val release = json.decodeFromStream<GitHubReleaseDto>(
                     response.body.byteStream()
                 )
 
-                val latestVersionName = release.tag_name
-                val releaseNotes = release.body.orEmpty()
-                val releaseUrl = release.html_url
+                val latestVersionName = release.tagName
 
                 Log.d(
                     TAG,
@@ -68,8 +66,8 @@ class UpdateRepositoryImpl(
                     UpdateCheckResult.NewVersion(
                         ReleaseInfo(
                             versionName = latestVersionName,
-                            releaseNotes = releaseNotes,
-                            url = releaseUrl
+                            releaseNotes = release.body.orEmpty(),
+                            url = release.htmlUrl
                         )
                     )
                 } else {

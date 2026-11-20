@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.ui.components.LocalScaffoldIncludesStartPadding
+import com.lonx.lyrico.ui.components.scaffold.LocalScaffoldIncludesStartPadding
 
 internal val FloatingNavigationBarHeight = 64.dp
 internal val FloatingNavigationBarBottomMargin = 16.dp

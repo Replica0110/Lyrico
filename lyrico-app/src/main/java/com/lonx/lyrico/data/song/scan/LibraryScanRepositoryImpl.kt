@@ -7,10 +7,9 @@ import android.content.Context
 import android.util.Log
 import androidx.room.withTransaction
 import com.lonx.audiotag.model.CustomTagField
-import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.LibraryOperationLock
-import com.lonx.lyrico.data.model.SongFile
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.LyricoDatabase
+
+import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.repository.AppLogRepository
@@ -20,9 +19,8 @@ import com.lonx.lyrico.data.song.mapper.SongMetadataMapper
 import com.lonx.lyrico.data.song.search.LyricFtsIndexer
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.utils.MediaScanner
-import com.lonx.lyrico.utils.LyricsSearchTextExtractor
-import com.lonx.lyrico.utils.UriUtils
+import com.lonx.lyrico.domain.lyrics.LyricsSearchTextExtractor
+import com.lonx.lyrico.platform.storage.UriUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext

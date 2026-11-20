@@ -1,11 +1,11 @@
 package com.lonx.lyrico.ui.components.base
 
 import androidx.compose.runtime.Composable
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.model.appearance.UiEngine
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.salt.SaltDropdownRow
+import com.lonx.lyrico.ui.components.input.salt.SaltDropdownRow
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 

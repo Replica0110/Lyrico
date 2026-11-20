@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
-import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
+import com.lonx.lyrico.ui.components.sheet.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 
 /** 操作弹层：业务内容共用，外壳按引擎区分（Salt 复用 SaltBottomSheet）。 */

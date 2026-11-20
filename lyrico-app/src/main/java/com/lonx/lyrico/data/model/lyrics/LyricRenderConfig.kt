@@ -1,6 +1,6 @@
 package com.lonx.lyrico.data.model.lyrics
 
-import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.text.ConversionMode
 import com.lonx.lyrico.data.repository.SettingsDefaults
 import kotlinx.serialization.Serializable
 

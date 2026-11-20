@@ -1,6 +1,6 @@
 package com.lonx.lyrico.data.model.log
 
-import com.lonx.lyrico.data.model.entity.AppLogEntity
+import com.lonx.lyrico.data.db.entity.AppLogEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

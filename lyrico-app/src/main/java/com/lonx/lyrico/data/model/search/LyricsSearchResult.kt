@@ -1,7 +1,6 @@
 package com.lonx.lyrico.data.model.search
 
 import android.os.Parcelable
-import com.lonx.lyrico.data.model.lyrics.sanitizeStandardFields
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import kotlinx.parcelize.Parcelize
 

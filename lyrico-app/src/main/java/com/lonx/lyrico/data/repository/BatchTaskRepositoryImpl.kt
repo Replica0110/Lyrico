@@ -1,11 +1,11 @@
 package com.lonx.lyrico.data.repository
 
-import com.lonx.lyrico.data.model.BatchTaskStatus
-import com.lonx.lyrico.data.model.BatchTaskType
-import com.lonx.lyrico.data.model.dao.BatchTaskDao
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.batch.BatchTaskStatus
+import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.db.dao.BatchTaskDao
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 

@@ -12,17 +12,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.lonx.audiotag.model.AudioPicture
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
-import com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
 import com.lonx.lyrico.domain.poster.ArtistPictureEntry
 import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
-import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
+import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
+import com.lonx.lyrico.ui.components.base.ItemMenuAction
+import com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
+import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.preference.ArrowPreference
@@ -246,7 +245,7 @@ fun ArtistPosterMenu(
         }
     }
 
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
         val request = state.pickerRequest
         com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
             show = request != null,
@@ -342,7 +341,7 @@ private fun ArtistPicturePickerItems(
             } else {
                 name
             }
-        if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+        if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
             com.lonx.lyrico.ui.components.base.ItemMenuAction(
                 title = title, icon = LucideIcons.Image, onClick = { onPick(entry) })
         } else ArrowPreference(

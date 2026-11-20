@@ -1,9 +1,9 @@
 package com.lonx.lyrico.data.repository
 
-import com.lonx.lyrico.data.model.entity.AlbumEntity
-import com.lonx.lyrico.data.model.entity.ArtistEntity
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.model.dao.ArtistCoverCandidateRow
+import com.lonx.lyrico.data.db.entity.AlbumEntity
+import com.lonx.lyrico.data.db.entity.ArtistEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.data.db.dao.ArtistCoverCandidateRow
 import kotlinx.coroutines.flow.Flow
 
 interface LibraryIndexRepository {

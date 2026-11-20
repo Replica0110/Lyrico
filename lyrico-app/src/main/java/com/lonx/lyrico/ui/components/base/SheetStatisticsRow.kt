@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.model.appearance.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 
 /** Progress summaries can wrap on narrow windows or with enlarged text. */

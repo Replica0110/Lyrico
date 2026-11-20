@@ -2,13 +2,13 @@ package com.lonx.lyrico.data.repository
 
 import android.content.Context
 import androidx.room.withTransaction
-import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.LibraryOperationLock
-import com.lonx.lyrico.data.model.entity.FolderEntity
+import com.lonx.lyrico.data.db.LyricoDatabase
+import com.lonx.lyrico.data.song.scan.LibraryOperationLock
+import com.lonx.lyrico.data.db.entity.FolderEntity
 import com.lonx.lyrico.data.model.log.AppLog
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.utils.UriUtils
+import com.lonx.lyrico.platform.storage.UriUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow

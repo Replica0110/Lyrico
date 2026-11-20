@@ -4,10 +4,9 @@ import android.app.Application
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.recordOperation
+import com.lonx.lyrico.data.plugin.SourcePluginRepository
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.SourcePluginRepository
-import com.lonx.lyrico.utils.DiagnosticEnvironment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart

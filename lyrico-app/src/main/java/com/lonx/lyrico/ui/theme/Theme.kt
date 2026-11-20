@@ -5,8 +5,8 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
-import com.lonx.lyrico.data.model.ThemeMode
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.model.appearance.ThemeMode
+import com.lonx.lyrico.data.model.appearance.UiEngine
 import com.lonx.lyrico.ui.components.blur.LocalBarBlurEnabled
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled
 import top.yukonga.miuix.kmp.theme.MiuixTheme

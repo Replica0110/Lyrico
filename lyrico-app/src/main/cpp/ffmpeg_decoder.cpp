@@ -70,7 +70,7 @@ Decoder* get(jlong pointer) { return reinterpret_cast<Decoder*>(pointer); }
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_openNative(JNIEnv* env, jobject, jint fd, jlong offset, jlong length) {
+Java_com_lonx_lyrico_platform_audio_FfmpegAudioDecoder_openNative(JNIEnv* env, jobject, jint fd, jlong offset, jlong length) {
     auto d = std::make_unique<Decoder>();
     d->fd = dup(fd);
     if (d->fd < 0) { fail(env, "dup", AVERROR(errno)); return 0; }
@@ -114,12 +114,12 @@ Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_openNative(JNIEnv* env, jobject, j
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_mimeTypeNative(JNIEnv* env, jobject, jlong pointer) {
+Java_com_lonx_lyrico_platform_audio_FfmpegAudioDecoder_mimeTypeNative(JNIEnv* env, jobject, jlong pointer) {
     return env->NewStringUTF(get(pointer)->codec->codec_id == AV_CODEC_ID_APE ? "audio/x-ape" : "audio/alac");
 }
 
 extern "C" JNIEXPORT jintArray JNICALL
-Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_formatNative(JNIEnv* env, jobject, jlong pointer) {
+Java_com_lonx_lyrico_platform_audio_FfmpegAudioDecoder_formatNative(JNIEnv* env, jobject, jlong pointer) {
     auto* d = get(pointer);
     jint values[] = { d->rate, d->channels };
     jintArray result = env->NewIntArray(2);
@@ -128,7 +128,7 @@ Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_formatNative(JNIEnv* env, jobject,
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_durationNative(JNIEnv*, jobject, jlong pointer) {
+Java_com_lonx_lyrico_platform_audio_FfmpegAudioDecoder_durationNative(JNIEnv*, jobject, jlong pointer) {
     auto* d = get(pointer);
     auto* stream = d->format->streams[d->stream];
     if (stream->duration != AV_NOPTS_VALUE)
@@ -137,7 +137,7 @@ Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_durationNative(JNIEnv*, jobject, j
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_readNative(JNIEnv* env, jobject, jlong pointer) {
+Java_com_lonx_lyrico_platform_audio_FfmpegAudioDecoder_readNative(JNIEnv* env, jobject, jlong pointer) {
     auto* d = get(pointer);
     while (true) {
         int result = avcodec_receive_frame(d->codec, d->frame);
@@ -175,4 +175,4 @@ Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_readNative(JNIEnv* env, jobject, j
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_lonx_lyrico_utils_FfmpegAudioDecoder_closeNative(JNIEnv*, jobject, jlong pointer) { delete get(pointer); }
+Java_com_lonx_lyrico_platform_audio_FfmpegAudioDecoder_closeNative(JNIEnv*, jobject, jlong pointer) { delete get(pointer); }

@@ -8,11 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.plugin.source.*
+import com.lonx.lyrico.data.db.entity.SourcePluginEntity
+import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.plugin.distribution.PluginUpdateOption
+import com.lonx.lyrico.plugin.distribution.PluginUpdateState
 import com.lonx.lyrico.ui.components.base.*
+import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.salt.SaltIconButton
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import top.yukonga.miuix.kmp.basic.*
@@ -49,7 +51,7 @@ internal fun PluginImportMenu(enabled: Boolean, onLocal: () -> Unit, onOnline: (
 internal fun PluginUpdateSheet(
     show: Boolean,
     candidate: PluginUpdateState?,
-    installed: com.lonx.lyrico.data.model.entity.SourcePluginEntity?,
+    installed: SourcePluginEntity?,
     error: String?,
     onDismiss: () -> Unit,
     onDismissFinished: () -> Unit,

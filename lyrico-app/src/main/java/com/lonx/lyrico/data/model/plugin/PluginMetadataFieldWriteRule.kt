@@ -2,7 +2,6 @@ package com.lonx.lyrico.data.model.plugin
 
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
-import com.lonx.lyrico.data.model.lyrics.SearchSource
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -27,18 +26,5 @@ object PluginMetadataFieldKeyAlias {
 
     fun normalize(key: String): String {
         return aliases[key] ?: key
-    }
-}
-
-object PluginMetadataFieldWriteRuleFactory {
-    fun buildDefaultRules(searchSources: List<SearchSource>): List<PluginMetadataFieldWriteRule> {
-        return emptyList()
-    }
-
-    fun mergeWithDeclaredFields(
-        savedRules: List<PluginMetadataFieldWriteRule>,
-        searchSources: List<SearchSource>
-    ): List<PluginMetadataFieldWriteRule> {
-        return emptyList()
     }
 }

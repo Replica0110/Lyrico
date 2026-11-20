@@ -21,7 +21,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.lonx.audiotag.model.AudioPictureType
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.model.appearance.UiEngine
 import com.lonx.lyrico.data.model.artwork.CoverCandidate
 import com.lonx.lyrico.data.model.artwork.CoverRequest
 import com.lonx.lyrico.ui.theme.LocalUiEngine

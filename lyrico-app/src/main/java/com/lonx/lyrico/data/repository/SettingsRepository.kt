@@ -1,29 +1,28 @@
 package com.lonx.lyrico.data.repository
 
-import com.lonx.lyrico.data.model.BatchMatchConfig
-import com.lonx.lyrico.data.model.CharacterMappingConfig
-import com.lonx.lyrico.data.model.ConversionMode
-import com.lonx.lyrico.data.model.FloatingBarEffect
-import com.lonx.lyrico.data.model.ReplayGainPeakMode
-import com.lonx.lyrico.data.model.ReplayGainSettings
+import com.lonx.lyrico.data.model.batch.BatchMatchConfig
+import com.lonx.lyrico.data.model.filename.CharacterMappingConfig
+import com.lonx.lyrico.data.model.text.ConversionMode
+import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
+import com.lonx.lyrico.data.model.replaygain.ReplayGainPeakMode
+import com.lonx.lyrico.data.model.replaygain.ReplayGainSettings
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.log.LogRetentionOption
 import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
-import com.lonx.lyrico.data.model.SearchConfig
-import com.lonx.lyrico.data.model.SearchSourceTabStyle
-import com.lonx.lyrico.data.model.ThemeConfig
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.data.model.ThemeMode
-import com.lonx.lyrico.data.model.AlbumSortInfo
-import com.lonx.lyrico.data.model.ArtistSortInfo
+import com.lonx.lyrico.data.model.search.SearchConfig
+import com.lonx.lyrico.data.model.search.SearchSourceTabStyle
+import com.lonx.lyrico.data.model.appearance.ThemeConfig
+import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.model.appearance.ThemeMode
+import com.lonx.lyrico.data.model.library.AlbumSortInfo
+import com.lonx.lyrico.data.model.library.ArtistSortInfo
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
-import com.lonx.lyrico.data.model.SortInfo
-import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
+import com.lonx.lyrico.data.model.library.SongSortInfo
+import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
 import kotlinx.coroutines.flow.Flow
-
 
 interface SettingsRepository {
     val defaultPlayerComponent: Flow<String?>
@@ -44,7 +43,7 @@ interface SettingsRepository {
 
     // Flow properties
     val lyricFormat: Flow<LyricFormat>
-    val sortInfo: Flow<SortInfo>
+    val sortInfo: Flow<SongSortInfo>
     val albumSortInfo: Flow<AlbumSortInfo>
     val artistSortInfo: Flow<ArtistSortInfo>
     val albumGridColumns: Flow<Int>
@@ -89,7 +88,7 @@ interface SettingsRepository {
     
     // Save functions
     suspend fun saveLyricDisplayMode(mode: LyricFormat)
-    suspend fun saveSortInfo(sortInfo: SortInfo)
+    suspend fun saveSortInfo(sortInfo: SongSortInfo)
     suspend fun saveAlbumSortInfo(sortInfo: AlbumSortInfo)
     suspend fun saveArtistSortInfo(sortInfo: ArtistSortInfo)
     suspend fun saveAlbumGridColumns(columns: Int)

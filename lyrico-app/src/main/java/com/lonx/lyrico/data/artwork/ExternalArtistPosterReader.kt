@@ -9,7 +9,7 @@ import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.util.Log
 import androidx.core.net.toUri
-import com.lonx.lyrico.utils.SafDocuments
+import com.lonx.lyrico.platform.storage.SafDocuments
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
 import com.lonx.lyrico.domain.poster.ArtistPosterMatcher
 import java.io.ByteArrayOutputStream

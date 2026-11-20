@@ -1,8 +1,8 @@
 package com.lonx.lyrico.data.repository
 
 import android.util.Log
-import com.lonx.lyrico.data.dto.ContributorInfo
-import com.lonx.lyrico.data.dto.GitHubContributorDTO
+import com.lonx.lyrico.data.dto.github.GitHubContributorDto
+import com.lonx.lyrico.data.model.contributor.ContributorInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -43,7 +43,7 @@ class GhContributorRepositoryImpl(
 
                 val stream = response.body.byteStream()
 
-                val dtoList = json.decodeFromStream<List<GitHubContributorDTO>>(stream)
+                val dtoList = json.decodeFromStream<List<GitHubContributorDto>>(stream)
 
                 val result = dtoList
                     .asSequence()
@@ -52,8 +52,8 @@ class GhContributorRepositoryImpl(
                         ContributorInfo(
                             id = it.id,
                             login = it.login,
-                            avatar_url = it.avatar_url,
-                            html_url = it.html_url,
+                            avatarUrl = it.avatarUrl,
+                            profileUrl = it.htmlUrl,
                             contributions = it.contributions
                         )
                     }

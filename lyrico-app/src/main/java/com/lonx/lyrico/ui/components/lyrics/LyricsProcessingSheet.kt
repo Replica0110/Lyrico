@@ -9,24 +9,25 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.model.appearance.UiEngine
 import com.lonx.lyrico.data.model.lyrics.*
 import com.lonx.lyrico.ui.components.base.ActionBottomSheet
 import com.lonx.lyrico.ui.components.base.ConcurrencyDropdown
-import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
 import com.lonx.lyrico.ui.components.base.SheetConfirmActions
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.ui.components.icons.PreferenceIcon
+import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
+import com.lonx.lyrico.ui.components.input.salt.SaltDropdownRow
+import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonAppearance
 import com.moriafly.salt.ui.ItemCheck
@@ -198,7 +199,7 @@ private fun LyricsColumnCountSettings(
                 val kept = destination >= 0
                 val outputCount = mapping.order.size + if (kept) 0 else 1
                 val positions = (1..outputCount).map { stringResource(R.string.lyrics_output_line, it) }
-                com.lonx.lyrico.ui.components.salt.SaltDropdownRow(
+                com.lonx.lyrico.ui.components.input.salt.SaltDropdownRow(
                     title = stringResource(R.string.lyrics_input_line, source + 1),
                     labels = positions + stringResource(R.string.lyrics_column_remove),
                     selectedIndex = if (kept) destination else positions.size,

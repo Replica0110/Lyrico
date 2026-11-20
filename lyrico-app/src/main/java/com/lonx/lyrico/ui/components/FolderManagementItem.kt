@@ -2,21 +2,22 @@
 
 package com.lonx.lyrico.ui.components
 
-import com.lonx.lyrico.ui.components.icons.LucideIcons
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
+import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownEntry
@@ -36,7 +37,7 @@ fun FolderManagementItem(
     isLoading: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
         val popup = com.moriafly.salt.ui.popup.rememberPopupState()
         com.moriafly.salt.ui.RoundedColumn {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -46,7 +47,7 @@ fun FolderManagementItem(
                     arrowType = com.moriafly.salt.ui.ItemArrowType.None,
                 )
                 Box(Modifier.padding(end = 8.dp)) {
-                    com.lonx.lyrico.ui.components.salt.SaltIconButton(
+                    com.lonx.lyrico.ui.components.button.salt.SaltIconButton(
                         LucideIcons.EllipsisVertical, stringResource(R.string.cd_more_actions),
                         enabled = enabled && actions.enabled, onClick = popup::expend,
                     )

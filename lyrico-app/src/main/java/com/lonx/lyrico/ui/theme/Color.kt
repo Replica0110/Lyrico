@@ -5,7 +5,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.model.appearance.UiEngine
 import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.Dark
@@ -14,7 +14,6 @@ import top.yukonga.miuix.kmp.theme.ColorSchemeMode.MonetDark
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.MonetLight
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.MonetSystem
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
 
 val isDarkTheme: Boolean
     @Composable
@@ -44,7 +43,6 @@ object LyricoColors {
         } else {
             MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
         }
-
 
     /**
      * Modified state background color (for edited items).

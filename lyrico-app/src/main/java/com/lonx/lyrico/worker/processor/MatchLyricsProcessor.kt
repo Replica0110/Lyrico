@@ -1,33 +1,32 @@
 package com.lonx.lyrico.worker.processor
 
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
-
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.model.log.AppLog
+import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.lyrics.LyricsCandidateResult
-import com.lonx.lyrico.data.model.lyrics.SongSearchResult
-import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
 import com.lonx.lyrico.data.model.plugin.PluginCapability
 import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
+import com.lonx.lyrico.data.model.search.SongSearchResult
+import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
+import com.lonx.lyrico.domain.lyrics.LyricEncoder
+import com.lonx.lyrico.domain.match.MusicMatchUtils
+import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
-import com.lonx.lyrico.utils.LyricEncoder
-import com.lonx.lyrico.utils.MusicMatchUtils
-import com.lonx.lyrico.utils.PluginFieldPostProcessor
-import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.serialization.json.Json
 
 class MatchLyricsProcessor(
     private val audioTagRepository: AudioTagRepository,
@@ -157,7 +156,7 @@ class MatchLyricsProcessor(
         val encoded = LyricEncoder.encode(
             processed,
             renderConfig.copy(
-                conversionMode = com.lonx.lyrico.data.model.ConversionMode.NONE
+                conversionMode = com.lonx.lyrico.data.model.text.ConversionMode.NONE
             )
         )
         if (encoded.isBlank()) throw BatchTaskSkippedException("Lyrics are empty")
@@ -170,7 +169,7 @@ class MatchLyricsProcessor(
     }
 
     private fun orderedSources(
-        sources: List<com.lonx.lyrico.data.model.lyrics.SearchSource>,
+        sources: List<com.lonx.lyrico.data.song.search.SearchSource>,
         order: List<String>
     ) = sources
         .filter { order.isEmpty() || it.id in order }

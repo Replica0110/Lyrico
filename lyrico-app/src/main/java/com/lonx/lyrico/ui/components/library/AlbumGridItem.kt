@@ -17,7 +17,6 @@ import com.lonx.lyrico.ui.components.cover.CoverImage
 import com.lonx.lyrico.ui.components.library.LibraryItemText as Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-
 data class AlbumGridTextStyle(
     val title: TextStyle,
     val summary: TextStyle,

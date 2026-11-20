@@ -40,19 +40,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.scale
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.salt.SaltDropdownRow
+import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.ui.components.input.salt.SaltDropdownRow
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.RoundedColumn
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sqrt
 
 // ============================================================
 // 裁剪状态持有者 —— 供外部读取和触发裁剪
@@ -413,7 +413,6 @@ fun calculateNewRect(
     right = right.coerceIn(minOf(bounds.right, left + safeMinW), bounds.right)
     top = top.coerceIn(bounds.top, maxOf(bounds.top, bottom - safeMinH))
     bottom = bottom.coerceIn(minOf(bounds.bottom, top + safeMinH), bounds.bottom)
-
 
     if (aspectRatio != null) {
         var w = right - left

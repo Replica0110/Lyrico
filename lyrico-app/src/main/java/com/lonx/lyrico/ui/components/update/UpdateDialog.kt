@@ -41,7 +41,7 @@ fun UpdateDialog(
         ),
         confirmText = stringResource(R.string.dialog_action_go_update),
         content = {
-            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
                 com.moriafly.salt.ui.Card {
                     MarkdownText(
                         modifier = Modifier.padding(12.dp).heightIn(max = 300.dp).verticalScroll(scrollState),

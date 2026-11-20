@@ -73,7 +73,6 @@ internal object LucideIcons {
         )
     }
 
-
     // Lucide 1.59.0, icons/list-check.svg; same license as the existing icons.
     // Archive SHA-256: aae4638a541df91e28cd7733eed2d0d87e72da0942a28b306941284fd00e176a
     val ListCheck: ImageVector by lazy {

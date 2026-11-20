@@ -1,7 +1,5 @@
 package com.lonx.lyrico.ui.components.lyrics
 
-import com.lonx.lyrico.ui.components.icons.LucideIcons
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.utils.UiMessage
+import com.lonx.lyrico.ui.UiMessage
+import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
+import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -46,7 +46,7 @@ fun LyricsPreviewPane(
     contentPadding: PaddingValues = PaddingValues(12.dp),
 ) {
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.UiEngine.SALT
+            com.lonx.lyrico.data.model.appearance.UiEngine.SALT
     Box(modifier = modifier.fillMaxWidth()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             when {
@@ -128,7 +128,7 @@ fun LyricsPreviewPane(
                             shape = CircleShape
                         )
                 ) {
-                    com.lonx.lyrico.ui.components.salt.SaltIconButton(
+                    com.lonx.lyrico.ui.components.button.salt.SaltIconButton(
                         icon = LucideIcons.Copy,
                         label = "",
                         onClick = onCopyLyrics,

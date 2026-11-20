@@ -2,7 +2,7 @@ package com.lonx.lyrico.domain.song.usecase
 
 import android.content.IntentSender
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel

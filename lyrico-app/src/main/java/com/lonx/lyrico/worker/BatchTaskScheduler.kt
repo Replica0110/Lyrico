@@ -7,8 +7,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkInfo
 import androidx.work.await
-import com.lonx.lyrico.data.model.BatchTaskType
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.repository.BatchTaskRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable

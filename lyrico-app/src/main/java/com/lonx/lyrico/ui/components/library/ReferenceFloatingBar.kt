@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -52,19 +54,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
-import com.lonx.lyrico.data.model.FloatingBarEffect
-import com.lonx.lyrico.ui.components.salt.glass.GlassEffect
-import com.lonx.lyrico.ui.components.salt.glass.GlassSource
-import com.lonx.lyrico.ui.components.salt.glass.glass
-import androidx.compose.ui.draw.shadow
-import androidx.compose.foundation.selection.selectable
+import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
+import com.lonx.lyrico.ui.components.effect.glass.GlassEffect
+import com.lonx.lyrico.ui.components.effect.glass.GlassSource
+import com.lonx.lyrico.ui.components.effect.glass.glass
 import com.lonx.lyrico.ui.components.library.liquid.DampedDragAnimation
+import kotlin.math.abs
+import kotlin.math.sign
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.LocalContentColor
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import kotlin.math.abs
-import kotlin.math.sign
+
 private val LocalReferenceBarSelection = staticCompositionLocalOf<(Int) -> Unit> { {} }
 private val ReferenceBarPadding = 4.dp
 private val ReferenceBarTabMinWidth = 76.dp

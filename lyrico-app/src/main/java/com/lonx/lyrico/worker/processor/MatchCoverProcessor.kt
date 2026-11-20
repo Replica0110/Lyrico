@@ -5,10 +5,10 @@ import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.AppLogLevel
 
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
-import com.lonx.lyrico.data.model.lyrics.SongSearchResult
-import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.model.search.SongSearchResult
+import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import com.lonx.lyrico.data.model.plugin.PluginSourceType
@@ -18,7 +18,7 @@ import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
-import com.lonx.lyrico.utils.MusicMatchUtils
+import com.lonx.lyrico.domain.match.MusicMatchUtils
 import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
 

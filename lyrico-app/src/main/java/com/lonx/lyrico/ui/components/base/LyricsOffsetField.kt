@@ -2,10 +2,6 @@
 
 package com.lonx.lyrico.ui.components.base
 
-import com.lonx.lyrico.ui.components.salt.SaltTextInput
-
-import com.lonx.lyrico.ui.components.salt.SaltConfirmDialog
-
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -52,7 +48,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.ui.components.dialog.salt.SaltConfirmDialog
+import com.lonx.lyrico.ui.components.input.salt.SaltTextInput
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.ButtonAppearance
 import com.moriafly.salt.ui.ControlSize
@@ -359,7 +357,7 @@ fun LyricsOffsetInputDialog(
     val isValid = value != null && value in minOffset..maxOffset
     val rangeHint = stringResource(R.string.lyrics_offset_input_hint, minOffset, maxOffset)
 
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
         SaltConfirmDialog(
             show = show, title = stringResource(R.string.label_lyrics_offset),
             onDismissRequest = onDismiss, onConfirm = { value?.let(onConfirm) },

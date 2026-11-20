@@ -1,32 +1,34 @@
 package com.lonx.lyrico.plugin.source
 
 import android.util.Log
+import com.lonx.lyrico.data.db.entity.SourcePluginEntity
+import com.lonx.lyrico.data.db.entity.capabilities
+import com.lonx.lyrico.data.db.entity.displayName
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.newLogOperation
+import com.lonx.lyrico.data.model.lyrics.LyricsCandidateResult
+import com.lonx.lyrico.data.model.lyrics.LyricsResult
+import com.lonx.lyrico.data.model.plugin.PluginCapability
 import com.lonx.lyrico.data.model.plugin.PluginConfigField
 import com.lonx.lyrico.data.model.plugin.PluginManifest
+import com.lonx.lyrico.data.model.plugin.normalizedPluginCapabilities
+import com.lonx.lyrico.data.model.search.SongSearchResult
+import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
 import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.song.search.SearchSource
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
-import com.lonx.lyrico.data.model.lyrics.LyricsResult
-import com.lonx.lyrico.data.model.lyrics.LyricsCandidateResult
-import com.lonx.lyrico.data.model.lyrics.SearchSource
-import com.lonx.lyrico.data.model.plugin.PluginCapability
-import com.lonx.lyrico.data.model.plugin.normalizedPluginCapabilities
-import com.lonx.lyrico.data.model.lyrics.SongSearchResult
-import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlinx.coroutines.currentCoroutineContext
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.suspendCancellableCoroutine
-import com.lonx.lyrico.data.model.entity.SourcePluginEntity
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 class ScriptSearchSource(
     private val manifest: PluginManifest,

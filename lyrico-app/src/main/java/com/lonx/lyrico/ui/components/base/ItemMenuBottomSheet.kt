@@ -1,9 +1,9 @@
 package com.lonx.lyrico.ui.components.base
 
-import com.lonx.lyrico.ui.components.salt.SaltMenuBottomSheet
-import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
+import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
+import com.lonx.lyrico.ui.components.sheet.salt.SaltMenuBottomSheet
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -18,7 +18,7 @@ fun ItemMenuBottomSheet(
     enableNestedScroll: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+    if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.appearance.UiEngine.SALT) {
         SaltMenuBottomSheet(
             show = show,
             label = label,

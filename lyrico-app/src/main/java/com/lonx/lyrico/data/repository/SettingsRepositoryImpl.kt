@@ -13,14 +13,14 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.lonx.lyrico.data.editfield.EditFieldConfigJson
 import com.lonx.lyrico.data.editfield.EditFieldConfigRepository
-import com.lonx.lyrico.data.model.BatchMatchConfig
-import com.lonx.lyrico.data.model.BatchMatchConfigDefaults
-import com.lonx.lyrico.data.model.CharacterMappingConfig
-import com.lonx.lyrico.data.model.CharacterMappingDefaults
-import com.lonx.lyrico.data.model.ConversionMode
-import com.lonx.lyrico.data.model.FloatingBarEffect
-import com.lonx.lyrico.data.model.ReplayGainPeakMode
-import com.lonx.lyrico.data.model.ReplayGainSettings
+import com.lonx.lyrico.data.model.batch.BatchMatchConfig
+import com.lonx.lyrico.data.model.batch.BatchMatchConfigDefaults
+import com.lonx.lyrico.data.model.filename.CharacterMappingConfig
+import com.lonx.lyrico.data.model.filename.CharacterMappingDefaults
+import com.lonx.lyrico.data.model.text.ConversionMode
+import com.lonx.lyrico.data.model.appearance.FloatingBarEffect
+import com.lonx.lyrico.data.model.replaygain.ReplayGainPeakMode
+import com.lonx.lyrico.data.model.replaygain.ReplayGainSettings
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricLineTrack
 import com.lonx.lyrico.data.model.lyrics.DefaultLyricLineOrder
@@ -29,24 +29,24 @@ import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.model.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.model.log.LogRetentionOption
 import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
-import com.lonx.lyrico.data.model.SearchConfig
-import com.lonx.lyrico.data.model.SearchSourceTabStyle
-import com.lonx.lyrico.data.model.SettingsBackup
-import com.lonx.lyrico.data.model.SourceSettingsStore
-import com.lonx.lyrico.data.model.ThemeConfig
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.data.model.ThemeMode
-import com.lonx.lyrico.data.model.AlbumSortBy
-import com.lonx.lyrico.data.model.AlbumSortInfo
-import com.lonx.lyrico.data.model.ArtistSortBy
-import com.lonx.lyrico.data.model.ArtistSortInfo
+import com.lonx.lyrico.data.model.search.SearchConfig
+import com.lonx.lyrico.data.model.search.SearchSourceTabStyle
+import com.lonx.lyrico.data.dto.settings.SettingsBackup
+import com.lonx.lyrico.data.model.search.source.SourceSettingsStore
+import com.lonx.lyrico.data.model.appearance.ThemeConfig
+import com.lonx.lyrico.data.model.appearance.UiEngine
+import com.lonx.lyrico.data.model.appearance.ThemeMode
+import com.lonx.lyrico.data.model.library.AlbumSortBy
+import com.lonx.lyrico.data.model.library.AlbumSortInfo
+import com.lonx.lyrico.data.model.library.ArtistSortBy
+import com.lonx.lyrico.data.model.library.ArtistSortInfo
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.ui.theme.KeyColor
 import com.lonx.lyrico.ui.theme.KeyColors
-import com.lonx.lyrico.data.model.SortBy
-import com.lonx.lyrico.data.model.SortInfo
-import com.lonx.lyrico.data.model.SortOrder
-import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
+import com.lonx.lyrico.data.model.library.SongSortBy
+import com.lonx.lyrico.data.model.library.SongSortInfo
+import com.lonx.lyrico.data.model.library.SortOrder
+import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
 import kotlinx.coroutines.flow.Flow
@@ -60,7 +60,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.first
-
 
 internal val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
@@ -81,7 +80,7 @@ object SettingsDefaults {
     const val RENAME_FORMAT = "@1 - @2"
 
     val LYRIC_FORMAT = LyricFormat.VERBATIM_LRC
-    val SORT_BY = SortBy.TITLE
+    val SORT_BY = SongSortBy.TITLE
     val SORT_ORDER = SortOrder.ASC
     val ALBUM_SORT_BY = AlbumSortBy.NAME
     val ALBUM_SORT_ORDER = SortOrder.ASC
@@ -220,10 +219,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             }
         }
 
-    override val sortInfo: Flow<SortInfo>
+    override val sortInfo: Flow<SongSortInfo>
         get() = context.settingsDataStore.data.map { preferences ->
             val sortBy = try {
-                SortBy.valueOf(
+                SongSortBy.valueOf(
                     preferences[PreferencesKeys.SORT_BY] ?: SettingsDefaults.SORT_BY.name
                 )
             } catch (e: Exception) {
@@ -238,7 +237,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                 SettingsDefaults.SORT_ORDER
             }
 
-            SortInfo(sortBy, sortOrder)
+            SongSortInfo(sortBy, sortOrder)
         }
 
     override val albumSortInfo: Flow<AlbumSortInfo>
@@ -487,7 +486,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             }
         }
 
-
     override val renameFormat: Flow<String>
         get() = context.settingsDataStore.data.map { preferences ->
             preferences[PreferencesKeys.RENAME_FORMAT] ?: SettingsDefaults.RENAME_FORMAT
@@ -497,7 +495,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[PreferencesKeys.LAST_SCAN_TIME] ?: 0L
         }.first()
     }
-
 
     private val baseConfigFlow =
         combine(
@@ -578,7 +575,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun saveSortInfo(sortInfo: SortInfo) {
+    override suspend fun saveSortInfo(sortInfo: SongSortInfo) {
         context.settingsDataStore.edit { preferences ->
             preferences[PreferencesKeys.SORT_BY] = sortInfo.sortBy.name
             preferences[PreferencesKeys.SORT_ORDER] = sortInfo.order.name
@@ -892,7 +889,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE]
                 ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE,
 
-
             limitLyricsInputLines = prefs[PreferencesKeys.LIMIT_LYRICS_INPUT_LINES]
                 ?: SettingsDefaults.LIMIT_LYRICS_INPUT_LINES,
             characterMappingConfig = charMapping,
@@ -911,7 +907,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
         return jsonFormatter.encodeToString(backup)
     }
-
 
     override suspend fun importSettings(jsonString: String): Boolean {
         return try {
@@ -1038,7 +1033,6 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             false
         }
     }
-
 
     override val characterMappingConfig: Flow<CharacterMappingConfig>
         get() = context.settingsDataStore.data.map { preferences ->

@@ -1,46 +1,44 @@
 package com.lonx.lyrico.worker.processor
 
-import com.lonx.lyrico.data.model.metadata.StandardPluginField
-
 import android.util.Log
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.BatchMatchConfig
-import com.lonx.lyrico.data.model.ScoredSearchResult
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.data.model.batch.BatchMatchConfig
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.model.lyrics.SearchSource
-import com.lonx.lyrico.data.model.lyrics.SourceRuntimeConfig
-import com.lonx.lyrico.data.model.lyrics.withSessions
 import com.lonx.lyrico.data.model.metadata.MetadataApplyPolicy
-import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
-import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.model.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.model.metadata.MetadataWriteMode
-import com.lonx.lyrico.data.model.metadata.SearchResultApplier
+import com.lonx.lyrico.data.model.metadata.StandardPluginField
+import com.lonx.lyrico.data.model.plugin.GlobalFieldProcessSettings
+import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.model.plugin.defaultPluginFieldProcessConfig
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.model.search.source.SourceRuntimeConfig
 import com.lonx.lyrico.data.repository.AppLogRepository
+import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.data.song.search.SearchSource
+import com.lonx.lyrico.data.song.search.withSessions
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
+import com.lonx.lyrico.domain.lyrics.LyricEncoder
+import com.lonx.lyrico.domain.match.MatchScoreDetail
+import com.lonx.lyrico.domain.match.MusicMatchUtils
+import com.lonx.lyrico.domain.metadata.SearchResultApplier
+import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
-import com.lonx.lyrico.utils.LyricEncoder
-import com.lonx.lyrico.utils.MatchScoreDetail
-import com.lonx.lyrico.utils.MusicMatchUtils
-import com.lonx.lyrico.utils.PluginFieldPostProcessor
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlin.coroutines.cancellation.CancellationException
 
 class MatchMetadataProcessor(
     private val audioTagRepository: AudioTagRepository,
@@ -299,7 +297,7 @@ class MatchMetadataProcessor(
                                 LyricEncoder.encode(
                                     result = processed,
                                     config = lyricConfig.copy(
-                                        conversionMode = com.lonx.lyrico.data.model.ConversionMode.NONE
+                                        conversionMode = com.lonx.lyrico.data.model.text.ConversionMode.NONE
                                     )
                                 )
                             }

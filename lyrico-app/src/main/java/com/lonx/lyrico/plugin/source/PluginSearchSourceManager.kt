@@ -1,26 +1,27 @@
 package com.lonx.lyrico.plugin.source
 
 import android.util.Log
-import com.lonx.lyrico.data.model.entity.SourcePluginEntity
-import com.lonx.lyrico.data.model.entity.capabilities
-import com.lonx.lyrico.data.model.entity.displayName
-import com.lonx.lyrico.data.model.entity.isEnabledFor
-import com.lonx.lyrico.data.model.entity.isEnabledAnywhere
-import com.lonx.lyrico.data.model.entity.sortOrderFor
+import com.lonx.lyrico.data.db.entity.SourcePluginEntity
+import com.lonx.lyrico.data.db.entity.capabilities
+import com.lonx.lyrico.data.db.entity.displayName
+import com.lonx.lyrico.data.db.entity.isEnabledAnywhere
+import com.lonx.lyrico.data.db.entity.isEnabledFor
+import com.lonx.lyrico.data.db.entity.sortOrderFor
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.plugin.PluginSourceType
 import com.lonx.lyrico.data.model.plugin.supportsSourceType
+import com.lonx.lyrico.data.plugin.SourcePluginRepository
 import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.SourcePluginRepository
-import com.lonx.lyrico.data.model.lyrics.SearchSource
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.combine
+import com.lonx.lyrico.data.song.search.SearchSource
 import com.lonx.lyrico.plugin.i18n.PluginLocales
 import com.lonx.lyrico.plugin.i18n.PluginNames
+import com.lonx.lyrico.plugin.install.SourcePluginInstaller
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class SearchSourceWithState(
     val source: SearchSource,

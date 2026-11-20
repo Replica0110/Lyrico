@@ -1,6 +1,7 @@
 package com.lonx.lyrico.data.model.lyrics
 
 import android.os.Parcelable
+import com.lonx.lyrico.data.model.search.SongSearchResult
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 

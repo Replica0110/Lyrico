@@ -1,20 +1,20 @@
 package com.lonx.lyrico.data.repository
 
 import androidx.room.withTransaction
-import com.lonx.lyrico.data.LyricoDatabase
+import com.lonx.lyrico.data.db.LyricoDatabase
 import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
 import com.lonx.lyrico.data.model.artist.normalizedArtistKey
-import com.lonx.lyrico.data.model.dao.LibraryIndexSong
-import com.lonx.lyrico.data.model.dao.LibraryIndexDao
-import com.lonx.lyrico.data.model.dao.SongDao
-import com.lonx.lyrico.data.model.entity.AlbumEntity
-import com.lonx.lyrico.data.model.entity.AlbumSongCrossRef
-import com.lonx.lyrico.data.model.entity.ArtistEntity
-import com.lonx.lyrico.data.model.entity.ArtistSongCrossRef
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.utils.ArtistNameSplitter
-import com.lonx.lyrico.data.utils.SortKeyUtils
-import com.lonx.lyrico.data.utils.normalizedAlbumKey
+import com.lonx.lyrico.data.db.dao.LibraryIndexSong
+import com.lonx.lyrico.data.db.dao.LibraryIndexDao
+import com.lonx.lyrico.data.db.dao.SongDao
+import com.lonx.lyrico.data.db.entity.AlbumEntity
+import com.lonx.lyrico.data.db.entity.AlbumSongCrossRef
+import com.lonx.lyrico.data.db.entity.ArtistEntity
+import com.lonx.lyrico.data.db.entity.ArtistSongCrossRef
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.domain.artist.ArtistNameSplitter
+import com.lonx.lyrico.data.song.mapper.SortKeyUtils
+import com.lonx.lyrico.data.song.library.normalizedAlbumKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 

@@ -1,22 +1,22 @@
 package com.lonx.lyrico.worker.processor
 
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.BatchTaskType
-import com.lonx.lyrico.data.model.ConversionMode
+import com.lonx.lyrico.data.model.batch.BatchTaskType
+import com.lonx.lyrico.data.model.text.ConversionMode
 import com.lonx.lyrico.data.model.lyrics.LyricFormat
 import com.lonx.lyrico.data.model.lyrics.LyricRenderConfig
-import com.lonx.lyrico.utils.lyrics.document.LyricsDocumentPipeline
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
+import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
-import com.lonx.lyrico.utils.LyricDecoder
-import com.lonx.lyrico.utils.LyricEncoder
-import com.lonx.lyrico.utils.lyrics.LyricsColumnSorter
-import com.lonx.lyrico.utils.lyrics.LyricsTextCleanup
+import com.lonx.lyrico.domain.lyrics.LyricDecoder
+import com.lonx.lyrico.domain.lyrics.LyricEncoder
+import com.lonx.lyrico.domain.lyrics.LyricsColumnSorter
+import com.lonx.lyrico.domain.lyrics.LyricsTextCleanup
 import com.lonx.lyrico.data.model.lyrics.LyricsFormatConfig
 import kotlinx.serialization.json.Json
 

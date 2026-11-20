@@ -2,7 +2,7 @@ package com.lonx.lyrico.data.repository
 
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.entity.AppLogEntity
+import com.lonx.lyrico.data.db.entity.AppLogEntity
 import kotlinx.coroutines.flow.Flow
 import com.lonx.lyrico.data.model.log.LogRecordingState
 import kotlinx.coroutines.flow.StateFlow

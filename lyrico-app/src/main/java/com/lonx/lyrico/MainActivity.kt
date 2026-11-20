@@ -33,14 +33,14 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.lonx.lyrico.App.Companion.ACTION_EDIT_TAG
-import com.lonx.lyrico.data.model.ThemeMode
+import com.lonx.lyrico.data.model.appearance.ThemeMode
 import com.lonx.lyrico.data.repository.LibraryIndexRepository
 import com.lonx.lyrico.data.repository.SettingsRepository
 import com.lonx.lyrico.ui.components.update.UpdateDialog
 import com.lonx.lyrico.ui.theme.KeyColors
 import com.lonx.lyrico.ui.theme.LyricoTheme
-import com.lonx.lyrico.utils.UpdateManager
-import com.lonx.lyrico.viewmodel.SongListViewModel
+import com.lonx.lyrico.data.update.UpdateManager
+import com.lonx.lyrico.ui.screens.library.SongListViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.compose.koinInject
@@ -114,7 +114,6 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
                 ).show()
             }
         }
-
 
     private val songListViewModel: SongListViewModel by viewModel()
     private val settingsRepository: SettingsRepository by inject()

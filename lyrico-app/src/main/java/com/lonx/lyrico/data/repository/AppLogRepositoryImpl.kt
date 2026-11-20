@@ -3,12 +3,12 @@ package com.lonx.lyrico.data.repository
 import com.lonx.lyrico.data.model.log.AppLogLevel
 import com.lonx.lyrico.data.model.log.AppLogType
 import com.lonx.lyrico.data.model.log.LogRetentionOption
-import com.lonx.lyrico.data.model.dao.AppLogDao
-import com.lonx.lyrico.data.model.entity.AppLogEntity
+import com.lonx.lyrico.data.db.dao.AppLogDao
+import com.lonx.lyrico.data.db.entity.AppLogEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import com.lonx.lyrico.data.model.log.LogRecording
-import com.lonx.lyrico.data.model.log.LogRedactor
+
 import com.lonx.lyrico.data.model.log.LogOperation
 import com.lonx.lyrico.data.model.log.LogFileReference
 import com.lonx.lyrico.data.model.log.AppLog

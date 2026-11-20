@@ -1,9 +1,9 @@
 package com.lonx.lyrico.data.song.search
 
-import com.lonx.lyrico.data.model.dao.AlbumSearchRow
-import com.lonx.lyrico.data.model.dao.ArtistSearchRow
-import com.lonx.lyrico.data.model.dao.SongFieldValue
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.dao.AlbumSearchRow
+import com.lonx.lyrico.data.db.dao.ArtistSearchRow
+import com.lonx.lyrico.data.db.dao.SongFieldValue
+import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.model.search.LocalLyricSearchResult
 import com.lonx.lyrico.data.model.search.LocalSearchType
 import kotlinx.coroutines.flow.Flow

@@ -1,7 +1,7 @@
 package com.lonx.lyrico.plugin.source
 
-import com.lonx.lyrico.data.model.entity.SourcePluginEntity
-import com.lonx.lyrico.data.model.entity.displayName
+import com.lonx.lyrico.data.db.entity.SourcePluginEntity
+import com.lonx.lyrico.data.db.entity.displayName
 import com.lonx.lyrico.data.model.plugin.PluginManifest
 import com.lonx.lyrico.data.repository.AppLogRepository
 import com.lonx.lyrico.plugin.runtime.PluginJsRuntime

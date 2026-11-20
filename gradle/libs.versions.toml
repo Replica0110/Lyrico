@@ -14,7 +14,7 @@ lifecycleRuntimeKtx = "2.11.0"
 activityCompose = "1.13.0"
 appcompat = "1.8.0"
 composeBom = "2026.09.00"
-kotlinxSerializationJson = "1.12.0"
+kotlinxSerializationJson = "1.13.0"
 okhttp = "5.5.1"
 opencc4j = "1.14.0"
 reorderable = "3.1.0"
@@ -30,7 +30,7 @@ haze = "2.1.0"
 lottie = "6.7.1"
 zoomable = "2.16.0"
 junit = "4.13.2"
-robolectric = "4.17"
+robolectric = "4.18"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }

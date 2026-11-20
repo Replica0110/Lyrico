@@ -2,78 +2,53 @@
 
 package com.lonx.lyrico.ui.screens.settings.editing
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberOverscrollEffect
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.editfield.EditFieldBlock
 import com.lonx.lyrico.data.editfield.EditFieldDefinition
-import com.lonx.lyrico.data.editfield.EditFieldListItem
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.editfield.toEditFieldBlocks
 import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.components.ItemOrderState
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
 import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.scaffold.PageScaffold
 import com.lonx.lyrico.ui.components.scaffold.scaffoldContentPadding
-import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
-import com.lonx.lyrico.ui.components.sheet.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.screens.settings.EditFieldSettingsViewModel
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
-import com.moriafly.salt.ui.Switcher
-import com.moriafly.salt.ui.innerPadding
+import com.moriafly.salt.ui.Text as SaltText
 import com.moriafly.salt.ui.outerPadding
-import com.moriafly.salt.ui.popup.PopupMenu
-import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.FieldSongsDestination
@@ -82,22 +57,14 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
-import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowListPopup
 
 /** 内置字段与自定义标签共用一份可排序列表。 */
 @Composable
@@ -112,19 +79,21 @@ fun EditFieldSettingsScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var pendingDeleteKey by remember { mutableStateOf<String?>(null) }
     var showResetDialog by remember { mutableStateOf(false) }
-
     var componentKey by remember { mutableStateOf<String?>(null) }
     var showComponentSheet by remember { mutableStateOf(false) }
     var pendingFieldSongs by remember { mutableStateOf<EditFieldDefinition?>(null) }
+
     val blocks = remember(uiState.items) { uiState.items.map { it.field }.toEditFieldBlocks() }
-    val selectedComponent = blocks.firstOrNull { it.key == componentKey }
+    val blocksByKey = remember(blocks) { blocks.associateBy { it.key } }
+    val itemsByCode = remember(uiState.items) { uiState.items.associateBy { it.field.code } }
+    val selectedComponent = componentKey?.let(blocksByKey::get)
 
     val scrollBehavior = MiuixScrollBehavior()
     val topBarBackdrop = rememberBarBlurBackdrop()
     val lazyListState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
 
-    val savedOrder = blocks.map { it.key }
+    val savedOrder = remember(blocks) { blocks.map { it.key } }
     val orderState = remember { ItemOrderState(savedOrder) }
     val displayCodes = orderState.order
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -143,7 +112,7 @@ fun EditFieldSettingsScreen(
             SaltIconButton(
                 icon = LucideIcons.RotateCcw,
                 label = stringResource(R.string.reset_to_default),
-                onClick = { showResetDialog = true }
+                onClick = { showResetDialog = true },
             )
             SaltIconButton(
                 icon = LucideIcons.Plus,
@@ -151,7 +120,7 @@ fun EditFieldSettingsScreen(
                 onClick = {
                     viewModel.clearInputError()
                     showAddDialog = true
-                }
+                },
             )
         },
         miuixTopBar = {
@@ -182,7 +151,7 @@ fun EditFieldSettingsScreen(
                     scrollBehavior = scrollBehavior,
                 )
             }
-        }
+        },
     ) { paddingValues ->
         LazyColumn(
             state = lazyListState,
@@ -199,102 +168,65 @@ fun EditFieldSettingsScreen(
             overscrollEffect = if (salt) rememberOverscrollEffect() else null,
         ) {
             item(key = "hint") {
-                val hintText = stringResource(R.string.edit_field_settings_hint)
-                val countText = stringResource(
-                    R.string.edit_field_settings_enabled_count,
-                    uiState.enabledCount,
-                    uiState.items.size,
+                FieldListHint(
+                    hint = stringResource(R.string.edit_field_settings_hint),
+                    countText = stringResource(
+                        R.string.edit_field_settings_enabled_count,
+                        uiState.enabledCount,
+                        uiState.items.size,
+                    ),
                 )
-                if (salt) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .outerPadding(),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        com.moriafly.salt.ui.Text(
-                            text = hintText,
-                            color = SaltTheme.colors.subText,
-                            style = SaltTheme.textStyles.sub,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        com.moriafly.salt.ui.Text(
-                            text = countText,
-                            color = SaltTheme.colors.subText,
-                            style = SaltTheme.textStyles.sub,
-                            maxLines = 1,
-                        )
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 28.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        Text(
-                            text = hintText,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = countText,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                            maxLines = 1,
-                        )
-                    }
-                }
             }
 
-            items(
+            itemsIndexed(
                 items = displayCodes,
-                key = { code -> code },
-            ) { code ->
-                val block = blocks.firstOrNull { it.key == code }
-                val item = uiState.items.firstOrNull { it.field.code == block?.fields?.firstOrNull()?.code }
+                key = { _, code -> code },
+            ) { index, code ->
+                val block = blocksByKey[code] ?: return@itemsIndexed
+                val item = block.fields.firstOrNull()?.let { itemsByCode[it.code] } ?: return@itemsIndexed
+                val component = block.takeIf { it.isComposite }
 
                 ReorderableItem(state = reorderableState, key = code) {
-                    if (item != null) {
-                        EditFieldRow(
-                            item = item,
-                            iconTone = PreferenceIconTone.at(displayCodes.indexOf(code)),
-                            component = block?.takeIf { it.isComposite },
-                            checked = if (block?.isComposite == true) uiState.componentOverrides[block.key] ?: true else item.enabled,
-                            onManageComponent = {
-                                componentKey = block?.key
-                                showComponentSheet = true
-                            },
-                            onCheckedChange = { checked ->
-                                if (block?.isComposite == true) viewModel.setComponentEnabled(block.key, checked)
-                                else viewModel.setEnabled(item.field.code, checked)
-                            },
-                            onDelete = {
-                                EditFieldRegistry.customTagKeyOf(item.field.code)
-                                    ?.let { pendingDeleteKey = it }
-                            },
-                            onOpenSongs = {
-                                navigator.navigate(FieldSongsDestination(
+                    EditFieldRow(
+                        item = item,
+                        checked = component?.let { uiState.componentOverrides[it.key] ?: true }
+                            ?: item.enabled,
+                        iconTone = PreferenceIconTone.at(index),
+                        onCheckedChange = { checked ->
+                            if (component != null) {
+                                viewModel.setComponentEnabled(component.key, checked)
+                            } else {
+                                viewModel.setEnabled(item.field.code, checked)
+                            }
+                        },
+                        onOpenSongs = {
+                            navigator.navigate(
+                                FieldSongsDestination(
                                     fieldCode = item.field.code,
-                                    component = block?.isComposite == true,
-                                ))
+                                    component = component != null,
+                                )
+                            )
+                        },
+                        onDelete = {
+                            EditFieldRegistry.customTagKeyOf(item.field.code)
+                                ?.let { pendingDeleteKey = it }
+                        },
+                        dragHandleModifier = Modifier.longPressDraggableHandle(
+                            onDragStarted = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
-                            dragHandleModifier = Modifier.longPressDraggableHandle(
-                                onDragStarted = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                },
-                                onDragStopped = {
-                                    viewModel.setBlockOrder(orderState.order)
-                                },
-                            ),
-                        )
-                    }
+                            onDragStopped = { viewModel.setBlockOrder(orderState.order) },
+                        ),
+                        component = component,
+                        onManageComponent = {
+                            if (component != null) {
+                                componentKey = component.key
+                                showComponentSheet = true
+                            }
+                        },
+                    )
                 }
             }
-
         }
     }
 
@@ -349,6 +281,7 @@ fun EditFieldSettingsScreen(
         },
         onDismissRequest = { showComponentSheet = false },
         onDismissFinished = {
+            // 弹层完全关闭后再导航，避免成员列表在退出动画中仍然可见。
             if (!showComponentSheet) {
                 componentKey = null
                 pendingFieldSongs?.let { field ->
@@ -360,350 +293,50 @@ fun EditFieldSettingsScreen(
     )
 }
 
-/** 自定义标签的键名；标准字段没有键名，返回空串。 */
-private fun EditFieldDefinition?.customTagKey(): String =
-    this?.let { EditFieldRegistry.customTagKeyOf(it.code) }.orEmpty()
-
-/** 歌曲列表的标题：自定义标签用键名，标准字段用字段名。 */
+/** 列表顶部说明与已启用数量；两套主题的分隔与字号不同，文案一致。 */
 @Composable
-private fun EditFieldDefinition?.displayTitle(): String = when {
-    this == null -> ""
-    custom -> customTagKey()
-    else -> stringResource(titleRes)
-}
-
-@Composable
-private fun EditFieldRow(
-    item: EditFieldListItem,
-    onCheckedChange: (Boolean) -> Unit,
-    onDelete: () -> Unit,
-    onOpenSongs: () -> Unit,
-    dragHandleModifier: Modifier,
-    component: EditFieldBlock? = null,
-    checked: Boolean = item.enabled,
-    onManageComponent: () -> Unit = {},
-    inSheet: Boolean = false,
-    iconTone: PreferenceIconTone = PreferenceIconTone.Tools,
-) {
-    var showMenu by remember { mutableStateOf(false) }
-    val menuItems = buildList<Triple<String, ImageVector, () -> Unit>> {
-        if (component != null) add(Triple(stringResource(R.string.edit_field_manage_members), LucideIcons.Settings, onManageComponent))
-        add(Triple(stringResource(R.string.edit_field_view_songs), LucideIcons.ListMusic, onOpenSongs))
-        if (item.field.custom) add(Triple(stringResource(R.string.common_delete), LucideIcons.Trash, onDelete))
-    }
+private fun FieldListHint(hint: String, countText: String) {
     if (LocalUiEngine.current == UiEngine.SALT) {
-        // Salt 行：拖拽把手不变，操作菜单换成原生弹出菜单，密度按 Salt 的 item 规格。
-        val saltContent: @Composable () -> Unit = {
-            Row(
-                modifier = Modifier.fillMaxWidth().then(dragHandleModifier).innerPadding(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                com.moriafly.salt.ui.Icon(
-                    painter = rememberVectorPainter(
-                        if (component?.isComposite == true) LucideIcons.Volume2 else item.field.settingsIcon()
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.size(SaltTheme.dimens.itemIcon),
-                    tint = iconTone.color(),
-                )
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    com.moriafly.salt.ui.Text(
-                        text = component?.title() ?: item.field.displayTitle(),
-                        modifier = Modifier.weight(1f, fill = false),
-                        style = SaltTheme.textStyles.main,
-                        color = SaltTheme.colors.text,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (component != null || item.field.custom) {
-                        FieldTagChip(stringResource(
-                            if (component != null) R.string.edit_field_component_short_tag
-                            else R.string.edit_field_custom_short_tag
-                        ))
-                    }
-                }
-                Box {
-                    SaltIconButton(
-                        icon = LucideIcons.EllipsisVertical,
-                        label = stringResource(R.string.cd_more_actions),
-                        onClick = { showMenu = true },
-                        size = 36.dp,
-                        iconSize = 20.dp,
-                    )
-                    PopupMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        menuItems.forEachIndexed { index, (label, icon, action) ->
-                            PopupMenuItem(
-                                text = label,
-                                iconPainter = rememberVectorPainter(icon),
-                                iconColor = if (icon == LucideIcons.Trash) SaltTheme.colors.error
-                                else PreferenceIconTone.at(index).color(),
-                                onClick = {
-                                    showMenu = false
-                                    action()
-                                },
-                            )
-                        }
-                    }
-                }
-                Switcher(state = checked, onChange = onCheckedChange)
-            }
-        }
-        if (inSheet) saltContent() else com.moriafly.salt.ui.Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp)
-        ) { saltContent() }
-        return
-    }
-    val content: @Composable () -> Unit = {
         Row(
-            modifier = Modifier.fillMaxWidth().then(dragHandleModifier)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            PreferenceIcon(
-                imageVector = if (component?.isComposite == true) LucideIcons.Volume2 else item.field.settingsIcon(),
-                tone = iconTone,
-                modifier = Modifier,
-            )
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = component?.title() ?: item.field.displayTitle(),
-                    modifier = Modifier.weight(1f, fill = false),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (component != null || item.field.custom) {
-                    FieldTagChip(stringResource(
-                        if (component != null) R.string.edit_field_component_short_tag
-                        else R.string.edit_field_custom_short_tag
-                    ))
-                }
-            }
-            Box {
-                PillButton(
-                    text = stringResource(R.string.cd_more_actions),
-                    showText = false,
-                    style = PillButtonDefaults.style(PillButtonSize.Small),
-                    onClick = { showMenu = true },
-                    leading = { Icon(LucideIcons.EllipsisVertical, stringResource(R.string.cd_more_actions), Modifier.size(20.dp)) },
-                )
-                WindowListPopup(
-                    show = showMenu,
-                    popupPositionProvider = ListPopupDefaults.DropdownPositionProvider,
-                    onDismissRequest = { showMenu = false },
-                    alignment = PopupPositionProvider.Align.End,
-                ) {
-                    ListPopupColumn {
-                        menuItems.forEachIndexed { index, (label, icon, action) ->
-                            DropdownImpl(
-                                item = top.yukonga.miuix.kmp.basic.DropdownItem(
-                                    text = label,
-                                    icon = { modifier ->
-                                        PreferenceIcon(icon,
-                                            if (icon == LucideIcons.Trash) PreferenceIconTone.Danger else PreferenceIconTone.at(index),
-                                            modifier = modifier)
-                                    },
-                                ),
-                                isSelected = false,
-                                optionSize = menuItems.size,
-                                index = index,
-                                onSelectedIndexChange = {
-                                    showMenu = false
-                                    action()
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
-        }
-    }
-    if (inSheet) content() else Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
-        insideMargin = PaddingValues(0.dp),
-    ) { content() }
-}
-
-@Composable
-private fun EditFieldBlock.title(): String = stringResource(
-    if (isComposite) R.string.group_replay_gain else fields.first().titleRes
-)
-
-private fun EditFieldDefinition.settingsIcon(): ImageVector = when (code) {
-    "picture" -> LucideIcons.Image
-    "rating" -> LucideIcons.Star
-    "title" -> LucideIcons.Music
-    "artist", "album_artist" -> LucideIcons.Users
-    "album", "disc_number" -> LucideIcons.Disc
-    "date" -> LucideIcons.Calendar
-    "language" -> LucideIcons.Languages
-    "genre" -> LucideIcons.Tags
-    "track_number" -> LucideIcons.ListMusic
-    "lyricist" -> LucideIcons.NotebookPen
-    "composer" -> LucideIcons.Music
-    "copyright" -> LucideIcons.Copyright
-    "comment" -> LucideIcons.MessageSquare
-    "track_gain", "album_gain", "reference_loudness" -> LucideIcons.Volume2
-    "track_peak", "album_peak" -> LucideIcons.Activity
-    "lyrics" -> LucideIcons.Captions
-    "lyrics_offset" -> LucideIcons.ArrowDownUp
-    else -> LucideIcons.Tags
-}
-
-@Composable
-private fun ComponentFieldsBottomSheet(
-    show: Boolean,
-    component: EditFieldBlock?,
-    items: List<EditFieldListItem>,
-    onEnabledChange: (String, Boolean) -> Unit,
-    onOrderChange: (List<String>) -> Unit,
-    onOpenSongs: (EditFieldDefinition) -> Unit,
-    onDismissRequest: () -> Unit,
-    onDismissFinished: () -> Unit,
-) {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        SaltBottomSheet(
-            show = show,
-            onDismissRequest = onDismissRequest,
-            onDismissFinished = onDismissFinished,
-            title = component?.title().orEmpty(),
-        ) {
-            ComponentFieldsSheetContent(
-                component = component,
-                items = items,
-                onEnabledChange = onEnabledChange,
-                onOrderChange = onOrderChange,
-                onOpenSongs = onOpenSongs,
-                salt = true,
-            )
-        }
-        return
-    }
-    MiuixBottomSheet(
-        show = show,
-        title = component?.title().orEmpty(),
-        enableNestedScroll = false,
-        onDismissRequest = onDismissRequest,
-        onDismissFinished = onDismissFinished,
-    ) {
-        ComponentFieldsSheetContent(
-            component = component,
-            items = items,
-            onEnabledChange = onEnabledChange,
-            onOrderChange = onOrderChange,
-            onOpenSongs = onOpenSongs,
-            salt = false,
-        )
-    }
-}
-
-@Composable
-private fun ComponentFieldsSheetContent(
-    component: EditFieldBlock?,
-    items: List<EditFieldListItem>,
-    onEnabledChange: (String, Boolean) -> Unit,
-    onOrderChange: (List<String>) -> Unit,
-    onOpenSongs: (EditFieldDefinition) -> Unit,
-    salt: Boolean,
-) {
-    val savedCodes = component?.fields?.map { it.code }.orEmpty()
-    val orderState = remember(component?.key) { ItemOrderState(savedCodes) }
-    val displayCodes = orderState.order
-    val latestOnOrderChange by rememberUpdatedState(onOrderChange)
-    val listState = rememberLazyListState()
-    val haptic = LocalHapticFeedback.current
-    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
-        if (orderState.move(from.key, to.key)) {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        }
-    }
-    LaunchedEffect(savedCodes) { orderState.updateSaved(savedCodes) }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .then(if (salt) Modifier else Modifier.padding(bottom = 32.dp))
-    ) {
-        if (salt) com.moriafly.salt.ui.Text(
-            text = stringResource(R.string.edit_field_component_hint),
-            style = SaltTheme.textStyles.sub,
-            color = SaltTheme.colors.subText,
-            modifier = Modifier.innerPadding(vertical = false),
-        )
-        else Text(
-            stringResource(R.string.edit_field_component_hint),
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            style = MiuixTheme.textStyles.footnote1,
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        )
-        Spacer(Modifier.height(8.dp))
-        val listContent: @Composable () -> Unit = {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
-                contentPadding = PaddingValues(vertical = 4.dp),
-                overscrollEffect = if (salt) rememberOverscrollEffect() else null,
-            ) {
-                items(displayCodes, key = { it }) { code ->
-                    val item = items.firstOrNull { it.field.code == code }
-                    ReorderableItem(reorderState, key = code) {
-                        if (item != null) EditFieldRow(
-                            item = item,
-                            iconTone = PreferenceIconTone.at(displayCodes.indexOf(code)),
-                            inSheet = true,
-                            onCheckedChange = { onEnabledChange(code, it) },
-                            onDelete = {},
-                            onOpenSongs = { onOpenSongs(item.field) },
-                            dragHandleModifier = Modifier.longPressDraggableHandle(
-                                onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-                                onDragStopped = { latestOnOrderChange(orderState.order) },
-                            ),
-                        )
-                    }
-                }
-            }
-        }
-        if (salt) RoundedColumn { listContent() }
-        else Card(
-            modifier = Modifier.fillMaxWidth(),
-            insideMargin = PaddingValues(0.dp),
-            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
-        ) { listContent() }
-    }
-}
-
-/** 字段行上的小标记，用来把自定义标签和内置字段区分开。 */
-@Composable
-private fun FieldTagChip(text: String) {
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        com.moriafly.salt.ui.Text(
-            text = text,
-            style = SaltTheme.textStyles.sub,
-            color = SaltTheme.colors.highlight,
-            maxLines = 1,
             modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .background(SaltTheme.colors.highlight.copy(alpha = 0.12f))
-                .padding(horizontal = 8.dp, vertical = 2.dp),
-        )
+                .fillMaxWidth()
+                .outerPadding(),
+            verticalAlignment = Alignment.Top,
+        ) {
+            SaltText(
+                text = hint,
+                color = SaltTheme.colors.subText,
+                style = SaltTheme.textStyles.sub,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(12.dp))
+            SaltText(
+                text = countText,
+                color = SaltTheme.colors.subText,
+                style = SaltTheme.textStyles.sub,
+                maxLines = 1,
+            )
+        }
         return
     }
-    Text(
-        text = text,
-        fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-        color = MiuixTheme.colorScheme.primary,
+    Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.12f))
-            .padding(horizontal = 8.dp, vertical = 2.dp),
-    )
+            .fillMaxWidth()
+            .padding(horizontal = 28.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = hint,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            fontSize = MiuixTheme.textStyles.footnote1.fontSize,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = countText,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+            fontSize = MiuixTheme.textStyles.footnote1.fontSize,
+            maxLines = 1,
+        )
+    }
 }

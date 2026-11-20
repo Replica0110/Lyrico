@@ -8,7 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -16,27 +15,17 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberOverscrollEffect
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,10 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
@@ -64,31 +50,24 @@ import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.data.song.library.SongSortBy
 import com.lonx.lyrico.data.song.library.SongSortInfo
 import com.lonx.lyrico.data.song.library.SortOrder
+import com.lonx.lyrico.domain.folder.breadcrumbsTo
+import com.lonx.lyrico.domain.folder.buildFolderTree
+import com.lonx.lyrico.domain.folder.folderDisplayName
 import com.lonx.lyrico.platform.storage.UriUtils
 import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
 import com.lonx.lyrico.ui.components.bar.SongSelectionTopAppBar
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
+import com.lonx.lyrico.ui.components.base.YesNoDialog
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.icons.PreferenceIcon
-import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.library.EmptyStateKind
-import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
-import com.lonx.lyrico.ui.components.library.SelectableLibraryItem
 import com.lonx.lyrico.ui.components.scaffold.PageScaffold
-import com.lonx.lyrico.ui.components.scaffold.pageScroll
 import com.lonx.lyrico.ui.components.scaffold.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.scaffold.scaffoldTopHorizontalPadding
 import com.lonx.lyrico.ui.components.song.SongActionSheets
-import com.lonx.lyrico.ui.components.song.SongListItemActions
-import com.lonx.lyrico.ui.components.song.SongListItemContent
 import com.lonx.lyrico.ui.components.tabs.AppTabs
 import com.lonx.lyrico.ui.screens.batch.SongBatchSelectionActions
 import com.lonx.lyrico.ui.screens.library.SongSelectionViewModel
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.popup.PopupMenu
 import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.moriafly.salt.ui.popup.rememberPopupState
 import com.ramcosta.composedestinations.annotation.Destination
@@ -97,8 +76,6 @@ import com.ramcosta.composedestinations.generated.destinations.EditMetadataDesti
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import top.yukonga.miuix.kmp.basic.BreadcrumbBar
-import top.yukonga.miuix.kmp.basic.BreadcrumbItem
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownEntry
@@ -106,7 +83,6 @@ import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.basic.Text
@@ -115,11 +91,14 @@ import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
+/** 顶层目录没有对应实体，用负数占位与数据库自增 id 区分。 */
+private const val ROOT_FOLDER_ID = -1L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Destination<RootGraph>(route = "folder_manager")
 fun FolderManagerScreen(
-    navigator: DestinationsNavigator
+    navigator: DestinationsNavigator,
 ) {
     val viewModel: FolderManagerViewModel = koinViewModel()
     val selectionViewModel: SongSelectionViewModel = koinViewModel()
@@ -131,12 +110,10 @@ fun FolderManagerScreen(
     val selectedSongUris by selectionViewModel.selectedSongUris.collectAsState()
     val swipeAnchorUri by selectionViewModel.swipeAnchorUri.collectAsState()
     val swipeSelectionLabel = stringResource(
-        if (!isSelectionMode) {
-            R.string.swipe_selection_enter_selection
-        } else if (swipeAnchorUri == null) {
-            R.string.swipe_selection_range_start
-        } else {
-            R.string.swipe_selection_range_end
+        when {
+            !isSelectionMode -> R.string.swipe_selection_enter_selection
+            swipeAnchorUri == null -> R.string.swipe_selection_range_start
+            else -> R.string.swipe_selection_range_end
         }
     )
     val swipeSelectionSecondaryLabel = if (!isSelectionMode) {
@@ -146,69 +123,61 @@ fun FolderManagerScreen(
     }
 
     val folders = uiState.folders
-    val folderTree = remember(folders) {
-        buildFolderTree(folders)
-    }
+    val folderTree = remember(folders) { buildFolderTree(folders) }
     val context = LocalContext.current
 
     var currentFolderId by rememberSaveable { mutableLongStateOf(ROOT_FOLDER_ID) }
-    var selectedFolderId by rememberSaveable { mutableLongStateOf(ROOT_FOLDER_ID) }
     var folderContentTransition by remember { mutableStateOf<FolderContentTransition?>(null) }
     var isFabMenuExpanded by remember { mutableStateOf(false) }
+    var savedPagerPage by rememberSaveable { mutableIntStateOf(FOLDER_TAB_INDEX) }
     val scope = rememberCoroutineScope()
-    var savedPagerPage by rememberSaveable { mutableIntStateOf(0) }
     val pagerState = rememberPagerState(
         initialPage = savedPagerPage,
-        pageCount = { 2 }
+        pageCount = { 2 },
     )
     var selectedSong by remember { mutableStateOf<SongEntity?>(null) }
     var showMenuSheet by remember { mutableStateOf(false) }
     var showDetailSheet by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    // 对话框关闭动画期间仍要读到目录内容，因此引用在 show 置回 false 后保留，下次打开时替换。
+    var folderToRemove by remember { mutableStateOf<FolderEntity?>(null) }
+    var showRemoveFolderDialog by remember { mutableStateOf(false) }
 
-    val selectedFolder = remember(selectedFolderId, folders) {
-        folders.find { it.id == selectedFolderId }
+    val currentFolder = remember(currentFolderId, folders) { folders.find { it.id == currentFolderId } }
+    val currentNode = remember(currentFolderId, folderTree) { folderTree.nodeOf(currentFolderId) }
+    val parentFolder = remember(currentNode, folderTree) {
+        currentNode?.parentId?.let(folderTree::nodeOf)?.folder
     }
-    val currentFolder = remember(currentFolderId, folders) {
-        folders.find { it.id == currentFolderId }
+    val currentChildFolders = remember(currentFolderId, folderTree) {
+        folderTree.childFoldersOf(currentFolderId)
     }
+    // 目录切换后仓库流可能还停在上一个目录，先确认歌曲都属于当前目录再展示。
+    val currentSongs = remember(currentFolder, currentFolderSongs) {
+        if (currentFolder != null && currentFolderSongs.all { song -> song.folderId == currentFolder.id }) {
+            currentFolderSongs
+        } else {
+            emptyList()
+        }
+    }
+    val rootPathLabel = stringResource(R.string.folder_root_path)
+    val currentBreadcrumbs = remember(currentFolderId, folderTree, rootPathLabel) {
+        folderTree.breadcrumbsTo(currentFolderId, ROOT_FOLDER_ID, rootPathLabel)
+    }
+
     LaunchedEffect(currentFolder?.id) {
         viewModel.setCurrentFolderId(currentFolder?.id)
     }
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }
-            .collect { page -> savedPagerPage = page }
+        snapshotFlow { pagerState.currentPage }.collect { page -> savedPagerPage = page }
     }
-    val currentNode = remember(currentFolder, folderTree) {
-        currentFolder?.let { folderTree.nodesById[it.id] }
-    }
-    val parentFolder = remember(currentNode, folderTree) {
-        currentNode?.parentId?.let { folderTree.nodesById[it]?.folder }
-    }
-    val currentChildFolders = remember(currentNode, folderTree) {
-        currentNode?.childFolders ?: folderTree.rootFolders
-    }
-    val currentSongs = if (
-        currentFolder != null &&
-        currentFolderSongs.all { song -> song.folderId == currentFolder.id }
-    ) {
-        currentFolderSongs
-    } else {
-        emptyList()
-    }
-    val rootPathLabel = stringResource(R.string.folder_root_path)
-    val currentBreadcrumbs = remember(currentFolder, currentNode, folderTree, rootPathLabel) {
-        buildFolderBreadcrumbs(currentFolder, currentNode, folderTree, rootPathLabel)
-    }
-    val showConfirmDialog = remember { mutableStateOf(false) }
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
+        contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri ->
         uri?.let {
             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 
             try {
                 context.contentResolver.takePersistableUriPermission(it, flags)
@@ -216,13 +185,9 @@ fun FolderManagerScreen(
                 e.printStackTrace()
             }
 
-            val path = UriUtils.getFileAbsolutePath(context, it)
-                ?: it.toString()
+            val path = UriUtils.getFileAbsolutePath(context, it) ?: it.toString()
 
-            viewModel.addFolder(
-                path = path,
-                treeUri = it.toString()
-            )
+            viewModel.addFolder(path = path, treeUri = it.toString())
         }
     }
 
@@ -233,25 +198,25 @@ fun FolderManagerScreen(
             folderContentTransition = FolderContentTransition(
                 fromFolderId = currentFolderId,
                 toFolderId = folderId,
-                forward = forward
+                forward = forward,
             )
         }
         currentFolderId = folderId
     }
 
+    fun removeFolder(folder: FolderEntity) {
+        viewModel.deleteFolder(folder)
+        if (folder.id == currentFolderId) {
+            navigateToFolder(parentFolder?.id ?: ROOT_FOLDER_ID, forward = false)
+        }
+    }
+
     BackHandler(enabled = isSelectionMode || currentFolder != null) {
         when {
-            isFabMenuExpanded -> {
-                isFabMenuExpanded = false
-            }
-
-            isSelectionMode -> {
-                selectionViewModel.exitSelectionMode()
-            }
-
-            currentFolder != null -> {
+            isFabMenuExpanded -> isFabMenuExpanded = false
+            isSelectionMode -> selectionViewModel.exitSelectionMode()
+            currentFolder != null ->
                 navigateToFolder(parentFolder?.id ?: ROOT_FOLDER_ID, forward = false)
-            }
         }
     }
 
@@ -259,10 +224,7 @@ fun FolderManagerScreen(
     val folderTitle = if (currentFolderId == ROOT_FOLDER_ID) {
         stringResource(R.string.folder_manager_title)
     } else {
-        currentFolder?.path
-            ?.substringAfterLast("/")
-            ?.ifBlank { currentFolder.path }
-            ?: stringResource(R.string.folder_manager_title)
+        currentFolder?.path?.folderDisplayName() ?: stringResource(R.string.folder_manager_title)
     }
     val navigateUpAction: () -> Unit = {
         if (currentFolder != null) {
@@ -285,6 +247,15 @@ fun FolderManagerScreen(
         )
     } else null
     val sortPopupState = rememberPopupState()
+    val showSortAction =
+        currentFolder != null && pagerState.currentPage == SONG_TAB_INDEX && currentSongs.isNotEmpty()
+
+    // 再次选择当前排序方式时切换升降序，其余情况从升序开始。
+    fun onSortSelected(sortType: SongSortBy) {
+        val isCurrent = sortInfo.sortBy == sortType
+        val order = if (isCurrent && sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC
+        viewModel.onSortChange(SongSortInfo(sortBy = sortType, order = order))
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         PageScaffold(
@@ -296,42 +267,29 @@ fun FolderManagerScreen(
                     SaltIconButton(
                         icon = LucideIcons.FolderPlus,
                         label = stringResource(R.string.folder_manager_title),
-                        onClick = { folderPickerLauncher.launch(null) }
+                        onClick = { folderPickerLauncher.launch(null) },
                     )
                 }
-                if (currentFolder != null && pagerState.currentPage == 1 && currentSongs.isNotEmpty()) {
-                    val sortTypes = SongSortBy.entries.toList()
+                if (showSortAction) {
                     SaltIconButton(
                         icon = LucideIcons.Sort,
                         label = stringResource(R.string.cd_sort),
-                        onClick = { sortPopupState.expend() }
+                        onClick = { sortPopupState.expend() },
                     )
-                    com.moriafly.salt.ui.popup.PopupMenu(
+                    PopupMenu(
                         expanded = sortPopupState.expend,
-                        onDismissRequest = sortPopupState::dismiss
+                        onDismissRequest = sortPopupState::dismiss,
                     ) {
-                        sortTypes.forEach { sortType ->
+                        SongSortBy.entries.forEach { sortType ->
                             val isSelected = sortInfo.sortBy == sortType
-                            val newOrder = if (isSelected) {
-                                if (sortInfo.order == SortOrder.ASC) SortOrder.DESC else SortOrder.ASC
-                            } else {
-                                SortOrder.ASC
-                            }
                             PopupMenuItem(
                                 text = stringResource(sortType.labelRes),
                                 selected = isSelected,
-                                sub = if (isSelected) {
-                                    stringResource(
-                                        when (sortInfo.order) {
-                                            SortOrder.ASC -> R.string.sort_ascending
-                                            SortOrder.DESC -> R.string.sort_descending
-                                        }
-                                    )
-                                } else null,
+                                sub = if (isSelected) sortOrderLabel(sortInfo.order) else null,
                                 onClick = {
                                     sortPopupState.dismiss()
-                                    viewModel.onSortChange(SongSortInfo(sortBy = sortType, order = newOrder))
-                                }
+                                    onSortSelected(sortType)
+                                },
                             )
                         }
                     }
@@ -344,25 +302,25 @@ fun FolderManagerScreen(
                     transitionSpec = {
                         val animationDuration = 300
                         val enter = fadeIn(tween(animationDuration)) +
-                                slideInVertically(
-                                    animationSpec = tween(
-                                        durationMillis = animationDuration,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    initialOffsetY = { -it / 3 }
-                                )
+                            slideInVertically(
+                                animationSpec = tween(
+                                    durationMillis = animationDuration,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                                initialOffsetY = { -it / 3 },
+                            )
                         val exit = fadeOut(tween(animationDuration)) +
-                                slideOutVertically(
-                                    animationSpec = tween(
-                                        durationMillis = animationDuration,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    targetOffsetY = { -it / 3 }
-                                )
+                            slideOutVertically(
+                                animationSpec = tween(
+                                    durationMillis = animationDuration,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                                targetOffsetY = { -it / 3 },
+                            )
 
                         (enter togetherWith exit).using(SizeTransform(clip = false))
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) { selectionMode ->
                     if (selectionMode) {
                         SongSelectionTopAppBar(
@@ -371,175 +329,69 @@ fun FolderManagerScreen(
                             scrollBehavior = topAppBarScrollBehavior,
                             onSelectAll = selectionViewModel::selectAll,
                             onDeselectAll = selectionViewModel::deselectAll,
-                            onClose = selectionViewModel::exitSelectionMode
+                            onClose = selectionViewModel::exitSelectionMode,
                         )
                     } else {
                         SmallTopAppBar(
-                            title = if (currentFolderId == ROOT_FOLDER_ID) {
-                                stringResource(R.string.folder_manager_title)
-                            } else {
-                                currentFolder?.path
-                                    ?.substringAfterLast("/")
-                                    ?.ifBlank { currentFolder.path }
-                                    ?: stringResource(R.string.folder_manager_title)
-                            },
+                            title = folderTitle,
                             navigationIcon = {
-                                IconButton(
-                                    onClick = navigateUpAction
-                                ) {
+                                IconButton(onClick = navigateUpAction) {
                                     Icon(
                                         imageVector = LucideIcons.ArrowLeft,
-                                        contentDescription = null
+                                        contentDescription = null,
                                     )
                                 }
                             },
                             actions = {
                                 if (currentFolderId == ROOT_FOLDER_ID) {
-                                    IconButton(
-                                        onClick = { folderPickerLauncher.launch(null) }
-                                    ) {
+                                    IconButton(onClick = { folderPickerLauncher.launch(null) }) {
                                         Icon(
                                             imageVector = LucideIcons.FolderPlus,
-                                            contentDescription = null
+                                            contentDescription = null,
                                         )
                                     }
                                 }
 
-                                if (
-                                    currentFolder != null &&
-                                    pagerState.currentPage == 1 &&
-                                    currentSongs.isNotEmpty()
-                                ) {
-                                    val sortTypes = SongSortBy.entries.toList()
-                                    val sortEntries = DropdownEntry(
-                                        items = sortTypes.map { sortType ->
-                                            val isSelected = sortInfo.sortBy == sortType
-
-                                            DropdownItem(
-                                                text = stringResource(sortType.labelRes),
-                                                selected = isSelected,
-                                                summary = if (isSelected) {
-                                                    stringResource(
-                                                        when (sortInfo.order) {
-                                                            SortOrder.ASC -> R.string.sort_ascending
-                                                            SortOrder.DESC -> R.string.sort_descending
-                                                        }
-                                                    )
-                                                } else {
-                                                    null
-                                                },
-                                                onClick = {
-                                                    val newOrder = if (isSelected) {
-                                                        if (sortInfo.order == SortOrder.ASC) {
-                                                            SortOrder.DESC
-                                                        } else {
-                                                            SortOrder.ASC
-                                                        }
-                                                    } else {
-                                                        SortOrder.ASC
-                                                    }
-
-                                                    viewModel.onSortChange(
-                                                        SongSortInfo(
-                                                            sortBy = sortType,
-                                                            order = newOrder
-                                                        )
-                                                    )
-                                                }
-                                            )
-                                        }
-                                    )
-
+                                if (showSortAction) {
                                     OverlayIconDropdownMenu(
-                                        entries = listOf(sortEntries)
+                                        entries = listOf(
+                                            DropdownEntry(
+                                                items = SongSortBy.entries.map { sortType ->
+                                                    val isSelected = sortInfo.sortBy == sortType
+                                                    DropdownItem(
+                                                        text = stringResource(sortType.labelRes),
+                                                        selected = isSelected,
+                                                        summary = if (isSelected) {
+                                                            sortOrderLabel(sortInfo.order)
+                                                        } else {
+                                                            null
+                                                        },
+                                                        onClick = { onSortSelected(sortType) },
+                                                    )
+                                                },
+                                            )
+                                        ),
                                     ) {
                                         Icon(
                                             imageVector = LucideIcons.Sort,
-                                            contentDescription = stringResource(R.string.cd_sort)
+                                            contentDescription = stringResource(R.string.cd_sort),
                                         )
                                     }
                                 }
                             },
-                            scrollBehavior = topAppBarScrollBehavior
+                            scrollBehavior = topAppBarScrollBehavior,
                         )
                     }
                 }
-            }
+            },
         ) { paddingValues ->
-            selectedFolder?.let { folder ->
-                if (salt) com.lonx.lyrico.ui.components.base.YesNoDialog(
-                    show = showConfirmDialog.value,
-                    title = stringResource(R.string.dialog_remove_folder_title),
-                    summary = folder.path + "\n\n" + stringResource(R.string.dialog_remove_folder_content_tip),
-                    onDismissRequest = { showConfirmDialog.value = false },
-                    onConfirm = {
-                        viewModel.deleteFolder(folder)
-                        selectedFolderId = ROOT_FOLDER_ID
-                        if (folder.id == currentFolderId) {
-                            navigateToFolder(parentFolder?.id ?: ROOT_FOLDER_ID, forward = false)
-                        }
-                    },
-                ) else WindowDialog(
-                    title = stringResource(R.string.dialog_remove_folder_title),
-                    show = showConfirmDialog.value,
-                    onDismissRequest = { showConfirmDialog.value = false }
-                ) {
-                    Column {
-                        Text(
-                            text = folder.path,
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MiuixTheme.colorScheme.onBackground
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = stringResource(R.string.dialog_remove_folder_content_tip),
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                            fontSize = MiuixTheme.textStyles.body2.fontSize
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            TextButton(
-                                text = stringResource(R.string.cancel),
-                                onClick = {
-                                    showConfirmDialog.value = false
-                                },
-                                modifier = Modifier.weight(1f),
-                            )
-
-                            Spacer(Modifier.width(20.dp))
-
-                            TextButton(
-                                text = stringResource(R.string.confirm),
-                                onClick = {
-                                    showConfirmDialog.value = false
-                                    viewModel.deleteFolder(folder)
-                                    selectedFolderId = ROOT_FOLDER_ID
-                                    if (folder.id == currentFolderId) {
-                                        navigateToFolder(
-                                            parentFolder?.id ?: ROOT_FOLDER_ID,
-                                            forward = false
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.textButtonColorsPrimary(),
-                            )
-                        }
-                    }
-                }
-            }
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(if (salt) com.lonx.lyrico.ui.components.scaffold.scaffoldContentPadding(paddingValues)
-                        else scaffoldTopHorizontalPadding(paddingValues))
+                    .padding(
+                        if (salt) scaffoldContentPadding(paddingValues)
+                        else scaffoldTopHorizontalPadding(paddingValues)
+                    ),
             ) {
                 FolderPathHeader(
                     breadcrumbs = currentBreadcrumbs,
@@ -547,82 +399,80 @@ fun FolderManagerScreen(
                     songCount = currentSongs.size,
                     onBreadcrumbClick = { folderId ->
                         navigateToFolder(folderId, forward = false)
-                    }
+                    },
                 )
 
                 uiState.error?.let { error ->
-                    if (salt) com.moriafly.salt.ui.ItemTip(
-                        stringResource(R.string.folder_operation_failed, error)
-                    ) else Text(
-                        text = stringResource(R.string.folder_operation_failed, error),
+                    val message = stringResource(R.string.folder_operation_failed, error)
+                    if (salt) com.moriafly.salt.ui.ItemTip(message) else Text(
+                        text = message,
                         fontSize = MiuixTheme.textStyles.footnote1.fontSize,
                         color = MiuixTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     )
                 }
 
-                if (salt) AppTabs(
-                    tabs = listOf(
-                        "${stringResource(R.string.folder_tab_folders)} (${currentChildFolders.size})",
-                        "${stringResource(R.string.folder_tab_songs)} (${currentSongs.size})",
-                    ), selectedIndex = pagerState.currentPage,
+                FolderTabs(
+                    foldersLabel = stringResource(R.string.folder_tab_folders),
+                    songsLabel = stringResource(R.string.folder_tab_songs),
+                    folderCount = currentChildFolders.size,
+                    songCount = currentSongs.size,
+                    selectedIndex = pagerState.currentPage,
                     onSelected = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
-                ) else Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .padding(bottom = 8.dp)
-                ) {
-                    TabRowWithContour(
-                        tabs = listOf(
-                            "${stringResource(R.string.folder_tab_folders)} (${currentChildFolders.size})",
-                            "${stringResource(R.string.folder_tab_songs)} (${currentSongs.size})"
-                        ),
-                        selectedTabIndex = pagerState.currentPage,
-                        onTabSelected = { index ->
-                            scope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        }
-                    )
-                }
-
-                FolderPagerSlideContent(
-                    currentFolderId = currentFolderId,
-                    transition = folderContentTransition,
-                    folders = folders,
-                    folderTree = folderTree,
-                    currentFolderSongs = currentSongs,
-                    pagerState = pagerState,
-                    scanningFolderIds = uiState.scanningFolderIds,
-                    queuedFolderIds = uiState.queuedFolderIds,
-                    isSelectionMode = isSelectionMode,
-                    selectedSongUris = selectedSongUris,
-                    swipeSelectionLabel = swipeSelectionLabel,
-                    swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                    topAppBarScrollBehavior = topAppBarScrollBehavior,
-                    navigator = navigator,
-                    selectionViewModel = selectionViewModel,
-                    onFolderClick = { folder ->
-                        navigateToFolder(folder.id, forward = true)
-                    },
-                    onDeleteFolder = { folder ->
-                        selectedFolderId = folder.id
-                        showConfirmDialog.value = true
-                    },
-                    onRefreshFolder = viewModel::refreshFolder,
-                    onIgnoredChange = viewModel::setFolderIgnored,
-                    onShowSongMenu = { song ->
-                        selectedSong = song
-                        showMenuSheet = true
-                    },
-                    onTransitionFinished = {
-                        folderContentTransition = null
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
                 )
+
+                FolderContentPager(
+                    currentFolderId = currentFolderId,
+                    currentFolderSongs = currentSongs,
+                    transition = folderContentTransition,
+                    pagerState = pagerState,
+                    onTransitionFinished = { folderContentTransition = null },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) { page, snapshot, layerModifier ->
+                    when (page) {
+                        FOLDER_TAB_INDEX -> FolderChildrenPage(
+                            folders = folderTree.childFoldersOf(snapshot.folderId),
+                            folderTree = folderTree,
+                            scanningFolderIds = uiState.scanningFolderIds,
+                            queuedFolderIds = uiState.queuedFolderIds,
+                            isSelectionMode = isSelectionMode,
+                            topAppBarScrollBehavior = topAppBarScrollBehavior,
+                            onFolderClick = { folder -> navigateToFolder(folder.id, forward = true) },
+                            onDeleteFolder = { folder ->
+                                folderToRemove = folder
+                                showRemoveFolderDialog = true
+                            },
+                            onRefreshFolder = viewModel::refreshFolder,
+                            onIgnoredChange = viewModel::setFolderIgnored,
+                            modifier = layerModifier,
+                        )
+
+                        else -> FolderSongsPage(
+                            songs = snapshot.songs,
+                            isSelectionMode = isSelectionMode,
+                            selectedSongUris = selectedSongUris,
+                            swipeSelectionLabel = swipeSelectionLabel,
+                            swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
+                            topAppBarScrollBehavior = topAppBarScrollBehavior,
+                            onSongClick = { song ->
+                                navigator.navigate(EditMetadataDestination(songFileUri = song.uri))
+                            },
+                            onToggleSelection = { song ->
+                                selectionViewModel.toggleSelection(song.uri)
+                            },
+                            onSwipeSelection = { song ->
+                                selectionViewModel.swipeSelect(song, snapshot.songs)
+                            },
+                            onShowSongMenu = { song ->
+                                selectedSong = song
+                                showMenuSheet = true
+                            },
+                            modifier = layerModifier,
+                        )
+                    }
+                }
             }
 
             SongActionSheets(
@@ -643,795 +493,135 @@ fun FolderManagerScreen(
                 onShowDetail = { showDetailSheet = true },
                 onShowDelete = { showDeleteDialog = true },
                 onShowRename = { showRenameDialog = true },
-                onPlay = { song ->
-                    selectionViewModel.play(context, song)
-                },
-                onDelete = { song ->
-                    selectionViewModel.delete(song)
-                },
-                onRename = { song, newFileName ->
-                    selectionViewModel.renameSong(song, newFileName)
-                }
+                onPlay = { song -> selectionViewModel.play(context, song) },
+                onDelete = { song -> selectionViewModel.delete(song) },
+                onRename = { song, newFileName -> selectionViewModel.renameSong(song, newFileName) },
             )
         }
 
         SongBatchSelectionActions(
             navigator = navigator,
             songs = currentSongs,
-            show = isSelectionMode && pagerState.currentPage == 1 && currentSongs.isNotEmpty(),
+            show = isSelectionMode && pagerState.currentPage == SONG_TAB_INDEX && currentSongs.isNotEmpty(),
             expanded = isFabMenuExpanded,
             selectedSongUris = selectedSongUris,
             onExpandedChange = { isFabMenuExpanded = it },
             onSetSelectionUris = selectionViewModel::setSelectionUris,
             onBatchDelete = selectionViewModel::batchDelete,
-            onBatchShare = selectionViewModel::batchShare
-        )
-    }
-}
-
-private const val ROOT_FOLDER_ID = -1L
-
-private data class FolderContentTransition(
-    val fromFolderId: Long,
-    val toFolderId: Long,
-    val forward: Boolean
-)
-
-private data class FolderContentSnapshot(
-    val folderId: Long,
-    val childFolders: List<FolderEntity>,
-    val songs: List<SongEntity>
-)
-
-private data class FolderBreadcrumb(
-    val folderId: Long,
-    val label: String
-)
-
-@Composable
-private fun FolderPagerSlideContent(
-    currentFolderId: Long,
-    transition: FolderContentTransition?,
-    folders: List<FolderEntity>,
-    folderTree: FolderTree,
-    currentFolderSongs: List<SongEntity>,
-    pagerState: androidx.compose.foundation.pager.PagerState,
-    scanningFolderIds: Set<Long>,
-    queuedFolderIds: Set<Long>,
-    isSelectionMode: Boolean,
-    selectedSongUris: Set<String>,
-    swipeSelectionLabel: String,
-    swipeSelectionSecondaryLabel: String?,
-    topAppBarScrollBehavior: ScrollBehavior,
-    navigator: DestinationsNavigator,
-    selectionViewModel: SongSelectionViewModel,
-    onFolderClick: (FolderEntity) -> Unit,
-    onDeleteFolder: (FolderEntity) -> Unit,
-    onRefreshFolder: (FolderEntity) -> Unit,
-    onIgnoredChange: (FolderEntity, Boolean) -> Unit,
-    onShowSongMenu: (SongEntity) -> Unit,
-    onTransitionFinished: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val progress = remember { Animatable(1f) }
-
-    LaunchedEffect(transition) {
-        if (transition != null) {
-            progress.snapTo(0f)
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = 360,
-                    easing = FastOutSlowInEasing
-                )
-            )
-            onTransitionFinished()
-        } else {
-            progress.snapTo(1f)
-        }
-    }
-
-    val currentSnapshot = remember(
-        currentFolderId,
-        folders,
-        folderTree,
-        currentFolderSongs
-    ) {
-        buildFolderContentSnapshot(
-            folderId = currentFolderId,
-            folders = folders,
-            folderTree = folderTree,
-            currentFolderId = currentFolderId,
-            currentFolderSongs = currentFolderSongs,
-            useCurrentFolderSongs = true
+            onBatchShare = selectionViewModel::batchShare,
         )
     }
 
-    val activeTransition = transition
-    val fromSnapshot = remember(
-        activeTransition?.fromFolderId,
-        folders,
-        folderTree
-    ) {
-        activeTransition?.let {
-            buildFolderContentSnapshot(
-                folderId = it.fromFolderId,
-                folders = folders,
-                folderTree = folderTree,
-                currentFolderId = currentFolderId,
-                currentFolderSongs = currentFolderSongs,
-                useCurrentFolderSongs = false
-            )
-        }
-    }
-    val toSnapshot = remember(
-        activeTransition?.toFolderId,
-        currentFolderId,
-        folders,
-        folderTree,
-        currentFolderSongs
-    ) {
-        activeTransition?.let {
-            buildFolderContentSnapshot(
-                folderId = it.toFolderId,
-                folders = folders,
-                folderTree = folderTree,
-                currentFolderId = currentFolderId,
-                currentFolderSongs = currentFolderSongs,
-                useCurrentFolderSongs = it.toFolderId == currentFolderId
-            )
-        }
-    }
-
-    HorizontalPager(
-        state = pagerState,
-        userScrollEnabled =  false,
-        modifier = modifier
-    ) { page ->
-        FolderPageSlideContent(
-            page = page,
-            currentSnapshot = currentSnapshot,
-            fromSnapshot = fromSnapshot,
-            toSnapshot = toSnapshot,
-            transition = activeTransition,
-            progress = progress.value,
-            folderTree = folderTree,
-            scanningFolderIds = scanningFolderIds,
-            queuedFolderIds = queuedFolderIds,
-            isSelectionMode = isSelectionMode,
-            selectedSongUris = selectedSongUris,
-            swipeSelectionLabel = swipeSelectionLabel,
-            swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-            topAppBarScrollBehavior = topAppBarScrollBehavior,
-            navigator = navigator,
-            selectionViewModel = selectionViewModel,
-            onFolderClick = onFolderClick,
-            onDeleteFolder = onDeleteFolder,
-            onRefreshFolder = onRefreshFolder,
-            onIgnoredChange = onIgnoredChange,
-            onShowSongMenu = onShowSongMenu,
-            modifier = Modifier.fillMaxSize()
-        )
-    }
-}
-
-@Composable
-private fun FolderPageSlideContent(
-    page: Int,
-    currentSnapshot: FolderContentSnapshot,
-    fromSnapshot: FolderContentSnapshot?,
-    toSnapshot: FolderContentSnapshot?,
-    transition: FolderContentTransition?,
-    progress: Float,
-    folderTree: FolderTree,
-    scanningFolderIds: Set<Long>,
-    queuedFolderIds: Set<Long>,
-    isSelectionMode: Boolean,
-    selectedSongUris: Set<String>,
-    swipeSelectionLabel: String,
-    swipeSelectionSecondaryLabel: String?,
-    topAppBarScrollBehavior: ScrollBehavior,
-    navigator: DestinationsNavigator,
-    selectionViewModel: SongSelectionViewModel,
-    onFolderClick: (FolderEntity) -> Unit,
-    onDeleteFolder: (FolderEntity) -> Unit,
-    onRefreshFolder: (FolderEntity) -> Unit,
-    onIgnoredChange: (FolderEntity, Boolean) -> Unit,
-    onShowSongMenu: (SongEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    BoxWithConstraints(
-        modifier = modifier.clipToBounds()
-    ) {
-        val density = LocalDensity.current
-        val travelPx = with(density) { maxWidth.toPx() * 0.45f }
-
-        if (transition == null || fromSnapshot == null || toSnapshot == null) {
-            FolderPage(
-                page = page,
-                snapshot = currentSnapshot,
-                folderTree = folderTree,
-                scanningFolderIds = scanningFolderIds,
-                queuedFolderIds = queuedFolderIds,
-                isSelectionMode = isSelectionMode,
-                selectedSongUris = selectedSongUris,
-                swipeSelectionLabel = swipeSelectionLabel,
-                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                topAppBarScrollBehavior = topAppBarScrollBehavior,
-                navigator = navigator,
-                selectionViewModel = selectionViewModel,
-                onFolderClick = onFolderClick,
-                onDeleteFolder = onDeleteFolder,
-                onRefreshFolder = onRefreshFolder,
-                onIgnoredChange = onIgnoredChange,
-                onShowSongMenu = onShowSongMenu,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            val fromOffset = if (transition.forward) {
-                -travelPx * progress
-            } else {
-                travelPx * progress
-            }
-            val toOffset = if (transition.forward) {
-                travelPx * (1f - progress)
-            } else {
-                -travelPx * (1f - progress)
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                FolderPage(
-                    page = page,
-                    snapshot = fromSnapshot,
-                    folderTree = folderTree,
-                    scanningFolderIds = scanningFolderIds,
-                    queuedFolderIds = queuedFolderIds,
-                    isSelectionMode = isSelectionMode,
-                    selectedSongUris = selectedSongUris,
-                    swipeSelectionLabel = swipeSelectionLabel,
-                    swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                    topAppBarScrollBehavior = topAppBarScrollBehavior,
-                    navigator = navigator,
-                    selectionViewModel = selectionViewModel,
-                    onFolderClick = onFolderClick,
-                    onDeleteFolder = onDeleteFolder,
-                    onRefreshFolder = onRefreshFolder,
-                    onIgnoredChange = onIgnoredChange,
-                    onShowSongMenu = onShowSongMenu,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            translationX = fromOffset
-                            alpha = 1f - progress
-                        }
-                )
-
-                FolderPage(
-                    page = page,
-                    snapshot = toSnapshot,
-                    folderTree = folderTree,
-                    scanningFolderIds = scanningFolderIds,
-                    queuedFolderIds = queuedFolderIds,
-                    isSelectionMode = isSelectionMode,
-                    selectedSongUris = selectedSongUris,
-                    swipeSelectionLabel = swipeSelectionLabel,
-                    swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                    topAppBarScrollBehavior = topAppBarScrollBehavior,
-                    navigator = navigator,
-                    selectionViewModel = selectionViewModel,
-                    onFolderClick = onFolderClick,
-                    onDeleteFolder = onDeleteFolder,
-                    onRefreshFolder = onRefreshFolder,
-                    onIgnoredChange = onIgnoredChange,
-                    onShowSongMenu = onShowSongMenu,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            translationX = toOffset
-                            alpha = progress
-                        }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FolderPage(
-    page: Int,
-    snapshot: FolderContentSnapshot,
-    folderTree: FolderTree,
-    scanningFolderIds: Set<Long>,
-    queuedFolderIds: Set<Long>,
-    isSelectionMode: Boolean,
-    selectedSongUris: Set<String>,
-    swipeSelectionLabel: String,
-    swipeSelectionSecondaryLabel: String?,
-    topAppBarScrollBehavior: ScrollBehavior,
-    navigator: DestinationsNavigator,
-    selectionViewModel: SongSelectionViewModel,
-    onFolderClick: (FolderEntity) -> Unit,
-    onDeleteFolder: (FolderEntity) -> Unit,
-    onRefreshFolder: (FolderEntity) -> Unit,
-    onIgnoredChange: (FolderEntity, Boolean) -> Unit,
-    onShowSongMenu: (SongEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    when (page) {
-        0 -> {
-            FolderChildrenPage(
-                folders = snapshot.childFolders,
-                folderTree = folderTree,
-                scanningFolderIds = scanningFolderIds,
-                queuedFolderIds = queuedFolderIds,
-                isSelectionMode = isSelectionMode,
-                topAppBarScrollBehavior = topAppBarScrollBehavior,
-                onFolderClick = onFolderClick,
-                onDeleteFolder = onDeleteFolder,
-                onRefreshFolder = onRefreshFolder,
-                onIgnoredChange = onIgnoredChange,
-                modifier = modifier
-            )
-        }
-
-        1 -> {
-            FolderCurrentSongsPage(
-                songs = snapshot.songs,
-                isSelectionMode = isSelectionMode,
-                selectedSongUris = selectedSongUris,
-                swipeSelectionLabel = swipeSelectionLabel,
-                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                topAppBarScrollBehavior = topAppBarScrollBehavior,
-                onSongClick = { song ->
-                    navigator.navigate(
-                        EditMetadataDestination(songFileUri = song.uri)
-                    )
-                },
-                onToggleSelection = { song ->
-                    selectionViewModel.toggleSelection(song.uri)
-                },
-                onSwipeSelection = { song ->
-                    selectionViewModel.swipeSelect(song, snapshot.songs)
-                },
-                onShowSongMenu = onShowSongMenu,
-                modifier = modifier
-            )
-        }
-    }
-}
-
-private fun buildFolderContentSnapshot(
-    folderId: Long,
-    folders: List<FolderEntity>,
-    folderTree: FolderTree,
-    currentFolderId: Long,
-    currentFolderSongs: List<SongEntity>,
-    useCurrentFolderSongs: Boolean
-): FolderContentSnapshot {
-    val folder = folders.find { it.id == folderId }
-    val node = folder?.let { folderTree.nodesById[it.id] }
-    val songs = when {
-        folderId == ROOT_FOLDER_ID -> emptyList()
-        useCurrentFolderSongs && folderId == currentFolderId -> currentFolderSongs
-        else -> emptyList()
-    }
-
-    return FolderContentSnapshot(
-        folderId = folderId,
-        childFolders = node?.childFolders ?: folderTree.rootFolders,
-        songs = songs
+    RemoveFolderDialog(
+        folder = folderToRemove,
+        show = showRemoveFolderDialog,
+        onDismissRequest = { showRemoveFolderDialog = false },
+        onConfirm = {
+            showRemoveFolderDialog = false
+            folderToRemove?.let(::removeFolder)
+        },
     )
 }
 
 @Composable
-private fun FolderChildrenPage(
-    folders: List<FolderEntity>,
-    folderTree: FolderTree,
-    scanningFolderIds: Set<Long>,
-    queuedFolderIds: Set<Long>,
-    isSelectionMode: Boolean,
-    topAppBarScrollBehavior: ScrollBehavior,
-    onFolderClick: (FolderEntity) -> Unit,
-    onDeleteFolder: (FolderEntity) -> Unit,
-    onRefreshFolder: (FolderEntity) -> Unit,
-    onIgnoredChange: (FolderEntity, Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier
-            .pageScroll(topAppBarScrollBehavior)
-            .fillMaxHeight(),
-        contentPadding = PaddingValues(bottom = 12.dp),
-        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) rememberOverscrollEffect() else null
-    ) {
-        if (folders.isEmpty()) {
-            item("empty") {
-                IllustratedEmptyState(
-                    kind = EmptyStateKind.Folders,
-                    title = stringResource(R.string.empty_folders_title),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-        items(
-            items = folders,
-            key = { folder -> "folder-${folder.id}" }
-        ) { folder ->
-            FolderListItem(
-                folder = folder,
-                node = folderTree.nodesById.getValue(folder.id),
-                isScanning = folder.id in scanningFolderIds,
-                isQueued = folder.id in queuedFolderIds,
-                isSelectionMode = isSelectionMode,
-                onClick = {
-                    if (!isSelectionMode) {
-                        onFolderClick(folder)
-                    }
-                },
-                canRemove = folder.addedBySaf,
-                onDelete = {
-                    onDeleteFolder(folder)
-                },
-                onRefresh = {
-                    onRefreshFolder(folder)
-                },
-                onIgnoredChange = { ignored ->
-                    onIgnoredChange(folder, ignored)
-                }
-            )
-        }
+private fun sortOrderLabel(order: SortOrder): String = stringResource(
+    when (order) {
+        SortOrder.ASC -> R.string.sort_ascending
+        SortOrder.DESC -> R.string.sort_descending
     }
-}
+)
 
+/** 子目录／歌曲两个分页的标签栏；两套主题的容器不同，标签文案与选中状态一致。 */
 @Composable
-private fun FolderCurrentSongsPage(
-    songs: List<SongEntity>,
-    isSelectionMode: Boolean,
-    selectedSongUris: Set<String>,
-    swipeSelectionLabel: String,
-    swipeSelectionSecondaryLabel: String?,
-    topAppBarScrollBehavior: ScrollBehavior,
-    onSongClick: (SongEntity) -> Unit,
-    onToggleSelection: (SongEntity) -> Unit,
-    onSwipeSelection: (SongEntity) -> Unit,
-    onShowSongMenu: (SongEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val listState = rememberLazyListState()
-
-    LazyColumn(
-        modifier = modifier
-            .pageScroll(topAppBarScrollBehavior)
-            .fillMaxHeight(),
-        state = listState,
-        contentPadding = PaddingValues(bottom = 12.dp),
-        overscrollEffect = if (LocalUiEngine.current == UiEngine.SALT) rememberOverscrollEffect() else null
-    ) {
-        if (songs.isEmpty()) {
-            item("empty") {
-                IllustratedEmptyState(
-                    kind = EmptyStateKind.Songs,
-                    title = stringResource(R.string.empty_songs_title),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-        items(
-            items = songs,
-            key = { song ->
-                song.uri.takeIf { it.isNotBlank() && it != "0" } ?: "song-${song.id}"
-            }
-        ) { song ->
-            SelectableLibraryItem(
-                itemKey = song.uri,
-                modifier = Modifier.animateItem(),
-                isSelectionMode = isSelectionMode,
-                isSelected = selectedSongUris.contains(song.uri),
-                swipeSelectionLabel = swipeSelectionLabel,
-                swipeSelectionSecondaryLabel = swipeSelectionSecondaryLabel,
-                onClick = {
-                    onSongClick(song)
-                },
-                onToggleSelection = {
-                    onToggleSelection(song)
-                },
-                onSwipeSelection = {
-                    onSwipeSelection(song)
-                }
-            ) {
-                SongListItemContent(
-                    song = song,
-                    trailingContent = {
-                        Box(modifier = Modifier.padding(end = 8.dp)) {
-                            SongListItemActions(
-                                isSelectionMode = isSelectionMode,
-                                isSelected = selectedSongUris.contains(song.uri),
-                                onToggleSelection = {
-                                    onToggleSelection(song)
-                                },
-                                onShowMenu = {
-                                    onShowSongMenu(song)
-                                }
-                            )
-                        }
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FolderPathHeader(
-    breadcrumbs: List<FolderBreadcrumb>,
+private fun FolderTabs(
+    foldersLabel: String,
+    songsLabel: String,
     folderCount: Int,
     songCount: Int,
-    onBreadcrumbClick: (Long) -> Unit
+    selectedIndex: Int,
+    onSelected: (Int) -> Unit,
 ) {
+    val labels = listOf("$foldersLabel ($folderCount)", "$songsLabel ($songCount)")
     if (LocalUiEngine.current == UiEngine.SALT) {
-        com.moriafly.salt.ui.RoundedColumn {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
-                breadcrumbs.forEachIndexed { index, breadcrumb ->
-                    // 面包屑是紧凑的行内链接：Salt 原生 Plain 按钮最小 48dp，会撑高整条面包屑。
-                    PillButton(
-                        text = breadcrumb.label,
-                        style = PillButtonDefaults.style(PillButtonSize.Medium),
-                        colors = PillButtonDefaults.plainColors(),
-                        onClick = { if (index != breadcrumbs.lastIndex) onBreadcrumbClick(breadcrumb.folderId) },
-                    )
-                    if (index != breadcrumbs.lastIndex) com.moriafly.salt.ui.Text(
-                        "›", modifier = Modifier.align(androidx.compose.ui.Alignment.CenterVertically),
-                        color = SaltTheme.colors.subText,
-                    )
-                }
-            }
-            com.moriafly.salt.ui.Text(
-                stringResource(R.string.folder_browser_count_format, folderCount, songCount),
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText,
-            )
-        }
+        AppTabs(
+            tabs = labels,
+            selectedIndex = selectedIndex,
+            onSelected = onSelected,
+        )
         return
     }
     Card(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 8.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            BreadcrumbBar(
-                items = breadcrumbs.map { breadcrumb ->
-                    BreadcrumbItem(path = breadcrumb.folderId.toString(), text = breadcrumb.label)
-                },
-                onItemClick = { index ->
-                    if (index != breadcrumbs.lastIndex) {
-                        onBreadcrumbClick(breadcrumbs[index].folderId)
-                    }
-                },
+        TabRowWithContour(
+            tabs = labels,
+            selectedTabIndex = selectedIndex,
+            onTabSelected = onSelected,
+        )
+    }
+}
+
+/** 移除已添加目录的确认框；内容在关闭动画期间仍需可见，因此按 [folder] 是否为空渲染。 */
+@Composable
+private fun RemoveFolderDialog(
+    folder: FolderEntity?,
+    show: Boolean,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val target = folder ?: return
+    val title = stringResource(R.string.dialog_remove_folder_title)
+    if (LocalUiEngine.current == UiEngine.SALT) {
+        YesNoDialog(
+            show = show,
+            title = title,
+            summary = target.path + "\n\n" + stringResource(R.string.dialog_remove_folder_content_tip),
+            onDismissRequest = onDismissRequest,
+            onConfirm = onConfirm,
+        )
+        return
+    }
+    WindowDialog(
+        title = title,
+        show = show,
+        onDismissRequest = onDismissRequest,
+    ) {
+        Column {
+            Text(
+                text = target.path,
                 modifier = Modifier.fillMaxWidth(),
-                insideMargin = PaddingValues(vertical = 4.dp)
+                color = MiuixTheme.colorScheme.onBackground,
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = stringResource(R.string.folder_browser_count_format, folderCount, songCount),
+                text = stringResource(R.string.dialog_remove_folder_content_tip),
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                fontSize = MiuixTheme.textStyles.body2.fontSize
+                fontSize = MiuixTheme.textStyles.body2.fontSize,
             )
-        }
-    }
-}
 
-@Composable
-private fun FolderListItem(
-    folder: FolderEntity,
-    node: FolderTreeNode,
-    isScanning: Boolean,
-    isQueued: Boolean,
-    isSelectionMode: Boolean,
-    onClick: () -> Unit,
-    canRemove: Boolean,
-    onDelete: () -> Unit,
-    onRefresh: () -> Unit,
-    onIgnoredChange: (Boolean) -> Unit
-) {
-    val folderName = folder.path.substringAfterLast("/").ifBlank { folder.path }
-    val isBusy = isScanning || isQueued || isSelectionMode
-    val statusText = when {
-        isScanning -> {
-            stringResource(R.string.folder_scanning)
-        }
+            Spacer(modifier = Modifier.height(12.dp))
 
-        isQueued -> {
-            stringResource(R.string.folder_scan_queued)
-        }
-
-        folder.isIgnored -> {
-            stringResource(
-                R.string.folder_hidden_child_song_count_format,
-                node.childFolders.size,
-                node.subtreeSongCount
-            )
-        }
-
-        else -> {
-            stringResource(
-                R.string.folder_child_song_count_format,
-                node.childFolders.size,
-                node.subtreeSongCount
-            )
-        }
-    }
-
-    val actionItems = buildList {
-        add(
-            DropdownItem(
-                icon = { modifier -> PreferenceIcon(if (folder.isIgnored) LucideIcons.Eye else LucideIcons.EyeOff, PreferenceIconTone.Appearance, modifier = modifier) },
-                text = if (folder.isIgnored) {
-                    stringResource(R.string.folder_action_show)
-                } else {
-                    stringResource(R.string.folder_action_hide)
-                },
-                onClick = {
-                    onIgnoredChange(!folder.isIgnored)
-                }
-            )
-        )
-
-        add(
-            DropdownItem(
-                icon = { modifier -> PreferenceIcon(LucideIcons.RefreshCw, PreferenceIconTone.Tools, modifier = modifier) },
-                text = stringResource(R.string.action_refresh_folder),
-                onClick = {
-                    if (!isBusy) {
-                        onRefresh()
-                    }
-                }
-            )
-        )
-
-        if (canRemove) {
-            add(
-                DropdownItem(
-                    icon = { modifier -> PreferenceIcon(LucideIcons.Folder, PreferenceIconTone.Library, modifier = modifier) },
-                    text = stringResource(R.string.folder_action_remove),
-                    onClick = {
-                        if (!isBusy) {
-                            onDelete()
-                        }
-                    }
+            Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismissRequest,
+                    modifier = Modifier.weight(1f),
                 )
-            )
-        }
-    }
 
-    val actionEntry = DropdownEntry(items = actionItems)
+                Spacer(Modifier.width(20.dp))
 
-    com.lonx.lyrico.ui.components.FolderManagementItem(
-        name = folderName,
-        path = folder.path,
-        status = statusText,
-        actions = actionEntry,
-        enabled = !isBusy,
-        isLoading = isScanning,
-        onClick = onClick
-    )
-}
-
-private data class FolderTree(
-    val nodesById: Map<Long, FolderTreeNode>,
-    val rootFolders: List<FolderEntity>
-)
-
-private data class FolderTreeNode(
-    val folder: FolderEntity,
-    val parentId: Long?,
-    val childFolders: List<FolderEntity>,
-    val directSongCount: Int,
-    val subtreeSongCount: Int
-)
-
-private fun buildFolderBreadcrumbs(
-    currentFolder: FolderEntity?,
-    currentNode: FolderTreeNode?,
-    folderTree: FolderTree,
-    rootLabel: String
-): List<FolderBreadcrumb> {
-    if (currentFolder == null || currentNode == null) {
-        return listOf(FolderBreadcrumb(ROOT_FOLDER_ID, rootLabel))
-    }
-
-    val ancestors = mutableListOf<FolderTreeNode>()
-    var node: FolderTreeNode? = currentNode
-    while (node != null) {
-        ancestors += node
-        node = node.parentId?.let { parentId -> folderTree.nodesById[parentId] }
-    }
-
-    return buildList {
-        add(FolderBreadcrumb(ROOT_FOLDER_ID, rootLabel))
-        ancestors.asReversed().forEach { ancestor ->
-            add(
-                FolderBreadcrumb(
-                    folderId = ancestor.folder.id,
-                    label = ancestor.folder.path.substringAfterLast("/")
-                        .ifBlank { ancestor.folder.path }
+                TextButton(
+                    text = stringResource(R.string.confirm),
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
                 )
-            )
-        }
-    }
-}
-
-private fun buildFolderTree(
-    folders: List<FolderEntity>
-): FolderTree {
-    val normalizedPaths = folders.associate { folder ->
-        folder.id to folder.path.normalizeFolderPath()
-    }
-
-    val directSongCounts = folders.associate { folder ->
-        folder.id to folder.songCount
-    }
-
-    val parentIds = folders.associate { folder ->
-        val path = normalizedPaths.getValue(folder.id)
-        val parent = folders
-            .filter { candidate ->
-                val candidatePath = normalizedPaths.getValue(candidate.id)
-                candidate.id != folder.id &&
-                        candidatePath.isNotBlank() &&
-                        path.startsWith("$candidatePath/")
             }
-            .maxByOrNull { candidate ->
-                normalizedPaths.getValue(candidate.id).length
-            }
-
-        folder.id to parent?.id
-    }
-
-    val childrenByParentId = folders
-        .groupBy { folder -> parentIds.getValue(folder.id) }
-        .mapValues { (_, children) ->
-            children.sortedBy { it.path.normalizeFolderPath() }
-        }
-
-    val subtreeSongCounts = mutableMapOf<Long, Int>()
-
-    fun subtreeSongCount(folderId: Long): Int {
-        return subtreeSongCounts.getOrPut(folderId) {
-            directSongCounts[folderId].orZero() +
-                    childrenByParentId[folderId].orEmpty().sumOf { child ->
-                        subtreeSongCount(child.id)
-                    }
         }
     }
-
-    val nodesById = folders.associate { folder ->
-        folder.id to FolderTreeNode(
-            folder = folder,
-            parentId = parentIds.getValue(folder.id),
-            childFolders = childrenByParentId[folder.id].orEmpty(),
-            directSongCount = directSongCounts[folder.id].orZero(),
-            subtreeSongCount = subtreeSongCount(folder.id)
-        )
-    }
-
-    return FolderTree(
-        nodesById = nodesById,
-        rootFolders = childrenByParentId[null].orEmpty()
-    )
-}
-
-private fun Int?.orZero(): Int = this ?: 0
-
-private fun String.normalizeFolderPath(): String {
-    return replace('\\', '/')
-        .trim()
-        .trimEnd('/')
 }

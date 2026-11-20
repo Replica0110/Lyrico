@@ -37,25 +37,11 @@ internal class BatchEditChanges(draft: BatchEditUiState, visibleFieldCodes: Set<
         }
 
         return buildList {
-            addTextChange(this, BatchEditField.TITLE.labelResId, song.title, state.title)
-            addTextChange(this, BatchEditField.ARTIST.labelResId, song.artist, state.artist)
-            addTextChange(this, BatchEditField.ALBUM_ARTIST.labelResId, song.albumArtist, state.albumArtist)
-            addTextChange(this, BatchEditField.ALBUM.labelResId, song.album, state.album)
-            addTextChange(this, BatchEditField.DATE.labelResId, song.date, state.date)
-            addTextChange(this, BatchEditField.LANGUAGE.labelResId, song.language, state.language)
-            addTextChange(this, BatchEditField.GENRE.labelResId, song.genre, state.genre)
-            addTextChange(this, BatchEditField.TRACK_NUMBER.labelResId, song.trackerNumber, state.trackNumber)
-            addTextChange(this, BatchEditField.DISC_NUMBER.labelResId, song.discNumber?.toString(), state.discNumber)
-            addTextChange(this, BatchEditField.COMPOSER.labelResId, song.composer, state.composer)
-            addTextChange(this, BatchEditField.LYRICIST.labelResId, song.lyricist, state.lyricist)
-            addTextChange(this, BatchEditField.COPYRIGHT.labelResId, song.copyright, state.copyright)
-            addTextChange(this, BatchEditField.COMMENT.labelResId, song.comment, state.comment)
-            addTextChange(this, BatchEditField.LYRICS.labelResId, song.lyrics, state.lyrics)
-            addTextChange(this, BatchEditField.REPLAY_GAIN_TRACK_GAIN.labelResId, song.replayGainTrackGain, state.replayGainTrackGain)
-            addTextChange(this, BatchEditField.REPLAY_GAIN_TRACK_PEAK.labelResId, song.replayGainTrackPeak, state.replayGainTrackPeak)
-            addTextChange(this, BatchEditField.REPLAY_GAIN_ALBUM_GAIN.labelResId, song.replayGainAlbumGain, state.replayGainAlbumGain)
-            addTextChange(this, BatchEditField.REPLAY_GAIN_ALBUM_PEAK.labelResId, song.replayGainAlbumPeak, state.replayGainAlbumPeak)
-            addTextChange(this, BatchEditField.REPLAY_GAIN_REFERENCE_LOUDNESS.labelResId, song.replayGainReferenceLoudness, state.replayGainReferenceLoudness)
+            BatchEditField.entries
+                .filter { it.isText }
+                .forEach { field ->
+                    addTextChange(this, field.labelResId, field.readSongValue(song), field.readDraftValue(state))
+                }
 
             if (state.ratingModified) {
                 add(
@@ -140,35 +126,13 @@ internal class BatchEditChanges(draft: BatchEditUiState, visibleFieldCodes: Set<
         val keep = EditTagsTaskConfig.KEEP_VALUE
         fun visible(code: String): Boolean = code in visibleFieldCodes
 
-        return copy(
-            title = if (visible("title")) title else keep,
-            artist = if (visible("artist")) artist else keep,
-            albumArtist = if (visible("album_artist")) albumArtist else keep,
-            album = if (visible("album")) album else keep,
-            date = if (visible("date")) date else keep,
-            language = if (visible("language")) language else keep,
-            genre = if (visible("genre")) genre else keep,
-            trackNumber = if (visible("track_number")) trackNumber else keep,
-            discNumber = if (visible("disc_number")) discNumber else keep,
-            composer = if (visible("composer")) composer else keep,
-            lyricist = if (visible("lyricist")) lyricist else keep,
-            copyright = if (visible("copyright")) copyright else keep,
-            comment = if (visible("comment")) comment else keep,
-            lyrics = if (visible("lyrics")) lyrics else keep,
-            rating = if (visible("rating")) rating else 0,
-            ratingModified = visible("rating") && ratingModified,
-            coverUri = if (visible("picture")) coverUri else null,
-            removeCover = visible("picture") && removeCover,
-            lyricsOffset = if (visible("lyrics_offset")) lyricsOffset else 0L,
-            replayGainTrackGain = if (visible("track_gain")) replayGainTrackGain else keep,
-            replayGainTrackPeak = if (visible("track_peak")) replayGainTrackPeak else keep,
-            replayGainAlbumGain = if (visible("album_gain")) replayGainAlbumGain else keep,
-            replayGainAlbumPeak = if (visible("album_peak")) replayGainAlbumPeak else keep,
-            replayGainReferenceLoudness = if (visible("reference_loudness")) {
-                replayGainReferenceLoudness
-            } else {
-                keep
-            },
+        // 封面、评级、歌词偏移由专用控件维护，按各自的可见开关回落。
+        var state = copy(
+            rating = if (visible(BatchEditField.RATING.code)) rating else 0,
+            ratingModified = visible(BatchEditField.RATING.code) && ratingModified,
+            coverUri = if (visible(BatchEditField.COVER.code)) coverUri else null,
+            removeCover = visible(BatchEditField.COVER.code) && removeCover,
+            lyricsOffset = if (visible(LYRICS_OFFSET_CODE)) lyricsOffset else 0L,
             customFields = customFields
                 .filter {
                     visible(EditFieldRegistry.customTagCode(it.key.uppercase(Locale.ROOT))) &&
@@ -176,5 +140,17 @@ internal class BatchEditChanges(draft: BatchEditUiState, visibleFieldCodes: Set<
                 }
                 .distinctBy { it.key },
         )
+
+        BatchEditField.entries
+            .filter { it.isText }
+            .forEach { field ->
+                if (!visible(field.code)) state = state.withDraftValue(field, keep)
+            }
+
+        return state
+    }
+
+    private companion object {
+        const val LYRICS_OFFSET_CODE = "lyrics_offset"
     }
 }

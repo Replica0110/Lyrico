@@ -210,60 +210,9 @@ class BatchEditViewModel(
 
     // ── 标签值更新 ──────────────────────────────────────────
 
-    fun updateTitle(value: String) {
-        _uiState.update { it.copy(title = value) }
-    }
-
-    fun updateArtist(value: String) {
-        _uiState.update { it.copy(artist = value) }
-    }
-
-    fun updateAlbumArtist(value: String) {
-        _uiState.update { it.copy(albumArtist = value) }
-    }
-
-    fun updateAlbum(value: String) {
-        _uiState.update { it.copy(album = value) }
-    }
-
-    fun updateDate(value: String) {
-        _uiState.update { it.copy(date = value) }
-    }
-
-    fun updateLanguage(value: String) {
-        _uiState.update { it.copy(language = value) }
-    }
-
-    fun updateGenre(value: String) {
-        _uiState.update { it.copy(genre = value) }
-    }
-
-    fun updateTrackNumber(value: String) {
-        _uiState.update { it.copy(trackNumber = value) }
-    }
-
-    fun updateDiscNumber(value: String) {
-        _uiState.update { it.copy(discNumber = value) }
-    }
-
-    fun updateComposer(value: String) {
-        _uiState.update { it.copy(composer = value) }
-    }
-
-    fun updateLyricist(value: String) {
-        _uiState.update { it.copy(lyricist = value) }
-    }
-
-    fun updateCopyright(value: String) {
-        _uiState.update { it.copy(copyright = value) }
-    }
-
-    fun updateComment(value: String) {
-        _uiState.update { it.copy(comment = value) }
-    }
-
-    fun updateLyrics(value: String) {
-        _uiState.update { it.copy(lyrics = value) }
+    /** 文本字段统一入口；字段与草稿属性的对应关系见 [withDraftValue]。 */
+    fun updateField(field: BatchEditField, value: String) {
+        _uiState.update { it.withDraftValue(field, value) }
     }
 
     fun updateRating(value: Int) {
@@ -274,32 +223,10 @@ class BatchEditViewModel(
         _uiState.update { it.copy(rating = 0, ratingModified = false) }
     }
 
-    // ── 歌词偏移 ──────────────────────────────────────────
+    // ── 回放增益 ──────────────────────────────────────────
 
     fun updateLyricsOffset(value: Long) {
         _uiState.update { it.copy(lyricsOffset = value) }
-    }
-
-    // ── 回放增益 ──────────────────────────────────────────
-
-    fun updateReplayGainTrackGain(value: String) {
-        _uiState.update { it.copy(replayGainTrackGain = value) }
-    }
-
-    fun updateReplayGainTrackPeak(value: String) {
-        _uiState.update { it.copy(replayGainTrackPeak = value) }
-    }
-
-    fun updateReplayGainAlbumGain(value: String) {
-        _uiState.update { it.copy(replayGainAlbumGain = value) }
-    }
-
-    fun updateReplayGainAlbumPeak(value: String) {
-        _uiState.update { it.copy(replayGainAlbumPeak = value) }
-    }
-
-    fun updateReplayGainReferenceLoudness(value: String) {
-        _uiState.update { it.copy(replayGainReferenceLoudness = value) }
     }
 
     // ── 自定义标签 ──────────────────────────────────────────
@@ -400,30 +327,6 @@ class BatchEditViewModel(
                 )
             }.distinctBy { it.value }
         }
-
-    private fun BatchEditField.databaseColumnName(): String? = when (this) {
-        BatchEditField.TITLE -> "title"
-        BatchEditField.ARTIST -> "artist"
-        BatchEditField.ALBUM_ARTIST -> "albumArtist"
-        BatchEditField.ALBUM -> "album"
-        BatchEditField.DATE -> "date"
-        BatchEditField.LANGUAGE -> "language"
-        BatchEditField.GENRE -> "genre"
-        BatchEditField.TRACK_NUMBER -> "trackerNumber"
-        BatchEditField.DISC_NUMBER -> "discNumber"
-        BatchEditField.COMPOSER -> "composer"
-        BatchEditField.LYRICIST -> "lyricist"
-        BatchEditField.COPYRIGHT -> "copyright"
-        BatchEditField.COMMENT -> "comment"
-        BatchEditField.LYRICS -> "lyrics"
-        BatchEditField.REPLAY_GAIN_TRACK_GAIN -> "replayGainTrackGain"
-        BatchEditField.REPLAY_GAIN_TRACK_PEAK -> "replayGainTrackPeak"
-        BatchEditField.REPLAY_GAIN_ALBUM_GAIN -> "replayGainAlbumGain"
-        BatchEditField.REPLAY_GAIN_ALBUM_PEAK -> "replayGainAlbumPeak"
-        BatchEditField.REPLAY_GAIN_REFERENCE_LOUDNESS -> "replayGainReferenceLoudness"
-        BatchEditField.COVER,
-        BatchEditField.RATING -> null
-    }
 
     suspend fun getSelectedSongCovers(): List<BatchEditSelectableCover> =
         withContext(Dispatchers.IO) {

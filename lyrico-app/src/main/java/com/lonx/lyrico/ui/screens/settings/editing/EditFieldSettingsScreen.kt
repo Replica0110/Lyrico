@@ -20,12 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberOverscrollEffect
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,9 +49,7 @@ import com.lonx.lyrico.data.editfield.EditFieldListItem
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
 import com.lonx.lyrico.data.editfield.toEditFieldBlocks
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.ui.components.ChipGrid
 import com.lonx.lyrico.ui.components.ItemOrderState
-import com.lonx.lyrico.ui.components.ManagedChip
 import com.lonx.lyrico.ui.components.base.PillButton
 import com.lonx.lyrico.ui.components.base.PillButtonDefaults
 import com.lonx.lyrico.ui.components.base.PillButtonSize
@@ -65,16 +58,13 @@ import com.lonx.lyrico.ui.components.blur.BlurredTopBar
 import com.lonx.lyrico.ui.components.blur.blurSource
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
 import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
-import com.lonx.lyrico.ui.components.dialog.salt.SaltConfirmDialog
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIcon
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.input.salt.SaltTextInput
 import com.lonx.lyrico.ui.components.scaffold.PageScaffold
 import com.lonx.lyrico.ui.components.scaffold.scaffoldContentPadding
 import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
 import com.lonx.lyrico.ui.components.sheet.salt.SaltBottomSheet
-import com.lonx.lyrico.ui.screens.settings.CustomTagKeyError
 import com.lonx.lyrico.ui.screens.settings.EditFieldSettingsViewModel
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.RoundedColumn
@@ -92,7 +82,6 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownImpl
@@ -105,12 +94,9 @@ import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
-import top.yukonga.miuix.kmp.window.WindowDialog
 import top.yukonga.miuix.kmp.window.WindowListPopup
 
 /** 内置字段与自定义标签共用一份可排序列表。 */
@@ -720,136 +706,4 @@ private fun FieldTagChip(text: String) {
             .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.12f))
             .padding(horizontal = 8.dp, vertical = 2.dp),
     )
-}
-
-@Composable
-private fun AddCustomTagDialog(
-    show: Boolean,
-    availableKeys: List<String>,
-    error: CustomTagKeyError?,
-    onClearInputError: () -> Unit,
-    onDismiss: () -> Unit,
-    onDismissFinished: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    val inputState = remember(show) { TextFieldState("") }
-    val typed = inputState.text.toString()
-    val onSelectKey: (String) -> Unit = { key ->
-        inputState.setTextAndPlaceCursorAtEnd(key)
-        onClearInputError()
-    }
-
-    if (LocalUiEngine.current == UiEngine.SALT) {
-        // Salt 弹窗同步销毁，用“曾显示”标记在关闭后补发一次完成回调。
-        var wasShown by remember { mutableStateOf(false) }
-        LaunchedEffect(show) {
-            if (show) {
-                wasShown = true
-            } else if (wasShown) {
-                wasShown = false
-                onDismissFinished()
-            }
-        }
-        val errorText = when (error) {
-            null -> stringResource(R.string.custom_tag_key_hint)
-            CustomTagKeyError.EMPTY -> stringResource(R.string.invalid_empty_input)
-            CustomTagKeyError.INVALID -> stringResource(R.string.custom_tag_key_invalid)
-            CustomTagKeyError.DUPLICATE -> stringResource(R.string.duplicate_item)
-        }
-        com.lonx.lyrico.ui.components.dialog.salt.SaltConfirmDialog(
-            show = show, title = stringResource(R.string.custom_tag_add_key),
-            onDismissRequest = onDismiss, onConfirm = { onConfirm(typed) },
-            cancelText = stringResource(R.string.cancel), confirmText = stringResource(R.string.confirm),
-            dismissOnConfirm = false,
-        ) {
-            CustomTagSuggestions(availableKeys, onSelectKey)
-            RoundedColumn(paddingValues = PaddingValues(0.dp)) {
-                SaltTextInput(
-                    state = inputState,
-                    hint = stringResource(R.string.custom_tag_key_hint),
-                    hintMaxLines = 3,
-                    error = if (error == null) null else errorText,
-                )
-            }
-        }
-        return
-    }
-
-    WindowDialog(
-        show = show,
-        title = stringResource(R.string.custom_tag_add_key),
-        onDismissRequest = onDismiss,
-        onDismissFinished = onDismissFinished,
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            CustomTagSuggestions(availableKeys, onSelectKey)
-            TextField(
-                state = inputState,
-                label = stringResource(R.string.custom_tag_key_hint),
-                useLabelAsPlaceholder = true,
-                modifier = Modifier.fillMaxWidth(),
-                lineLimits = TextFieldLineLimits.MultiLine(),
-            )
-            if (error != null) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = when (error) {
-                        CustomTagKeyError.EMPTY -> stringResource(R.string.invalid_empty_input)
-                        CustomTagKeyError.INVALID -> stringResource(R.string.custom_tag_key_invalid)
-                        CustomTagKeyError.DUPLICATE -> stringResource(R.string.duplicate_item)
-                    },
-                    color = MiuixTheme.colorScheme.error,
-                    fontSize = MiuixTheme.textStyles.footnote1.fontSize,
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(20.dp))
-                TextButton(
-                    text = stringResource(R.string.confirm),
-                    onClick = { onConfirm(typed) },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
-                )
-            }
-        }
-    }
-}
-
-/** 候选标签只填入草稿，统一由对话框的确认操作添加。 */
-@Composable
-private fun CustomTagSuggestions(keys: List<String>, onSelect: (String) -> Unit) {
-    if (keys.isEmpty()) return
-
-    val salt = LocalUiEngine.current == UiEngine.SALT
-    if (salt) {
-        com.moriafly.salt.ui.Text(
-            text = stringResource(R.string.custom_tag_library_section),
-            color = SaltTheme.colors.subText,
-            style = SaltTheme.textStyles.sub,
-        )
-    } else {
-        Text(
-            text = stringResource(R.string.custom_tag_library_section),
-            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            style = MiuixTheme.textStyles.footnote1,
-        )
-    }
-    Spacer(Modifier.height(8.dp))
-    ChipGrid(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 200.dp)
-            .verticalScroll(rememberScrollState()),
-    ) {
-        keys.forEach { key ->
-            ManagedChip(text = key, onClick = { onSelect(key) })
-        }
-    }
-    Spacer(Modifier.height(16.dp))
 }

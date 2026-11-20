@@ -65,7 +65,7 @@ import com.lonx.lyrico.ui.components.PagerDotsIndicator
 import com.lonx.lyrico.ui.components.image.ImageViewerItem
 import com.lonx.lyrico.ui.components.image.PreviewableImage
 import com.lonx.lyrico.ui.components.image.resolveForPreview
-import com.lonx.lyrico.ui.components.rememberTintedPainter
+import com.lonx.lyrico.ui.components.image.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.moriafly.salt.ui.RoundedColumn

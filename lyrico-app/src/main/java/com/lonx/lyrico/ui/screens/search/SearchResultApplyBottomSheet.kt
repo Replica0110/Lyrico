@@ -63,7 +63,7 @@ import com.lonx.lyrico.ui.components.image.PreviewableImage
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.ui.components.lyrics.LyricsPreviewPane
-import com.lonx.lyrico.ui.components.rememberTintedPainter
+import com.lonx.lyrico.ui.components.image.rememberTintedPainter
 import com.lonx.lyrico.ui.theme.LyricoColors
 import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.moriafly.salt.ui.icons.Check

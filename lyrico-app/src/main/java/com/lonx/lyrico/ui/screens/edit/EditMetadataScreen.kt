@@ -96,7 +96,7 @@ import com.lonx.lyrico.ui.components.editor.rememberEditorTextFieldState
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
-import com.lonx.lyrico.ui.components.getBitmap
+import com.lonx.lyrico.data.artwork.ArtworkFiles
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.lyrics.LyricsProcessingSheet
 import com.lonx.lyrico.ui.components.poster.ArtistPosterMenu
@@ -413,7 +413,7 @@ fun EditMetadataScreen(
 
     fun cropArtistImage(bytes: ByteArray, request: CropRequest) {
         scope.launch(Dispatchers.IO) {
-            val bitmap = getBitmap(context, bytes)
+            val bitmap = ArtworkFiles.readBitmap(context, bytes)
             withContext(Dispatchers.Main) {
                 if (bitmap != null) {
                     cropRequest = request
@@ -1389,7 +1389,7 @@ Box(modifier = Modifier.fillMaxSize()) {
 
             if (sourceData != null) {
                 scope.launch(Dispatchers.IO) {
-                    val bitmap = getBitmap(context, sourceData)
+                    val bitmap = ArtworkFiles.readBitmap(context, sourceData)
                     withContext(Dispatchers.Main) {
                         if (bitmap != null) {
                             cropRequest = CropRequest.Cover

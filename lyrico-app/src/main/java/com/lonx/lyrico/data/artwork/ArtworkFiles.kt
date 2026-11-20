@@ -3,6 +3,8 @@ package com.lonx.lyrico.data.artwork
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
@@ -116,5 +118,42 @@ internal object ArtworkFiles {
         )
 
         CoverSourceType.UNSUPPORTED -> false
+    }
+
+    fun readBitmap(context: Context, data: Any): Bitmap? {
+        return try {
+            when (data) {
+                is ByteArray -> {
+                    // 原生 ID3 提取出的字节数组
+                    BitmapFactory.decodeByteArray(data, 0, data.size)
+                }
+                is Uri -> {
+                    decodeUri(context, data)
+                }
+                is String -> {
+                    decodeUri(context, data.toUri())
+                }
+                is Bitmap -> {
+                    // 已经是 Bitmap 对象，直接返回
+                    data
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * 从 Uri 解析 Bitmap
+     */
+    private fun decodeUri(context: Context, uri: Uri): Bitmap {
+        val source = ImageDecoder.createSource(context.contentResolver, uri)
+        return ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+            // 裁剪操作需要获取可变(Mutable)和软件渲染(Software)的 Bitmap
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            decoder.isMutableRequired = true
+        }
     }
 }

@@ -66,7 +66,7 @@ import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.image.PreviewableImage
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
-import com.lonx.lyrico.ui.components.rememberTintedPainter
+import com.lonx.lyrico.ui.components.image.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffold.scaffoldPageWindowInsets
 import com.lonx.lyrico.ui.components.scaffold.scaffoldTopAppBarInsetsPadding
 import com.lonx.lyrico.ui.components.scaffold.scaffoldTopHorizontalPadding

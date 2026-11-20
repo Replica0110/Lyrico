@@ -80,7 +80,7 @@ import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
 import com.lonx.lyrico.ui.components.lyrics.LyricRenderConfigBottomSheet
 import com.lonx.lyrico.ui.components.plugin.PluginIcon
 import com.lonx.lyrico.ui.components.progress.salt.SaltCircularProgressIndicator
-import com.lonx.lyrico.ui.components.rememberTintedPainter
+import com.lonx.lyrico.ui.components.image.rememberTintedPainter
 import com.lonx.lyrico.ui.components.scaffold.scaffoldPageWindowInsets
 import com.lonx.lyrico.ui.components.scaffold.scaffoldTopAppBarInsetsPadding
 import com.lonx.lyrico.ui.components.scaffold.scaffoldTopHorizontalPadding

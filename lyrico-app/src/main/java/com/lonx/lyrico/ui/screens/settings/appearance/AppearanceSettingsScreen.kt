@@ -23,7 +23,7 @@ import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.ui.screens.settings.PaletteOption
 import com.lonx.lyrico.ui.screens.settings.SettingsPage
 import com.lonx.lyrico.ui.screens.settings.settingsViewModelWithEvents
-import com.lonx.lyrico.ui.components.getSystemWallpaperColor
+import com.lonx.lyrico.ui.theme.systemAccentColor
 import com.lonx.lyrico.ui.components.blur.isBarBlurSupported
 import com.lonx.lyrico.ui.components.blur.isLiquidGlassSupported
 import com.lonx.lyrico.ui.components.blur.resolveFloatingBarEffect
@@ -132,7 +132,7 @@ fun AppearanceSettingsScreen(navigator: DestinationsNavigator) {
                     val options = ThemeColor.entries.map { keyColor ->
                         PaletteOption(
                             title = stringResource(keyColor.nameResId),
-                            color = keyColor.color ?: getSystemWallpaperColor(context),
+                            color = keyColor.color ?: systemAccentColor(context),
                         )
                     }
 

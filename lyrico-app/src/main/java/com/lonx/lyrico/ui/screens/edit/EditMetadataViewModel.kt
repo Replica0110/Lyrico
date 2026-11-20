@@ -34,6 +34,7 @@ import com.lonx.lyrico.data.log.AppLogType
 import com.lonx.lyrico.data.log.recordOperation
 import com.lonx.lyrico.data.lyrics.LyricFormat
 import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsFileTransfer
 import com.lonx.lyrico.data.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.metadata.MetadataApplyPolicy
 import com.lonx.lyrico.data.metadata.MetadataFieldTarget
@@ -52,9 +53,7 @@ import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.domain.artist.ArtistNameSplitter
 import com.lonx.lyrico.domain.lyrics.LyricDecoder
 import com.lonx.lyrico.domain.lyrics.LyricEncoder
-import com.lonx.lyrico.domain.lyrics.LyricsColumnSorter
-import com.lonx.lyrico.domain.lyrics.LyricsTextCleanup
-import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
+import com.lonx.lyrico.domain.lyrics.LyricsProcessing
 import com.lonx.lyrico.domain.metadata.SearchResultApplier
 import com.lonx.lyrico.domain.metadata.preserveHiddenEditFields
 import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
@@ -62,24 +61,20 @@ import com.lonx.lyrico.domain.poster.ArtistPosterEdits
 import com.lonx.lyrico.domain.song.usecase.ReadAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
-import com.lonx.lyrico.platform.audio.ReplayGainCalculateState
-import com.lonx.lyrico.platform.audio.ReplayGainError
 import com.lonx.lyrico.platform.audio.ReplayGainScanner
-import com.lonx.lyrico.platform.storage.SafSiblingFileWriter
 import com.lonx.lyrico.ui.UiMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class SongInfo(
     val uriString: String,
@@ -124,14 +119,6 @@ data class EditMetadataUiState(
     val sameAlbumCoverMessage: UiMessage? = null
 )
 
-private data class LyricsFormatConversionSession(
-    val sourceFormat: LyricFormat,
-    val sourceLyrics: String,
-    val lastRenderedLyrics: String
-)
-
-private const val LYRICS_EXPORT_MIME_TYPE = "application/octet-stream"
-
 class EditMetadataViewModel(
     private val songLibraryRepository: SongLibraryRepository,
     private val readAudioTagsUseCase: ReadAudioTagsUseCase,
@@ -168,9 +155,16 @@ class EditMetadataViewModel(
     private var currentSong: SongEntity? = null
 
     private var currentSongUri: String? = null
+
+    /** 打开偏移面板时的歌词快照；偏移始终相对它计算，避免逐次累积误差。 */
     private var preOffsetLyrics: String? = null
-    private var lyricsFormatConversionSession: LyricsFormatConversionSession? = null
-    private var scanJob: Job? = null
+
+    private val replayGainScan = ReplayGainScanController(
+        scanner = replayGainScanner,
+        settingsRepository = settingsRepository,
+        scope = viewModelScope,
+    )
+
     private val _currentShiftOffset = MutableStateFlow(0L)
     val currentShiftOffset: StateFlow<Long> = _currentShiftOffset.asStateFlow()
     private val _uiState = MutableStateFlow(EditMetadataUiState())
@@ -191,7 +185,6 @@ class EditMetadataViewModel(
     fun readMetadata(uriString: String) {
         if (currentSongUri != uriString) pendingWritePermissionUri = null
         currentSongUri = uriString
-        lyricsFormatConversionSession = null
 
         viewModelScope.launch {
             try {
@@ -335,19 +328,6 @@ class EditMetadataViewModel(
             )
         }
     }
-    /**
-     * 重置回打开 BottomSheet 时的状态
-     */
-    fun resetLyricsOffset() {
-        _currentShiftOffset.value = 0L
-        preOffsetLyrics?.let { original ->
-            _uiState.update { state ->
-                state.copy(
-                    editingTagData = state.editingTagData?.copy(lyrics = original)
-                )
-            }
-        }
-    }
     fun updateMetadataFromSearchResult(result: LyricsSearchResult) {
         _uiState.update { state ->
             val current = state.editingTagData ?: AudioTagData()
@@ -382,9 +362,6 @@ class EditMetadataViewModel(
                 fields = processedFields,
                 policy = applyPolicy
             )
-            if (!result.lyrics.isNullOrBlank()) {
-                lyricsFormatConversionSession = null
-            }
             val nextCoverUri = if (applyPolicy.modeOf(MetadataFieldTarget.COVER) != MetadataWriteMode.DISABLED) {
                 applied.picUrl
                     ?.takeIf { it.isNotBlank() && it != current.picUrl }
@@ -1156,146 +1133,97 @@ class EditMetadataViewModel(
         val uriString = currentSongUri ?: _uiState.value.songInfo?.uriString ?: return
         if (_uiState.value.isReplayGainCalculating) return
 
-        scanJob = viewModelScope.launch {
-            val replayGainSettings = settingsRepository.getReplayGainSettings()
-            _uiState.update {
-                it.copy(
-                    isReplayGainCalculating = true,
-                    replayGainCalculateProgress = 0f,
-                    replayGainScanMessage = null
+        _uiState.update {
+            it.copy(
+                isReplayGainCalculating = true,
+                replayGainCalculateProgress = 0f,
+                replayGainScanMessage = null
+            )
+        }
+        replayGainScan.start(uriString) { event -> onReplayGainEvent(uriString, event) }
+    }
+
+    fun cancelScan() {
+        replayGainScan.cancel()
+    }
+
+    /** 扫描结果落到编辑态；日志与提示文案的取舍都留在这里。 */
+    private fun onReplayGainEvent(uriString: String, event: ReplayGainScanEvent) {
+        when (event) {
+            is ReplayGainScanEvent.Progress -> _uiState.update {
+                it.copy(replayGainCalculateProgress = event.percent)
+            }
+
+            is ReplayGainScanEvent.Succeeded -> _uiState.update { ui ->
+                val current = ui.editingTagData ?: AudioTagData(fileName = ui.fileName.orEmpty())
+                ui.copy(
+                    editingTagData = current.copy(
+                        replayGainTrackGain = event.trackGain,
+                        replayGainTrackPeak = event.trackPeak,
+                        replayGainReferenceLoudness = event.referenceLoudness
+                    ),
+                    isEditing = true,
+                    isReplayGainCalculating = false,
+                    replayGainCalculateProgress = 1f,
+                    replayGainScanMessage = UiMessage.StringResource(R.string.replay_gain_calculate_success)
                 )
             }
 
-            try {
-                replayGainScanner.analyze(uriString, replayGainSettings.peakMode)
-                    .flowOn(Dispatchers.IO) // 将解码和 DSP 计算放入 IO 线程池，不卡顿 UI
-                    .collect { state ->
-                        when (state) {
-                            is ReplayGainCalculateState.Progress -> {
-                                _uiState.update {
-                                    it.copy(replayGainCalculateProgress = state.percent)
-                                }
-                            }
-
-                            is ReplayGainCalculateState.Success -> {
-                                _uiState.update { ui ->
-                                    val current = ui.editingTagData ?: AudioTagData(fileName = ui.fileName.orEmpty())
-                                    ui.copy(
-                                        editingTagData = current.copy(
-                                            replayGainTrackGain = replayGainScanner.formatGain(
-                                                state.analysis,
-                                                replayGainSettings.targetLoudness
-                                            ),
-                                            replayGainTrackPeak = replayGainScanner.formatPeak(state.analysis.peak),
-                                            replayGainReferenceLoudness = replayGainScanner.formatReferenceLoudness(
-                                                replayGainSettings.targetLoudness
-                                            )
-                                        ),
-                                        isEditing = true,
-                                        isReplayGainCalculating = false,
-                                        replayGainCalculateProgress = 1.0f,
-                                        replayGainScanMessage = UiMessage.StringResource(R.string.replay_gain_calculate_success)
-                                    )
-                                }
-                            }
-
-                            is ReplayGainCalculateState.Cancelled -> {
-                                // 这里处理 Flow 内部抛出异常前发出的 Cancelled 状态
-                                _uiState.update { it.copy(
-                                    isReplayGainCalculating = false,
-                                    replayGainCalculateProgress = 0f,
-                                    replayGainScanMessage = UiMessage.StringResource(R.string.replay_gain_calculate_cancelled)
-                                )}
-                            }
-
-                            is ReplayGainCalculateState.Failed -> {
-                                val errorMsg = mapErrorToUiMessage(state.mimeType, state.error)
-                                recordMetadataFailure(
-                                    message = "ReplayGain scan failed",
-                                    relatedId = uriString,
-                                    detail = buildString {
-                                        appendLine("Uri: $uriString")
-                                        appendLine("MimeType: ${state.mimeType ?: "unknown"}")
-                                        appendLine("Error: ${state.error::class.java.name}")
-                                        appendLine("Message: ${state.error.toLogMessage()}")
-                                    }
-                                )
-                                _uiState.update { it.copy(
-                                    isReplayGainCalculating = false,
-                                    replayGainCalculateProgress = 0f,
-                                    replayGainScanMessage = errorMsg
-                                )}
-                            }
-                        }
-                    }
-            } catch (e: CancellationException) {
-                // 协程被取消时，collect 可能会停止。如果是外部 job.cancel() 触发，
-                // 且 state 没有发回 Cancelled，这里可以补底线逻辑
-                if (_uiState.value.isReplayGainCalculating) {
-                    _uiState.update { it.copy(isReplayGainCalculating = false, replayGainScanMessage = UiMessage.StringResource(R.string.replay_gain_calculate_cancelled)) }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "扫描 ReplayGain 失败: $uriString", e)
-                recordMetadataException(
-                    message = "ReplayGain scan crashed",
-                    relatedId = uriString,
-                    throwable = e
-                )
-                _uiState.update { it.copy(
+            ReplayGainScanEvent.Cancelled -> _uiState.update {
+                it.copy(
                     isReplayGainCalculating = false,
                     replayGainCalculateProgress = 0f,
-                    replayGainScanMessage = UiMessage.StringResource(R.string.replay_gain_calculate_failed,e.localizedMessage?: "未知错误")
-                )}
-            } finally {
-                _uiState.update { it.copy(
+                    replayGainScanMessage = UiMessage.StringResource(R.string.replay_gain_calculate_cancelled)
+                )
+            }
+
+            is ReplayGainScanEvent.Failed -> {
+                viewModelScope.launch {
+                    recordMetadataFailure(
+                        message = "ReplayGain scan failed",
+                        relatedId = uriString,
+                        detail = event.detail
+                    )
+                }
+                _uiState.update {
+                    it.copy(
+                        isReplayGainCalculating = false,
+                        replayGainCalculateProgress = 0f,
+                        replayGainScanMessage = event.message
+                    )
+                }
+            }
+
+            is ReplayGainScanEvent.Crashed -> {
+                Log.e(TAG, "扫描 ReplayGain 失败: $uriString", event.error)
+                viewModelScope.launch {
+                    recordMetadataException(
+                        message = "ReplayGain scan crashed",
+                        relatedId = uriString,
+                        throwable = event.error
+                    )
+                }
+                _uiState.update {
+                    it.copy(
+                        isReplayGainCalculating = false,
+                        replayGainCalculateProgress = 0f,
+                        replayGainScanMessage = UiMessage.StringResource(
+                            R.string.replay_gain_calculate_failed,
+                            event.error.localizedMessage ?: "未知错误"
+                        )
+                    )
+                }
+            }
+
+            ReplayGainScanEvent.Finished -> _uiState.update {
+                it.copy(
                     isReplayGainCalculating = false,
                     replayGainCalculateProgress = if (it.replayGainCalculateProgress == 1f) 1f else null
-                )}
+                )
             }
         }
     }
 
-    /**
-     * 具体的 UI 文本映射逻辑
-     */
-    private fun mapErrorToUiMessage(mimeType: String?, error: ReplayGainError): UiMessage {
-        val format = when (mimeType?.lowercase()) {
-            "audio/alac" -> "ALAC"
-            "audio/ape", "audio/x-ape" -> "APE"
-            "audio/flac" -> "FLAC"
-            "audio/mpeg" -> "MP3"
-            "audio/mp4a-latm" -> "AAC"
-            null -> "unknown"
-            else -> mimeType
-        }
-
-        return when (error) {
-            is ReplayGainError.NoAudioTrack -> UiMessage.StringResource(R.string.replay_gain_error_no_audio_track)
-            is ReplayGainError.UnknownMimeType -> UiMessage.StringResource(R.string.replay_gain_error_unknown_mime_type)
-            is ReplayGainError.ZeroSampleCount -> UiMessage.StringResource(R.string.replay_gain_error_zero_sample_count)
-            is ReplayGainError.UnsupportedCodec -> UiMessage.StringResource(R.string.replay_gain_error_unsupported_codec, format)
-            is ReplayGainError.CodecException -> {
-                if (error.isAlacIssue) UiMessage.StringResource(R.string.replay_gain_error_alac_issue)
-                else UiMessage.StringResource(R.string.replay_gain_error_codec_exception, error.message ?: "")
-            }
-            is ReplayGainError.GeneralException -> UiMessage.StringResource(R.string.replay_gain_error_general, error.message ?: "")
-        }
-    }
-
-    private fun ReplayGainError.toLogMessage(): String = when (this) {
-        is ReplayGainError.NoAudioTrack -> "No audio track"
-        is ReplayGainError.UnknownMimeType -> "Unknown MIME type"
-        is ReplayGainError.ZeroSampleCount -> "Zero sample count"
-        is ReplayGainError.UnsupportedCodec -> "Unsupported codec: ${mimeType ?: "unknown"}"
-        is ReplayGainError.CodecException -> message.orEmpty()
-        is ReplayGainError.GeneralException -> message.orEmpty()
-    }
-    
-    fun cancelScan() {
-        scanJob?.cancel()  // 这会触发 ensureActive() 抛出 CancellationException
-        scanJob = null
-    }
-    
     fun clearReplayGainScanMessage() {
         _uiState.update { it.copy(replayGainScanMessage = null) }
     }
@@ -1317,32 +1245,11 @@ class EditMetadataViewModel(
         }
     }
 
-    /** 检测歌词格式，返回 "lrc" 或 "ttml"。 */
-    private fun getLyricsMimeType(lyrics: String?): String {
-        if (lyrics.isNullOrBlank()) return "lrc"
-        
-        if (lyrics.contains("begin=") && lyrics.contains("end=") && lyrics.contains("<?xml")) {
-            return "ttml"
-        }
-        
-        // 检测 LRC 格式时间戳 [mm:ss.xxx] 或 <mm:ss.xxx>
-        if (Regex("[\\[<]\\d{1,2}:\\d{2}\\.\\d{2,3}[>\\]]").containsMatchIn(lyrics)) {
-            return "lrc"
-        }
-        
-        return "lrc"
-    }
-
     /**
-     * 获取导出歌词的默认文件名
+     * 获取导出歌词的默认文件名；没有歌词时返回 null。
      */
-    fun getLyricsFileName(): String? {
-        val lyrics = _uiState.value.editingTagData?.lyrics ?: return null
-        val format = getLyricsMimeType(lyrics)
-        val fileExtension = if (format == "ttml") ".ttml" else ".lrc"
-        val fileName = _uiState.value.fileName ?:""
-        return "$fileName$fileExtension"
-    }
+    fun getLyricsFileName(): String? =
+        LyricsFileTransfer.defaultFileName(_uiState.value.fileName, _uiState.value.editingTagData?.lyrics)
 
     /**
      * 导出歌词
@@ -1362,9 +1269,7 @@ class EditMetadataViewModel(
                     return@launch
                 }
 
-                requireNotNull(context.contentResolver.openOutputStream(uri)) { "No lyrics output stream: $uri" }.use { outputStream ->
-                    outputStream.write(lyrics.toByteArray(Charsets.UTF_8))
-                }
+                LyricsFileTransfer.write(context, uri, lyrics)
                 _uiState.update { it.copy(exportLyricsResult = true) }
                 appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Lyrics exported",
                     "uri=$currentSongUri\ndestination=$uri\ncharacters=${lyrics.length}\nformat=${LyricDecoder.detectFormat(lyrics)}", currentSongUri, AppLogLevel.INFO)
@@ -1396,12 +1301,11 @@ class EditMetadataViewModel(
                     return@launch
                 }
 
-                val outputUri = SafSiblingFileWriter.write(
+                LyricsFileTransfer.writeNextToAudio(
                     context = context,
-                    sourceDocumentUri = audioUri,
-                    mimeType = LYRICS_EXPORT_MIME_TYPE,
+                    audioUri = audioUri,
                     fileName = fileName,
-                    bytes = lyrics.toByteArray(Charsets.UTF_8)
+                    lyrics = lyrics
                 )
                 _uiState.update { it.copy(exportLyricsResult = true) }
             } catch (e: Exception) {
@@ -1422,12 +1326,9 @@ class EditMetadataViewModel(
     fun importLyrics(context: Context, uri: Uri) {
         viewModelScope.launch {
             try {
-                val lyrics = context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    inputStream.bufferedReader(Charsets.UTF_8).readText()
-                }
+                val lyrics = LyricsFileTransfer.read(context, uri)
 
                 if (!lyrics.isNullOrBlank()) {
-                    lyricsFormatConversionSession = null
                     updateTag { copy(lyrics = lyrics) }
                     _uiState.update { it.copy(importLyricsResult = true) }
                     appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Lyrics imported into draft",
@@ -1466,17 +1367,7 @@ class EditMetadataViewModel(
         if (currentLyrics.isBlank()) return
 
         val convertedLyrics = LyricEncoder.convertLyricsText(currentLyrics, conversionMode)
-        lyricsFormatConversionSession = null
         updateTag { copy(lyrics = convertedLyrics) }
-    }
-
-    /** 把歌词转换为 [targetFormat]。 */
-    fun convertLyricsFormat(targetFormat: LyricFormat) {
-        processLyrics(
-            LyricsProcessingOptions(
-                targetFormat = targetFormat
-            )
-        )
     }
 
     fun processLyrics(options: LyricsProcessingOptions) {
@@ -1485,44 +1376,17 @@ class EditMetadataViewModel(
 
         viewModelScope.launch {
             try {
-                if (options.formatLineOrder) {
-                    val converted = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                        LyricsColumnSorter.apply(currentLyrics, options.twoColumnMapping, options.threeColumnMapping)
-                    }
-                    if (converted != currentLyrics && _uiState.value.editingTagData?.lyrics == currentLyrics) {
-                        lyricsFormatConversionSession = null
-                        updateTag { copy(lyrics = converted) }
-                    }
-                    if (options.targetFormat == null && !options.removeEmptyLines && !options.removeTagLines) return@launch
-                }
-                val currentFormat = LyricDecoder.detectFormat(currentLyrics)
-                val targetFormat = options.targetFormat ?: currentFormat
-                if (options.targetFormat != null && options.targetFormat == currentFormat && !options.hasTextOperations()) return@launch
                 val tagLineKeywords = if (options.removeTagLines) {
                     settingsRepository.lyricsTagLineKeywords.first()
                 } else {
                     emptyList()
                 }
-
-                val converted = if (options.targetFormat == null && !options.formatLineOrder && currentFormat != LyricFormat.TTML) {
-                    LyricsTextCleanup.process(
-                        raw = currentLyrics,
-                        removeEmptyLines = options.removeEmptyLines,
-                        tagLineKeywords = tagLineKeywords
-                    )
-                } else {
-                    if (currentFormat == null || targetFormat == null) return@launch
-                    LyricsDocumentPipeline.process(
-                        raw = currentLyrics,
-                        sourceFormat = currentFormat,
-                        targetFormat = targetFormat,
-                        removeEmptyLines = options.removeEmptyLines,
-                        removeTagLineKeywords = tagLineKeywords
-                    ) ?: convertLyricsFormatFromCurrent(currentLyrics, targetFormat)
+                val converted = withContext(Dispatchers.Default) {
+                    LyricsProcessing.apply(currentLyrics, options, tagLineKeywords)
                 } ?: return@launch
 
+                // 处理期间用户可能已经改了歌词，此时不覆盖。
                 if (_uiState.value.editingTagData?.lyrics == currentLyrics) {
-                    lyricsFormatConversionSession = null
                     updateTag { copy(lyrics = converted) }
                 }
             } catch (e: Exception) {
@@ -1534,42 +1398,6 @@ class EditMetadataViewModel(
                 )
             }
         }
-    }
-
-    private fun getOrCreateLyricsFormatConversionSession(
-        currentLyrics: String
-    ): LyricsFormatConversionSession? {
-        lyricsFormatConversionSession
-            ?.takeIf { it.lastRenderedLyrics == currentLyrics }
-            ?.let { return it }
-
-        val sourceFormat = LyricDecoder.detectFormat(currentLyrics) ?: return null
-        return LyricsFormatConversionSession(
-            sourceFormat = sourceFormat,
-            sourceLyrics = currentLyrics,
-            lastRenderedLyrics = currentLyrics
-        ).also {
-            lyricsFormatConversionSession = it
-        }
-    }
-
-    private fun convertLyricsFormatFromCurrent(
-        currentLyrics: String,
-        targetFormat: LyricFormat
-    ): String? {
-        val lyricsResult = LyricDecoder.decode(currentLyrics) ?: return null
-        if (lyricsResult.original.isEmpty()) return null
-
-        val config = LyricRenderConfig(
-            format = targetFormat,
-            conversionMode = ConversionMode.NONE,
-            showTranslation = lyricsResult.translated != null,
-            showRomanization = lyricsResult.romanization != null,
-            removeEmptyLines = false,
-            onlyTranslationIfAvailable = false
-        )
-
-        return LyricEncoder.encode(lyricsResult, config).takeIf { it.isNotBlank() }
     }
 
     fun clearImportLyricsStatus() {

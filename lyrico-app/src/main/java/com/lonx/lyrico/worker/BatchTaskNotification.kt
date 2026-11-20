@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.lonx.lyrico.MainActivity
 import com.lonx.lyrico.R
@@ -18,18 +17,16 @@ object BatchTaskNotification {
     const val ACTION_CANCEL = "com.lonx.lyrico.ACTION_CANCEL_BATCH_TASK"
 
     fun ensureChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-                val channel = NotificationChannel(
-                    CHANNEL_ID,
-                    "Batch Tasks",
-                    NotificationManager.IMPORTANCE_LOW
-                ).apply {
-                    setShowBadge(false)
-                }
-                manager.createNotificationChannel(channel)
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Batch Tasks",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                setShowBadge(false)
             }
+            manager.createNotificationChannel(channel)
         }
     }
 

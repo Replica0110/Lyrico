@@ -101,7 +101,7 @@ internal fun SaltBasicDialog(
     }
 }
 
-/** Shared title without the legacy DialogTitle's extra item padding. */
+/** 共享对话框标题，内容边距由外层容器提供。 */
 @Composable
 internal fun SaltDialogTitle(text: String) {
     Text(

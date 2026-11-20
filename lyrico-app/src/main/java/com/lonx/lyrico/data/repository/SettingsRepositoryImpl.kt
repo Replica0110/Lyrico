@@ -1,16 +1,11 @@
 package com.lonx.lyrico.data.repository
 
 import android.content.Context
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.lonx.lyrico.data.editfield.EditFieldConfigJson
-import com.lonx.lyrico.data.editfield.EditFieldConfigRepository
 import com.lonx.lyrico.data.model.batch.BatchMatchConfig
 import com.lonx.lyrico.data.model.batch.BatchMatchConfigDefaults
 import com.lonx.lyrico.data.model.filename.CharacterMappingConfig
@@ -30,7 +25,7 @@ import com.lonx.lyrico.data.model.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.model.search.SearchConfig
 import com.lonx.lyrico.data.model.search.SearchSourceTabStyle
 import com.lonx.lyrico.data.dto.settings.SettingsBackup
-import com.lonx.lyrico.data.model.search.source.SourceSettingsStore
+import com.lonx.lyrico.data.dto.settings.SettingsBackupMapper
 import com.lonx.lyrico.data.model.appearance.ThemeConfig
 import com.lonx.lyrico.data.model.appearance.UiEngine
 import com.lonx.lyrico.data.model.appearance.ThemeMode
@@ -72,6 +67,7 @@ object SettingsDefaults {
     const val MONET_ENABLE: Boolean = false
     const val FLOATING_BOTTOM_BAR_ENABLED: Boolean = true
     val FLOATING_BAR_EFFECT = FloatingBarEffect.NONE
+    const val BAR_BLUR_ENABLED = false
     val KEY_THEME_COLOR = null
     val CONVERSION_MODE = ConversionMode.NONE
     const val RENAME_FORMAT = "@1 - @2"
@@ -154,62 +150,13 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         encodeDefaults = true    // 即使是默认值也编码
     }
 
-    private object PreferencesKeys {
-        val RENAME_FORMAT = stringPreferencesKey("rename_format")
-        val REMOVE_EMPTY_LINES = booleanPreferencesKey("remove_empty_lines")
-        val LYRICS_TAG_LINE_KEYWORDS = stringPreferencesKey("lyrics_tag_line_keywords")
-        val LIMIT_LYRICS_INPUT_LINES = booleanPreferencesKey("limit_lyrics_input_lines")
-        val LYRIC_FORMAT = stringPreferencesKey("lyric_display_mode")
-        val LAST_SCAN_TIME = longPreferencesKey("last_scan_time")
-        val SORT_BY = stringPreferencesKey("sort_by")
-        val SORT_ORDER = stringPreferencesKey("sort_order")
-        val ALBUM_SORT_BY = stringPreferencesKey("album_sort_by")
-        val ALBUM_SORT_ORDER = stringPreferencesKey("album_sort_order")
-        val ARTIST_SORT_BY = stringPreferencesKey("artist_sort_by")
-        val ARTIST_SORT_ORDER = stringPreferencesKey("artist_sort_order")
-        val ALBUM_GRID_COLUMNS = intPreferencesKey("album_grid_columns")
-        val SEPARATOR = stringPreferencesKey("separator")
-        val LYRIC_LINE_ORDER = stringPreferencesKey("lyric_line_order")
-        val ROMA_ENABLED = booleanPreferencesKey("roma_enabled")
-        val CHECK_UPDATE_ENABLED = booleanPreferencesKey("check_update_enabled")
-        val TRANSLATION_ENABLED = booleanPreferencesKey("translation_enabled")
-        val LYRIC_INDEX_ENABLED = booleanPreferencesKey("lyric_index_enabled")
-        val IGNORE_SHORT_AUDIO = booleanPreferencesKey("ignore_short_audio")
-        val DEFAULT_PLAYER_COMPONENT = stringPreferencesKey("default_player_component")
-        val SEARCH_SOURCE_ORDER = stringPreferencesKey("search_source_order")
-        val ENABLED_SEARCH_SOURCES = stringPreferencesKey("enabled_search_sources")
-        val SEARCH_PAGE_SIZE = intPreferencesKey("search_page_size")
-        val SEARCH_SOURCE_TAB_STYLE = stringPreferencesKey("search_source_tab_style")
-        val SHOW_ALL_SEARCH_RESULT_FIELDS = booleanPreferencesKey("show_all_search_result_fields")
-        val THEME_MODE = stringPreferencesKey("theme_mode")
-        val UI_ENGINE = stringPreferencesKey("ui_engine")
-        val MONET_ENABLE = booleanPreferencesKey("monet_enable")
-        val FLOATING_BOTTOM_BAR_ENABLED = booleanPreferencesKey("floating_bottom_bar_enabled")
-        val BAR_BLUR_ENABLED = booleanPreferencesKey("bar_blur_enabled")
-        val FLOATING_BAR_EFFECT = stringPreferencesKey("floating_bar_effect")
-
-        /** 旧版把“毛玻璃”和“液态玻璃”存成两个互斥开关，仅用于读取旧值。 */
-        val FLOATING_BAR_BLUR_ENABLED_LEGACY = booleanPreferencesKey("floating_bar_blur_enabled")
-        val LIQUID_GLASS_ENABLED_LEGACY = booleanPreferencesKey("liquid_glass_enabled")
-        val KEY_THEME_COLOR = intPreferencesKey("theme_color_argb")
-        val ONLY_TRANSLATION_IF_AVAILABLE = booleanPreferencesKey("only_translation_if_available")
-        val CHARACTER_MAPPING_CONFIG = stringPreferencesKey("character_mapping_config")
-        val BATCH_MATCH_CONFIG = stringPreferencesKey("batch_match_config")
-        val METADATA_FIELD_WRITE_RULES = stringPreferencesKey("metadata_field_write_rules")
-        val SOURCE_SETTINGS = stringPreferencesKey("source_settings")
-        val CONVERSION_MODE = stringPreferencesKey("conversion_mode")
-        val LOG_RETENTION_OPTION = stringPreferencesKey("log_retention_option")
-        val ARTIST_SPLIT_CONFIG = stringPreferencesKey("artist_split_config")
-        val LIBRARY_INDEX_VERSION = intPreferencesKey("library_index_version")
-        val REPLAY_GAIN_TARGET_LOUDNESS = doublePreferencesKey("replay_gain_target_loudness")
-        val REPLAY_GAIN_PEAK_MODE = stringPreferencesKey("replay_gain_peak_mode")
-    }
+    private val backupMapper = SettingsBackupMapper(jsonFormatter)
 
     override val lyricFormat: Flow<LyricFormat>
         get() = context.settingsDataStore.data.map { preferences ->
             try {
                 LyricFormat.valueOf(
-                    preferences[PreferencesKeys.LYRIC_FORMAT] ?: SettingsDefaults.LYRIC_FORMAT.name
+                    preferences[SettingsPreferenceKeys.LYRIC_FORMAT] ?: SettingsDefaults.LYRIC_FORMAT.name
                 )
             } catch (e: Exception) {
                 SettingsDefaults.LYRIC_FORMAT
@@ -220,7 +167,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         get() = context.settingsDataStore.data.map { preferences ->
             val sortBy = try {
                 SongSortBy.valueOf(
-                    preferences[PreferencesKeys.SORT_BY] ?: SettingsDefaults.SORT_BY.name
+                    preferences[SettingsPreferenceKeys.SORT_BY] ?: SettingsDefaults.SORT_BY.name
                 )
             } catch (e: Exception) {
                 SettingsDefaults.SORT_BY
@@ -228,7 +175,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
             val sortOrder = try {
                 SortOrder.valueOf(
-                    preferences[PreferencesKeys.SORT_ORDER] ?: SettingsDefaults.SORT_ORDER.name
+                    preferences[SettingsPreferenceKeys.SORT_ORDER] ?: SettingsDefaults.SORT_ORDER.name
                 )
             } catch (e: Exception) {
                 SettingsDefaults.SORT_ORDER
@@ -241,14 +188,14 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         get() = context.settingsDataStore.data.map { preferences ->
             val sortBy = runCatching {
                 AlbumSortBy.valueOf(
-                    preferences[PreferencesKeys.ALBUM_SORT_BY]
+                    preferences[SettingsPreferenceKeys.ALBUM_SORT_BY]
                         ?: SettingsDefaults.ALBUM_SORT_BY.name
                 )
             }.getOrDefault(SettingsDefaults.ALBUM_SORT_BY)
 
             val sortOrder = runCatching {
                 SortOrder.valueOf(
-                    preferences[PreferencesKeys.ALBUM_SORT_ORDER]
+                    preferences[SettingsPreferenceKeys.ALBUM_SORT_ORDER]
                         ?: SettingsDefaults.ALBUM_SORT_ORDER.name
                 )
             }.getOrDefault(SettingsDefaults.ALBUM_SORT_ORDER)
@@ -260,14 +207,14 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         get() = context.settingsDataStore.data.map { preferences ->
             val sortBy = runCatching {
                 ArtistSortBy.valueOf(
-                    preferences[PreferencesKeys.ARTIST_SORT_BY]
+                    preferences[SettingsPreferenceKeys.ARTIST_SORT_BY]
                         ?: SettingsDefaults.ARTIST_SORT_BY.name
                 )
             }.getOrDefault(SettingsDefaults.ARTIST_SORT_BY)
 
             val sortOrder = runCatching {
                 SortOrder.valueOf(
-                    preferences[PreferencesKeys.ARTIST_SORT_ORDER]
+                    preferences[SettingsPreferenceKeys.ARTIST_SORT_ORDER]
                         ?: SettingsDefaults.ARTIST_SORT_ORDER.name
                 )
             }.getOrDefault(SettingsDefaults.ARTIST_SORT_ORDER)
@@ -277,65 +224,65 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val albumGridColumns: Flow<Int>
         get() = context.settingsDataStore.data.map { preferences ->
-            val columns = preferences[PreferencesKeys.ALBUM_GRID_COLUMNS]
+            val columns = preferences[SettingsPreferenceKeys.ALBUM_GRID_COLUMNS]
                 ?: SettingsDefaults.ALBUM_GRID_COLUMNS
             columns.coerceIn(2, 4)
         }
 
     override val separator: Flow<String>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.SEPARATOR] ?: SettingsDefaults.SEPARATOR
+            preferences[SettingsPreferenceKeys.SEPARATOR] ?: SettingsDefaults.SEPARATOR
         }
 
     override val romaEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.ROMA_ENABLED] ?: SettingsDefaults.ROMA_ENABLED
+            preferences[SettingsPreferenceKeys.ROMA_ENABLED] ?: SettingsDefaults.ROMA_ENABLED
         }
 
     override val lyricLineOrder: Flow<List<LyricLineTrack>>
         get() = context.settingsDataStore.data.map { preferences ->
-            decodeLyricLineOrder(preferences[PreferencesKeys.LYRIC_LINE_ORDER])
+            decodeLyricLineOrder(preferences[SettingsPreferenceKeys.LYRIC_LINE_ORDER])
         }
 
     override val translationEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.TRANSLATION_ENABLED] ?: SettingsDefaults.TRANSLATION_ENABLED
+            preferences[SettingsPreferenceKeys.TRANSLATION_ENABLED] ?: SettingsDefaults.TRANSLATION_ENABLED
         }
 
     override val checkUpdateEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.CHECK_UPDATE_ENABLED]
+            preferences[SettingsPreferenceKeys.CHECK_UPDATE_ENABLED]
                 ?: SettingsDefaults.CHECK_UPDATE_ENABLED
         }
 
     override val lyricIndexEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.LYRIC_INDEX_ENABLED] ?: false
+            preferences[SettingsPreferenceKeys.LYRIC_INDEX_ENABLED] ?: false
         }
 
     override val defaultPlayerComponent: Flow<String?>
-        get() = context.settingsDataStore.data.map { it[PreferencesKeys.DEFAULT_PLAYER_COMPONENT] }
+        get() = context.settingsDataStore.data.map { it[SettingsPreferenceKeys.DEFAULT_PLAYER_COMPONENT] }
 
     override suspend fun saveDefaultPlayerComponent(component: String?) {
         context.settingsDataStore.edit { preferences ->
-            if (component == null) preferences.remove(PreferencesKeys.DEFAULT_PLAYER_COMPONENT)
-            else preferences[PreferencesKeys.DEFAULT_PLAYER_COMPONENT] = component
+            if (component == null) preferences.remove(SettingsPreferenceKeys.DEFAULT_PLAYER_COMPONENT)
+            else preferences[SettingsPreferenceKeys.DEFAULT_PLAYER_COMPONENT] = component
         }
     }
 
     override val ignoreShortAudio: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.IGNORE_SHORT_AUDIO] ?: SettingsDefaults.IGNORE_SHORT_AUDIO
+            preferences[SettingsPreferenceKeys.IGNORE_SHORT_AUDIO] ?: SettingsDefaults.IGNORE_SHORT_AUDIO
         }
 
     override val replayGainSettings: Flow<ReplayGainSettings>
         get() = context.settingsDataStore.data.map { preferences ->
             ReplayGainSettings(
-                targetLoudness = preferences[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS]
+                targetLoudness = preferences[SettingsPreferenceKeys.REPLAY_GAIN_TARGET_LOUDNESS]
                     ?: SettingsDefaults.REPLAY_GAIN_TARGET_LOUDNESS,
                 peakMode = runCatching {
                     ReplayGainPeakMode.valueOf(
-                        preferences[PreferencesKeys.REPLAY_GAIN_PEAK_MODE]
+                        preferences[SettingsPreferenceKeys.REPLAY_GAIN_PEAK_MODE]
                             ?: SettingsDefaults.REPLAY_GAIN_PEAK_MODE.name
                     )
                 }.getOrDefault(SettingsDefaults.REPLAY_GAIN_PEAK_MODE)
@@ -344,22 +291,22 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val searchSourceOrder: Flow<List<String>>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.SEARCH_SOURCE_ORDER].csvToIds()
+            preferences[SettingsPreferenceKeys.SEARCH_SOURCE_ORDER].csvToIds()
         }
 
     override val enabledSearchSources: Flow<Set<String>>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.ENABLED_SEARCH_SOURCES].csvToIds().toSet()
+            preferences[SettingsPreferenceKeys.ENABLED_SEARCH_SOURCES].csvToIds().toSet()
         }
 
     override val searchPageSize: Flow<Int>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.SEARCH_PAGE_SIZE] ?: SettingsDefaults.SEARCH_PAGE_SIZE
+            preferences[SettingsPreferenceKeys.SEARCH_PAGE_SIZE] ?: SettingsDefaults.SEARCH_PAGE_SIZE
         }
 
     override val searchSourceTabStyle: Flow<SearchSourceTabStyle>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.SEARCH_SOURCE_TAB_STYLE]
+            preferences[SettingsPreferenceKeys.SEARCH_SOURCE_TAB_STYLE]
                 ?.let { styleName ->
                     runCatching { SearchSourceTabStyle.valueOf(styleName) }.getOrNull()
                 }
@@ -368,22 +315,22 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val showAllSearchResultFields: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.SHOW_ALL_SEARCH_RESULT_FIELDS]
+            preferences[SettingsPreferenceKeys.SHOW_ALL_SEARCH_RESULT_FIELDS]
                 ?: SettingsDefaults.SHOW_ALL_SEARCH_RESULT_FIELDS
         }
 
     override val uiEngine: Flow<UiEngine>
         get() = context.settingsDataStore.data.map { preferences ->
-            UiEngine.fromValue(preferences[PreferencesKeys.UI_ENGINE])
+            UiEngine.fromValue(preferences[SettingsPreferenceKeys.UI_ENGINE])
         }
 
     override suspend fun saveUiEngine(engine: UiEngine) {
-        context.settingsDataStore.edit { it[PreferencesKeys.UI_ENGINE] = engine.value }
+        context.settingsDataStore.edit { it[SettingsPreferenceKeys.UI_ENGINE] = engine.value }
     }
 
     override val themeMode: Flow<ThemeMode>
         get() = context.settingsDataStore.data.map { preferences ->
-            val modeName = preferences[PreferencesKeys.THEME_MODE]
+            val modeName = preferences[SettingsPreferenceKeys.THEME_MODE]
             if (modeName.isNullOrBlank()) {
                 SettingsDefaults.THEME_MODE
             } else {
@@ -396,45 +343,27 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     override val keyColor: Flow<ThemeColor>
         get() = context.settingsDataStore.data.map { preferences ->
-            ThemeColor.fromArgb(preferences[PreferencesKeys.KEY_THEME_COLOR])
+            ThemeColor.fromArgb(preferences[SettingsPreferenceKeys.KEY_THEME_COLOR])
         }
     override val monetEnable: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.MONET_ENABLE] ?: false
+            preferences[SettingsPreferenceKeys.MONET_ENABLE] ?: false
         }
     override val floatingBottomBarEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED]
+            preferences[SettingsPreferenceKeys.FLOATING_BOTTOM_BAR_ENABLED]
                 ?: SettingsDefaults.FLOATING_BOTTOM_BAR_ENABLED
         }
     override val barBlurEnabled: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
             preferences.resolveBarBlurEnabled()
         }
-    // Preserve an explicit bar setting. Older profiles with only a floating effect inherit it.
-    private fun Preferences.resolveBarBlurEnabled(): Boolean =
-        this[PreferencesKeys.BAR_BLUR_ENABLED]
-            ?: (resolveFloatingBarEffect() != FloatingBarEffect.NONE)
-
     override val floatingBarEffect: Flow<FloatingBarEffect>
         get() = context.settingsDataStore.data.map { it.resolveFloatingBarEffect() }
 
-    /**
-     * 新键缺失时回退到旧版的两个互斥开关，保留老用户升级前的选择。
-     */
-    private fun Preferences.resolveFloatingBarEffect(): FloatingBarEffect =
-        this[PreferencesKeys.FLOATING_BAR_EFFECT]
-            ?.let(FloatingBarEffect::fromName)
-            ?: when {
-                this[PreferencesKeys.LIQUID_GLASS_ENABLED_LEGACY] == true ->
-                    FloatingBarEffect.LIQUID_GLASS
-                this[PreferencesKeys.FLOATING_BAR_BLUR_ENABLED_LEGACY] == true ->
-                    FloatingBarEffect.FROSTED_GLASS
-                else -> SettingsDefaults.FLOATING_BAR_EFFECT
-            }
     override val conversionMode: Flow<ConversionMode>
         get() = context.settingsDataStore.data.map { preferences ->
-            val modeName = preferences[PreferencesKeys.CONVERSION_MODE]
+            val modeName = preferences[SettingsPreferenceKeys.CONVERSION_MODE]
             if (modeName.isNullOrBlank()) {
                 ConversionMode.NONE
             } else {
@@ -448,26 +377,26 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val onlyTranslationIfAvailable: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE]
+            preferences[SettingsPreferenceKeys.ONLY_TRANSLATION_IF_AVAILABLE]
                 ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE
         }
 
     override val removeEmptyLines: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.REMOVE_EMPTY_LINES] ?: SettingsDefaults.REMOVE_EMPTY_LINES
+            preferences[SettingsPreferenceKeys.REMOVE_EMPTY_LINES] ?: SettingsDefaults.REMOVE_EMPTY_LINES
         }
     override val lyricsTagLineKeywords: Flow<List<String>>
         get() = context.settingsDataStore.data.map { preferences ->
-            decodeLyricsTagLineKeywords(preferences[PreferencesKeys.LYRICS_TAG_LINE_KEYWORDS])
+            jsonFormatter.decodeLyricsTagLineKeywords(preferences[SettingsPreferenceKeys.LYRICS_TAG_LINE_KEYWORDS])
         }
     override val limitLyricsInputLines: Flow<Boolean>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.LIMIT_LYRICS_INPUT_LINES]
+            preferences[SettingsPreferenceKeys.LIMIT_LYRICS_INPUT_LINES]
                 ?: SettingsDefaults.LIMIT_LYRICS_INPUT_LINES
         }
     override val logRetentionOption: Flow<LogRetentionOption>
         get() = context.settingsDataStore.data.map { preferences ->
-            val optionName = preferences[PreferencesKeys.LOG_RETENTION_OPTION]
+            val optionName = preferences[SettingsPreferenceKeys.LOG_RETENTION_OPTION]
             if (optionName.isNullOrBlank()) {
                 SettingsDefaults.LOG_RETENTION_OPTION
             } else {
@@ -478,11 +407,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val renameFormat: Flow<String>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.RENAME_FORMAT] ?: SettingsDefaults.RENAME_FORMAT
+            preferences[SettingsPreferenceKeys.RENAME_FORMAT] ?: SettingsDefaults.RENAME_FORMAT
         }
     override suspend fun getLastScanTime(): Long {
         return context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.LAST_SCAN_TIME] ?: 0L
+            preferences[SettingsPreferenceKeys.LAST_SCAN_TIME] ?: 0L
         }.first()
     }
 
@@ -555,26 +484,26 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun saveOnlyTranslationIfAvailable(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] = enabled
+            preferences[SettingsPreferenceKeys.ONLY_TRANSLATION_IF_AVAILABLE] = enabled
         }
     }
 
     override suspend fun saveLyricDisplayMode(mode: LyricFormat) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LYRIC_FORMAT] = mode.name
+            preferences[SettingsPreferenceKeys.LYRIC_FORMAT] = mode.name
         }
     }
 
     override suspend fun saveSortInfo(sortInfo: SongSortInfo) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.SORT_BY] = sortInfo.sortBy.name
-            preferences[PreferencesKeys.SORT_ORDER] = sortInfo.order.name
+            preferences[SettingsPreferenceKeys.SORT_BY] = sortInfo.sortBy.name
+            preferences[SettingsPreferenceKeys.SORT_ORDER] = sortInfo.order.name
         }
     }
 
     override val sourceSettingsByIdFlow: Flow<Map<String, SourceRuntimeConfig>>
         get() = context.settingsDataStore.data.map { preferences ->
-            decodeSourceSettingsStore(preferences[PreferencesKeys.SOURCE_SETTINGS])
+            jsonFormatter.decodeSourceSettingsStore(preferences[SettingsPreferenceKeys.SOURCE_SETTINGS])
                 .values
                 .mapKeys { (sourceId, _) -> sourceId.toStableSourceId() }
                 .mapValues { (_, values) -> SourceRuntimeConfig(values) }
@@ -582,76 +511,76 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun saveAlbumSortInfo(sortInfo: AlbumSortInfo) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.ALBUM_SORT_BY] = sortInfo.sortBy.name
-            preferences[PreferencesKeys.ALBUM_SORT_ORDER] = sortInfo.order.name
+            preferences[SettingsPreferenceKeys.ALBUM_SORT_BY] = sortInfo.sortBy.name
+            preferences[SettingsPreferenceKeys.ALBUM_SORT_ORDER] = sortInfo.order.name
         }
     }
 
     override suspend fun saveArtistSortInfo(sortInfo: ArtistSortInfo) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.ARTIST_SORT_BY] = sortInfo.sortBy.name
-            preferences[PreferencesKeys.ARTIST_SORT_ORDER] = sortInfo.order.name
+            preferences[SettingsPreferenceKeys.ARTIST_SORT_BY] = sortInfo.sortBy.name
+            preferences[SettingsPreferenceKeys.ARTIST_SORT_ORDER] = sortInfo.order.name
         }
     }
 
     override suspend fun saveAlbumGridColumns(columns: Int) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.ALBUM_GRID_COLUMNS] = columns.coerceIn(2, 4)
+            preferences[SettingsPreferenceKeys.ALBUM_GRID_COLUMNS] = columns.coerceIn(2, 4)
         }
     }
 
     override suspend fun saveSeparator(separator: String) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.SEPARATOR] = separator
+            preferences[SettingsPreferenceKeys.SEPARATOR] = separator
         }
     }
 
     override suspend fun saveRomaEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.ROMA_ENABLED] = enabled
+            preferences[SettingsPreferenceKeys.ROMA_ENABLED] = enabled
         }
     }
 
     override suspend fun saveLyricLineOrder(order: List<LyricLineTrack>) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LYRIC_LINE_ORDER] =
+            preferences[SettingsPreferenceKeys.LYRIC_LINE_ORDER] =
                 order.normalizedLyricLineOrder().joinToString(",") { it.name }
         }
     }
 
     override suspend fun saveCheckUpdateEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.CHECK_UPDATE_ENABLED] = enabled
+            preferences[SettingsPreferenceKeys.CHECK_UPDATE_ENABLED] = enabled
         }
     }
 
     override suspend fun saveTranslationEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.TRANSLATION_ENABLED] = enabled
+            preferences[SettingsPreferenceKeys.TRANSLATION_ENABLED] = enabled
         }
     }
 
     override suspend fun saveLyricIndexEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LYRIC_INDEX_ENABLED] = enabled
+            preferences[SettingsPreferenceKeys.LYRIC_INDEX_ENABLED] = enabled
         }
     }
 
     override suspend fun saveIgnoreShortAudio(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.IGNORE_SHORT_AUDIO] = enabled
+            preferences[SettingsPreferenceKeys.IGNORE_SHORT_AUDIO] = enabled
         }
     }
 
     override suspend fun saveReplayGainTargetLoudness(loudness: Double) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS] = loudness
+            preferences[SettingsPreferenceKeys.REPLAY_GAIN_TARGET_LOUDNESS] = loudness
         }
     }
 
     override suspend fun saveReplayGainPeakMode(mode: ReplayGainPeakMode) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.REPLAY_GAIN_PEAK_MODE] = mode.name
+            preferences[SettingsPreferenceKeys.REPLAY_GAIN_PEAK_MODE] = mode.name
         }
     }
 
@@ -660,73 +589,73 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun saveLastScanTime(time: Long) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LAST_SCAN_TIME] = time
+            preferences[SettingsPreferenceKeys.LAST_SCAN_TIME] = time
         }
     }
 
     override suspend fun saveSearchSourceOrder(sources: List<String>) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.SEARCH_SOURCE_ORDER] =
+            preferences[SettingsPreferenceKeys.SEARCH_SOURCE_ORDER] =
                 sources.idsToCsv()
         }
     }
 
     override suspend fun saveEnabledSearchSources(sources: Set<String>) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.ENABLED_SEARCH_SOURCES] = sources.idsToCsv()
+            preferences[SettingsPreferenceKeys.ENABLED_SEARCH_SOURCES] = sources.idsToCsv()
         }
     }
 
     override suspend fun saveSearchPageSize(size: Int) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.SEARCH_PAGE_SIZE] = size
+            preferences[SettingsPreferenceKeys.SEARCH_PAGE_SIZE] = size
         }
     }
 
     override suspend fun saveSearchSourceTabStyle(style: SearchSourceTabStyle) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.SEARCH_SOURCE_TAB_STYLE] = style.name
+            preferences[SettingsPreferenceKeys.SEARCH_SOURCE_TAB_STYLE] = style.name
         }
     }
 
     override suspend fun saveShowAllSearchResultFields(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.SHOW_ALL_SEARCH_RESULT_FIELDS] = enabled
+            preferences[SettingsPreferenceKeys.SHOW_ALL_SEARCH_RESULT_FIELDS] = enabled
         }
     }
 
     override suspend fun saveConversionMode(mode: ConversionMode) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.CONVERSION_MODE] = mode.name
+            preferences[SettingsPreferenceKeys.CONVERSION_MODE] = mode.name
         }
     }
 
     override suspend fun saveThemeMode(mode: ThemeMode) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.THEME_MODE] = mode.name
+            preferences[SettingsPreferenceKeys.THEME_MODE] = mode.name
         }
     }
     override suspend fun saveMonetEnable(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.MONET_ENABLE] = enabled
+            preferences[SettingsPreferenceKeys.MONET_ENABLE] = enabled
         }
     }
 
     override suspend fun saveFloatingBottomBarEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED] = enabled
+            preferences[SettingsPreferenceKeys.FLOATING_BOTTOM_BAR_ENABLED] = enabled
         }
     }
 
     override suspend fun saveBarBlurEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.BAR_BLUR_ENABLED] = enabled
+            preferences[SettingsPreferenceKeys.BAR_BLUR_ENABLED] = enabled
         }
     }
 
     override suspend fun saveFloatingBarEffect(effect: FloatingBarEffect) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.FLOATING_BAR_EFFECT] = effect.name
+            preferences[SettingsPreferenceKeys.FLOATING_BAR_EFFECT] = effect.name
         }
     }
 
@@ -734,34 +663,34 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         context.settingsDataStore.edit { preferences ->
             if (selectedKeyColor.argb == null) {
                 // 如果选了“系统默认”，直接移除保存的值
-                preferences.remove(PreferencesKeys.KEY_THEME_COLOR)
+                preferences.remove(SettingsPreferenceKeys.KEY_THEME_COLOR)
             } else {
-                preferences[PreferencesKeys.KEY_THEME_COLOR] = selectedKeyColor.argb
+                preferences[SettingsPreferenceKeys.KEY_THEME_COLOR] = selectedKeyColor.argb
             }
         }
     }
     override suspend fun saveRemoveEmptyLines(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.REMOVE_EMPTY_LINES] = enabled
+            preferences[SettingsPreferenceKeys.REMOVE_EMPTY_LINES] = enabled
         }
     }
 
     override suspend fun saveLyricsTagLineKeywords(keywords: List<String>) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LYRICS_TAG_LINE_KEYWORDS] =
+            preferences[SettingsPreferenceKeys.LYRICS_TAG_LINE_KEYWORDS] =
                 jsonFormatter.encodeToString(normalizeLyricsTagLineKeywords(keywords))
         }
     }
 
     override suspend fun saveLimitLyricsInputLines(enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LIMIT_LYRICS_INPUT_LINES] = enabled
+            preferences[SettingsPreferenceKeys.LIMIT_LYRICS_INPUT_LINES] = enabled
         }
     }
 
     override suspend fun saveLogRetentionOption(option: LogRetentionOption) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LOG_RETENTION_OPTION] = option.name
+            preferences[SettingsPreferenceKeys.LOG_RETENTION_OPTION] = option.name
         }
     }
 
@@ -769,18 +698,18 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val prefs = context.settingsDataStore.data.first()
 
         val format = LyricFormat.valueOf(
-            prefs[PreferencesKeys.LYRIC_FORMAT]
+            prefs[SettingsPreferenceKeys.LYRIC_FORMAT]
                 ?: SettingsDefaults.LYRIC_FORMAT.name
         )
 
-        val roma = prefs[PreferencesKeys.ROMA_ENABLED] ?: SettingsDefaults.ROMA_ENABLED
+        val roma = prefs[SettingsPreferenceKeys.ROMA_ENABLED] ?: SettingsDefaults.ROMA_ENABLED
 
-        val showTranslation = prefs[PreferencesKeys.TRANSLATION_ENABLED] ?: SettingsDefaults.TRANSLATION_ENABLED
+        val showTranslation = prefs[SettingsPreferenceKeys.TRANSLATION_ENABLED] ?: SettingsDefaults.TRANSLATION_ENABLED
 
-        val removeEmptyLines = prefs[PreferencesKeys.REMOVE_EMPTY_LINES] ?: SettingsDefaults.REMOVE_EMPTY_LINES
-        val onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE
+        val removeEmptyLines = prefs[SettingsPreferenceKeys.REMOVE_EMPTY_LINES] ?: SettingsDefaults.REMOVE_EMPTY_LINES
+        val onlyTranslationIfAvailable = prefs[SettingsPreferenceKeys.ONLY_TRANSLATION_IF_AVAILABLE] ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE
         val conversionMode = ConversionMode.valueOf(
-            prefs[PreferencesKeys.CONVERSION_MODE]
+            prefs[SettingsPreferenceKeys.CONVERSION_MODE]
                 ?: SettingsDefaults.CONVERSION_MODE.name
         )
         return LyricRenderConfig(
@@ -788,7 +717,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             showRomanization = roma,
             removeEmptyLines = removeEmptyLines,
             showTranslation = showTranslation,
-            lineOrder = decodeLyricLineOrder(prefs[PreferencesKeys.LYRIC_LINE_ORDER]),
+            lineOrder = decodeLyricLineOrder(prefs[SettingsPreferenceKeys.LYRIC_LINE_ORDER]),
             onlyTranslationIfAvailable = onlyTranslationIfAvailable,
             conversionMode = conversionMode
         )
@@ -799,100 +728,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         val charMapping = getCharacterMappingConfig()
         val batchMatchConfig = getBatchMatchConfig()
         val artistSplitConfig = getArtistSplitConfig()
-        val backup = SettingsBackup(
-            removeEmptyLines = prefs[PreferencesKeys.REMOVE_EMPTY_LINES]
-                ?: SettingsDefaults.REMOVE_EMPTY_LINES,
-            lyricsTagLineKeywords = decodeLyricsTagLineKeywords(
-                prefs[PreferencesKeys.LYRICS_TAG_LINE_KEYWORDS]
-            ),
-
-            lyricFormat = prefs[PreferencesKeys.LYRIC_FORMAT]
-                ?: SettingsDefaults.LYRIC_FORMAT.name,
-
-            sortBy = prefs[PreferencesKeys.SORT_BY]
-                ?: SettingsDefaults.SORT_BY.name,
-
-            sortOrder = prefs[PreferencesKeys.SORT_ORDER]
-                ?: SettingsDefaults.SORT_ORDER.name,
-
-            albumSortBy = prefs[PreferencesKeys.ALBUM_SORT_BY]
-                ?: SettingsDefaults.ALBUM_SORT_BY.name,
-
-            albumSortOrder = prefs[PreferencesKeys.ALBUM_SORT_ORDER]
-                ?: SettingsDefaults.ALBUM_SORT_ORDER.name,
-
-            artistSortBy = prefs[PreferencesKeys.ARTIST_SORT_BY]
-                ?: SettingsDefaults.ARTIST_SORT_BY.name,
-
-            artistSortOrder = prefs[PreferencesKeys.ARTIST_SORT_ORDER]
-                ?: SettingsDefaults.ARTIST_SORT_ORDER.name,
-
-            albumGridColumns = prefs[PreferencesKeys.ALBUM_GRID_COLUMNS]
-                ?: SettingsDefaults.ALBUM_GRID_COLUMNS,
-
-            separator = prefs[PreferencesKeys.SEPARATOR]
-                ?: SettingsDefaults.SEPARATOR,
-
-            lyricLineOrder = decodeLyricLineOrder(prefs[PreferencesKeys.LYRIC_LINE_ORDER]).map { it.name },
-
-            romaEnabled = prefs[PreferencesKeys.ROMA_ENABLED]
-                ?: SettingsDefaults.ROMA_ENABLED,
-
-            checkUpdateEnabled = prefs[PreferencesKeys.CHECK_UPDATE_ENABLED]
-                ?: SettingsDefaults.CHECK_UPDATE_ENABLED,
-
-            translationEnabled = prefs[PreferencesKeys.TRANSLATION_ENABLED]
-                ?: SettingsDefaults.TRANSLATION_ENABLED,
-
-            lyricIndexEnabled = prefs[PreferencesKeys.LYRIC_INDEX_ENABLED] ?: false,
-            defaultPlayerComponent = prefs[PreferencesKeys.DEFAULT_PLAYER_COMPONENT].orEmpty(),
-            ignoreShortAudio = prefs[PreferencesKeys.IGNORE_SHORT_AUDIO]
-                ?: SettingsDefaults.IGNORE_SHORT_AUDIO,
-
-            replayGainTargetLoudness = prefs[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS]
-                ?: SettingsDefaults.REPLAY_GAIN_TARGET_LOUDNESS,
-            replayGainPeakMode = prefs[PreferencesKeys.REPLAY_GAIN_PEAK_MODE]
-                ?: SettingsDefaults.REPLAY_GAIN_PEAK_MODE.name,
-
-            searchSourceOrder = (prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.idsToCsv()).csvToIds(),
-
-            enabledSearchSources = (prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] ?: SettingsDefaults.SEARCH_SOURCE_ORDER.idsToCsv()).csvToIds(),
-
-            searchPageSize = prefs[PreferencesKeys.SEARCH_PAGE_SIZE]
-                ?: SettingsDefaults.SEARCH_PAGE_SIZE,
-            searchSourceTabStyle = prefs[PreferencesKeys.SEARCH_SOURCE_TAB_STYLE]
-                ?: SettingsDefaults.SEARCH_SOURCE_TAB_STYLE.name,
-            showAllSearchResultFields = prefs[PreferencesKeys.SHOW_ALL_SEARCH_RESULT_FIELDS]
-                ?: SettingsDefaults.SHOW_ALL_SEARCH_RESULT_FIELDS,
-
-            uiEngine = UiEngine.fromValue(prefs[PreferencesKeys.UI_ENGINE]).value,
-            themeMode = prefs[PreferencesKeys.THEME_MODE]
-                ?: SettingsDefaults.THEME_MODE.name,
-            monetEnable = prefs[PreferencesKeys.MONET_ENABLE]
-                ?: SettingsDefaults.MONET_ENABLE,
-            floatingBottomBarEnabled = prefs[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED]
-                ?: SettingsDefaults.FLOATING_BOTTOM_BAR_ENABLED,
-            barBlurEnabled = prefs.resolveBarBlurEnabled(),
-            floatingBarEffect = prefs.resolveFloatingBarEffect().name,
-            keyThemeColor = prefs[PreferencesKeys.KEY_THEME_COLOR] ?: SettingsDefaults.KEY_THEME_COLOR,
-
-            onlyTranslationIfAvailable = prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE]
-                ?: SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE,
-
-            limitLyricsInputLines = prefs[PreferencesKeys.LIMIT_LYRICS_INPUT_LINES]
-                ?: SettingsDefaults.LIMIT_LYRICS_INPUT_LINES,
-            characterMappingConfig = charMapping,
-            metadataFieldWriteRules = getMetadataFieldWriteRules(),
-            sourceSettings = decodeSourceSettingsStore(prefs[PreferencesKeys.SOURCE_SETTINGS]),
-            renameFormat = prefs[PreferencesKeys.RENAME_FORMAT]
-                ?: SettingsDefaults.RENAME_FORMAT,
-            batchMatchConfig = batchMatchConfig,
-            conversionMode = prefs[PreferencesKeys.CONVERSION_MODE]
-                ?: SettingsDefaults.CONVERSION_MODE.name,
-            logRetentionOption = prefs[PreferencesKeys.LOG_RETENTION_OPTION]
-                ?: SettingsDefaults.LOG_RETENTION_OPTION.name,
-            artistSplitConfig = artistSplitConfig,
-            editFieldConfig = EditFieldConfigJson.from(EditFieldConfigRepository.readConfig(prefs)),
+        val backup = backupMapper.fromPreferences(
+            prefs, charMapping, batchMatchConfig, artistSplitConfig, getMetadataFieldWriteRules()
         )
 
         return jsonFormatter.encodeToString(backup)
@@ -903,118 +740,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             val backup = jsonFormatter.decodeFromString<SettingsBackup>(jsonString)
 
             context.settingsDataStore.edit { prefs ->
-                backup.removeEmptyLines?.let { prefs[PreferencesKeys.REMOVE_EMPTY_LINES] = it }
-                backup.lyricsTagLineKeywords?.let {
-                    prefs[PreferencesKeys.LYRICS_TAG_LINE_KEYWORDS] =
-                        jsonFormatter.encodeToString(normalizeLyricsTagLineKeywords(it))
-                }
-                backup.lyricFormat?.let { prefs[PreferencesKeys.LYRIC_FORMAT] = it }
-                backup.sortBy?.let { prefs[PreferencesKeys.SORT_BY] = it }
-                backup.sortOrder?.let { prefs[PreferencesKeys.SORT_ORDER] = it }
-                backup.albumSortBy?.let { prefs[PreferencesKeys.ALBUM_SORT_BY] = it }
-                backup.albumSortOrder?.let { prefs[PreferencesKeys.ALBUM_SORT_ORDER] = it }
-                backup.artistSortBy?.let { prefs[PreferencesKeys.ARTIST_SORT_BY] = it }
-                backup.artistSortOrder?.let { prefs[PreferencesKeys.ARTIST_SORT_ORDER] = it }
-                backup.albumGridColumns?.let {
-                    prefs[PreferencesKeys.ALBUM_GRID_COLUMNS] = it.coerceIn(2, 4)
-                }
-                backup.separator?.let { prefs[PreferencesKeys.SEPARATOR] = it }
-                backup.romaEnabled?.let { prefs[PreferencesKeys.ROMA_ENABLED] = it }
-                backup.lyricLineOrder?.let { names ->
-                    prefs[PreferencesKeys.LYRIC_LINE_ORDER] =
-                        decodeLyricLineOrder(names.joinToString(",")).joinToString(",") { it.name }
-                }
-
-                backup.checkUpdateEnabled?.let { prefs[PreferencesKeys.CHECK_UPDATE_ENABLED] = it }
-                backup.translationEnabled?.let { prefs[PreferencesKeys.TRANSLATION_ENABLED] = it }
-                backup.lyricIndexEnabled?.let { prefs[PreferencesKeys.LYRIC_INDEX_ENABLED] = it }
-                backup.ignoreShortAudio?.let { prefs[PreferencesKeys.IGNORE_SHORT_AUDIO] = it }
-                backup.defaultPlayerComponent?.let {
-                    if (it.isBlank()) prefs.remove(PreferencesKeys.DEFAULT_PLAYER_COMPONENT)
-                    else prefs[PreferencesKeys.DEFAULT_PLAYER_COMPONENT] = it
-                }
-                backup.replayGainTargetLoudness?.let {
-                    prefs[PreferencesKeys.REPLAY_GAIN_TARGET_LOUDNESS] = it
-                }
-                backup.replayGainPeakMode?.let { modeName ->
-                    runCatching { ReplayGainPeakMode.valueOf(modeName) }
-                        .getOrNull()
-                        ?.let { prefs[PreferencesKeys.REPLAY_GAIN_PEAK_MODE] = it.name }
-                }
-                backup.searchSourceOrder?.let { list ->
-                    prefs[PreferencesKeys.SEARCH_SOURCE_ORDER] = list.idsToCsv()
-                }
-                
-                // 启用源为 null 或空时回落到默认列表
-                if (backup.enabledSearchSources.isNullOrEmpty()) {
-                    prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] =
-                        SettingsDefaults.DEFAULT_ENABLED_SEARCH_SOURCES.idsToCsv()
-                } else {
-                    // 使用导入的启用源列表，直接映射而不补齐缺失源
-                    prefs[PreferencesKeys.ENABLED_SEARCH_SOURCES] =
-                        backup.enabledSearchSources.idsToCsv()
-                }
-                
-                backup.searchPageSize?.let { prefs[PreferencesKeys.SEARCH_PAGE_SIZE] = it }
-                backup.searchSourceTabStyle?.let { styleName ->
-                    runCatching { SearchSourceTabStyle.valueOf(styleName) }
-                        .getOrNull()
-                        ?.let { prefs[PreferencesKeys.SEARCH_SOURCE_TAB_STYLE] = it.name }
-                }
-                backup.showAllSearchResultFields?.let {
-                    prefs[PreferencesKeys.SHOW_ALL_SEARCH_RESULT_FIELDS] = it
-                }
-                backup.uiEngine?.let { prefs[PreferencesKeys.UI_ENGINE] = UiEngine.fromValue(it).value }
-                backup.themeMode?.let { prefs[PreferencesKeys.THEME_MODE] = it }
-                backup.monetEnable?.let { prefs[PreferencesKeys.MONET_ENABLE] = it }
-                backup.floatingBottomBarEnabled?.let {
-                    prefs[PreferencesKeys.FLOATING_BOTTOM_BAR_ENABLED] = it
-                }
-                backup.barBlurEnabled?.let { prefs[PreferencesKeys.BAR_BLUR_ENABLED] = it }
-                backup.floatingBarEffect?.let {
-                    prefs[PreferencesKeys.FLOATING_BAR_EFFECT] = FloatingBarEffect.fromName(it).name
-                }
-                backup.keyThemeColor?.let { prefs[PreferencesKeys.KEY_THEME_COLOR] = it }
-                backup.onlyTranslationIfAvailable?.let {
-                    prefs[PreferencesKeys.ONLY_TRANSLATION_IF_AVAILABLE] = it
-                }
-                backup.limitLyricsInputLines?.let {
-                    prefs[PreferencesKeys.LIMIT_LYRICS_INPUT_LINES] = it
-                }
-                backup.characterMappingConfig?.let { config ->
-                    prefs[PreferencesKeys.CHARACTER_MAPPING_CONFIG] = jsonFormatter.encodeToString(config)
-                }
-                backup.metadataFieldWriteRules?.let { rules ->
-                    prefs[PreferencesKeys.METADATA_FIELD_WRITE_RULES] =
-                        jsonFormatter.encodeToString(rules)
-                }
-                backup.sourceSettings?.let { store ->
-                    prefs[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(store)
-                }
-                backup.renameFormat?.let { prefs[PreferencesKeys.RENAME_FORMAT]  = it }
-                backup.batchMatchConfig?.let { config ->
-                    prefs[PreferencesKeys.BATCH_MATCH_CONFIG] = jsonFormatter.encodeToString(config)
-                }
-                backup.conversionMode?.let { prefs[PreferencesKeys.CONVERSION_MODE] = it }
-                backup.logRetentionOption?.let { optionName ->
-                    runCatching { LogRetentionOption.valueOf(optionName) }
-                        .getOrNull()
-                        ?.let { prefs[PreferencesKeys.LOG_RETENTION_OPTION] = it.name }
-                }
-                backup.artistSplitConfig?.let { config ->
-                    prefs[PreferencesKeys.ARTIST_SPLIT_CONFIG] = jsonFormatter.encodeToString(config)
-                    prefs[PreferencesKeys.LIBRARY_INDEX_VERSION] = 0
-                }
-                if (backup.editFieldConfig != null || backup.editFieldVisibilityOverrides != null) {
-                    val config = backup.editFieldConfig?.toConfig(backup.editFieldVisibilityOverrides.orEmpty())
-                        ?: EditFieldConfigRepository.readConfig(prefs).copy(
-                            overrides = EditFieldConfigJson(
-                                version = 2,
-                                overrides = backup.editFieldVisibilityOverrides.orEmpty(),
-                            ).toConfig().overrides,
-                        )
-                    EditFieldConfigRepository.writeConfig(prefs, config)
-                }
+                backupMapper.restore(backup, prefs)
             }
             true
         } catch (e: Exception) {
@@ -1026,7 +752,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val characterMappingConfig: Flow<CharacterMappingConfig>
         get() = context.settingsDataStore.data.map { preferences ->
-            val configJson = preferences[PreferencesKeys.CHARACTER_MAPPING_CONFIG]
+            val configJson = preferences[SettingsPreferenceKeys.CHARACTER_MAPPING_CONFIG]
             if (configJson.isNullOrBlank()) {
                 CharacterMappingConfig(
                     rules = CharacterMappingDefaults.ALL_BUILTIN_RULES
@@ -1044,7 +770,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val artistSplitConfigFlow: Flow<ArtistSplitConfig>
         get() = context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.ARTIST_SPLIT_CONFIG]
+            preferences[SettingsPreferenceKeys.ARTIST_SPLIT_CONFIG]
                 ?.let { json ->
                     runCatching {
                         jsonFormatter.decodeFromString<ArtistSplitConfig>(json)
@@ -1055,7 +781,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val batchMatchConfig: Flow<BatchMatchConfig>
         get() = context.settingsDataStore.data.map { preferences ->
-            val configJson = preferences[PreferencesKeys.BATCH_MATCH_CONFIG]
+            val configJson = preferences[SettingsPreferenceKeys.BATCH_MATCH_CONFIG]
             if (configJson.isNullOrBlank()) {
                 BatchMatchConfigDefaults.DEFAULT_CONFIG
             } else {
@@ -1065,7 +791,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override val metadataFieldWriteRules: Flow<List<PluginMetadataFieldWriteRule>>
         get() = context.settingsDataStore.data.map { preferences ->
-            val rulesJson = preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES]
+            val rulesJson = preferences[SettingsPreferenceKeys.METADATA_FIELD_WRITE_RULES]
             if (!rulesJson.isNullOrBlank()) {
                 decodeMetadataFieldWriteRules(rulesJson)
             } else {
@@ -1076,36 +802,36 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun saveCharacterMappingConfig(config: CharacterMappingConfig) {
         context.settingsDataStore.edit { preferences ->
             val configJson = jsonFormatter.encodeToString(config)
-            preferences[PreferencesKeys.CHARACTER_MAPPING_CONFIG] = configJson
+            preferences[SettingsPreferenceKeys.CHARACTER_MAPPING_CONFIG] = configJson
         }
     }
 
     override suspend fun saveRenameFormat(format: String) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.RENAME_FORMAT] = format
+            preferences[SettingsPreferenceKeys.RENAME_FORMAT] = format
         }
     }
     override suspend fun saveBatchMatchConfig(config: BatchMatchConfig) {
         context.settingsDataStore.edit { preferences ->
             val configJson = jsonFormatter.encodeToString(config)
-            preferences[PreferencesKeys.BATCH_MATCH_CONFIG] = configJson
+            preferences[SettingsPreferenceKeys.BATCH_MATCH_CONFIG] = configJson
         }
     }
 
     override suspend fun saveMetadataFieldWriteRules(rules: List<PluginMetadataFieldWriteRule>) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES] =
+            preferences[SettingsPreferenceKeys.METADATA_FIELD_WRITE_RULES] =
                 jsonFormatter.encodeToString(rules)
         }
     }
 
     override suspend fun saveSourceSettings(sourceId: String, values: Map<String, String>) {
         context.settingsDataStore.edit { preferences ->
-            val currentStore = decodeSourceSettingsStore(preferences[PreferencesKeys.SOURCE_SETTINGS])
+            val currentStore = jsonFormatter.decodeSourceSettingsStore(preferences[SettingsPreferenceKeys.SOURCE_SETTINGS])
             val newStore = currentStore.copy(
                 values = currentStore.values + (sourceId.toStableSourceId() to values)
             )
-            preferences[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(newStore)
+            preferences[SettingsPreferenceKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(newStore)
         }
     }
 
@@ -1137,22 +863,22 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
     override suspend fun removePluginSettings(pluginId: String) {
         val stablePluginId = pluginId.toStableSourceId()
         context.settingsDataStore.edit { preferences ->
-            val currentStore = decodeSourceSettingsStore(preferences[PreferencesKeys.SOURCE_SETTINGS])
-            preferences[PreferencesKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(
+            val currentStore = jsonFormatter.decodeSourceSettingsStore(preferences[SettingsPreferenceKeys.SOURCE_SETTINGS])
+            preferences[SettingsPreferenceKeys.SOURCE_SETTINGS] = jsonFormatter.encodeToString(
                 currentStore.copy(values = currentStore.values - stablePluginId)
             )
             val rules = decodeMetadataFieldWriteRules(
-                preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES].orEmpty()
+                preferences[SettingsPreferenceKeys.METADATA_FIELD_WRITE_RULES].orEmpty()
             )
-            preferences[PreferencesKeys.METADATA_FIELD_WRITE_RULES] =
+            preferences[SettingsPreferenceKeys.METADATA_FIELD_WRITE_RULES] =
                 jsonFormatter.encodeToString(rules.filterNot { it.pluginId == stablePluginId })
         }
     }
 
     override suspend fun saveArtistSplitConfig(config: ArtistSplitConfig) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.ARTIST_SPLIT_CONFIG] = jsonFormatter.encodeToString(config)
-            preferences[PreferencesKeys.LIBRARY_INDEX_VERSION] = 0
+            preferences[SettingsPreferenceKeys.ARTIST_SPLIT_CONFIG] = jsonFormatter.encodeToString(config)
+            preferences[SettingsPreferenceKeys.LIBRARY_INDEX_VERSION] = 0
             preferences[artistPosterRevisionKey] = (preferences[artistPosterRevisionKey] ?: 0L) + 1L
         }
     }
@@ -1163,13 +889,13 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     override suspend fun getLibraryIndexVersion(): Int {
         return context.settingsDataStore.data.map { preferences ->
-            preferences[PreferencesKeys.LIBRARY_INDEX_VERSION] ?: 0
+            preferences[SettingsPreferenceKeys.LIBRARY_INDEX_VERSION] ?: 0
         }.first()
     }
 
     override suspend fun saveLibraryIndexVersion(version: Int) {
         context.settingsDataStore.edit { preferences ->
-            preferences[PreferencesKeys.LIBRARY_INDEX_VERSION] = version
+            preferences[SettingsPreferenceKeys.LIBRARY_INDEX_VERSION] = version
         }
     }
 
@@ -1180,10 +906,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             val newTargetModes = root["targetModes"]
                 ?.jsonObject
                 ?.mapNotNull { (targetName, modeElement) ->
-                    val target = decodePluginMetadataFieldTarget(targetName)
+                    val target = decodeMetadataFieldTarget(targetName)
                         ?: return@mapNotNull null
 
-                    val mode = decodePluginMetadataWriteMode(
+                    val mode = decodeMetadataWriteMode(
                         modeElement.jsonPrimitive.contentOrNull
                     ) ?: return@mapNotNull null
 
@@ -1197,7 +923,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
                     val target = legacyBatchFieldToTarget(fieldName)
                         ?: return@mapNotNull null
 
-                    val mode = decodePluginMetadataWriteMode(
+                    val mode = decodeMetadataWriteMode(
                         modeElement.jsonPrimitive.contentOrNull
                     ) ?: return@mapNotNull null
 
@@ -1232,11 +958,11 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    private fun decodePluginMetadataFieldTarget(name: String): MetadataFieldTarget? {
+    private fun decodeMetadataFieldTarget(name: String): MetadataFieldTarget? {
         return MetadataFieldTarget.entries.firstOrNull { it.name == name }
     }
 
-    private fun decodePluginMetadataWriteMode(name: String?): MetadataWriteMode? {
+    private fun decodeMetadataWriteMode(name: String?): MetadataWriteMode? {
         return name
             ?.let { value -> runCatching { MetadataWriteMode.valueOf(value) }.getOrNull() }
     }
@@ -1268,63 +994,8 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }.getOrDefault(emptyList())
     }
 
-    private fun decodeSourceSettingsStore(raw: String?): SourceSettingsStore {
-        return raw
-            ?.takeIf { it.isNotBlank() }
-            ?.let {
-                runCatching {
-                    jsonFormatter.decodeFromString<SourceSettingsStore>(it)
-                }.getOrNull()
-            }
-            ?: SourceSettingsStore()
-    }
-
-    private fun decodeLyricsTagLineKeywords(raw: String?): List<String> {
-        if (raw.isNullOrBlank()) return SettingsDefaults.LYRICS_TAG_LINE_KEYWORDS
-        return runCatching {
-            normalizeLyricsTagLineKeywords(jsonFormatter.decodeFromString<List<String>>(raw))
-        }.getOrElse {
-            normalizeLyricsTagLineKeywords(raw.lines()).ifEmpty {
-                SettingsDefaults.LYRICS_TAG_LINE_KEYWORDS
-            }
-        }
-    }
-
-    private fun normalizeLyricsTagLineKeywords(keywords: List<String>): List<String> {
-        return keywords
-            .flatMap { it.split('\n', ',', '，', ';', '；') }
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .distinct()
-    }
-
-    private fun decodeLyricLineOrder(raw: String?): List<LyricLineTrack> {
-        if (raw.isNullOrBlank()) return SettingsDefaults.LYRIC_LINE_ORDER
-        return raw
-            .split(',', '\n', ';')
-            .mapNotNull { name ->
-                runCatching { LyricLineTrack.valueOf(name.trim()) }.getOrNull()
-            }
-            .normalizedLyricLineOrder()
-    }
-
     private fun String.toStableSourceId(): String {
         return trim()
     }
 
-    private fun String?.csvToIds(): List<String> {
-        return this
-            ?.split(",")
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            ?.distinct()
-            .orEmpty()
-    }
-
-    private fun Iterable<String>.idsToCsv(): String {
-        return map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .distinct()
-            .joinToString(",")
-    }
 }

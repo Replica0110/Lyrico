@@ -11,7 +11,7 @@ import com.lonx.lyrico.ui.components.blur.LocalBarBlurEnabled
 import com.lonx.lyrico.ui.components.blur.rememberBarBlurEnabled
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-/** Both palettes remain available to shared content during the UI migration. */
+/** 为共享控件提供两套调色板，控件按 [LocalUiEngine] 选择主题实现。 */
 @Composable
 fun LyricoTheme(
     uiEngine: UiEngine = UiEngine.MIUIX,

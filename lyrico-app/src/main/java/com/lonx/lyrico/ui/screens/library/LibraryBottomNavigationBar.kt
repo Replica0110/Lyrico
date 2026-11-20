@@ -1,20 +1,18 @@
 package com.lonx.lyrico.ui.screens.library
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.data.settings.FloatingBarEffect
 import com.lonx.lyrico.ui.components.blur.BarBlurBackdrop
 import com.lonx.lyrico.ui.components.blur.BlurredBar
 import com.lonx.lyrico.ui.components.effect.glass.GlassSource
-import com.lonx.lyrico.ui.components.library.BlurNavigationBarItemV2
-import com.lonx.lyrico.ui.components.library.BlurNavigationBarV2
+import com.lonx.lyrico.ui.components.bar.miuix.MiuixFloatingNavigationBar
+import com.lonx.lyrico.ui.components.bar.miuix.MiuixFloatingNavigationBarItem
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
@@ -93,27 +91,19 @@ internal fun LibraryBlurBottomBar(
     onTabSelected: (LibraryTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BlurNavigationBarV2(
+    MiuixFloatingNavigationBar(
         modifier = modifier,
         backdrop = backdrop,
         selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0),
         itemCount = tabs.size,
         effect = effect,
-        onSelectionChanged = { index ->
-            tabs.getOrNull(index)?.let(onTabSelected)
-        },
+        onSelectionChanged = { index -> tabs.getOrNull(index)?.let(onTabSelected) },
     ) {
         tabs.forEachIndexed { index, tab ->
-            BlurNavigationBarItemV2(
+            MiuixFloatingNavigationBarItem(
                 index = index,
                 selected = tab == selectedTab,
-                icon = {
-                    Icon(
-                        imageVector = tab.icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                    )
-                },
+                icon = { Icon(imageVector = tab.icon, contentDescription = null) },
                 label = stringResource(tab.titleRes),
             )
         }

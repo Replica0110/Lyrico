@@ -1,4 +1,4 @@
-package com.lonx.lyrico.ui.components.library.liquid
+package com.lonx.lyrico.ui.components.bar.miuix.animation
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
@@ -16,7 +16,7 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastFirstOrNull
@@ -28,7 +28,13 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.time.TimeSource
 
-/** Keeps the indicator position, pressed morphology, and drag velocity together. */
+/**
+ * 指示块的位置、按压形变与拖动速度。
+ *
+ * 指示块只跟随拖动增量；按下不会把它瞬移到手指位置，避免轻扫时选中块跳动。
+ *
+ * 手势与动画结构移植自 compose-miuix-ui 示例（IosLiquidGlassNavigationBar，Apache 2.0）。
+ */
 internal class DampedDragAnimation(
     private val animationScope: CoroutineScope,
     initialValue: Float,
@@ -137,6 +143,10 @@ internal class DampedDragAnimation(
     }
 }
 
+/**
+ * Observes a press without consuming it, so lists and pagers beneath the bar keep their gestures.
+ * The initial-down pass is used because the bar sits on top of scrollable content.
+ */
 private suspend fun PointerInputScope.inspectDragGestures(
     onDragStart: () -> Unit,
     onDragEnd: () -> Unit,
@@ -144,12 +154,13 @@ private suspend fun PointerInputScope.inspectDragGestures(
     onDrag: (PointerInputChange, Offset) -> Unit,
 ) {
     awaitEachGesture {
-        val initialDown = awaitFirstDown(false, PointerEventPass.Initial)
-        awaitFirstDown(false)
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         onDragStart()
         var completed = false
         try {
-            val upEvent = drag(initialDown.id) { change -> onDrag(change, change.positionChange()) }
+            val upEvent = drag(down.id) { change ->
+                onDrag(change, change.positionChangeIgnoreConsumed())
+            }
             if (upEvent != null) {
                 completed = true
                 onDragEnd()
@@ -167,7 +178,6 @@ private suspend inline fun AwaitPointerEventScope.drag(
     var pointer = pointerId
     while (true) {
         val change = awaitDragOrUp(pointer) ?: return null
-        if (change.isConsumed) return null
         if (change.changedToUpIgnoreConsumed()) return change
         onDrag(change)
         pointer = change.id
@@ -179,7 +189,7 @@ private suspend inline fun AwaitPointerEventScope.awaitDragOrUp(
 ): PointerInputChange? {
     var pointer = pointerId
     while (true) {
-        val event = awaitPointerEvent()
+        val event = awaitPointerEvent(PointerEventPass.Initial)
         val change = event.changes.fastFirstOrNull { it.id == pointer } ?: return null
         if (change.changedToUpIgnoreConsumed()) {
             pointer = event.changes.fastFirstOrNull { it.pressed }?.id ?: return change

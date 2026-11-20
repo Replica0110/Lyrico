@@ -414,12 +414,6 @@ fun Modifier.glass(
     interactionState: GlassInteractionState = rememberGlassInteractionState()
 ): Modifier {
     val isDarkTheme = SaltTheme.configs.isDarkTheme
-    val background = when (effect) {
-        is GlassEffect.Solid -> if (isDarkTheme) effect.darkColor else effect.lightColor
-        GlassEffect.Blur -> SaltTheme.colors.subBackground
-        is GlassEffect.Regular -> if (isDarkTheme) effect.darkColor else effect.lightColor
-        GlassEffect.Transparent -> Color.Transparent
-    }
     return this
         .glassPointerInput(interactionState)
         // Move the material and its automatically tracked source cutout together.
@@ -430,6 +424,58 @@ fun Modifier.glass(
             translationX = interactionState.translation.x
             translationY = interactionState.translation.y
         }
+        // The cutout and material inherit this surface's transform.
+        .glassSurface(source, shape, effect)
+        .thenIf(effect is GlassEffect.Regular || effect == GlassEffect.Transparent) {
+            glassInteractionLight(interactionState, shape, isDarkTheme)
+        }
+        // Undo the material transform for the content's hit testing.
+        .graphicsLayer {
+            val inverseScale = 1f / interactionState.scale
+            scaleX = inverseScale
+            scaleY = inverseScale
+            transformOrigin = interactionState.transformOrigin(size)
+            translationX = -interactionState.translation.x * inverseScale
+            translationY = -interactionState.translation.y * inverseScale
+        }
+        // Reapply the transform to content drawing without changing its hit region.
+        .drawWithContent {
+            val glassScale = interactionState.scale
+            val translation = interactionState.translation
+            if (glassScale == 1f && translation == Offset.Zero) {
+                drawContent()
+            } else {
+                val origin = interactionState.transformOrigin(size)
+                val pivot = Offset(
+                    x = size.width * origin.pivotFractionX,
+                    y = size.height * origin.pivotFractionY
+                )
+                withTransform({
+                    translate(translation.x, translation.y)
+                    scale(scaleX = glassScale, scaleY = glassScale, pivot = pivot)
+                }) {
+                    this@drawWithContent.drawContent()
+                }
+            }
+        }
+}
+
+/** Draws glass whose gestures and transforms are owned by its container. */
+@UnstableSaltUiApi
+@Composable
+internal fun Modifier.glassSurface(
+    source: GlassSource,
+    shape: RoundedCornerShape,
+    effect: GlassEffect,
+): Modifier {
+    val isDarkTheme = SaltTheme.configs.isDarkTheme
+    val background = when (effect) {
+        is GlassEffect.Solid -> if (isDarkTheme) effect.darkColor else effect.lightColor
+        GlassEffect.Blur -> SaltTheme.colors.subBackground
+        is GlassEffect.Regular -> if (isDarkTheme) effect.darkColor else effect.lightColor
+        GlassEffect.Transparent -> Color.Transparent
+    }
+    return this
         // The glass cutout, when needed, observes the material's transform here.
         .then(
             when (effect) {
@@ -483,41 +529,7 @@ fun Modifier.glass(
                         }
                         // Inherit Haze's performance mode; full resolution can cost more to render.
                         .hazeGlass(input = source.hazeInput, style = style)
-                        .glassInteractionLight(
-                            interaction = interactionState,
-                            shape = shape,
-                            isDarkTheme = isDarkTheme
-                        )
                 }
             }
         )
-        // Undo the material transform for the content's hit testing.
-        .graphicsLayer {
-            val inverseScale = 1f / interactionState.scale
-            scaleX = inverseScale
-            scaleY = inverseScale
-            transformOrigin = interactionState.transformOrigin(size)
-            translationX = -interactionState.translation.x * inverseScale
-            translationY = -interactionState.translation.y * inverseScale
-        }
-        // Reapply the transform to content drawing without changing its hit region.
-        .drawWithContent {
-            val glassScale = interactionState.scale
-            val translation = interactionState.translation
-            if (glassScale == 1f && translation == Offset.Zero) {
-                drawContent()
-            } else {
-                val origin = interactionState.transformOrigin(size)
-                val pivot = Offset(
-                    x = size.width * origin.pivotFractionX,
-                    y = size.height * origin.pivotFractionY
-                )
-                withTransform({
-                    translate(translation.x, translation.y)
-                    scale(scaleX = glassScale, scaleY = glassScale, pivot = pivot)
-                }) {
-                    this@drawWithContent.drawContent()
-                }
-            }
-        }
 }

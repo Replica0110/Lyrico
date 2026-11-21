@@ -3,7 +3,6 @@
 package com.lonx.lyrico.ui.screens.search
 
 import android.content.ClipData
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,10 +68,7 @@ import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.moriafly.salt.ui.icons.Check
 import com.moriafly.salt.ui.icons.SaltIcons
 import com.moriafly.salt.ui.icons.Uncheck
-import java.net.URL
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -108,7 +104,7 @@ internal fun SearchResultApplyBottomSheet(
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val applyPagerState = rememberPagerState { if (supportsLyrics) 2 else 1 }
-    var imageSize by remember(song?.picUrl) { mutableStateOf<Pair<Int, Int>?>(null) }
+    val imageSize by rememberArtworkDimensions(song?.picUrl.orEmpty(), enabled = show)
     var selectedTargets by remember(song?.id, song?.pluginId) {
         mutableStateOf(emptySet<MetadataFieldTarget>())
     }
@@ -121,27 +117,6 @@ internal fun SearchResultApplyBottomSheet(
         applyPagerState.scrollToPage(0)
         if (supportsLyrics) {
             onLoadLyrics(targetSong)
-        }
-    }
-
-    LaunchedEffect(song?.picUrl) {
-        val picUrl = song?.picUrl.orEmpty()
-        if (picUrl.isNotBlank()) {
-            imageSize = withContext(Dispatchers.IO) {
-                try {
-                    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeStream(
-                        URL(picUrl).openStream(),
-                        null,
-                        options
-                    )
-                    if (options.outWidth > 0 && options.outHeight > 0) {
-                        options.outWidth to options.outHeight
-                    } else null
-                } catch (e: Exception) {
-                    null
-                }
-            }
         }
     }
 

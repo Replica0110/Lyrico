@@ -44,7 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -505,31 +505,12 @@ fun CoverGridItem(
     onClick: () -> Unit,
     onImageSizeLoaded: (String, Pair<Int, Int>) -> Unit = { _, _ -> }
 ) {
-    var imageSize by remember(cover.url) { mutableStateOf<Pair<Int, Int>?>(null) }
+    val imageSize by rememberArtworkDimensions(cover.url)
+    val notifyImageSizeLoaded by rememberUpdatedState(onImageSizeLoaded)
     val salt = LocalUiEngine.current == UiEngine.SALT
 
-    LaunchedEffect(cover.url) {
-        if (cover.url.isNotBlank()) {
-            imageSize = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                    val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    android.graphics.BitmapFactory.decodeStream(
-                        java.net.URL(cover.url).openStream(),
-                        null,
-                        options
-                    )
-                    if (options.outWidth > 0 && options.outHeight > 0) {
-                        options.outWidth to options.outHeight
-                    } else null
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-            }
-            imageSize?.let { size ->
-                onImageSizeLoaded(cover.url, size)
-            }
-        }
+    LaunchedEffect(cover.url, imageSize) {
+        imageSize?.let { notifyImageSizeLoaded(cover.url, it) }
     }
 
     val cardContent: @Composable () -> Unit = {

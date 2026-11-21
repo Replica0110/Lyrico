@@ -3,7 +3,6 @@
 package com.lonx.lyrico.ui.screens.search
 
 import android.annotation.SuppressLint
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -89,11 +88,8 @@ import com.lonx.lyrico.ui.theme.isDarkTheme
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.result.ResultBackNavigator
-import java.net.URL
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -596,28 +592,7 @@ fun SearchResultItem(
 
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
             com.lonx.lyrico.data.settings.UiEngine.SALT
-    var imageSize by remember(song.picUrl) { mutableStateOf<Pair<Int, Int>?>(null) }
-
-    LaunchedEffect(song.picUrl) {
-        if (showCover && song.picUrl.isNotBlank()) {
-            imageSize = withContext(Dispatchers.IO) {
-                try {
-                    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeStream(
-                        URL(song.picUrl).openStream(),
-                        null,
-                        options
-                    )
-                    if (options.outWidth > 0 && options.outHeight > 0) {
-                        options.outWidth to options.outHeight
-                    } else null
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    null
-                }
-            }
-        }
-    }
+    val imageSize by rememberArtworkDimensions(song.picUrl, enabled = showCover)
 
     val itemContent: @Composable () -> Unit = {
         val formattedDuration = formatSearchResultDuration(song.duration)

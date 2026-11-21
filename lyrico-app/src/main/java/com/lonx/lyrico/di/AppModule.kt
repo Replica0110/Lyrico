@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.data.artwork.ArtistPosterReader
+import com.lonx.lyrico.data.artwork.ArtworkDimensionsReader
 import com.lonx.lyrico.data.cache.CacheManager
 import com.lonx.lyrico.data.db.LyricoDatabase
 import com.lonx.lyrico.data.editfield.EditFieldConfigRepository
@@ -251,6 +252,7 @@ val appModule = module {
     single { AudioFileAccess(androidContext()) }
     single { ImageMimeTypeDetector() }
     single<ImageBytesFetcher> { DefaultImageBytesFetcher(get(), get()) }
+    single { ArtworkDimensionsReader(get<OkHttpClient>()) }
     single { PictureMutationResolver(get(), get()) }
     single { TagMapBuilder() }
     single { AudioTagMutationResolver(get(), get()) }

@@ -21,6 +21,30 @@ import org.junit.Test
 
 class LyricsLinkedContentTest {
     @Test
+    fun `plain preview independently hides timed romanization and translation from imported enhanced LRC`() {
+        val raw = requireNotNull(javaClass.getResource("/lyrics/enhanced-lrc-three-tracks.lrc")).readText()
+        val parsed = requireNotNull(LyricsParser.parseOrNull(raw))
+        assertEquals(1, parsed.original.size)
+        assertEquals(1, parsed.romanization!!.size)
+        assertEquals(1, parsed.translated!!.size)
+        val original = "「形には意味などないから」"
+        val translated = "学者在电视上说"
+        for (showRomanization in listOf(true, false)) {
+            for (showTranslation in listOf(true, false)) {
+                val plain = LyricsRenderer.renderPlainText(parsed, config().copy(
+                    showRomanization = showRomanization, showTranslation = showTranslation))
+                assertTrue(plain.contains(original))
+                assertEquals(showRomanization, plain.contains("ka ta chi"))
+                assertEquals(showTranslation, plain.contains(translated))
+                assertFalse(LyricsTimestamp.lrcTimePattern.containsMatchIn(plain))
+                if (!showRomanization && showTranslation) assertEquals("$original\n$translated", plain)
+                if (!showRomanization && !showTranslation) assertEquals(original, plain)
+            }
+        }
+        assertTrue(raw.contains("<00:16.591>"))
+    }
+
+    @Test
     fun `real field processing retains linked lyrics across raw structured TTML LRC and plain output`() {
         for (input in inputs()) {
             for (format in listOf(LyricsFormat.TTML, LyricsFormat.PLAIN_LRC)) {

@@ -11,6 +11,7 @@ import com.lonx.lyrico.data.log.AppLogLevel
 import com.lonx.lyrico.data.log.AppLogType
 import com.lonx.lyrico.domain.poster.ArtistPosterFileNaming
 import com.lonx.lyrico.platform.storage.SafDocuments
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -58,6 +59,7 @@ object ArtistPosterFileWriter {
                 data = data
             )
         }.getOrElse { error ->
+            if (error is CancellationException) throw error
             AppLog.record(AppLogType.METADATA, TAG, "Poster folder write failed",
                 "folder=$posterFolder\nartist=$artistName\nmime=$folderMimeType\nbytes=${data.size}",
                 level = AppLogLevel.ERROR, error = error)

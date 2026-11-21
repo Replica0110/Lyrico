@@ -96,7 +96,6 @@ import com.lonx.lyrico.ui.components.editor.rememberEditorTextFieldState
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenu
 import com.lonx.lyrico.ui.components.fab.ExpandableFabMenuStyle
 import com.lonx.lyrico.ui.components.fab.FabMenuItem
-import com.lonx.lyrico.data.artwork.ArtworkFiles
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.lyrics.LyricsProcessingSheet
 import com.lonx.lyrico.ui.components.poster.ArtistPosterMenu
@@ -116,9 +115,7 @@ import com.ramcosta.composedestinations.generated.destinations.SearchResultsDest
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.result.ResultRecipient
 import com.ramcosta.composedestinations.result.onResult
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
@@ -149,6 +146,8 @@ fun EditMetadataScreen(
     externalEditRequestId: Long? = null,
 ) {
     val viewModel: EditMetadataViewModel = koinViewModel()
+    val pictureEditor = viewModel.pictures
+    val pictureRequests = pictureEditor.pendingRequests
     val searchSourceProvider: SearchSourceProvider = koinInject()
     val mainSearchSources by remember(searchSourceProvider) {
         searchSourceProvider.observeSources(PluginSourceType.METADATA)
@@ -233,6 +232,8 @@ fun EditMetadataScreen(
     var showLyricsProcessingSheet by remember { mutableStateOf(false) }
     var bitmapToCrop by remember { mutableStateOf<Bitmap?>(null) }
     var cropRequest by remember { mutableStateOf<CropRequest>(CropRequest.Cover) }
+    var cropTicket by remember { mutableStateOf<PictureEditSession.Ticket?>(null) }
+    var cropPreparation by remember { mutableStateOf<Any?>(null) }
     var isFabMenuExpanded by remember { mutableStateOf(false) }
     var isSearchFabMenuExpanded by remember { mutableStateOf(false) }
     // 艺术家海报的菜单与选择面板由组件自己管理
@@ -258,6 +259,20 @@ fun EditMetadataScreen(
 
     fun showCancelUndoSnackbar(fieldLabel: String, restoreChange: () -> Unit) {
         showUndoSnackbar(context.getString(R.string.msg_field_reverted, fieldLabel), restoreChange)
+    }
+
+    fun showPictureUndoSnackbar(message: String, artist: Boolean, restoreChange: () -> Unit) {
+        val ticket = pictureEditor.songTicket()
+        val afterChange = viewModel.uiState.value
+        fun ownedPictures(state: EditMetadataUiState) = state.editingTagData?.pictures.orEmpty().filter {
+            if (artist) it.type in artistPictureTypes else it.type == AudioPictureType.FrontCover
+        }
+        val expected = ownedPictures(afterChange)
+        showUndoSnackbar(message) {
+            val current = viewModel.uiState.value
+            if (pictureEditor.isCurrent(ticket) && ownedPictures(current) == expected &&
+                (artist || current.coverUri == afterChange.coverUri)) restoreChange()
+        }
     }
 
     fun <T> revertField(
@@ -302,11 +317,12 @@ fun EditMetadataScreen(
                     val previousPicture = uiState.picture
                     val previousPictures = editingTagData?.pictures.orEmpty()
                     val previousPicUrl = editingTagData?.picUrl
-                    viewModel.revertCover()
-                    showCancelUndoSnackbar(
-                        context.getString(R.string.label_cover)
+                    pictureEditor.revertCover()
+                    showPictureUndoSnackbar(
+                        context.getString(R.string.msg_field_reverted, context.getString(R.string.label_cover)),
+                        artist = false
                     ) {
-                        viewModel.restoreCoverSnapshot(
+                        pictureEditor.restoreCoverSnapshot(
                             coverUri = previousCoverUri,
                             picture = previousPicture,
                             pictures = previousPictures,
@@ -345,11 +361,12 @@ fun EditMetadataScreen(
                         onClick = { artistPosterMenu.open(entry, page.artistName) },
                         onRevertClick = {
                             val previousPictures = editingTagData?.pictures.orEmpty()
-                            viewModel.revertArtistImages()
-                            showCancelUndoSnackbar(
-                                context.getString(R.string.label_artist_image)
+                            pictureEditor.revertArtistImages()
+                            showPictureUndoSnackbar(
+                                context.getString(R.string.msg_field_reverted, context.getString(R.string.label_artist_image)),
+                                artist = true
                             ) {
-                                viewModel.restoreArtistImageSnapshot(previousPictures)
+                                pictureEditor.restoreArtistImageSnapshot(previousPictures)
                             }
                         }
                     )
@@ -382,7 +399,9 @@ fun EditMetadataScreen(
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        uri?.let { viewModel.updateCover(context, it) }
+        val ticket = pictureRequests.coverPicker
+        pictureRequests.coverPicker = null
+        if (uri != null && ticket != null && pictureEditor.isCurrent(ticket)) pictureEditor.updateCover(context, uri)
     }
 
     fun showPosterMessage(message: UiMessage) {
@@ -399,31 +418,46 @@ fun EditMetadataScreen(
         embedSummary = stringResource(R.string.artist_poster_embed_current_song_summary),
         enabled = !uiState.isSaving && !uiState.isSavingArtistPoster,
         onSetPosterFolder = { uri, onAdded ->
-            viewModel.setArtistPosterFolder(uri, onAdded, ::showPosterMessage)
+            if (pictureRequests.artistPicker?.let(pictureEditor::isCurrent) == true) {
+                pictureEditor.setArtistPosterFolder(uri, onAdded, ::showPosterMessage)
+            }
         },
         onImagePicked = { artistName, target, uri ->
-            when (target) {
-                com.lonx.lyrico.ui.screens.artist.poster.ArtistPosterTarget.EmbedIntoSongs ->
-                    viewModel.setArtistImage(context, uri, artistName)
-                com.lonx.lyrico.ui.screens.artist.poster.ArtistPosterTarget.SaveToFolder ->
-                    viewModel.saveArtistImageToFolder(context, uri, artistName, ::showPosterMessage)
+            val ticket = pictureRequests.artistPicker
+            pictureRequests.artistPicker = null
+            if (ticket != null && pictureEditor.isCurrent(ticket)) {
+                when (target) {
+                    com.lonx.lyrico.ui.screens.artist.poster.ArtistPosterTarget.EmbedIntoSongs ->
+                        pictureEditor.setArtistImage(context, uri, artistName)
+                    com.lonx.lyrico.ui.screens.artist.poster.ArtistPosterTarget.SaveToFolder ->
+                        pictureEditor.saveArtistImageToFolder(context, uri, artistName, ::showPosterMessage)
+                }
             }
         },
     )
 
-    fun cropArtistImage(bytes: ByteArray, request: CropRequest) {
-        scope.launch(Dispatchers.IO) {
-            val bitmap = ArtworkFiles.readBitmap(context, bytes)
-            withContext(Dispatchers.Main) {
-                if (bitmap != null) {
-                    cropRequest = request
-                    bitmapToCrop = bitmap
-                    showCropSheet = true
-                } else {
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.msg_read_artist_image_failed)
-                    )
-                }
+    fun preparePictureCrop(source: Any, request: CropRequest) {
+        val preparation = Any()
+        cropPreparation = preparation
+        cropTicket = null
+        showCropSheet = false
+        val ticket = when (request) {
+            CropRequest.Cover -> pictureEditor.beginCoverEdit()
+            is CropRequest.ArtistImage -> pictureEditor.beginArtistEdit(
+                artistPictureEntries.firstOrNull { it.picture === request.target }?.ownerName ?: request.target.description)
+            is CropRequest.ExternalArtistImage -> pictureEditor.songTicket()
+        }
+        scope.launch {
+            val bitmap = pictureEditor.readBitmap(context, source)
+            if (cropPreparation !== preparation || !pictureEditor.isCurrent(ticket)) return@launch
+            if (bitmap != null) {
+                cropTicket = ticket
+                cropRequest = request
+                bitmapToCrop = bitmap
+                showCropSheet = true
+            } else {
+                snackbarHostState.showSnackbar(context.getString(
+                    if (request is CropRequest.Cover) R.string.msg_read_cover_failed else R.string.msg_read_artist_image_failed))
             }
         }
     }
@@ -450,7 +484,13 @@ fun EditMetadataScreen(
     // 导出封面文件选择器
     val exportCoverLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("image/jpeg")
-    ) { uri -> uri?.let { viewModel.exportCover(context, it) } }
+    ) { uri ->
+        val snapshot = pictureRequests.coverExport
+        pictureRequests.coverExport = null
+        if (uri != null && snapshot != null && pictureEditor.isCurrent(snapshot.ticket)) {
+            pictureEditor.exportCover(context, uri, snapshot)
+        }
+    }
 
     ExportDestinationBottomSheet(
         show = showLyricsExportDestinationSheet,
@@ -476,11 +516,14 @@ fun EditMetadataScreen(
             showCoverExportDestinationSheet = false
             when (destination) {
                 ExportDestination.SELECTED_DIRECTORY -> {
-                    exportCoverLauncher.launch(viewModel.getCoverFileName())
+                    pictureEditor.captureExport()?.let { snapshot ->
+                        pictureRequests.coverExport = snapshot
+                        exportCoverLauncher.launch(snapshot.fileName)
+                    }
                 }
 
                 ExportDestination.AUDIO_DIRECTORY -> {
-                    viewModel.exportCoverToAudioDirectory(context)
+                    pictureEditor.exportCoverToAudioDirectory(context)
                 }
             }
         }
@@ -490,7 +533,11 @@ fun EditMetadataScreen(
     onLyricsResult.onResult { result -> viewModel.updateMetadataFromSearchResult(result) }
     onLyricsSearchResult.onResult { result -> viewModel.updateMetadataFromSearchResult(result) }
 
-    onCoverSearchResult.onResult { result -> viewModel.updateCover(result) }
+    onCoverSearchResult.onResult { result ->
+        val ticket = pictureRequests.coverSearch
+        pictureRequests.coverSearch = null
+        if (ticket != null && pictureEditor.isCurrent(ticket)) pictureEditor.updateCover(result)
+    }
     LaunchedEffect(uiState.permissionIntentSender) {
         uiState.permissionIntentSender?.let { intentSender ->
             intentSenderLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
@@ -540,7 +587,7 @@ fun EditMetadataScreen(
                 context.getString(R.string.label_cover)
             )
             scope.launch { snackbarHostState.showSnackbar(message) }
-            viewModel.clearExportCoverStatus()
+            pictureEditor.clearExportCoverStatus()
         }
     }
 
@@ -551,7 +598,7 @@ fun EditMetadataScreen(
                 context.getString(R.string.label_artist_image)
             )
             scope.launch { snackbarHostState.showSnackbar(message) }
-            viewModel.clearExportArtistImageStatus()
+            pictureEditor.clearExportArtistImageStatus()
         }
     }
 
@@ -578,7 +625,7 @@ fun EditMetadataScreen(
             scope.launch {
                 message.asString(context)?.let { it1 -> snackbarHostState.showSnackbar(it1) }
             }
-            viewModel.clearSameAlbumCoverMessage()
+            pictureEditor.clearSameAlbumCoverMessage()
         }
     }
 
@@ -1191,6 +1238,7 @@ Box(modifier = Modifier.fillMaxSize()) {
                         } else {
                             uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
                         }
+                        pictureRequests.coverSearch = pictureEditor.beginCoverEdit()
                         navigator.navigate(SearchCoverDestination(keyword))
                     }
                 )
@@ -1360,10 +1408,12 @@ Box(modifier = Modifier.fillMaxSize()) {
                 uiState.songInfo?.tagData?.fileName?.substringBeforeLast(".") ?: ""
             }
             showCoverOptionsSheet = false
+            pictureRequests.coverSearch = pictureEditor.beginCoverEdit()
             navigator.navigate(SearchCoverDestination(keyword))
         },
         onChangeCover = {
             showCoverOptionsSheet = false
+            pictureRequests.coverPicker = pictureEditor.beginCoverEdit()
             photoPickerLauncher.launch(
                 PickVisualMediaRequest(
                     ActivityResultContracts.PickVisualMedia.ImageOnly
@@ -1372,11 +1422,11 @@ Box(modifier = Modifier.fillMaxSize()) {
         },
         onSelectSameAlbumCover = {
             showCoverOptionsSheet = false
-            viewModel.loadSameAlbumCovers()
+            pictureEditor.loadSameAlbumCovers()
         },
         onRemoveCover = {
             showCoverOptionsSheet = false
-            viewModel.removeFrontCover()
+            pictureEditor.removeFrontCover()
         },
         canExportOrCropCover = uiState.coverUri != null || uiState.originalCover != null,
         onExportCover = {
@@ -1387,20 +1437,7 @@ Box(modifier = Modifier.fillMaxSize()) {
             showCoverOptionsSheet = false
             val sourceData = uiState.coverUri ?: uiState.originalCover
 
-            if (sourceData != null) {
-                scope.launch(Dispatchers.IO) {
-                    val bitmap = ArtworkFiles.readBitmap(context, sourceData)
-                    withContext(Dispatchers.Main) {
-                        if (bitmap != null) {
-                            cropRequest = CropRequest.Cover
-                            bitmapToCrop = bitmap
-                            showCropSheet = true
-                        } else {
-                            snackbarHostState.showSnackbar(context.getString(R.string.msg_read_cover_failed)) // "无法读取封面图片"
-                        }
-                    }
-                }
-            }
+            if (sourceData != null) preparePictureCrop(sourceData, CropRequest.Cover)
         }
     )
 
@@ -1411,14 +1448,14 @@ Box(modifier = Modifier.fillMaxSize()) {
     fun applyRebind(target: AudioPicture, artistName: String, swap: Boolean = false) {
         val previousPictures = editingTagData?.pictures.orEmpty()
         if (swap) {
-            viewModel.swapArtistImages(target, artistName)
+            pictureEditor.swapArtistImages(target, artistName)
         } else {
-            viewModel.reassignArtistImages(target, artistName)
+            pictureEditor.reassignArtistImages(target, artistName)
         }
-        showUndoSnackbar(
-            context.getString(R.string.msg_artist_image_reassigned, artistName)
+        showPictureUndoSnackbar(
+            context.getString(R.string.msg_artist_image_reassigned, artistName), artist = true
         ) {
-            viewModel.restoreArtistImageSnapshot(previousPictures)
+            pictureEditor.restoreArtistImageSnapshot(previousPictures)
         }
     }
 
@@ -1430,14 +1467,17 @@ Box(modifier = Modifier.fillMaxSize()) {
         currentEntry = currentArtistPage?.entry,
         currentPageIsArtistSlot = currentArtistPage != null,
         currentArtistName = currentArtistPage?.artistName,
-        onSetPoster = { addPosterArtistName = it },
-        onRemove = { viewModel.removeArtistImage(it) },
-        onExport = { viewModel.exportArtistImage(context, it) },
-        onCrop = { cropArtistImage(it.data, CropRequest.ArtistImage(it)) },
+        onSetPoster = {
+            pictureRequests.artistPicker = pictureEditor.beginArtistEdit(it)
+            addPosterArtistName = it
+        },
+        onRemove = { pictureEditor.removeArtistImage(it) },
+        onExport = { pictureEditor.exportArtistImage(context, it) },
+        onCrop = { preparePictureCrop(it.data, CropRequest.ArtistImage(it)) },
         externalPoster = externalPoster,
         externalActionsEnabled = !posterFileEditState.isRunning && !uiState.isSavingArtistPoster,
-        onCropExternal = { cropArtistImage(it.bytes, CropRequest.ExternalArtistImage(it)) },
-        onExportExternal = { viewModel.exportArtistImage(context, it.bytes) },
+        onCropExternal = { preparePictureCrop(it.bytes, CropRequest.ExternalArtistImage(it)) },
+        onExportExternal = { pictureEditor.exportArtistImage(context, it.bytes) },
         onDeleteExternal = { pendingPosterFileDelete = it },
         onReassign = { target, artistName ->
             val ownerKey = ArtistPosterGrouping.ownerKeyOf(artistName)
@@ -1476,14 +1516,16 @@ Box(modifier = Modifier.fillMaxSize()) {
         show = showCropSheet, bitmap = bitmapToCrop,
         title = stringResource(if (cropRequest is CropRequest.Cover) R.string.label_crop_cover else R.string.label_crop_artist_image),
         onCrop = { bitmap ->
-            when (val request = cropRequest) {
-                CropRequest.Cover -> viewModel.updateCover(bitmap)
-                is CropRequest.ArtistImage -> viewModel.replaceArtistImage(bitmap, request.target)
-                is CropRequest.ExternalArtistImage -> posterFileEditor.cropPoster(request.target, bitmap)
+            if (cropTicket?.let(pictureEditor::isCurrent) == true) {
+                when (val request = cropRequest) {
+                    CropRequest.Cover -> pictureEditor.updateCover(bitmap)
+                    is CropRequest.ArtistImage -> pictureEditor.replaceArtistImage(bitmap, request.target)
+                    is CropRequest.ExternalArtistImage -> posterFileEditor.cropPoster(request.target, bitmap)
+                }
             }
         },
-        onDismissRequest = { showCropSheet = false },
-        onDismissFinished = { if (!showCropSheet) bitmapToCrop = null }
+        onDismissRequest = { showCropSheet = false; cropPreparation = null; cropTicket = null },
+        onDismissFinished = { if (!showCropSheet) { bitmapToCrop = null; cropTicket = null } }
     )
     // 偏移调整 BottomSheet
     LyricsOffsetSheet(

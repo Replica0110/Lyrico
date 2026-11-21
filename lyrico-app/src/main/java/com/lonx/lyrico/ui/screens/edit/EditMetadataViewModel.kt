@@ -3,7 +3,6 @@ package com.lonx.lyrico.ui.screens.edit
 import android.app.RecoverableSecurityException
 import android.content.Context
 import android.content.IntentSender
-import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -11,18 +10,10 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.audiotag.model.AudioPicture
-import com.lonx.audiotag.model.AudioPictureType
 import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.CustomTagField
 import com.lonx.audiotag.model.frontCoverOrFallback
-import com.lonx.audiotag.model.pictureOfType
-import com.lonx.audiotag.model.removePictureType
-import com.lonx.audiotag.model.replacePicture
-import com.lonx.audiotag.model.type
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.artwork.ArtistPosterFileWriter
-import com.lonx.lyrico.data.artwork.ArtworkFiles
-import com.lonx.lyrico.data.artwork.getCoverSourceType
 import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.editfield.CustomTagKey
 import com.lonx.lyrico.data.editfield.EditFieldConfigRepository
@@ -51,7 +42,6 @@ import com.lonx.lyrico.platform.player.ExternalPlayerLauncher
 import com.lonx.lyrico.data.settings.SettingsDefaults
 import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
-import com.lonx.lyrico.domain.artist.ArtistNameSplitter
 import com.lonx.lyrico.domain.lyrics.LyricsParser
 import com.lonx.lyrico.domain.lyrics.LyricsRenderer
 import com.lonx.lyrico.domain.lyrics.LyricsTextTransform
@@ -60,7 +50,6 @@ import com.lonx.lyrico.domain.lyrics.LyricsProcessingResult
 import com.lonx.lyrico.domain.metadata.SearchResultApplier
 import com.lonx.lyrico.domain.metadata.preserveHiddenEditFields
 import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
-import com.lonx.lyrico.domain.poster.ArtistPosterEdits
 import com.lonx.lyrico.domain.song.usecase.ReadAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
@@ -68,6 +57,9 @@ import com.lonx.lyrico.platform.audio.ReplayGainScanner
 import com.lonx.lyrico.ui.UiMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -158,6 +150,7 @@ class EditMetadataViewModel(
     private var currentSong: SongEntity? = null
 
     private var currentSongUri: String? = null
+    private var loadedSongUri: String? = null
 
     /** 打开偏移面板时的歌词快照；偏移始终相对它计算，避免逐次累积误差。 */
     private var preOffsetLyrics: String? = null
@@ -173,6 +166,20 @@ class EditMetadataViewModel(
     private val _uiState = MutableStateFlow(EditMetadataUiState())
     val uiState: StateFlow<EditMetadataUiState> = _uiState.asStateFlow()
 
+    internal val pictures = EditPicturesController(
+        scope = viewModelScope,
+        _uiState = _uiState,
+        songUri = { currentSongUri.takeIf { it == loadedSongUri } },
+        artistSplitConfig = { artistSplitConfig.value },
+        settingsRepository = settingsRepository,
+        songLibraryRepository = songLibraryRepository,
+        readAudioTagsUseCase = readAudioTagsUseCase,
+        appLogRepository = appLogRepository,
+        recordFailure = { message, uri, detail -> recordMetadataFailure(message, uri, detail) },
+        recordException = { message, uri, error -> recordMetadataException(message, uri, error) },
+    )
+    private var metadataReadJob: Job? = null
+
     /** 单曲编辑页按配置排序后的可见字段。 */
     val visibleFields: StateFlow<List<EditFieldDefinition>> =
         editFieldConfigRepository.configFlow
@@ -187,20 +194,31 @@ class EditMetadataViewModel(
 
     fun readMetadata(uriString: String) {
         if (currentSongUri != uriString) pendingWritePermissionUri = null
+        val changedSong = currentSongUri != uriString
+        val hadLoadedSong = !changedSong && loadedSongUri == uriString
         currentSongUri = uriString
-
-        viewModelScope.launch {
+        if (changedSong) {
+            loadedSongUri = null
+            pictures.onSongChanged(uriString)
+        }
+        metadataReadJob?.cancel()
+        val ticket = pictures.songTicket()
+        metadataReadJob = viewModelScope.launch {
             try {
                 val song = songLibraryRepository.getSongByUri(uriString)
-                currentSong = song
-
                 val audioTagData = readAudioTagsUseCase(uriString)
+                currentCoroutineContext().ensureActive()
+                if (!pictures.isCurrent(ticket)) return@launch
+                currentSong = song
+                loadedSongUri = uriString
                 val displayFileName = song?.fileName ?: audioTagData.fileName
                 val displayPicture = audioTagData.pictures.frontCoverOrFallback()
                 val displayCover = displayPicture?.data
 
                 _uiState.update { state ->
+                    val keepDraft = hadLoadedSong && state.isEditing && state.songInfo?.uriString == uriString
                     state.copy(
+                        isEditing = keepDraft,
                         songInfo = SongInfo(
                             uriString = uriString,
                             tagData = audioTagData
@@ -210,10 +228,10 @@ class EditMetadataViewModel(
                             ".",
                             missingDelimiterValue = displayFileName
                         ),
-                        editingTagData = if (state.isEditing) state.editingTagData else audioTagData,
-                        picture = displayPicture,
-                        originalCover = if (state.isEditing) state.originalCover else displayCover,
-                        coverUri = if (state.isEditing) state.coverUri else displayCover
+                        editingTagData = if (keepDraft) state.editingTagData else audioTagData,
+                        picture = if (keepDraft) state.picture else displayPicture,
+                        originalCover = if (keepDraft) state.originalCover else displayCover,
+                        coverUri = if (keepDraft) state.coverUri else displayCover
                     )
                 }
             } catch (e: Exception) {
@@ -332,6 +350,10 @@ class EditMetadataViewModel(
         }
     }
     fun updateMetadataFromSearchResult(result: LyricsSearchResult) {
+        val appliesCover = result.applyTargets.isEmpty() || MetadataFieldTarget.COVER in result.applyTargets
+        if (appliesCover && !result.normalizedFields()["cover_url"].isNullOrBlank()) {
+            pictures.beginCoverEdit()
+        }
         _uiState.update { state ->
             val current = state.editingTagData ?: AudioTagData()
 
@@ -379,534 +401,6 @@ class EditMetadataViewModel(
             )
         }
     }
-    /**
-     * 更新封面（从本地选择）
-     */
-    fun updateCover(uri: Uri) {
-        _uiState.update { state ->
-            state.copy(
-                coverUri = uri,
-                isEditing = true,
-                editingTagData = state.editingTagData?.copy(picUrl = uri.toString())
-            )
-        }
-    }
-
-    fun updateCover(context: Context, uri: Uri) {
-        readPictureBytes(
-            context = context,
-            uri = uri,
-            onResult = { bytes, mimeType ->
-                if (bytes == null) return@readPictureBytes
-
-                val audioPicture = AudioPicture(
-                    data = bytes,
-                    mimeType = mimeType,
-                    description = "",
-                    pictureType = AudioPictureType.FrontCover.tagLibName
-                )
-
-                _uiState.update { state ->
-                    state.withUpdatedFrontCover(
-                        displaySource = uri,
-                        audioPicture = audioPicture
-                    )
-                }
-            }
-        )
-    }
-
-    fun updateCover(picUrl: String) {
-        _uiState.update { state ->
-            state.copy(
-                coverUri = picUrl,
-                isEditing = true,
-                editingTagData = state.editingTagData?.copy(picUrl = picUrl)
-            )
-        }
-    }
-
-    fun updateCover(bitmap: Bitmap) {
-        val byteArray = ArtworkFiles.encodeJpeg(bitmap)
-        val audioPicture = AudioPicture(
-            data = byteArray,
-            mimeType = "image/jpeg",
-            description = "",
-            pictureType = AudioPictureType.FrontCover.tagLibName
-        )
-
-        _uiState.update { state ->
-            state.withUpdatedFrontCover(
-                displaySource = byteArray,
-                audioPicture = audioPicture
-            )
-        }
-    }
-
-    // ---------------------------------------------------------------- 艺术家海报
-
-    /**
-     * 新增或替换 [artistName] 的艺术家海报：该艺术家名下的旧海报会被替换。
-     * 一个艺术家只保留一张（ID3v2 同一 content descriptor 只能挂一张图）。
-     */
-    fun setArtistImage(context: Context, uri: Uri, artistName: String) {
-        readPictureBytes(
-            context = context,
-            uri = uri,
-            onResult = { bytes, mimeType ->
-                if (bytes == null) return@readPictureBytes
-                val picture = newArtistPicture(bytes, mimeType, artistName)
-                updateArtistPictures { pictures, _ ->
-                    ArtistPosterEdits.setFor(
-                        pictures = pictures,
-                        artistNames = currentArtistNames(),
-                        artistName = artistName,
-                        picture = picture
-                    )
-                }
-            }
-        )
-    }
-
-    fun setArtistPosterFolder(uri: Uri, onAdded: () -> Unit, onFailure: (UiMessage) -> Unit) {
-        viewModelScope.launch {
-            try {
-                settingsRepository.setArtistPosterFolder(uri.toString())
-                settingsRepository.refreshArtistPosters()
-                onAdded()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "添加艺术家海报文件夹失败", e)
-                onFailure(UiMessage.StringResource(R.string.artist_poster_folder_error))
-            }
-        }
-    }
-
-    /** Folder saves apply immediately and never change the song's metadata draft. */
-    fun saveArtistImageToFolder(context: Context, uri: Uri, artistName: String, onResult: (UiMessage) -> Unit) {
-        if (_uiState.value.isSavingArtistPoster) return
-        _uiState.update { it.copy(isSavingArtistPoster = true) }
-        val appContext = context.applicationContext
-        readPictureBytes(appContext, uri) { bytes, mimeType ->
-            viewModelScope.launch {
-                try {
-                    if (bytes == null || bytes.isEmpty()) {
-                        onResult(UiMessage.StringResource(R.string.msg_read_artist_image_failed))
-                        return@launch
-                    }
-                    val writtenName = ArtistPosterFileWriter.write(
-                        context = appContext,
-                        artistName = artistName,
-                        data = bytes,
-                        mimeType = mimeType,
-                        posterFolder = settingsRepository.artistPosterFolder.first(),
-                    )
-                    if (writtenName != null) {
-                        try {
-                            settingsRepository.refreshArtistPosters()
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Log.w(TAG, "刷新艺术家海报缓存失败", e)
-                        }
-                    }
-                    onResult(if (writtenName != null)
-                        UiMessage.StringResource(R.string.msg_artist_poster_saved_to_folder, writtenName)
-                        else UiMessage.StringResource(R.string.msg_artist_poster_folder_save_failed))
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.e(TAG, "保存艺术家海报文件失败", e)
-                    onResult(UiMessage.StringResource(R.string.msg_artist_poster_folder_save_failed))
-                } finally {
-                    _uiState.update { it.copy(isSavingArtistPoster = false) }
-                }
-            }
-        }
-    }
-
-    /** 移除某一张艺术家图片（标签里若残留多张，只删这一张）。 */
-    fun removeArtistImage(target: AudioPicture) {
-        updateArtistPictures { pictures, _ -> ArtistPosterEdits.remove(pictures, target) }
-    }
-
-    /** 裁剪结果：替换某一张艺术家图片的数据，保留它的归属描述。 */
-    fun replaceArtistImage(bitmap: Bitmap, target: AudioPicture) {
-        val bytes = ArtworkFiles.encodeJpeg(bitmap)
-        updateArtistPictures { pictures, _ ->
-            ArtistPosterEdits.replaceData(pictures, target, bytes, "image/jpeg")
-        }
-    }
-
-    /**
-     * 把 [target] 改挂到 [artistName]，该艺术家原有的海报会被替换。
-     * 两张都想留下时用 [swapArtistImages]。
-     */
-    fun reassignArtistImages(target: AudioPicture, artistName: String) {
-        updateArtistPictures { pictures, _ ->
-            ArtistPosterEdits.reassign(
-                pictures = pictures,
-                artistNames = currentArtistNames(),
-                target = target,
-                artistName = artistName
-            )
-        }
-    }
-
-    /** [target] 与 [artistName] 原有的海报**交换归属**，两张图都留着。 */
-    fun swapArtistImages(target: AudioPicture, artistName: String) {
-        updateArtistPictures { pictures, _ ->
-            ArtistPosterEdits.swapOwners(
-                pictures = pictures,
-                artistNames = currentArtistNames(),
-                target = target,
-                artistName = artistName
-            )
-        }
-    }
-
-    /** 导出某张艺术家海报到系统相册。 */
-    fun exportArtistImage(context: Context, target: AudioPicture) = exportArtistImage(context, target.data)
-
-    fun exportArtistImage(context: Context, bytes: ByteArray) {
-        exportPictureToGallery(
-            context = context,
-            source = bytes,
-            albumName = "ArtistPosters",
-            filenamePrefix = "Artist",
-            failureLogMessage = "Failed to export artist poster",
-            onResult = { success -> _uiState.update { it.copy(exportArtistImageResult = success) } }
-        )
-    }
-
-    private fun newArtistPicture(
-        bytes: ByteArray,
-        mimeType: String,
-        artistName: String
-    ) = AudioPicture(
-        data = bytes,
-        mimeType = mimeType,
-        description = artistName.trim(),
-        pictureType = AudioPictureType.Artist.tagLibName
-    )
-
-    /** 当前编辑态的艺术家名（艺术家字段按配置拆分）。 */
-    private fun currentArtistNames(): List<String> =
-        _uiState.value.editingTagData?.let {
-            ArtistNameSplitter.splitArtists(it.artist, artistSplitConfig.value)
-        }.orEmpty()
-
-    /** 用 [transform] 生成新的图片列表；结果没变时不动状态。 */
-    private fun updateArtistPictures(
-        transform: (pictures: List<AudioPicture>, original: AudioTagData?) -> List<AudioPicture>
-    ) {
-        _uiState.update { state ->
-            val current = state.editingTagData ?: return@update state
-            val nextPictures = transform(current.pictures, state.originalTagData)
-            if (nextPictures == current.pictures) return@update state
-            state.copy(
-                isEditing = true,
-                editingTagData = current.copy(pictures = nextPictures)
-            )
-        }
-    }
-
-    /** 读取本地图片字节；失败时记录日志并以 `null` 回调。 */
-    private fun readPictureBytes(
-        context: Context,
-        uri: Uri,
-        onResult: (bytes: ByteArray?, mimeType: String) -> Unit
-    ) {
-        val appContext = context.applicationContext
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val image = ArtworkFiles.readLocal(appContext, uri)
-                if (image == null) {
-                    recordMetadataFailure(
-                        message = "Failed to read image source",
-                        relatedId = currentSongUri,
-                        detail = "Source URI: $uri"
-                    )
-                    onResult(null, "image/jpeg")
-                    return@launch
-                }
-
-                onResult(image.bytes, image.mimeType)
-            } catch (e: Exception) {
-                Log.e(TAG, "读取图片失败: $uri", e)
-                recordMetadataException(
-                    message = "Failed to read image source",
-                    relatedId = currentSongUri,
-                    throwable = e
-                )
-                onResult(null, "image/jpeg")
-            }
-        }
-    }
-
-    private fun EditMetadataUiState.withUpdatedFrontCover(
-        displaySource: Any?,
-        audioPicture: AudioPicture
-    ): EditMetadataUiState {
-        val current = editingTagData ?: AudioTagData()
-        return copy(
-            coverUri = displaySource,
-            picture = audioPicture,
-            isEditing = true,
-            editingTagData = current.copy(
-                pictures = current.pictures.replacePicture(
-                    picture = audioPicture,
-                    type = AudioPictureType.FrontCover
-                ),
-                picUrl = null
-            )
-        )
-    }
-
-    /**
-     * 移除封面
-     */
-    fun removeFrontCover() {
-        _uiState.update { state ->
-            val current = state.editingTagData ?: return@update state
-            val newPictures = current.pictures.removePictureType(AudioPictureType.FrontCover)
-            val displayPicture = newPictures.frontCoverOrFallback()
-
-            state.copy(
-                coverUri = displayPicture?.data,
-                picture = displayPicture,
-                isEditing = true,
-                editingTagData = current.copy(
-                    pictures = newPictures,
-                    picUrl = ""
-                )
-            )
-        }
-    }
-
-    fun getCoverFileName(): String = "${_uiState.value.fileName ?: "Cover"}.jpg"
-
-    fun exportCover(context: Context, destinationUri: Uri) {
-        exportPictureToUri(
-            context = context,
-            source = currentCoverSource(),
-            destinationUri = destinationUri,
-            failureLogMessage = "Failed to export cover",
-            onResult = { success -> _uiState.update { it.copy(exportCoverResult = success) } }
-        )
-    }
-
-    fun exportCoverToAudioDirectory(context: Context) {
-        val source = currentCoverSource()
-        val audioUri = (currentSong?.uri ?: currentSongUri)?.toUri()
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                if (source == null || audioUri == null) {
-                    recordMetadataFailure(
-                        message = "Failed to export cover next to audio: source unavailable",
-                        relatedId = currentSongUri
-                    )
-                    _uiState.update { it.copy(exportCoverResult = false) }
-                    return@launch
-                }
-
-                ArtworkFiles.writeNextToAudio(context, audioUri, getCoverFileName(), source)
-                _uiState.update { it.copy(exportCoverResult = true) }
-            } catch (e: Exception) {
-                Log.e(TAG, "导出封面到音频同目录失败", e)
-                recordMetadataException(
-                    message = "Failed to export cover next to audio",
-                    relatedId = currentSongUri,
-                    throwable = e
-                )
-                _uiState.update { it.copy(exportCoverResult = false) }
-            }
-        }
-    }
-
-    private fun currentCoverSource(): Any? {
-        val state = _uiState.value
-        return state.coverUri ?: state.originalCover ?: state.picture?.data
-    }
-
-    private fun exportPictureToUri(
-        context: Context,
-        source: Any?,
-        destinationUri: Uri,
-        failureLogMessage: String,
-        onResult: (Boolean) -> Unit
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                if (source == null) {
-                    recordMetadataFailure(
-                        message = "$failureLogMessage: no picture source",
-                        relatedId = currentSongUri
-                    )
-                    onResult(false)
-                    return@launch
-                }
-                val wrotePicture = ArtworkFiles.writeToUri(context, destinationUri, source)
-                if (!wrotePicture) {
-                    recordMetadataFailure(
-                        message = "$failureLogMessage: source stream unavailable",
-                        relatedId = currentSongUri,
-                        detail = "Destination: $destinationUri"
-                    )
-                } else {
-                    appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Picture exported",
-                        "uri=$currentSongUri\ndestination=$destinationUri\nsourceType=${getCoverSourceType(source)}", currentSongUri, AppLogLevel.INFO)
-                }
-                onResult(wrotePicture)
-            } catch (e: Exception) {
-                Log.e(TAG, "导出图片失败: $destinationUri", e)
-                recordMetadataException(
-                    message = failureLogMessage,
-                    relatedId = currentSongUri,
-                    throwable = e
-                )
-                onResult(false)
-            }
-        }
-    }
-
-    /**
-     * 把内嵌/已选/原始图片写入系统相册，结果通过 [onResult] 回传
-     */
-    private fun exportPictureToGallery(
-        context: Context,
-        source: Any?,
-        albumName: String,
-        filenamePrefix: String,
-        failureLogMessage: String,
-        onResult: (Boolean) -> Unit
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                if (source == null) {
-                    recordMetadataFailure(
-                        message = "$failureLogMessage: no picture source",
-                        relatedId = currentSongUri,
-                        detail = "No embedded picture, selected picture, or original picture is available."
-                    )
-                    onResult(false)
-                    return@launch
-                }
-
-                when (ArtworkFiles.writeToGallery(context, source, albumName, filenamePrefix)) {
-                    ArtworkFiles.GalleryWriteResult.WRITTEN -> onResult(true)
-                    ArtworkFiles.GalleryWriteResult.SOURCE_UNAVAILABLE -> {
-                        recordMetadataFailure(
-                            message = "$failureLogMessage: source stream unavailable",
-                            relatedId = currentSongUri,
-                            detail = "Source: $source"
-                        )
-                        onResult(false)
-                    }
-                    ArtworkFiles.GalleryWriteResult.DESTINATION_UNAVAILABLE -> {
-                        recordMetadataFailure(
-                            message = "$failureLogMessage: MediaStore insert returned null",
-                            relatedId = currentSongUri,
-                            detail = "Destination image URI could not be created."
-                        )
-                        onResult(false)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "导出图片失败: $filenamePrefix", e)
-                recordMetadataException(
-                    message = failureLogMessage,
-                    relatedId = currentSongUri,
-                    throwable = e
-                )
-                onResult(false)
-            }
-        }
-    }
-
-    fun clearExportCoverStatus() {
-        _uiState.update { it.copy(exportCoverResult = null) }
-    }
-
-    fun clearExportArtistImageStatus() {
-        _uiState.update { it.copy(exportArtistImageResult = null) }
-    }
-    fun revertCover() {
-        _uiState.update { state ->
-            val original = state.originalTagData
-            if (original == null) {
-                state.copy(
-                    coverUri = state.originalCover,
-                    editingTagData = state.editingTagData?.copy(picUrl = null)
-                )
-            } else {
-                val displayPicture = original.pictures.frontCoverOrFallback()
-                val current = state.editingTagData ?: AudioTagData()
-                val originalFrontCover = original.pictures.pictureOfType(AudioPictureType.FrontCover)
-                val revertedPictures = originalFrontCover?.let { picture ->
-                    current.pictures
-                        .removePictureType(AudioPictureType.FrontCover)
-                        .replacePicture(
-                            picture = picture,
-                            type = AudioPictureType.FrontCover
-                        )
-                } ?: current.pictures.removePictureType(AudioPictureType.FrontCover)
-
-                state.copy(
-                    coverUri = state.originalCover,
-                    picture = displayPicture,
-                    editingTagData = state.editingTagData?.copy(
-                        pictures = revertedPictures,
-                        picUrl = null
-                    )
-                )
-            }
-        }
-    }
-
-    /**
-     * 还原所有艺术家海报。重挂或裁剪后无法逐张识别原图，只能整组还原。
-     */
-    fun revertArtistImages() {
-        updateArtistPictures { pictures, original ->
-            if (original == null) pictures
-            else ArtistPosterEdits.revertAll(pictures, original.pictures)
-        }
-    }
-
-    fun restoreCoverSnapshot(
-        coverUri: Any?,
-        picture: AudioPicture?,
-        pictures: List<AudioPicture>,
-        picUrl: String?
-    ) {
-        _uiState.update { state ->
-            val current = state.editingTagData ?: return@update state
-            state.copy(
-                coverUri = coverUri,
-                picture = picture,
-                isEditing = true,
-                editingTagData = current.copy(
-                    pictures = pictures,
-                    picUrl = picUrl
-                )
-            )
-        }
-    }
-
-    fun restoreArtistImageSnapshot(pictures: List<AudioPicture>) {
-        _uiState.update { state ->
-            val current = state.editingTagData ?: return@update state
-            state.copy(
-                isEditing = true,
-                editingTagData = current.copy(
-                    pictures = pictures
-                )
-            )
-        }
-    }
-
     /**
      * 保存元数据
      */
@@ -1095,6 +589,8 @@ class EditMetadataViewModel(
                 detail = detail,
                 relatedId = relatedId
             )
+        } catch (logError: CancellationException) {
+            throw logError
         } catch (logError: Exception) {
             Log.w(TAG, "Failed to write metadata log", logError)
         }
@@ -1113,6 +609,8 @@ class EditMetadataViewModel(
                 throwable = throwable,
                 relatedId = relatedId
             )
+        } catch (logError: CancellationException) {
+            throw logError
         } catch (logError: Exception) {
             Log.w(TAG, "Failed to write metadata exception log", logError)
         }
@@ -1429,73 +927,6 @@ class EditMetadataViewModel(
     fun play(context: Context) {
         val uriStr = currentSong?.uri ?: currentSongUri ?: return
         viewModelScope.launch { externalPlayerLauncher.launch(context, uriStr.toUri()) }
-    }
-
-    /** 获取同专辑歌曲封面，优先同专辑且同歌手的结果。 */
-    suspend fun getSameAlbumCovers(): List<Pair<String, Any?>> {
-        val currentAlbum = _uiState.value.editingTagData?.album ?: return emptyList()
-        val currentArtist = _uiState.value.editingTagData?.artist ?: ""
-
-        val sameAlbumSongs = songLibraryRepository.getSongsByAlbum(currentAlbum, currentArtist)
-        val covers = mutableListOf<Pair<String, Any?>>()
-
-        for (song in sameAlbumSongs) {
-            if (song.uri == currentSongUri) continue // 跳过当前歌曲
-            
-            try {
-                val tagData = readAudioTagsUseCase(song.uri)
-                val cover = tagData.pictures.frontCoverOrFallback()?.data
-                if (cover != null) {
-                    val title = "${song.title} - ${song.artist}"
-                    covers.add(title to cover)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "读取同专辑歌曲封面失败: ${song.uri}", e)
-                recordMetadataException(
-                    message = "Failed to read same-album cover",
-                    relatedId = song.uri,
-                    throwable = e
-                )
-            }
-        }
-
-        return covers
-    }
-
-    /**
-     * 加载同专辑封面（直接使用第一张）
-     */
-    fun loadSameAlbumCovers() {
-        viewModelScope.launch {
-            try {
-                val covers = getSameAlbumCovers()
-                if (covers.isNotEmpty()) {
-                    val (_, cover) = covers.first()
-                    when (cover) {
-                        is String -> updateCover(cover)
-                        is ByteArray -> {
-                            val bitmap = android.graphics.BitmapFactory.decodeByteArray(cover, 0, cover.size)
-                            updateCover(bitmap)
-                        }
-                    }
-                    _uiState.update { it.copy(sameAlbumCoverMessage = UiMessage.StringResource(R.string.msg_same_album_cover_applied)) }
-                } else {
-                    _uiState.update { it.copy(sameAlbumCoverMessage = UiMessage.StringResource(R.string.msg_no_same_album_cover_found)) }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "加载同专辑封面失败", e)
-                recordMetadataException(
-                    message = "Failed to load same-album cover",
-                    relatedId = currentSongUri,
-                    throwable = e
-                )
-                _uiState.update { it.copy(sameAlbumCoverMessage = UiMessage.StringResource(R.string.msg_load_same_album_cover_failed)) }
-            }
-        }
-    }
-
-    fun clearSameAlbumCoverMessage() {
-        _uiState.update { it.copy(sameAlbumCoverMessage = null) }
     }
 
     fun getPlainLyrics(

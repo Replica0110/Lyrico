@@ -12,6 +12,8 @@ import androidx.core.net.toUri
 import com.lonx.lyrico.platform.storage.SafSiblingFileWriter
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
+import java.io.InputStream
+import java.net.URL
 
 /** Image source access and file exports. Callers own dispatching, errors and UI state. */
 internal object ArtworkFiles {
@@ -66,11 +68,32 @@ internal object ArtworkFiles {
         val resolver = context.contentResolver
         val destinationUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
             ?: return GalleryWriteResult.DESTINATION_UNAVAILABLE
-        val wrotePicture = resolver.openOutputStream(destinationUri)?.use { outputStream ->
-            writeSource(context, outputStream, source)
-        } ?: false
-        return if (wrotePicture) GalleryWriteResult.WRITTEN else GalleryWriteResult.SOURCE_UNAVAILABLE
+        var completed = false
+        var failure: Throwable? = null
+        try {
+            completed = resolver.openOutputStream(destinationUri)?.use { outputStream ->
+                writeSource(context, outputStream, source)
+            } ?: false
+            return if (completed) GalleryWriteResult.WRITTEN else GalleryWriteResult.SOURCE_UNAVAILABLE
+        } catch (error: Throwable) {
+            failure = error
+            throw error
+        } finally {
+            if (!completed) {
+                try {
+                    resolver.delete(destinationUri, null, null)
+                } catch (cleanupError: Exception) {
+                    if (failure != null) failure.addSuppressed(cleanupError) else throw cleanupError
+                }
+            }
+        }
     }
+
+    private fun openNetworkStream(source: Any): InputStream = URL(source.toString().trim())
+        .openConnection().apply {
+            connectTimeout = 15_000
+            readTimeout = 15_000
+        }.getInputStream()
 
     private fun writeSource(
         context: Context,
@@ -83,7 +106,7 @@ internal object ArtworkFiles {
         }
 
         CoverSourceType.NETWORK_URL -> {
-            java.net.URL(source.toString().trim()).openStream().use { inputStream ->
+            openNetworkStream(source).use { inputStream ->
                 inputStream.copyTo(outputStream)
             }
             true
@@ -120,29 +143,15 @@ internal object ArtworkFiles {
         CoverSourceType.UNSUPPORTED -> false
     }
 
-    fun readBitmap(context: Context, data: Any): Bitmap? {
-        return try {
-            when (data) {
-                is ByteArray -> {
-                    // 原生 ID3 提取出的字节数组
-                    BitmapFactory.decodeByteArray(data, 0, data.size)
-                }
-                is Uri -> {
-                    decodeUri(context, data)
-                }
-                is String -> {
-                    decodeUri(context, data.toUri())
-                }
-                is Bitmap -> {
-                    // 已经是 Bitmap 对象，直接返回
-                    data
-                }
-                else -> null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
+    fun readBitmap(context: Context, data: Any): Bitmap? = when (getCoverSourceType(data)) {
+        CoverSourceType.BYTE_ARRAY -> (data as ByteArray).let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        CoverSourceType.BITMAP -> data as Bitmap
+        CoverSourceType.NETWORK_URL -> openNetworkStream(data).use { BitmapFactory.decodeStream(it) }
+        CoverSourceType.FILE_PATH -> BitmapFactory.decodeFile(data.toString().trim())
+        CoverSourceType.CONTENT_OR_FILE_URI, CoverSourceType.URI -> decodeUri(
+            context, if (data is Uri) data else data.toString().trim().toUri()
+        )
+        CoverSourceType.UNSUPPORTED -> null
     }
 
     /**

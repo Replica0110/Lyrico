@@ -1,11 +1,12 @@
 package com.lonx.lyrico.domain.lyrics.document
 
-import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsFormat
 import com.lonx.lyrico.data.lyrics.document.LyricsDocument
 import com.lonx.lyrico.data.lyrics.document.LyricsTrackType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class TtmlRoundTripTest {
@@ -80,19 +81,20 @@ class TtmlRoundTripTest {
     @Test
     fun `tag filtering removes linked translation and romanization lines`() {
         assertEquals("和声", TtmlParser.parse(SOURCE).lines(LyricsTrackType.Background).single().visibleText())
-        val output = requireNotNull(LyricsDocumentPipeline.process(
+        val output = LyricsDocumentPipeline.process(
             raw = SOURCE,
-            sourceFormat = LyricFormat.TTML,
-            targetFormat = LyricFormat.TTML,
+            sourceFormat = LyricsFormat.TTML,
+            targetFormat = LyricsFormat.TTML,
             removeTagLineKeywords = listOf("你&好")
-        ))
-        val filtered = TtmlParser.parse(output)
+        )
+        val filtered = RemoveTagLinesPostProcessor(listOf("你&好")).process(TtmlParser.parse(SOURCE))
 
         assertTrue(filtered.lines(LyricsTrackType.Original).isEmpty())
         assertTrue(filtered.lines(LyricsTrackType.Translation).isEmpty())
         assertTrue(filtered.lines(LyricsTrackType.Romanization).isEmpty())
         assertTrue(filtered.lines(LyricsTrackType.Background).isEmpty())
-        assertFalse(output.contains("Hello"))
+        assertNull(output)
+        assertEquals("", TtmlWriter.write(filtered))
     }
 
     @Test

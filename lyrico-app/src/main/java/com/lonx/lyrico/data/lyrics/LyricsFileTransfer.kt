@@ -2,30 +2,20 @@ package com.lonx.lyrico.data.lyrics
 
 import android.content.Context
 import android.net.Uri
-import com.lonx.lyrico.domain.lyrics.LyricDecoder
 import com.lonx.lyrico.platform.storage.SafSiblingFileWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * 歌词文件的读写与命名。
+ * 歌词文件的读取与写出。
  *
- * 导出扩展名以歌词实际内容为准（[LyricDecoder.detectFormat]），
+ * 导出命名由 [LyricsFileNames] 提供，
  * 为单曲编辑提供导入和导出，编辑页负责状态与提示。
  */
 object LyricsFileTransfer {
 
     /** 歌词没有通用的 MIME 类型，按 opaque 二进制交给系统选择保存位置。 */
     private const val EXPORT_MIME_TYPE = "application/octet-stream"
-
-    /**
-     * 导出用的默认文件名；没有歌词时返回 null（调用方据此不发起保存）。
-     */
-    fun defaultFileName(baseName: String?, lyrics: String?): String? {
-        if (lyrics.isNullOrBlank()) return null
-        val extension = if (LyricDecoder.detectFormat(lyrics) == LyricFormat.TTML) "ttml" else "lrc"
-        return "${baseName.orEmpty()}.$extension"
-    }
 
     /** 读取 [uri] 指向的歌词文件；内容为空时返回 null。 */
     suspend fun read(context: Context, uri: Uri): String? = withContext(Dispatchers.IO) {

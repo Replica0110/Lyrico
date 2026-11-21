@@ -9,7 +9,6 @@ import com.lonx.lyrico.data.batch.BatchMatchConfig
 import com.lonx.lyrico.data.batch.BatchMatchConfigDefaults
 import com.lonx.lyrico.data.batch.BatchTaskStatus
 import com.lonx.lyrico.data.batch.BatchTaskType
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
 import com.lonx.lyrico.data.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.plugin.PluginSourceType
 import com.lonx.lyrico.data.plugin.SourceRuntimeConfig
@@ -102,9 +101,6 @@ class BatchMatchViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
     private val separator: StateFlow<String> = settingsRepository.separator
         .stateIn(viewModelScope, SharingStarted.Eagerly, "/")
-    private val lyricRenderConfig: StateFlow<LyricRenderConfig?> = settingsRepository.lyricRenderConfigFlow
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
     private val _uiState = MutableStateFlow(BatchMatchUiState())
     val uiState: StateFlow<BatchMatchUiState> = _uiState.asStateFlow()
 
@@ -229,7 +225,7 @@ class BatchMatchViewModel(
                     separator = separator.value,
                     enabledSourceOrderIds = currentOrderIds,
                     sourceSettings = sourceSettings.value.mapValues { it.value.values },
-                    lyricRenderConfig = lyricRenderConfig.value,
+                    lyricRenderConfig = settingsRepository.getLyricRenderConfig(),
                     concurrency = matchConfig.concurrency
                 )
             )

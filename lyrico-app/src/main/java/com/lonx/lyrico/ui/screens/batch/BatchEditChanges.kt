@@ -4,7 +4,7 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.editfield.CustomTagKey
 import com.lonx.lyrico.data.editfield.EditFieldRegistry
-import com.lonx.lyrico.domain.lyrics.LyricEncoder
+import com.lonx.lyrico.domain.lyrics.LyricsTextTransform
 import com.lonx.lyrico.worker.processor.EditTagsCustomField
 import com.lonx.lyrico.worker.processor.EditTagsTaskConfig
 import java.util.Locale
@@ -71,7 +71,7 @@ internal class BatchEditChanges(draft: BatchEditUiState, visibleFieldCodes: Set<
                         labelResId = R.string.label_lyrics_offset,
                         customLabel = null,
                         oldValue = song.lyrics,
-                        newValue = LyricEncoder.shiftLyricsOffset(song.lyrics, state.lyricsOffset)
+                        newValue = LyricsTextTransform.shiftOffset(song.lyrics, state.lyricsOffset)
                     )
                 )
             }

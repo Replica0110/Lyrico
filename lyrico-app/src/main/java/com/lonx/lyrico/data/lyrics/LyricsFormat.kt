@@ -5,7 +5,7 @@ import com.lonx.lyrico.R
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class LyricFormat(
+enum class LyricsFormat(
     @field:StringRes val labelRes: Int
 ) {
     PLAIN_LRC(R.string.lyric_format_plain),

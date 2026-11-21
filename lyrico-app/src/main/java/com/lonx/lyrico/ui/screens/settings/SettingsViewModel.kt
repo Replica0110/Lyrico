@@ -13,13 +13,13 @@ import com.lonx.lyrico.data.text.ConversionMode
 import com.lonx.lyrico.data.settings.FloatingBarEffect
 import com.lonx.lyrico.data.settings.ReplayGainPeakMode
 import com.lonx.lyrico.data.settings.ReplayGainSettings
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
 import com.lonx.lyrico.data.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.settings.ThemeMode
 import com.lonx.lyrico.data.song.search.SearchSourceTabStyle
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
 import com.lonx.lyrico.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -46,10 +46,10 @@ data class SettingsUiState(
     val defaultPlayerComponent: String? = null,
     val defaultPlayerLabel: String? = null,
     val artistPosterFolder: String? = null,
-    val lyricFormat: LyricFormat = LyricFormat.VERBATIM_LRC,
+    val lyricFormat: LyricsFormat = LyricsFormat.VERBATIM_LRC,
     val separator: ArtistSeparator = ArtistSeparator.SLASH,
     val romaEnabled: Boolean = false,
-    val lyricLineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.lyrics.DefaultLyricLineOrder,
+    val lyricLineOrder: List<LyricsLineTrack> = com.lonx.lyrico.data.lyrics.defaultLyricsLineOrder,
     val translationEnabled: Boolean = false,
     val lyricIndexEnabled: Boolean = false,
     val ignoreShortAudio: Boolean = false,
@@ -118,7 +118,7 @@ class SettingsViewModel(
     }
 
     private data class SettingsBaseState(
-        val lyric: LyricRenderConfig,
+        val lyric: LyricsRenderConfig,
         val search: com.lonx.lyrico.data.song.search.SearchConfig,
         val theme: com.lonx.lyrico.data.settings.ThemeConfig,
         val ignoreShortAudio: Boolean,
@@ -233,7 +233,7 @@ class SettingsViewModel(
     )
     private val _events = MutableSharedFlow<SettingsEvent>()
     val events = _events.asSharedFlow()
-    fun setLyricFormat(mode: LyricFormat) {
+    fun setLyricFormat(mode: LyricsFormat) {
         viewModelScope.launch {
             settingsRepository.saveLyricDisplayMode(mode)
         }
@@ -267,7 +267,7 @@ class SettingsViewModel(
         )))
     }
 
-    fun setLyricLineOrder(order: List<LyricLineTrack>) {
+    fun setLyricLineOrder(order: List<LyricsLineTrack>) {
         viewModelScope.launch { settingsRepository.saveLyricLineOrder(order) }
     }
 
@@ -350,7 +350,7 @@ class SettingsViewModel(
     }
 
     fun resetNonLyricsContentRules() {
-        setLyricsTagLineKeywords(LyricsProcessingOptions.DefaultTagLineKeywords)
+        setLyricsTagLineKeywords(LyricsProcessingOptions.defaultTagLineKeywords)
     }
 
     private fun normalizeNonLyricsContentRule(input: String): String? {

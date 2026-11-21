@@ -5,15 +5,15 @@ import com.lonx.lyrico.data.settings.SettingsDefaults
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class LyricRenderConfig(
-    val format: LyricFormat,
+data class LyricsRenderConfig(
+    val format: LyricsFormat,
     val showRomanization: Boolean,
     val showTranslation: Boolean = SettingsDefaults.TRANSLATION_ENABLED,
     val onlyTranslationIfAvailable: Boolean = SettingsDefaults.ONLY_TRANSLATION_IF_AVAILABLE,
-    val lineOrder: List<LyricLineTrack> = DefaultLyricLineOrder,
+    val lineOrder: List<LyricsLineTrack> = defaultLyricsLineOrder,
     val removeEmptyLines: Boolean = SettingsDefaults.REMOVE_EMPTY_LINES,
     val conversionMode: ConversionMode = SettingsDefaults.CONVERSION_MODE
 ) {
-    val normalizedLineOrder: List<LyricLineTrack>
-        get() = lineOrder.normalizedLyricLineOrder()
+    val normalizedLineOrder: List<LyricsLineTrack>
+        get() = lineOrder.normalizedLyricsLineOrder()
 }

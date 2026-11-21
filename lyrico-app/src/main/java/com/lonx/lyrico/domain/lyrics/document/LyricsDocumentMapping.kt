@@ -72,7 +72,10 @@ fun LyricsDocument.toLyricsResult(): LyricsResult {
         .firstOrNull { it.type == LyricsTrackType.Original }
         ?.lines
         .orEmpty()
-    val originalLines = originalDocumentLines.mapNotNull { it.toLyricsLine() }
+    val originalLines = originalDocumentLines.mapIndexedNotNull { index, line ->
+        line.toLyricsLine(keepEmpty = line.visibleText().isBlank() &&
+                linkedLinesForOriginal(index).any { !it.isBlankOrPlaceholder() })
+    }
     val originalByKey = originalDocumentLines
         .mapNotNull { line -> line.linkKey?.let { it to line } }
         .toMap()
@@ -182,7 +185,10 @@ private fun ExtensionElement.toLyricsMetadataElement(): LyricsMetadataElement {
     )
 }
 
-private fun LyricsDocumentLine.toLyricsLine(fallback: LyricsDocumentLine? = null): LyricsLine? {
+private fun LyricsDocumentLine.toLyricsLine(
+    fallback: LyricsDocumentLine? = null,
+    keepEmpty: Boolean = false
+): LyricsLine? {
     val start = startMs ?: fallback?.startMs ?: return null
     val end = endMs
         ?: words.lastOrNull()?.endMs
@@ -243,7 +249,7 @@ private fun LyricsDocumentLine.toLyricsLine(fallback: LyricsDocumentLine? = null
             }
         }
 
-    return if (resultWords.isEmpty()) {
+    return if (resultWords.isEmpty() && !keepEmpty) {
         null
     } else {
         // 行级扩展属性带出（document → structured）：ttm:agent（演唱者引用）+ itunes:songPart（段落标注），

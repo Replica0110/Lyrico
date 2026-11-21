@@ -11,6 +11,7 @@ interface BatchTaskRepository {
     fun observeTask(taskId: String): Flow<BatchTaskEntity?>
     fun observeItems(taskId: String): Flow<List<BatchTaskItemEntity>>
     suspend fun getTask(taskId: String): BatchTaskEntity?
+    suspend fun updateConfigIfUnchanged(taskId: String, expected: String?, configJson: String): Boolean
     suspend fun markRunning(taskId: String)
     suspend fun markSucceeded(taskId: String)
     suspend fun markFailed(taskId: String, error: String?)

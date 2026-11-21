@@ -1,7 +1,7 @@
 package com.lonx.lyrico.domain.lyrics.document
 
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
 import com.lonx.lyrico.data.lyrics.document.ExtensionElement
 import com.lonx.lyrico.data.lyrics.document.ExtensionMap
 import com.lonx.lyrico.data.lyrics.document.LyricsAgentType
@@ -10,7 +10,7 @@ import com.lonx.lyrico.data.lyrics.document.LyricsDocumentLine
 import com.lonx.lyrico.data.lyrics.document.LyricsDocumentWord
 import com.lonx.lyrico.data.lyrics.document.LyricsTrackType
 import com.lonx.lyrico.data.lyrics.document.QualifiedName
-import com.lonx.lyrico.domain.lyrics.LyricFormatter
+import com.lonx.lyrico.domain.lyrics.LyricsTimestamp
 
 private val SAFE_XML_NAME = Regex("[A-Za-z_][A-Za-z0-9_.:-]*")
 
@@ -19,9 +19,10 @@ private const val NS_XMLNS = "http://www.w3.org/2000/xmlns/"
 private const val NS_TTML = "http://www.w3.org/ns/ttml"
 
 object TtmlWriter : LyricsFormatWriter {
-    override val format: LyricFormat = LyricFormat.TTML
+    override val format: LyricsFormat = LyricsFormat.TTML
 
-    override fun write(document: LyricsDocument, lineOrder: List<LyricLineTrack>): String {
+    override fun write(document: LyricsDocument, lineOrder: List<LyricsLineTrack>, removeEmptyLines: Boolean): String {
+        if (!document.hasTtmlLyrics()) return ""
         val builder = StringBuilder()
         builder.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
         builder.append("<tt xmlns=\"").append(NS_TTML).append("\"")
@@ -55,17 +56,10 @@ object TtmlWriter : LyricsFormatWriter {
         // 两个 songPart 相同但源文件中分属不同 <div> 的段落也能正确分开
         var currentSongPart: String? = null
         var divOpen = false
-        val backgroundByKey = document.linesByKey(LyricsTrackType.Background)
-        val backgroundByStart = document.linesByStart(LyricsTrackType.Background)
         val inlineTranslationTrack = document.tracks.firstOrNull { it.type == LyricsTrackType.Translation }
             .takeIf { document.sourceFormat == null }
-        val inlineTranslationsByStart = inlineTranslationTrack?.lines.orEmpty()
-            .mapNotNull { line -> line.startMs?.let { it to line } }
-            .toMap()
         originalLines.forEachIndexed { index, line ->
-            val backgroundLines = line.linkKey?.let { backgroundByKey[it] }
-                ?: line.startMs?.let { backgroundByStart[it] }
-                ?: emptyList()
+            val backgroundLines = document.linkedLinesForOriginal(index, LyricsTrackType.Background)
             val songPart = line.songPartExtensionValue()
             val divBegin = line.divTimingExtensionValue("divBegin")
             val divEnd = line.divTimingExtensionValue("divEnd")
@@ -78,11 +72,11 @@ object TtmlWriter : LyricsFormatWriter {
                 // 段落时间窗（段首行扩展携带的 div begin/end 毫秒值 → TTML 时间戳）
                 divBegin?.let {
                     builder.append(" begin=\"")
-                        .append(LyricFormatter.formatTtmlTimestamp(it)).append("\"")
+                        .append(LyricsTimestamp.formatTtml(it)).append("\"")
                 }
                 divEnd?.let {
                     builder.append(" end=\"")
-                        .append(LyricFormatter.formatTtmlTimestamp(it)).append("\"")
+                        .append(LyricsTimestamp.formatTtml(it)).append("\"")
                 }
                 builder.append(">\n")
                 currentSongPart = songPart
@@ -94,7 +88,9 @@ object TtmlWriter : LyricsFormatWriter {
                 line,
                 originalLineKeys[index],
                 backgroundLines,
-                line.startMs?.let(inlineTranslationsByStart::get),
+                inlineTranslationTrack?.let {
+                    document.linkedLinesForOriginal(index, LyricsTrackType.Translation).singleOrNull()
+                },
                 inlineTranslationTrack?.language
             )
         }
@@ -207,9 +203,9 @@ object TtmlWriter : LyricsFormatWriter {
                 val end = word.endMs
                 if (start != null && end != null) {
                     builder.append("<span xmlns=\"").append(NS_TTML).append("\" begin=\"")
-                        .append(LyricFormatter.formatTtmlTimestamp(start))
+                        .append(LyricsTimestamp.formatTtml(start))
                         .append("\" end=\"")
-                        .append(LyricFormatter.formatTtmlTimestamp(end))
+                        .append(LyricsTimestamp.formatTtml(end))
                         .append("\">")
                         .append(escapeXml(word.text))
                         .append("</span>")
@@ -233,9 +229,9 @@ object TtmlWriter : LyricsFormatWriter {
         val start = line.startMs ?: return
         val end = line.endMs ?: line.words.lastOrNull()?.endMs ?: (start + 2000)
         builder.append("      <p begin=\"")
-            .append(LyricFormatter.formatTtmlTimestamp(start))
+            .append(LyricsTimestamp.formatTtml(start))
             .append("\" end=\"")
-            .append(LyricFormatter.formatTtmlTimestamp(end))
+            .append(LyricsTimestamp.formatTtml(end))
             .append("\"")
         lineKey?.let { builder.append(" itunes:key=\"").append(escapeXml(it)).append("\"") }
         line.agentId?.let { builder.append(" ttm:agent=\"").append(escapeXml(it)).append("\"") }
@@ -288,8 +284,8 @@ object TtmlWriter : LyricsFormatWriter {
                 .append("<span tts:ruby=\"textContainer\">")
             resolveRubyTimings(word).forEach { syllable ->
                 builder.append("<span tts:ruby=\"text\"")
-                builder.append(" begin=\"").append(LyricFormatter.formatTtmlTimestamp(syllable.startMs)).append("\"")
-                builder.append(" end=\"").append(LyricFormatter.formatTtmlTimestamp(syllable.endMs)).append("\"")
+                builder.append(" begin=\"").append(LyricsTimestamp.formatTtml(syllable.startMs)).append("\"")
+                builder.append(" end=\"").append(LyricsTimestamp.formatTtml(syllable.endMs)).append("\"")
                 builder.append(">").append(escapeXml(syllable.text)).append("</span>")
             }
             builder.append("</span></span>")
@@ -299,9 +295,9 @@ object TtmlWriter : LyricsFormatWriter {
         val wordEnd = word.endMs
         if (wordStart != null && wordEnd != null) {
             builder.append("<span begin=\"")
-                .append(LyricFormatter.formatTtmlTimestamp(wordStart))
+                .append(LyricsTimestamp.formatTtml(wordStart))
                 .append("\" end=\"")
-                .append(LyricFormatter.formatTtmlTimestamp(wordEnd))
+                .append(LyricsTimestamp.formatTtml(wordEnd))
                 .append("\"")
             appendUnmanagedAttributes(builder, word.extensions, setOf("begin", "end"))
             builder.append(">")
@@ -397,15 +393,7 @@ object TtmlWriter : LyricsFormatWriter {
         originalLines: List<LyricsDocumentLine>,
         originalLineKeys: List<String?>
     ): String? {
-        line.linkKey?.let { linkKey ->
-            val index = originalLines.indexOfFirst { it.linkKey == linkKey }
-            if (index >= 0) return originalLineKeys[index]
-        }
-        line.startMs?.let { start ->
-            val index = originalLines.indexOfFirst { it.startMs == start }
-            if (index >= 0) return originalLineKeys[index]
-        }
-        return null
+        return line.linkedOriginalIndex(originalLines)?.let(originalLineKeys::get)
     }
 
     private fun LyricsAgentType.toTtmlType(): String? {
@@ -419,24 +407,6 @@ object TtmlWriter : LyricsFormatWriter {
             LyricsAgentType.Unknown -> null
         }
     }
-}
-
-private fun LyricsDocument.linesByKey(type: LyricsTrackType): Map<String, List<LyricsDocumentLine>> {
-    return tracks
-        .firstOrNull { it.type == type }
-        ?.lines
-        .orEmpty()
-        .groupBy { line -> line.linkKey.orEmpty() }
-        .filterKeys { it.isNotBlank() }
-}
-
-private fun LyricsDocument.linesByStart(type: LyricsTrackType): Map<Long, List<LyricsDocumentLine>> {
-    return tracks
-        .firstOrNull { it.type == type }
-        ?.lines
-        .orEmpty()
-        .mapNotNull { line -> line.startMs?.let { it to line } }
-        .groupBy({ it.first }, { it.second })
 }
 
 /** 读取行扩展中的 itunes:songPart 值（TtmlWriter 分组重建 div 用）；有 <p> 上遗留的同名属性时同样取出 */
@@ -571,9 +541,7 @@ private fun collectDocumentNamespaces(document: LyricsDocument): Map<String, Str
     return namespaces
 }
 
-private fun needsRomanizationSeparator(previous: String, current: String): Boolean {
-    return previous.lastOrNull()?.isWhitespace() != true && current.firstOrNull()?.isWhitespace() != true
-}
+
 
 private fun escapeXml(value: String): String {
     return value

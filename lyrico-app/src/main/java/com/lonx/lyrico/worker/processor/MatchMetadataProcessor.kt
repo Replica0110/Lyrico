@@ -8,7 +8,7 @@ import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.batch.BatchMatchConfig
 import com.lonx.lyrico.data.log.AppLogLevel
 import com.lonx.lyrico.data.log.AppLogType
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
 import com.lonx.lyrico.data.metadata.MetadataApplyPolicy
 import com.lonx.lyrico.data.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.metadata.MetadataWriteMode
@@ -18,13 +18,12 @@ import com.lonx.lyrico.data.plugin.PluginSourceType
 import com.lonx.lyrico.data.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.plugin.SourceRuntimeConfig
 import com.lonx.lyrico.data.log.AppLogRepository
-import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.search.SearchSource
 import com.lonx.lyrico.data.song.search.withSessions
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.domain.lyrics.LyricEncoder
+import com.lonx.lyrico.domain.lyrics.LyricsRenderer
 import com.lonx.lyrico.domain.match.MatchScoreDetail
 import com.lonx.lyrico.domain.match.MusicMatchUtils
 import com.lonx.lyrico.domain.metadata.SearchResultApplier
@@ -36,7 +35,6 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -44,7 +42,6 @@ class MatchMetadataProcessor(
     private val audioTagRepository: AudioTagRepository,
     private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val songLibraryRepository: SongLibraryRepository,
-    private val settingsRepository: SettingsRepository,
     private val searchSourceProvider: SearchSourceProvider,
     private val appLogRepository: AppLogRepository
 ) : BatchTaskProcessor {
@@ -98,20 +95,11 @@ class MatchMetadataProcessor(
                 null -> false
             }
 
-            val lyricConfig = if (shouldWriteLyrics) {
-                config.lyricRenderConfig ?: settingsRepository.getLyricRenderConfig()
-            } else {
-                null
-            }
-
-            val fieldProcessor = PluginFieldPostProcessor(
-                GlobalFieldProcessSettings(
-                    scriptConversion = lyricConfig?.conversionMode
-                        ?: settingsRepository.conversionMode.first(),
-                    removeEmptyLines = lyricConfig?.removeEmptyLines
-                        ?: settingsRepository.removeEmptyLines.first()
-                )
-            )
+            val snapshot = requireNotNull(config.lyricRenderConfig) { "Lyrics task snapshot was not prepared" }
+            val lyricConfig = snapshot.takeIf { shouldWriteLyrics }
+            val fieldProcessor = PluginFieldPostProcessor(GlobalFieldProcessSettings(
+                scriptConversion = snapshot.conversionMode, removeEmptyLines = snapshot.removeEmptyLines
+            ))
 
             val queries = MusicMatchUtils.buildSearchQueries(
                 song = song,
@@ -287,19 +275,7 @@ class MatchMetadataProcessor(
                     coroutineScope {
                         val deferred = async(Dispatchers.Default) {
                             finalMatch.source?.getLyrics(finalMatch.result)?.let { result ->
-                                val sourceId = finalMatch.source.id
-
-                                val processed = fieldProcessor.processLyrics(
-                                    lyrics = result,
-                                    config = defaultPluginFieldProcessConfig(sourceId)
-                                )
-
-                                LyricEncoder.encode(
-                                    result = processed,
-                                    config = lyricConfig.copy(
-                                        conversionMode = com.lonx.lyrico.data.text.ConversionMode.NONE
-                                    )
-                                )
+                                LyricsRenderer.render(result = result, config = lyricConfig)
                             }
                         }
                         deferred.await()
@@ -323,14 +299,18 @@ class MatchMetadataProcessor(
             onProgress(0.75f)
 
             val sourceId = finalMatch.source?.id.orEmpty()
+            val rawFields = finalMatch.result.normalizedFields()
+            val lyricsToApply = if (shouldWriteLyrics) {
+                // null means no fetched result; an explicitly empty rendered result must not revive inline text.
+                newLyrics ?: rawFields["lyrics"]?.let { LyricsRenderer.renderText(it, snapshot) }
+            } else null
             val candidateFields = fieldProcessor.processFields(
                 pluginId = sourceId,
-                fields = finalMatch.result.normalizedFields() +
-                        newLyrics?.takeIf { it.isNotBlank() }?.let { mapOf("lyrics" to it) }.orEmpty(),
+                fields = rawFields - "lyrics",
                 config = defaultPluginFieldProcessConfig(sourceId),
                 fieldDefinitions = emptyList(),
                 writeRules = emptyList()
-            )
+            ) + lyricsToApply?.takeIf { it.isNotBlank() }?.let { mapOf("lyrics" to it) }.orEmpty()
 
             val tagDataToWrite = SearchResultApplier.buildPatch(
                 current = currentTag,
@@ -464,6 +444,6 @@ data class MatchMetadataTaskConfig(
     val separator: String,
     val enabledSourceOrderIds: List<String>,
     val sourceSettings: Map<String, Map<String, String>> = emptyMap(),
-    val lyricRenderConfig: LyricRenderConfig? = null,
+    val lyricRenderConfig: LyricsRenderConfig? = null,
     val concurrency: Int = 3
 )

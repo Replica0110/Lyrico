@@ -25,7 +25,7 @@ object LyricsTextCleanup {
 
     private fun visibleLineText(line: String): String {
         return line
-            .replace(LyricFormatter.LRC_TIME_PATTERN, "")
+            .replace(LyricsTimestamp.lrcTimePattern, "")
             .replace(Regex("""<[^>]+>"""), "")
     }
 

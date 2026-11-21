@@ -1,6 +1,6 @@
 package com.lonx.lyrico.domain.lyrics.document
 
-import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsFormat
 import com.lonx.lyrico.data.lyrics.document.ExtensionElement
 import com.lonx.lyrico.data.lyrics.document.ExtensionMap
 import com.lonx.lyrico.data.lyrics.document.LyricsAgent
@@ -13,33 +13,21 @@ import com.lonx.lyrico.data.lyrics.document.LyricsMetadata
 import com.lonx.lyrico.data.lyrics.document.LyricsTrack
 import com.lonx.lyrico.data.lyrics.document.LyricsTrackType
 import com.lonx.lyrico.data.lyrics.document.QualifiedName
-import java.io.StringReader
-import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.w3c.dom.Node
-import org.xml.sax.InputSource
 
 private const val ROLE_ROMAN_LEGACY = "x-romanization"
 
 private const val ROLE_ROMAN = "x-roman"
 
 object TtmlParser : LyricsFormatParser {
-    override val format: LyricFormat = LyricFormat.TTML
+    override val format: LyricsFormat = LyricsFormat.TTML
 
     override fun parse(raw: String): LyricsDocument {
-        require(!raw.contains("<!DOCTYPE", ignoreCase = true)) {
-            "TTML documents containing DOCTYPE are not supported"
-        }
-        val factory = DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-            isIgnoringComments = false
-            isExpandEntityReferences = false
-            setFeatureIfSupported("http://apache.org/xml/features/disallow-doctype-decl", true)
-            setFeatureIfSupported("http://xml.org/sax/features/external-general-entities", false)
-            setFeatureIfSupported("http://xml.org/sax/features/external-parameter-entities", false)
-            setFeatureIfSupported("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-        }
-        val dom = factory.newDocumentBuilder().parse(InputSource(StringReader(raw)))
+        return parse(TtmlXml.parse(raw))
+    }
+
+    internal fun parse(dom: org.w3c.dom.Document): LyricsDocument {
         val root = dom.documentElement
         val body = root.elementsByLocalName("body").firstOrNull()
         val (headMetadataElements, itunesMetadataElements) = parseHeadExtensionElements(root)
@@ -147,7 +135,7 @@ object TtmlParser : LyricsFormatParser {
             bodyExtensions = body?.attributesAsExtensions() ?: ExtensionMap(),
             headMetadataElements = headMetadataElements,
             itunesMetadataElements = itunesMetadataElements,
-            sourceFormat = LyricFormat.TTML
+            sourceFormat = LyricsFormat.TTML
         )
     }
 
@@ -501,9 +489,7 @@ object TtmlParser : LyricsFormatParser {
     }
 }
 
-private fun DocumentBuilderFactory.setFeatureIfSupported(name: String, value: Boolean) {
-    runCatching { setFeature(name, value) }
-}
+
 
 private fun Element.attr(localName: String, namespace: String? = null): String? {
     if (namespace != null) {

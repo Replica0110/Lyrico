@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class LyricsProcessingOptions(
-    val targetFormat: LyricFormat? = null,
+    val targetFormat: LyricsFormat? = null,
     val formatLineOrder: Boolean = false,
     val removeTagLines: Boolean = false,
     val tagLineKeywords: List<String> = emptyList(),
@@ -12,14 +12,11 @@ data class LyricsProcessingOptions(
     val twoColumnMapping: LyricsColumnMapping = LyricsColumnMapping.identity(2),
     val threeColumnMapping: LyricsColumnMapping = LyricsColumnMapping.identity(3)
 ) {
-    fun hasTextOperations(): Boolean {
-        return formatLineOrder || twoColumnMapping.isChanged || threeColumnMapping.isChanged ||
-                removeTagLines && tagLineKeywords.any { it.isNotBlank() } ||
-                removeEmptyLines
-    }
+    fun hasOperation(): Boolean = targetFormat != null || formatLineOrder || removeEmptyLines ||
+            (removeTagLines && tagLineKeywords.any { it.isNotBlank() })
 
     companion object {
-        val DefaultTagLineKeywords = listOf(
+        val defaultTagLineKeywords = listOf(
             "[by:",
             "[kana:",
             "[trans:",

@@ -13,14 +13,14 @@ import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.ArtistSeparator
 import com.lonx.lyrico.data.text.ConversionMode
 import com.lonx.lyrico.data.settings.ReplayGainPeakMode
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.visibleLyricLineTracks
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.visibleLyricsLineTracks
 import com.lonx.lyrico.ui.screens.settings.SettingsPage
 import com.lonx.lyrico.ui.screens.settings.settingsViewModelWithEvents
 import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.lyrics.LyricLineOrderBottomSheetContent
+import com.lonx.lyrico.ui.components.lyrics.LyricsLineOrderBottomSheetContent
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -35,8 +35,8 @@ fun TagEditingSettingsScreen(navigator: DestinationsNavigator) {
     val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lyricFormat = settingsUiState.lyricFormat
-    val lyricFormatItems = LyricFormat.entries.map { stringResource(it.labelRes) }
-    val selectedLyricFormatIndex = LyricFormat.entries.indexOf(lyricFormat).coerceAtLeast(0)
+    val lyricFormatItems = LyricsFormat.entries.map { stringResource(it.labelRes) }
+    val selectedLyricFormatIndex = LyricsFormat.entries.indexOf(lyricFormat).coerceAtLeast(0)
     val romaEnabled = settingsUiState.romaEnabled
     val translationEnabled = settingsUiState.translationEnabled
     val onlyTranslationIfAvailable = settingsUiState.onlyTranslationIfAvailable
@@ -46,7 +46,7 @@ fun TagEditingSettingsScreen(navigator: DestinationsNavigator) {
     val selectedConversionModeIndex = ConversionMode.entries.indexOf(conversionMode).coerceAtLeast(0)
     var showLyricLineOrderSheet by remember { mutableStateOf(false) }
     var showRgTargetDialog by remember { mutableStateOf(false) }
-    val visibleTracks = visibleLyricLineTracks(romaEnabled, translationEnabled, onlyTranslationIfAvailable)
+    val visibleTracks = visibleLyricsLineTracks(romaEnabled, translationEnabled, onlyTranslationIfAvailable)
     val lineOrderSummary = settingsUiState.lyricLineOrder.filter { it in visibleTracks }
         .joinToString(" / ") { context.getString(it.labelRes) }
     val artistSeparator = settingsUiState.separator
@@ -102,7 +102,7 @@ fun TagEditingSettingsScreen(navigator: DestinationsNavigator) {
                     items = lyricFormatItems,
                     selectedIndex = selectedLyricFormatIndex,
                     onSelectedIndexChange = { index ->
-                        settingsViewModel.setLyricFormat(LyricFormat.entries[index])
+                        settingsViewModel.setLyricFormat(LyricsFormat.entries[index])
                     }
                 )
                 Toggle(
@@ -197,7 +197,7 @@ fun TagEditingSettingsScreen(navigator: DestinationsNavigator) {
         onDismissRequest = { showLyricLineOrderSheet = false },
         scrollContent = false,
         content = {
-            LyricLineOrderBottomSheetContent(
+            LyricsLineOrderBottomSheetContent(
                 lineOrder = settingsUiState.lyricLineOrder,
                 visibleTracks = visibleTracks,
                 onLineOrderChange = settingsViewModel::setLyricLineOrder,

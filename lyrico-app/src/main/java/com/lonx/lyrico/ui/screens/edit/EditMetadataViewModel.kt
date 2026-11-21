@@ -32,8 +32,9 @@ import com.lonx.lyrico.data.settings.ArtistSplitConfig
 import com.lonx.lyrico.data.log.AppLogLevel
 import com.lonx.lyrico.data.log.AppLogType
 import com.lonx.lyrico.data.log.recordOperation
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsFileNames
 import com.lonx.lyrico.data.lyrics.LyricsFileTransfer
 import com.lonx.lyrico.data.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.metadata.MetadataApplyPolicy
@@ -51,9 +52,11 @@ import com.lonx.lyrico.data.settings.SettingsDefaults
 import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.domain.artist.ArtistNameSplitter
-import com.lonx.lyrico.domain.lyrics.LyricDecoder
-import com.lonx.lyrico.domain.lyrics.LyricEncoder
-import com.lonx.lyrico.domain.lyrics.LyricsProcessing
+import com.lonx.lyrico.domain.lyrics.LyricsParser
+import com.lonx.lyrico.domain.lyrics.LyricsRenderer
+import com.lonx.lyrico.domain.lyrics.LyricsTextTransform
+import com.lonx.lyrico.domain.lyrics.LyricsProcessor
+import com.lonx.lyrico.domain.lyrics.LyricsProcessingResult
 import com.lonx.lyrico.domain.metadata.SearchResultApplier
 import com.lonx.lyrico.domain.metadata.preserveHiddenEditFields
 import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
@@ -319,7 +322,7 @@ class EditMetadataViewModel(
         _currentShiftOffset.value = totalOffset
 
         // 始终基于 originalLyrics 快照偏移，避免来回计算导致精度丢失或触底失真
-        val shiftedLyrics = LyricEncoder.shiftLyricsOffset(originalLyrics, totalOffset)
+        val shiftedLyrics = LyricsTextTransform.shiftOffset(originalLyrics, totalOffset)
 
         _uiState.update { state ->
             state.copy(
@@ -1249,7 +1252,7 @@ class EditMetadataViewModel(
      * 获取导出歌词的默认文件名；没有歌词时返回 null。
      */
     fun getLyricsFileName(): String? =
-        LyricsFileTransfer.defaultFileName(_uiState.value.fileName, _uiState.value.editingTagData?.lyrics)
+        LyricsFileNames.defaultName(_uiState.value.fileName, _uiState.value.editingTagData?.lyrics)
 
     /**
      * 导出歌词
@@ -1272,7 +1275,7 @@ class EditMetadataViewModel(
                 LyricsFileTransfer.write(context, uri, lyrics)
                 _uiState.update { it.copy(exportLyricsResult = true) }
                 appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Lyrics exported",
-                    "uri=$currentSongUri\ndestination=$uri\ncharacters=${lyrics.length}\nformat=${LyricDecoder.detectFormat(lyrics)}", currentSongUri, AppLogLevel.INFO)
+                    "uri=$currentSongUri\ndestination=$uri\ncharacters=${lyrics.length}\nformat=${LyricsParser.detectFormat(lyrics)}", currentSongUri, AppLogLevel.INFO)
             } catch (e: Exception) {
                 Log.e(TAG, "导出歌词失败", e)
                 recordMetadataException(
@@ -1332,7 +1335,7 @@ class EditMetadataViewModel(
                     updateTag { copy(lyrics = lyrics) }
                     _uiState.update { it.copy(importLyricsResult = true) }
                     appLogRepository.recordOperation(AppLogType.METADATA, TAG, "Lyrics imported into draft",
-                        "uri=$currentSongUri\nsource=$uri\ncharacters=${lyrics.length}\nformat=${LyricDecoder.detectFormat(lyrics)}", currentSongUri)
+                        "uri=$currentSongUri\nsource=$uri\ncharacters=${lyrics.length}\nformat=${LyricsParser.detectFormat(lyrics)}", currentSongUri)
                 } else {
                     _uiState.update { it.copy(importLyricsResult = false) }
                     Log.w(TAG, "歌词导入失败: 文件内容为空")
@@ -1366,8 +1369,19 @@ class EditMetadataViewModel(
         val currentLyrics = _uiState.value.editingTagData?.lyrics ?: return
         if (currentLyrics.isBlank()) return
 
-        val convertedLyrics = LyricEncoder.convertLyricsText(currentLyrics, conversionMode)
-        updateTag { copy(lyrics = convertedLyrics) }
+        viewModelScope.launch {
+            try {
+                val converted = withContext(Dispatchers.Default) {
+                    LyricsTextTransform.convertLyricsScript(currentLyrics, conversionMode)
+                }
+                if (_uiState.value.editingTagData?.lyrics == currentLyrics && converted != currentLyrics) {
+                    updateTag { copy(lyrics = converted) }
+                }
+            } catch (error: Exception) {
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                recordMetadataException("Failed to convert lyrics script", throwable = error)
+            }
+        }
     }
 
     fun processLyrics(options: LyricsProcessingOptions) {
@@ -1381,15 +1395,23 @@ class EditMetadataViewModel(
                 } else {
                     emptyList()
                 }
-                val converted = withContext(Dispatchers.Default) {
-                    LyricsProcessing.apply(currentLyrics, options, tagLineKeywords)
-                } ?: return@launch
+                val effectiveOptions = options.copy(tagLineKeywords = tagLineKeywords)
+                val processed = withContext(Dispatchers.Default) {
+                    LyricsProcessor.process(currentLyrics, effectiveOptions)
+                }
+                val converted = when (processed) {
+                    is LyricsProcessingResult.Changed -> processed.text
+                    LyricsProcessingResult.Empty,
+                    LyricsProcessingResult.Unchanged,
+                    is LyricsProcessingResult.Unsupported -> return@launch
+                }
 
                 // 处理期间用户可能已经改了歌词，此时不覆盖。
                 if (_uiState.value.editingTagData?.lyrics == currentLyrics) {
                     updateTag { copy(lyrics = converted) }
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e(TAG, "歌词处理失败", e)
                 recordMetadataException(
                     message = "Failed to process lyrics",
@@ -1480,17 +1502,17 @@ class EditMetadataViewModel(
         showRomanization: Boolean = true,
         showTranslation: Boolean = true
     ): String? {
-        val lyricsResult = LyricDecoder.decode(_uiState.value.editingTagData?.lyrics ?: "")
+        val lyricsResult = LyricsParser.parseOrNull(_uiState.value.editingTagData?.lyrics ?: "")
             ?: return null
         if (lyricsResult.original.isEmpty()) return null
-        val config = LyricRenderConfig(
-            format = LyricFormat.PLAIN_LRC,
+        val config = LyricsRenderConfig(
+            format = LyricsFormat.PLAIN_LRC,
             conversionMode = ConversionMode.NONE,
             showTranslation = showTranslation && lyricsResult.translated != null,
             showRomanization = showRomanization && lyricsResult.romanization != null,
             removeEmptyLines = true,
             onlyTranslationIfAvailable = false
         )
-        return LyricEncoder.encodePlainText(lyricsResult, config)
+        return LyricsRenderer.renderPlainText(lyricsResult, config)
     }
 }

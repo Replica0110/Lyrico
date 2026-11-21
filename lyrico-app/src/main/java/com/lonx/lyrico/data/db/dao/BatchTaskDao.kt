@@ -12,6 +12,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BatchTaskDao {
+    @Query("""
+        UPDATE batch_tasks SET configJson = :configJson, updatedAt = :updatedAt
+        WHERE taskId = :taskId AND status IN (:activeStatuses)
+          AND ((:expected IS NULL AND configJson IS NULL) OR configJson = :expected)
+    """)
+    suspend fun updateConfigIfUnchanged(
+        taskId: String,
+        expected: String?,
+        configJson: String,
+        updatedAt: Long,
+        activeStatuses: List<BatchTaskStatus> = listOf(BatchTaskStatus.QUEUED, BatchTaskStatus.RUNNING)
+    ): Int
+
 
     @Insert
     suspend fun insertTask(task: BatchTaskEntity)

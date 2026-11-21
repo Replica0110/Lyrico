@@ -277,8 +277,8 @@ val appModule = module {
     single { BatchTaskScheduler(androidContext(), get()) }
     single { LyricsFormatProcessor(get(), get(), get()) }
     single { ReplayGainProcessor(get(), get(), get(), get(), get(), get()) }
-    single { MatchMetadataProcessor(get(), get(), get(), get(), get(), get()) }
-    single { MatchLyricsProcessor(get(), get(), get(), get(), get()) }
+    single { MatchMetadataProcessor(get(), get(), get(), get(), get()) }
+    single { MatchLyricsProcessor(get(), get(), get(), get()) }
     single { MatchCoverProcessor(get(), get(), get(), get()) }
     single { RenameFilesProcessor(get(), get(), get()) }
     single { EditTagsProcessor(get(), get(), get()) }

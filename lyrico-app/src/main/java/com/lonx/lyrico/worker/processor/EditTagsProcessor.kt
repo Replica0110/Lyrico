@@ -9,7 +9,7 @@ import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
-import com.lonx.lyrico.domain.lyrics.LyricEncoder
+import com.lonx.lyrico.domain.lyrics.LyricsTextTransform
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.util.Locale
@@ -132,7 +132,7 @@ class EditTagsProcessor(
             val offsetValue = parseLyricsOffset(config.lyricsOffset)
             if (offsetValue != 0) {
                 tag = tag.copy(
-                    lyrics = LyricEncoder.shiftLyricsOffset(tag.lyrics!!, offsetValue.toLong())
+                    lyrics = LyricsTextTransform.shiftOffset(tag.lyrics!!, offsetValue.toLong())
                 )
             }
         }

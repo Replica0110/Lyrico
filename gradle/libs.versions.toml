@@ -30,10 +30,12 @@ haze = "2.1.0"
 lottie = "6.7.1"
 zoomable = "2.16.0"
 junit = "4.13.2"
+androidxTestRunner = "1.7.0"
 robolectric = "4.18"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 salt-ui = { module = "io.github.moriafly:salt-ui", version.ref = "saltUi" }
 haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }

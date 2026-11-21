@@ -10,6 +10,9 @@ import java.util.UUID
 class BatchTaskRepositoryImpl(
     private val batchTaskDao: BatchTaskDao
 ) : BatchTaskRepository {
+    override suspend fun updateConfigIfUnchanged(taskId: String, expected: String?, configJson: String): Boolean =
+        batchTaskDao.updateConfigIfUnchanged(taskId, expected, configJson, System.currentTimeMillis()) == 1
+
 
     override suspend fun createTask(
         type: BatchTaskType,

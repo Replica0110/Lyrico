@@ -11,11 +11,11 @@ import com.lonx.lyrico.data.batch.BatchMatchConfigDefaults
 import com.lonx.lyrico.data.rename.CharacterMappingConfig
 import com.lonx.lyrico.data.rename.CharacterMappingDefaults
 import com.lonx.lyrico.data.text.ConversionMode
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.lyrics.DefaultLyricLineOrder
-import com.lonx.lyrico.data.lyrics.normalizedLyricLineOrder
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.defaultLyricsLineOrder
+import com.lonx.lyrico.data.lyrics.normalizedLyricsLineOrder
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
 import com.lonx.lyrico.data.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.log.LogRetentionOption
 import com.lonx.lyrico.data.plugin.PluginMetadataFieldWriteRule
@@ -65,7 +65,7 @@ object SettingsDefaults {
     val CONVERSION_MODE = ConversionMode.NONE
     const val RENAME_FORMAT = "@1 - @2"
 
-    val LYRIC_FORMAT = LyricFormat.VERBATIM_LRC
+    val LYRIC_FORMAT = LyricsFormat.VERBATIM_LRC
     val SORT_BY = SongSortBy.TITLE
     val SORT_ORDER = SortOrder.ASC
     val ALBUM_SORT_BY = AlbumSortBy.NAME
@@ -74,14 +74,14 @@ object SettingsDefaults {
     val ARTIST_SORT_ORDER = SortOrder.ASC
     const val ALBUM_GRID_COLUMNS = 2
     const val SEPARATOR = "/"
-    val LYRIC_LINE_ORDER = DefaultLyricLineOrder
+    val LYRIC_LINE_ORDER = defaultLyricsLineOrder
     const val ROMA_ENABLED = true
     const val TRANSLATION_ENABLED = true
     const val CHECK_UPDATE_ENABLED = true
     const val IGNORE_SHORT_AUDIO = true
     const val ONLY_TRANSLATION_IF_AVAILABLE = false
     const val REMOVE_EMPTY_LINES = true
-    val LYRICS_TAG_LINE_KEYWORDS = LyricsProcessingOptions.DefaultTagLineKeywords
+    val LYRICS_TAG_LINE_KEYWORDS = LyricsProcessingOptions.defaultTagLineKeywords
     const val LIMIT_LYRICS_INPUT_LINES = false
     val LOG_RETENTION_OPTION = LogRetentionOption.THIRTY_DAYS
     const val REPLAY_GAIN_TARGET_LOUDNESS = -18.0
@@ -145,10 +145,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
 
     private val backupMapper = SettingsBackupMapper(jsonFormatter)
 
-    override val lyricFormat: Flow<LyricFormat>
+    override val lyricFormat: Flow<LyricsFormat>
         get() = context.settingsDataStore.data.map { preferences ->
             try {
-                LyricFormat.valueOf(
+                LyricsFormat.valueOf(
                     preferences[SettingsPreferenceKeys.LYRIC_FORMAT] ?: SettingsDefaults.LYRIC_FORMAT.name
                 )
             } catch (e: Exception) {
@@ -232,7 +232,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             preferences[SettingsPreferenceKeys.ROMA_ENABLED] ?: SettingsDefaults.ROMA_ENABLED
         }
 
-    override val lyricLineOrder: Flow<List<LyricLineTrack>>
+    override val lyricLineOrder: Flow<List<LyricsLineTrack>>
         get() = context.settingsDataStore.data.map { preferences ->
             decodeLyricLineOrder(preferences[SettingsPreferenceKeys.LYRIC_LINE_ORDER])
         }
@@ -415,7 +415,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             translationEnabled,
             lyricLineOrder
         ) { format, roma, translation, lineOrder ->
-            LyricRenderConfig(
+            LyricsRenderConfig(
                 format = format,
                 showRomanization = roma,
                 showTranslation = translation,
@@ -481,7 +481,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun saveLyricDisplayMode(mode: LyricFormat) {
+    override suspend fun saveLyricDisplayMode(mode: LyricsFormat) {
         context.settingsDataStore.edit { preferences ->
             preferences[SettingsPreferenceKeys.LYRIC_FORMAT] = mode.name
         }
@@ -534,10 +534,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun saveLyricLineOrder(order: List<LyricLineTrack>) {
+    override suspend fun saveLyricLineOrder(order: List<LyricsLineTrack>) {
         context.settingsDataStore.edit { preferences ->
             preferences[SettingsPreferenceKeys.LYRIC_LINE_ORDER] =
-                order.normalizedLyricLineOrder().joinToString(",") { it.name }
+                order.normalizedLyricsLineOrder().joinToString(",") { it.name }
         }
     }
 
@@ -687,10 +687,10 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
         }
     }
 
-    override suspend fun getLyricRenderConfig(): LyricRenderConfig {
+    override suspend fun getLyricRenderConfig(): LyricsRenderConfig {
         val prefs = context.settingsDataStore.data.first()
 
-        val format = LyricFormat.valueOf(
+        val format = LyricsFormat.valueOf(
             prefs[SettingsPreferenceKeys.LYRIC_FORMAT]
                 ?: SettingsDefaults.LYRIC_FORMAT.name
         )
@@ -705,7 +705,7 @@ class SettingsRepositoryImpl(private val context: Context) : SettingsRepository 
             prefs[SettingsPreferenceKeys.CONVERSION_MODE]
                 ?: SettingsDefaults.CONVERSION_MODE.name
         )
-        return LyricRenderConfig(
+        return LyricsRenderConfig(
             format = format,
             showRomanization = roma,
             removeEmptyLines = removeEmptyLines,

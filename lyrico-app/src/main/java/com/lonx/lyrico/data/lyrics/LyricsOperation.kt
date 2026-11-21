@@ -9,7 +9,7 @@ enum class LyricsOperation(val titleRes: Int) {
     REMOVE_EMPTY(R.string.remove_empty_lines),
     REMOVE_TAGS(R.string.lyrics_remove_tag_lines);
 
-    fun options(format: LyricFormat? = null) = LyricsProcessingOptions(
+    fun processingOptions(format: LyricsFormat? = null) = LyricsProcessingOptions(
         targetFormat = if (this == CONVERT) format else null,
         formatLineOrder = this == SORT,
         removeEmptyLines = this == REMOVE_EMPTY,

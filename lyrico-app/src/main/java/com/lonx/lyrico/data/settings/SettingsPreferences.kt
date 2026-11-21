@@ -6,8 +6,8 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.lyrics.normalizedLyricLineOrder
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.normalizedLyricsLineOrder
 import com.lonx.lyrico.data.plugin.SourceSettingsStore
 import kotlinx.serialization.json.Json
 
@@ -98,14 +98,14 @@ internal fun normalizeLyricsTagLineKeywords(keywords: List<String>): List<String
         .distinct()
 }
 
-internal fun decodeLyricLineOrder(raw: String?): List<LyricLineTrack> {
+internal fun decodeLyricLineOrder(raw: String?): List<LyricsLineTrack> {
     if (raw.isNullOrBlank()) return SettingsDefaults.LYRIC_LINE_ORDER
     return raw
         .split(',', '\n', ';')
         .mapNotNull { name ->
-            runCatching { LyricLineTrack.valueOf(name.trim()) }.getOrNull()
+            runCatching { LyricsLineTrack.valueOf(name.trim()) }.getOrNull()
         }
-        .normalizedLyricLineOrder()
+        .normalizedLyricsLineOrder()
 }
 
 internal fun String?.csvToIds(): List<String> {

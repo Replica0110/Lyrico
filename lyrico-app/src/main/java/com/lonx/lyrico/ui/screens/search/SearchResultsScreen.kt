@@ -77,7 +77,7 @@ import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.image.PreviewableImage
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
-import com.lonx.lyrico.ui.components.lyrics.LyricRenderConfigBottomSheet
+import com.lonx.lyrico.ui.components.lyrics.LyricsRenderConfigBottomSheet
 import com.lonx.lyrico.ui.components.plugin.PluginIcon
 import com.lonx.lyrico.ui.components.progress.salt.SaltCircularProgressIndicator
 import com.lonx.lyrico.ui.components.image.rememberTintedPainter
@@ -321,7 +321,7 @@ fun SearchResultsScreen(
         }
     )
 
-    LyricRenderConfigBottomSheet(
+    LyricsRenderConfigBottomSheet(
         show = showLyricRenderConfigBottomSheet.value,
         config = lyricConfig,
         onDismissRequest = { showLyricRenderConfigBottomSheet.value = false },

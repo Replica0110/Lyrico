@@ -9,19 +9,15 @@ import com.lonx.lyrico.data.log.AppLogType
 import com.lonx.lyrico.data.lyrics.LyricsCandidateResult
 import com.lonx.lyrico.data.metadata.MetadataFieldTarget
 import com.lonx.lyrico.data.metadata.MetadataWriteMode
-import com.lonx.lyrico.data.plugin.GlobalFieldProcessSettings
 import com.lonx.lyrico.data.plugin.PluginCapability
 import com.lonx.lyrico.data.plugin.PluginSourceType
-import com.lonx.lyrico.data.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.song.search.SongSearchResult
 import com.lonx.lyrico.data.plugin.SourceRuntimeConfig
-import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.domain.lyrics.LyricEncoder
+import com.lonx.lyrico.domain.lyrics.LyricsRenderer
 import com.lonx.lyrico.domain.match.MusicMatchUtils
-import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -32,8 +28,7 @@ class MatchLyricsProcessor(
     private val audioTagRepository: AudioTagRepository,
     private val saveAudioTagsUseCase: SaveAudioTagsUseCase,
     private val songLibraryRepository: SongLibraryRepository,
-    private val searchSourceProvider: SearchSourceProvider,
-    private val settingsRepository: SettingsRepository
+    private val searchSourceProvider: SearchSourceProvider
 ) : BatchTaskProcessor {
     override suspend fun process(
         task: BatchTaskEntity,
@@ -142,23 +137,8 @@ class MatchLyricsProcessor(
             level = if (best?.let { it.score >= MIN_MATCH_SCORE } == true) AppLogLevel.DEBUG else AppLogLevel.INFO)
         val selected = best?.takeIf { it.score >= MIN_MATCH_SCORE }
             ?: throw BatchTaskSkippedException("No reliable lyrics match")
-        val renderConfig = config.lyricRenderConfig ?: settingsRepository.getLyricRenderConfig()
-        val processor = PluginFieldPostProcessor(
-            GlobalFieldProcessSettings(
-                scriptConversion = renderConfig.conversionMode,
-                removeEmptyLines = renderConfig.removeEmptyLines
-            )
-        )
-        val processed = processor.processLyrics(
-            lyrics = selected.candidate.lyrics,
-            config = defaultPluginFieldProcessConfig(selected.sourceId)
-        )
-        val encoded = LyricEncoder.encode(
-            processed,
-            renderConfig.copy(
-                conversionMode = com.lonx.lyrico.data.text.ConversionMode.NONE
-            )
-        )
+        val renderConfig = requireNotNull(config.lyricRenderConfig) { "Lyrics task snapshot was not prepared" }
+        val encoded = LyricsRenderer.render(selected.candidate.lyrics, renderConfig)
         if (encoded.isBlank()) throw BatchTaskSkippedException("Lyrics are empty")
 
         onProgress(0.85f)

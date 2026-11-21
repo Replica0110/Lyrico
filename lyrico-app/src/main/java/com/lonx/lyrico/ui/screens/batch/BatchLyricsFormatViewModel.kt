@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.batch.BatchTaskStatus
 import com.lonx.lyrico.data.batch.BatchTaskType
-import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsFormat
 import com.lonx.lyrico.data.lyrics.LyricsProcessingOptions
 import com.lonx.lyrico.data.lyrics.LyricsColumnMapping
 import com.lonx.lyrico.data.batch.BatchTaskRepository
@@ -30,10 +30,10 @@ data class BatchLyricsFormatUiState(
     val operation: LyricsOperation = LyricsOperation.CONVERT,
     val isRunning: Boolean = false,
     val concurrency: Int = 3,
-    val targetFormat: LyricFormat? = null,
+    val targetFormat: LyricsFormat? = null,
     val formatLineOrder: Boolean = false,
     val removeTagLines: Boolean = false,
-    val tagLineKeywords: List<String> = LyricsProcessingOptions.DefaultTagLineKeywords,
+    val tagLineKeywords: List<String> = LyricsProcessingOptions.defaultTagLineKeywords,
     val removeEmptyLines: Boolean = false,
     val twoColumnMapping: LyricsColumnMapping = LyricsColumnMapping.identity(2),
     val threeColumnMapping: LyricsColumnMapping = LyricsColumnMapping.identity(3),
@@ -126,7 +126,7 @@ class BatchLyricsFormatViewModel(
     fun openConfig(initialConcurrency: Int, operation: LyricsOperation = LyricsOperation.CONVERT) {
         _uiState.update {
             it.copy(concurrency = initialConcurrency.coerceIn(1, 5), operation = operation,
-                targetFormat = LyricFormat.PLAIN_LRC, formatLineOrder = false,
+                targetFormat = LyricsFormat.PLAIN_LRC, formatLineOrder = false,
                 removeEmptyLines = operation == LyricsOperation.REMOVE_EMPTY,
                 removeTagLines = operation == LyricsOperation.REMOVE_TAGS,
                 twoColumnMapping = LyricsColumnMapping.identity(2),
@@ -143,7 +143,7 @@ class BatchLyricsFormatViewModel(
         _uiState.update { it.copy(concurrency = count.coerceIn(1, 5)) }
     }
 
-    fun setTargetFormat(targetFormat: LyricFormat?) {
+    fun setTargetFormat(targetFormat: LyricsFormat?) {
         _uiState.update { it.copy(targetFormat = targetFormat) }
     }
 
@@ -159,13 +159,13 @@ class BatchLyricsFormatViewModel(
         val options = LyricsProcessingOptions(
             targetFormat = if (state.operation == LyricsOperation.CONVERT) state.targetFormat else null,
             formatLineOrder = state.operation == LyricsOperation.SORT || state.formatLineOrder,
-            removeTagLines = _uiState.value.removeTagLines,
-            tagLineKeywords = _uiState.value.tagLineKeywords,
-            removeEmptyLines = _uiState.value.removeEmptyLines,
+            removeTagLines = state.removeTagLines,
+            tagLineKeywords = state.tagLineKeywords,
+            removeEmptyLines = state.removeEmptyLines,
             twoColumnMapping = state.twoColumnMapping,
             threeColumnMapping = state.threeColumnMapping
         )
-        if (options.targetFormat == null && !options.hasTextOperations()) return
+        if (!options.hasOperation()) return
 
         _uiState.update {
             it.copy(

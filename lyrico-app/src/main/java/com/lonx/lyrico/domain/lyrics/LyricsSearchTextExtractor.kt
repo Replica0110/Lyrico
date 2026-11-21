@@ -11,7 +11,7 @@ object LyricsSearchTextExtractor {
 
         // 歌词搜索索引是 best-effort 的附加能力：任何解析失败都必须
         // 回退到纯文本提取，不允许导致整首音频扫描失败。
-        val decodedLines = runCatching { LyricDecoder.decode(raw) }
+        val decodedLines = runCatching { LyricsParser.parseOrNull(raw) }
             .onFailure { e ->
                 Log.w(TAG, "Decode failed, fallback to plain text extraction: ${e.message}")
             }

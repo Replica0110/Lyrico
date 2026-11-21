@@ -5,9 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.data.log.AppLogLevel
 import com.lonx.lyrico.data.log.AppLogType
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
 import com.lonx.lyrico.data.lyrics.LyricsResult
 import com.lonx.lyrico.data.plugin.GlobalFieldProcessSettings
 import com.lonx.lyrico.data.plugin.PluginCapability
@@ -19,7 +19,7 @@ import com.lonx.lyrico.data.text.ConversionMode
 import com.lonx.lyrico.data.log.AppLogRepository
 import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.search.SearchSource
-import com.lonx.lyrico.domain.lyrics.LyricEncoder
+import com.lonx.lyrico.domain.lyrics.LyricsRenderer
 import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
 import com.lonx.lyrico.plugin.source.SearchSourceConfigApplier
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
@@ -126,15 +126,7 @@ class SearchViewModel(
             val pluginId = lyricsState.song?.pluginId
 
             val rendered = if (raw != null) {
-                val processor = PluginFieldPostProcessor(config.toGlobalFieldProcessSettings())
-                val processed = processor.processLyrics(
-                    lyrics = raw,
-                    config = defaultPluginFieldProcessConfig(pluginId.orEmpty())
-                )
-                LyricEncoder.encode(
-                    result = processed,
-                    config = config.copy(conversionMode = ConversionMode.NONE)
-                )
+                LyricsRenderer.render(result = raw, config = config)
             } else null
 
             lyricsState.copy(content = rendered)
@@ -582,7 +574,7 @@ class SearchViewModel(
         lyricsState.value = LyricsUiState()
     }
 
-    private fun LyricRenderConfig.toGlobalFieldProcessSettings(): GlobalFieldProcessSettings {
+    private fun LyricsRenderConfig.toGlobalFieldProcessSettings(): GlobalFieldProcessSettings {
         return GlobalFieldProcessSettings(
             scriptConversion = conversionMode,
             removeEmptyLines = removeEmptyLines
@@ -684,13 +676,13 @@ class SearchViewModel(
         return allSources
     }
 
-    fun setLyricFormat(format: LyricFormat) {
+    fun setLyricFormat(format: LyricsFormat) {
         viewModelScope.launch {
             settingsRepository.saveLyricDisplayMode(format)
         }
     }
 
-    fun setLyricLineOrder(order: List<LyricLineTrack>) {
+    fun setLyricLineOrder(order: List<LyricsLineTrack>) {
         viewModelScope.launch { settingsRepository.saveLyricLineOrder(order) }
     }
 

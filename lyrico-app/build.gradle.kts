@@ -59,6 +59,7 @@ android {
         applicationId = "com.lonx.lyrico"
         minSdk = 28
         targetSdk = 36
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = baseVersionCode
         versionName = "$baseVersionName-${gitCommitHash().get()}"
 
@@ -140,6 +141,8 @@ ksp {
 }
 dependencies {
     testImplementation(libs.junit)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     testImplementation(libs.robolectric)
     testImplementation("androidx.work:work-testing:${libs.versions.work.get()}")
     implementation(libs.salt.ui)

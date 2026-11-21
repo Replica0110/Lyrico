@@ -3,9 +3,9 @@ package com.lonx.lyrico.data.settings
 import com.lonx.lyrico.data.batch.BatchMatchConfig
 import com.lonx.lyrico.data.rename.CharacterMappingConfig
 import com.lonx.lyrico.data.text.ConversionMode
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
 import com.lonx.lyrico.data.log.LogRetentionOption
 import com.lonx.lyrico.data.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.song.search.SearchConfig
@@ -35,13 +35,13 @@ interface SettingsRepository {
     val renameFormat: Flow<String>
 
     // Flow properties
-    val lyricFormat: Flow<LyricFormat>
+    val lyricFormat: Flow<LyricsFormat>
     val sortInfo: Flow<SongSortInfo>
     val albumSortInfo: Flow<AlbumSortInfo>
     val artistSortInfo: Flow<ArtistSortInfo>
     val albumGridColumns: Flow<Int>
     val separator: Flow<String>
-    val lyricLineOrder: Flow<List<LyricLineTrack>>
+    val lyricLineOrder: Flow<List<LyricsLineTrack>>
     val romaEnabled: Flow<Boolean>
 
     val conversionMode: Flow<ConversionMode>
@@ -70,7 +70,7 @@ interface SettingsRepository {
     val limitLyricsInputLines: Flow<Boolean>
     val logRetentionOption: Flow<LogRetentionOption>
 
-    val lyricRenderConfigFlow: Flow<LyricRenderConfig>
+    val lyricRenderConfigFlow: Flow<LyricsRenderConfig>
     val searchConfigFlow: Flow<SearchConfig>
     val themeConfigFlow: Flow<ThemeConfig>
 
@@ -80,13 +80,13 @@ interface SettingsRepository {
     suspend fun getLastScanTime(): Long
     
     // Save functions
-    suspend fun saveLyricDisplayMode(mode: LyricFormat)
+    suspend fun saveLyricDisplayMode(mode: LyricsFormat)
     suspend fun saveSortInfo(sortInfo: SongSortInfo)
     suspend fun saveAlbumSortInfo(sortInfo: AlbumSortInfo)
     suspend fun saveArtistSortInfo(sortInfo: ArtistSortInfo)
     suspend fun saveAlbumGridColumns(columns: Int)
     suspend fun saveSeparator(separator: String)
-    suspend fun saveLyricLineOrder(order: List<LyricLineTrack>)
+    suspend fun saveLyricLineOrder(order: List<LyricsLineTrack>)
     suspend fun saveRomaEnabled(enabled: Boolean)
     suspend fun saveConversionMode(mode: ConversionMode)
     suspend fun saveCheckUpdateEnabled(enabled: Boolean)
@@ -113,7 +113,7 @@ interface SettingsRepository {
     suspend fun saveLyricsTagLineKeywords(keywords: List<String>)
     suspend fun saveLimitLyricsInputLines(enabled: Boolean)
     suspend fun saveLogRetentionOption(option: LogRetentionOption)
-    suspend fun getLyricRenderConfig(): LyricRenderConfig
+    suspend fun getLyricRenderConfig(): LyricsRenderConfig
     suspend fun exportSettings(): String
     suspend fun importSettings(jsonString: String): Boolean
     suspend fun saveBatchMatchConfig(config: BatchMatchConfig)

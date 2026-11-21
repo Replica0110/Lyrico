@@ -1,7 +1,5 @@
 package com.lonx.lyrico.domain.plugin
 
-import com.lonx.lyrico.data.lyrics.LyricsLine
-import com.lonx.lyrico.data.lyrics.LyricsResult
 import com.lonx.lyrico.data.plugin.GlobalFieldProcessSettings
 import com.lonx.lyrico.data.plugin.PluginFieldProcessConfig
 import com.lonx.lyrico.data.plugin.PluginFieldValueType
@@ -10,9 +8,8 @@ import com.lonx.lyrico.data.plugin.PluginMetadataFieldWriteRule
 import com.lonx.lyrico.data.plugin.ResolvedFieldProcessRule
 import com.lonx.lyrico.data.plugin.resolveFieldProcessRule
 import com.lonx.lyrico.data.plugin.valueType
-import com.lonx.lyrico.data.text.ConversionMode
-import com.lonx.lyrico.domain.lyrics.LyricEncoder
-import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
+import com.lonx.lyrico.domain.lyrics.LyricsTextTransform
+import com.lonx.lyrico.domain.lyrics.LyricsRenderer
 
 class PluginFieldPostProcessor(
     private val globalSettings: GlobalFieldProcessSettings
@@ -41,6 +38,7 @@ class PluginFieldPostProcessor(
         valueType: PluginFieldValueType,
         rule: ResolvedFieldProcessRule
     ): String {
+        if (valueType == PluginFieldValueType.LYRICS) return LyricsRenderer.renderFieldText(value, rule)
         var text = value
 
         if (rule.trim && canTrim(valueType)) {
@@ -53,29 +51,10 @@ class PluginFieldPostProcessor(
             text = removeEmptyLines(text)
         }
         if (canConvertScript(valueType)) {
-            text = LyricEncoder.convertLyricsText(text, rule.scriptConversion)
+            text = LyricsTextTransform.convertScript(text, rule.scriptConversion)
         }
 
         return text
-    }
-
-    fun processLyrics(
-        lyrics: LyricsResult,
-        config: PluginFieldProcessConfig,
-        fieldKey: String = "lyrics"
-    ): LyricsResult {
-        val rule = resolveFieldProcessRule(globalSettings, resolveFieldProcessRule(config, fieldKey))
-
-        val processed = lyrics.copy(
-            original = processLyricLines(lyrics.original, rule),
-            translated = lyrics.translated?.let { processLyricLines(it, rule) },
-            romanization = lyrics.romanization?.let { processLyricLines(it, rule, convertScript = false) },
-            tags = lyrics.tags.mapValues { (_, value) ->
-                LyricEncoder.convertLyricsText(value, rule.scriptConversion)
-            }
-        )
-
-        return LyricsDocumentPipeline.processRawResultForFieldRule(processed, rule)
     }
 
     private fun inferValueType(key: String, field: PluginMetadataField?): PluginFieldValueType {
@@ -93,56 +72,6 @@ class PluginFieldPostProcessor(
                 else -> PluginFieldValueType.TEXT
             }
         }
-    }
-
-    private fun processLyricLines(
-        lines: List<LyricsLine>,
-        rule: ResolvedFieldProcessRule,
-        convertScript: Boolean = true
-    ): List<LyricsLine> {
-        val processed = lines.map { line ->
-            line.copy(
-                words = line.words.map { word ->
-                    val text = processLyricWordText(word.text, rule, convertScript)
-                    word.copy(text = text)
-                }
-            )
-        }
-
-        return if (rule.removeEmptyLines) {
-            processed.filterNot { it.words.joinToString("") { word -> word.text }.isBlank() }
-        } else {
-            processed
-        }
-    }
-
-    private fun processLyricWordText(
-        value: String,
-        rule: ResolvedFieldProcessRule,
-        convertScript: Boolean
-    ): String {
-        return if (convertScript) {
-            LyricEncoder.convertLyricsText(value, rule.scriptConversion)
-        } else {
-            value
-        }
-    }
-
-    private fun processLyricsText(
-        value: String,
-        rule: ResolvedFieldProcessRule
-    ): String {
-        var text = value
-        if (rule.scriptConversion != ConversionMode.NONE) {
-            text = LyricEncoder.convertLyricsText(text, rule.scriptConversion)
-        }
-        if (rule.normalizeWhitespace) {
-            text = normalizeWhitespace(text, PluginFieldValueType.LYRICS)
-        }
-        if (rule.removeEmptyLines) {
-            text = removeEmptyLines(text)
-        }
-        return text
     }
 
     private fun canTrim(valueType: PluginFieldValueType): Boolean {

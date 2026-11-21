@@ -257,11 +257,11 @@ fun LyricsConcurrency(value: Int, onChange: (Int) -> Unit, header: (@Composable 
 }
 
 @Composable
-fun LyricsOperationContent(operation: LyricsOperation, targetFormat: LyricFormat, onFormat: (LyricFormat) -> Unit) {
+fun LyricsOperationContent(operation: LyricsOperation, targetFormat: LyricsFormat, onFormat: (LyricsFormat) -> Unit) {
     if (LocalUiEngine.current == UiEngine.SALT) {
         when (operation) {
             LyricsOperation.CONVERT -> RoundedColumn {
-                LyricFormat.entries.forEach { format ->
+                LyricsFormat.entries.forEach { format ->
                 ItemCheck(
                     state = format == targetFormat,
                     onChange = { checked -> if (checked) onFormat(format) },
@@ -277,7 +277,7 @@ fun LyricsOperationContent(operation: LyricsOperation, targetFormat: LyricFormat
     }
     when (operation) {
         LyricsOperation.CONVERT -> Card(colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)) {
-            LyricFormat.entries.forEach { format ->
+            LyricsFormat.entries.forEach { format ->
                 RadioButtonPreference(title = stringResource(format.labelRes), selected = format == targetFormat,
                     onClick = { onFormat(format) })
             }
@@ -291,20 +291,20 @@ fun LyricsOperationContent(operation: LyricsOperation, targetFormat: LyricFormat
 @Composable
 fun LyricsProcessingSheet(show: Boolean, raw: String, operation: LyricsOperation, onDismiss: () -> Unit,
                           onConfirm: (LyricsProcessingOptions) -> Unit) {
-    var target by remember { mutableStateOf(LyricFormat.PLAIN_LRC) }
+    var target by remember { mutableStateOf(LyricsFormat.PLAIN_LRC) }
     var twoColumnMapping by remember { mutableStateOf(LyricsColumnMapping.identity(2)) }
     var threeColumnMapping by remember { mutableStateOf(LyricsColumnMapping.identity(3)) }
     // Keep the content mounted while the sheet animates out. Reset only when opening.
     LaunchedEffect(show, raw, operation) {
         if (show) {
-            target = LyricFormat.PLAIN_LRC
+            target = LyricsFormat.PLAIN_LRC
             twoColumnMapping = LyricsColumnMapping.identity(2)
             threeColumnMapping = LyricsColumnMapping.identity(3)
         }
     }
     val canConfirm = raw.isNotBlank()
     val confirm = {
-        onConfirm(operation.options(target).copy(twoColumnMapping = twoColumnMapping, threeColumnMapping = threeColumnMapping))
+        onConfirm(operation.processingOptions(target).copy(twoColumnMapping = twoColumnMapping, threeColumnMapping = threeColumnMapping))
     }
     ActionBottomSheet(show = show, title = stringResource(operation.titleRes), onDismissRequest = onDismiss,
         scrollContent = false,

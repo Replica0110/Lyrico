@@ -18,10 +18,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.lyrics.visibleLyricLineTracks
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
+import com.lonx.lyrico.data.lyrics.visibleLyricsLineTracks
 import com.lonx.lyrico.data.text.ConversionMode
 import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
 import com.lonx.lyrico.ui.components.icons.LucideIcons
@@ -40,13 +40,13 @@ import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun LyricRenderConfigBottomSheet(
+fun LyricsRenderConfigBottomSheet(
     show: Boolean,
-    config: LyricRenderConfig?,
+    config: LyricsRenderConfig?,
     onDismissRequest: () -> Unit,
-    onLyricFormatChange: (LyricFormat) -> Unit,
+    onLyricFormatChange: (LyricsFormat) -> Unit,
     onRomaEnabledChange: (Boolean) -> Unit,
-    onLineOrderChange: (List<LyricLineTrack>) -> Unit,
+    onLineOrderChange: (List<LyricsLineTrack>) -> Unit,
     onTranslationEnabledChange: (Boolean) -> Unit,
     onOnlyTranslationIfAvailableChange: (Boolean) -> Unit,
     onRemoveEmptyLinesChange: (Boolean) -> Unit,
@@ -59,7 +59,7 @@ fun LyricRenderConfigBottomSheet(
     }
     val context = LocalContext.current
     val visibleTracks = config?.let {
-        visibleLyricLineTracks(it.showRomanization, it.showTranslation, it.onlyTranslationIfAvailable)
+        visibleLyricsLineTracks(it.showRomanization, it.showTranslation, it.onlyTranslationIfAvailable)
     }.orEmpty()
     val lineOrderSummary = config?.normalizedLineOrder.orEmpty()
         .filter { it in visibleTracks }
@@ -71,7 +71,7 @@ fun LyricRenderConfigBottomSheet(
         scrollContent = false,
         content = {
             config?.let { lyricConfig ->
-                LyricLineOrderBottomSheetContent(
+                LyricsLineOrderBottomSheetContent(
                     lineOrder = lyricConfig.normalizedLineOrder,
                     visibleTracks = visibleTracks,
                     onLineOrderChange = onLineOrderChange,
@@ -88,10 +88,10 @@ fun LyricRenderConfigBottomSheet(
             scrollContent = true,
         ) {
             config?.let { lyricConfig ->
-                val lyricFormatItems = LyricFormat.entries.map {
+                val lyricFormatItems = LyricsFormat.entries.map {
                     stringResource(it.labelRes)
                 }
-                val selectedLyricFormatIndex = LyricFormat.entries
+                val selectedLyricFormatIndex = LyricsFormat.entries
                     .indexOf(lyricConfig.format)
                     .coerceAtLeast(0)
                 val conversionModeItems = ConversionMode.entries.map {
@@ -107,7 +107,7 @@ fun LyricRenderConfigBottomSheet(
                         labels = lyricFormatItems,
                         selectedIndex = selectedLyricFormatIndex,
                     ) { index ->
-                        onLyricFormatChange(LyricFormat.entries[index])
+                        onLyricFormatChange(LyricsFormat.entries[index])
                     }
                     ItemSwitcher(
                         text = stringResource(R.string.roma),
@@ -168,10 +168,10 @@ fun LyricRenderConfigBottomSheet(
                 )
             ) {
                 config?.let { lyricConfig ->
-                    val lyricFormatItems = LyricFormat.entries.map {
+                    val lyricFormatItems = LyricsFormat.entries.map {
                         stringResource(it.labelRes)
                     }
-                    val selectedLyricFormatIndex = LyricFormat.entries
+                    val selectedLyricFormatIndex = LyricsFormat.entries
                         .indexOf(lyricConfig.format)
                         .coerceAtLeast(0)
                     val conversionModeItems = ConversionMode.entries.map {
@@ -187,7 +187,7 @@ fun LyricRenderConfigBottomSheet(
                         items = lyricFormatItems,
                         selectedIndex = selectedLyricFormatIndex,
                         onSelectedIndexChange = { index ->
-                            onLyricFormatChange(LyricFormat.entries[index])
+                            onLyricFormatChange(LyricsFormat.entries[index])
                         }
                     )
                     SwitchPreference(

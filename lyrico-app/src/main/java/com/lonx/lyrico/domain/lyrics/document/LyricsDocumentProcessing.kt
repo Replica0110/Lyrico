@@ -9,38 +9,6 @@ interface LyricsPostProcessor {
     fun process(document: LyricsDocument): LyricsDocument
 }
 
-class TextTransformPostProcessor(
-    private val transformer: (String) -> String
-) : LyricsPostProcessor {
-    override fun process(document: LyricsDocument): LyricsDocument {
-        return document.copy(
-            metadata = document.metadata.copy(
-                title = document.metadata.title?.let(transformer),
-                artist = document.metadata.artist?.let(transformer),
-                album = document.metadata.album?.let(transformer),
-                extra = document.metadata.extra.mapValues { (_, value) -> transformer(value) }
-            ),
-            tracks = document.tracks.map { track ->
-                track.copy(
-                    lines = track.lines.map { line ->
-                        line.copy(
-                            text = transformer(line.text),
-                            words = line.words.map { word ->
-                                word.copy(
-                                    text = transformer(word.text),
-                                    ruby = word.ruby.map { syllable ->
-                                        syllable.copy(text = transformer(syllable.text))
-                                    }
-                                )
-                            }
-                        )
-                    }
-                )
-            }
-        )
-    }
-}
-
 object RemoveTranslationPostProcessor : LyricsPostProcessor {
     override fun process(document: LyricsDocument): LyricsDocument {
         return document.copy(tracks = document.tracks.filterNot { it.type == LyricsTrackType.Translation })
@@ -55,28 +23,17 @@ object RemoveRomanizationPostProcessor : LyricsPostProcessor {
 
 object RemoveEmptyLinesPostProcessor : LyricsPostProcessor {
     override fun process(document: LyricsDocument): LyricsDocument {
-        val removedKeys = mutableSetOf<String>()
-        val removedStarts = mutableSetOf<Long>()
-        val tracks = document.tracks.map { track ->
-            val keptLines = track.lines.filter { line ->
-                val empty = line.isBlankOrPlaceholder()
-                if (empty && track.type == LyricsTrackType.Original) {
-                    line.linkKey?.let(removedKeys::add)
-                    line.startMs?.let(removedStarts::add)
-                }
-                !empty
-            }
-            track.copy(lines = keptLines)
-        }.map { track ->
-            if (track.type.isLinkedToOriginal()) {
-                track.copy(lines = track.lines.filterNot {
-                    it.linkKey in removedKeys || it.startMs?.let(removedStarts::contains) == true
-                })
-            } else {
-                track
-            }
+        val filtered = document.filterLinkedLines { type, line, index ->
+            !line.isBlankOrPlaceholder() ||
+                    (type == LyricsTrackType.Original &&
+                            document.linkedLinesForOriginal(index).any { !it.isBlankOrPlaceholder() })
         }
-        return document.copy(tracks = tracks)
+        return filtered.copy(tracks = filtered.tracks.map { track ->
+            if (track.type != LyricsTrackType.Original) track else track.copy(lines = track.lines.map { line ->
+                // Retain the timed anchor and extensions, without rendering its empty placeholder.
+                if (line.isBlankOrPlaceholder()) line.copy(text = "", words = emptyList()) else line
+            })
+        })
     }
 }
 
@@ -84,32 +41,10 @@ class RemoveTagLinesPostProcessor(
     private val keywords: List<String>
 ) : LyricsPostProcessor {
     override fun process(document: LyricsDocument): LyricsDocument {
-        val removedKeys = mutableSetOf<String>()
-        val removedStarts = mutableSetOf<Long>()
-        val tracks = document.tracks.map { track ->
-            val keptLines = track.lines.filter { line ->
-                val shouldRemove = keywords.any { keyword -> line.visibleText().contains(keyword, ignoreCase = true) }
-                if (shouldRemove && track.type == LyricsTrackType.Original) {
-                    line.linkKey?.let(removedKeys::add)
-                    line.startMs?.let(removedStarts::add)
-                }
-                !shouldRemove
-            }
-            track.copy(lines = keptLines)
-        }.map { track ->
-            if (track.type.isLinkedToOriginal()) {
-                track.copy(lines = track.lines.filterNot {
-                    it.linkKey in removedKeys || it.startMs?.let(removedStarts::contains) == true
-                })
-            } else {
-                track
-            }
+        val filtered = document.filterLinkedLines { _, line, _ ->
+            keywords.none { keyword -> line.visibleText().contains(keyword, ignoreCase = true) }
         }
-
-        return document.copy(
-            metadata = document.metadata.removeMatchingTags(),
-            tracks = tracks
-        )
+        return filtered.copy(metadata = document.metadata.removeMatchingTags())
     }
 
     private fun LyricsMetadata.removeMatchingTags(): LyricsMetadata {
@@ -161,6 +96,26 @@ object OnlyTranslationPostProcessor : LyricsPostProcessor {
     }
 }
 
+private fun LyricsDocument.filterLinkedLines(
+    keep: (LyricsTrackType, LyricsDocumentLine, Int) -> Boolean
+): LyricsDocument {
+    val originals = tracks.firstOrNull { it.type == LyricsTrackType.Original }?.lines.orEmpty()
+    val removedOriginals = originals.indices.filterNot { keep(LyricsTrackType.Original, originals[it], it) }.toSet()
+    return copy(tracks = tracks.map { track ->
+        track.copy(lines = track.lines.filterIndexed { index, line ->
+            if (track.type == LyricsTrackType.Original) index !in removedOriginals
+            else keep(track.type, line, index) && (
+                !track.type.isLinkedToOriginal() || removedOriginals.isEmpty() || run {
+                    val anchors = originals.indices.filter { originalIndex ->
+                        linkedLinesForOriginal(originalIndex, track.type).any { it === line }
+                    }
+                    anchors.isEmpty() || anchors.any { it !in removedOriginals }
+                }
+            )
+        })
+    })
+}
+
 private fun LyricsTrackType.isLinkedToOriginal(): Boolean {
     return this == LyricsTrackType.Translation ||
             this == LyricsTrackType.Romanization ||
@@ -176,16 +131,21 @@ class OffsetPostProcessor(
                 track.copy(
                     lines = track.lines.map { line ->
                         line.copy(
-                            startMs = line.startMs?.let { (it + offsetMs).coerceAtLeast(0L) },
-                            endMs = line.endMs?.let { (it + offsetMs).coerceAtLeast(0L) },
+                            startMs = line.startMs?.let { com.lonx.lyrico.domain.lyrics.LyricsTimestamp.shift(it, offsetMs) },
+                            endMs = line.endMs?.let { com.lonx.lyrico.domain.lyrics.LyricsTimestamp.shift(it, offsetMs) },
+                            extensions = line.extensions.copy(attributes = line.extensions.attributes.mapValues { (name, value) ->
+                                if (name.namespaceUri == null && name.localName in setOf("divBegin", "divEnd")) {
+                                    value.toLongOrNull()?.let { com.lonx.lyrico.domain.lyrics.LyricsTimestamp.shift(it, offsetMs).toString() } ?: value
+                                } else value
+                            }),
                             words = line.words.map { word ->
                                 word.copy(
-                                    startMs = word.startMs?.let { (it + offsetMs).coerceAtLeast(0L) },
-                                    endMs = word.endMs?.let { (it + offsetMs).coerceAtLeast(0L) },
+                                    startMs = word.startMs?.let { com.lonx.lyrico.domain.lyrics.LyricsTimestamp.shift(it, offsetMs) },
+                                    endMs = word.endMs?.let { com.lonx.lyrico.domain.lyrics.LyricsTimestamp.shift(it, offsetMs) },
                                     ruby = word.ruby.map { syllable ->
                                         syllable.copy(
-                                            startMs = syllable.startMs?.let { (it + offsetMs).coerceAtLeast(0L) },
-                                            endMs = syllable.endMs?.let { (it + offsetMs).coerceAtLeast(0L) }
+                                            startMs = syllable.startMs?.let { com.lonx.lyrico.domain.lyrics.LyricsTimestamp.shift(it, offsetMs) },
+                                            endMs = syllable.endMs?.let { com.lonx.lyrico.domain.lyrics.LyricsTimestamp.shift(it, offsetMs) }
                                         )
                                     }
                                 )
@@ -198,7 +158,7 @@ class OffsetPostProcessor(
     }
 }
 
-private fun LyricsDocumentLine.isBlankOrPlaceholder(): Boolean {
+internal fun LyricsDocumentLine.isBlankOrPlaceholder(): Boolean {
     val visible = visibleText().trim()
     return visible.isEmpty() || visible.matches(Regex("^[\\s/\\\\|｜·・.。…_-]*$"))
 }

@@ -30,8 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.data.settings.UiEngine
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.lyrics.normalizedLyricLineOrder
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.normalizedLyricsLineOrder
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.theme.LocalUiEngine
 import com.moriafly.salt.ui.SaltTheme
@@ -45,14 +45,14 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun LyricLineOrderBottomSheetContent(
-    lineOrder: List<LyricLineTrack>,
-    visibleTracks: List<LyricLineTrack>,
-    onLineOrderChange: (List<LyricLineTrack>) -> Unit
+fun LyricsLineOrderBottomSheetContent(
+    lineOrder: List<LyricsLineTrack>,
+    visibleTracks: List<LyricsLineTrack>,
+    onLineOrderChange: (List<LyricsLineTrack>) -> Unit
 ) {
     val salt = LocalUiEngine.current == UiEngine.SALT
     var currentVisibleOrder by remember(lineOrder, visibleTracks) {
-        mutableStateOf(lineOrder.normalizedLyricLineOrder().filter { it in visibleTracks })
+        mutableStateOf(lineOrder.normalizedLyricsLineOrder().filter { it in visibleTracks })
     }
     // Pointer-input callbacks can outlive recomposition while dragging the same row again.
     val saveOrder by rememberUpdatedState {
@@ -157,13 +157,13 @@ fun LyricLineOrderBottomSheetContent(
 }
 
 private fun mergeVisibleOrder(
-    fullOrder: List<LyricLineTrack>,
-    visibleOrder: List<LyricLineTrack>
-): List<LyricLineTrack> {
+    fullOrder: List<LyricsLineTrack>,
+    visibleOrder: List<LyricsLineTrack>
+): List<LyricsLineTrack> {
     val pendingVisible = ArrayDeque(visibleOrder)
     val visibleSet = visibleOrder.toSet()
-    val merged = fullOrder.normalizedLyricLineOrder().map { track ->
+    val merged = fullOrder.normalizedLyricsLineOrder().map { track ->
         if (track in visibleSet) pendingVisible.removeFirst() else track
     }
-    return (merged + pendingVisible).normalizedLyricLineOrder()
+    return (merged + pendingVisible).normalizedLyricsLineOrder()
 }

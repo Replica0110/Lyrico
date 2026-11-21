@@ -3,21 +3,18 @@ package com.lonx.lyrico.ui.screens.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
 import com.lonx.lyrico.data.lyrics.LyricsResult
-import com.lonx.lyrico.data.plugin.GlobalFieldProcessSettings
 import com.lonx.lyrico.data.plugin.PluginCapability
 import com.lonx.lyrico.data.plugin.PluginSourceType
-import com.lonx.lyrico.data.plugin.defaultPluginFieldProcessConfig
 import com.lonx.lyrico.data.song.search.SearchSourceTabStyle
 import com.lonx.lyrico.data.song.search.SongSearchResult
 import com.lonx.lyrico.data.text.ConversionMode
 import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.search.SearchSource
-import com.lonx.lyrico.domain.lyrics.LyricEncoder
-import com.lonx.lyrico.domain.plugin.PluginFieldPostProcessor
+import com.lonx.lyrico.domain.lyrics.LyricsRenderer
 import com.lonx.lyrico.plugin.source.SearchSourceConfigApplier
 import com.lonx.lyrico.plugin.source.SearchSourceProvider
 import com.lonx.lyrico.ui.UiMessage
@@ -621,27 +618,17 @@ class LyricsSearchViewModel(
     }
 
     private fun LyricsSearchCandidateUi.render(
-        config: LyricRenderConfig
+        config: LyricsRenderConfig
     ): LyricsSearchCandidateUi {
         val rawLyrics = lyrics ?: return copy(formattedLyrics = "")
-        val processor = PluginFieldPostProcessor(config.toGlobalFieldProcessSettings())
-        val processed = processor.processLyrics(
-            lyrics = rawLyrics,
-            config = defaultPluginFieldProcessConfig(song.pluginId)
-        )
-        return copy(
-            formattedLyrics = LyricEncoder.encode(
-                result = processed,
-                config = config.copy(conversionMode = ConversionMode.NONE)
-            )
-        )
+        return copy(formattedLyrics = LyricsRenderer.render(result = rawLyrics, config = config))
     }
 
-    fun setLyricFormat(format: LyricFormat) {
+    fun setLyricFormat(format: LyricsFormat) {
         viewModelScope.launch { settingsRepository.saveLyricDisplayMode(format) }
     }
 
-    fun setLyricLineOrder(order: List<LyricLineTrack>) {
+    fun setLyricLineOrder(order: List<LyricsLineTrack>) {
         viewModelScope.launch { settingsRepository.saveLyricLineOrder(order) }
     }
 
@@ -666,12 +653,6 @@ class LyricsSearchViewModel(
     fun setConversionMode(mode: ConversionMode) {
         viewModelScope.launch { settingsRepository.saveConversionMode(mode) }
     }
-
-    private fun LyricRenderConfig.toGlobalFieldProcessSettings(): GlobalFieldProcessSettings =
-        GlobalFieldProcessSettings(
-            scriptConversion = conversionMode,
-            removeEmptyLines = removeEmptyLines
-        )
 
     private fun Throwable.toUiMessage(): UiMessage =
         UiMessage.DynamicString(message ?: javaClass.simpleName)

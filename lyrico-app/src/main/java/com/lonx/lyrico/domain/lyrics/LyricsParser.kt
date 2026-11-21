@@ -1,18 +1,20 @@
 package com.lonx.lyrico.domain.lyrics
 
-import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsFormat
 import com.lonx.lyrico.data.lyrics.LyricsResult
+import com.lonx.lyrico.data.lyrics.document.LyricsDocument
 import com.lonx.lyrico.domain.lyrics.document.LyricsDocumentPipeline
 import com.lonx.lyrico.domain.lyrics.document.toLyricsResult
+import kotlinx.coroutines.CancellationException
 
-object LyricDecoder {
-    fun detectFormat(lyricsText: String): LyricFormat? {
+object LyricsParser {
+    fun detectFormat(lyricsText: String): LyricsFormat? {
         if (lyricsText.isBlank()) return null
 
         // TTML 是 XML 文档：仅当文档以 <tt> 根元素开头时才判定为 TTML。
         // 不能因 LRC 正文任意位置出现 "<tt " 或 ttml 命名空间字符串而误判整份歌词。
         if (looksLikeTtml(lyricsText)) {
-            return LyricFormat.TTML
+            return LyricsFormat.TTML
         }
 
         val sampleLines = lyricsText.lines().filter { it.isNotBlank() }
@@ -24,7 +26,7 @@ object LyricDecoder {
         for (line in sampleLines) {
             if (line.startsWith("[ti:") || line.startsWith("[ar:") || line.startsWith("[al:")) continue
 
-            val matches = LyricFormatter.LRC_TIME_PATTERN.findAll(line).toList()
+            val matches = LyricsTimestamp.lrcTimePattern.findAll(line).toList()
             if (matches.isEmpty()) continue
 
             val hasBracket = matches.any { it.value.startsWith("[") }
@@ -42,9 +44,9 @@ object LyricDecoder {
         }
 
         return when {
-            hasEnhanced -> LyricFormat.ENHANCED_LRC
-            hasVerbatim -> LyricFormat.VERBATIM_LRC
-            hasPlain -> LyricFormat.PLAIN_LRC
+            hasEnhanced -> LyricsFormat.ENHANCED_LRC
+            hasVerbatim -> LyricsFormat.VERBATIM_LRC
+            hasPlain -> LyricsFormat.PLAIN_LRC
             else -> null
         }
     }
@@ -76,20 +78,31 @@ object LyricDecoder {
     }
 
     private fun isTtRootElement(text: String): Boolean {
-        if (!text.startsWith("<tt")) return false
-        val boundary = text.getOrNull(3) ?: return false
-        return boundary == '>' || boundary == '/' || boundary.isWhitespace()
+        return ttmlRootPattern.containsMatchIn(text)
     }
+
+    private val ttmlRootPattern = Regex("^<(?:[A-Za-z_][A-Za-z0-9_.-]*:)?tt(?=[\\s/>])")
 
     /**
      * 安全解析入口：歌词是不可信输入，解析失败返回 null，异常不向 UI 抛出。
      */
-    fun decode(lyricsText: String): LyricsResult? {
+    fun parseOrNull(lyricsText: String): LyricsResult? {
+        return safely { parseDocumentOrNull(lyricsText)?.toLyricsResult() }
+    }
+
+    internal fun parseDocumentOrNull(lyricsText: String): LyricsDocument? {
         val format = detectFormat(lyricsText) ?: return null
-        return runCatching {
-            LyricsDocumentPipeline.parse(lyricsText, format)?.let { document ->
-                document.toLyricsResult()
-            }
-        }.getOrNull()
+        return safely {
+            LyricsDocumentPipeline.parse(lyricsText, format)
+        }
+    }
+
+    private inline fun <T> safely(parse: () -> T?): T? {
+        return try {
+            parse()
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            null
+        }
     }
 }

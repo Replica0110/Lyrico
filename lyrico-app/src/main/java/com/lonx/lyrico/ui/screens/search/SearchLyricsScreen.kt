@@ -66,7 +66,7 @@ import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
 import com.lonx.lyrico.ui.components.icons.LucideIcons
 import com.lonx.lyrico.ui.components.library.EmptyStateKind
 import com.lonx.lyrico.ui.components.library.IllustratedEmptyState
-import com.lonx.lyrico.ui.components.lyrics.LyricRenderConfigBottomSheet
+import com.lonx.lyrico.ui.components.lyrics.LyricsRenderConfigBottomSheet
 import com.lonx.lyrico.ui.components.lyrics.LyricsPreviewPane
 import com.lonx.lyrico.ui.components.progress.salt.SaltCircularProgressIndicator
 import com.lonx.lyrico.ui.components.scaffold.scaffoldPageWindowInsets
@@ -386,7 +386,7 @@ fun SearchLyricsScreen(
         }
     )
 
-    LyricRenderConfigBottomSheet(
+    LyricsRenderConfigBottomSheet(
         show = showLyricRenderConfig,
         config = lyricConfig,
         onDismissRequest = { showLyricRenderConfig = false },

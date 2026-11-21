@@ -17,6 +17,7 @@ import com.lonx.lyrico.data.batch.BatchTaskType
 import com.lonx.lyrico.data.batch.BatchTaskStatus
 import com.lonx.lyrico.data.log.AppLogRepository
 import com.lonx.lyrico.data.batch.BatchTaskRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.worker.processor.BatchTaskProcessorFactory
 import com.lonx.lyrico.worker.processor.BatchTaskSkippedException
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,7 @@ class BatchTaskWorker(
     private val taskRepository: BatchTaskRepository by inject()
     private val processorFactory: BatchTaskProcessorFactory by inject()
     private val appLogRepository: AppLogRepository by inject()
+    private val settingsRepository: SettingsRepository by inject()
 
     private val taskId: String = inputData.getString(KEY_TASK_ID) ?: ""
 
@@ -55,10 +57,11 @@ class BatchTaskWorker(
 
         try {
             BatchTaskNotification.ensureChannel(applicationContext)
-            val task = taskRepository.getTask(taskId) ?: return Result.failure()
-            if (task.status != BatchTaskStatus.QUEUED && task.status != BatchTaskStatus.RUNNING) {
+            val storedTask = taskRepository.getTask(taskId) ?: return Result.failure()
+            if (storedTask.status != BatchTaskStatus.QUEUED && storedTask.status != BatchTaskStatus.RUNNING) {
                 return Result.success()
             }
+            val task = BatchLyricsConfigSnapshot.prepare(storedTask, settingsRepository, taskRepository)
             val title = getTaskTitle(task.type)
             val total = task.total
             val startedAt = System.currentTimeMillis()

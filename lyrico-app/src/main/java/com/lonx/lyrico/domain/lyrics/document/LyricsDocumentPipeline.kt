@@ -1,34 +1,31 @@
 package com.lonx.lyrico.domain.lyrics.document
 
-import com.github.houbb.opencc4j.util.ZhConverterUtil
 import com.lonx.lyrico.data.log.AppLog
 import com.lonx.lyrico.data.log.AppLogLevel
 import com.lonx.lyrico.data.log.AppLogType
-import com.lonx.lyrico.data.lyrics.LyricFormat
-import com.lonx.lyrico.data.lyrics.LyricLineTrack
-import com.lonx.lyrico.data.lyrics.LyricRenderConfig
-import com.lonx.lyrico.data.lyrics.LyricsPayloadType
-import com.lonx.lyrico.data.lyrics.LyricsResult
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
 import com.lonx.lyrico.data.lyrics.document.LyricsDocument
 import com.lonx.lyrico.data.plugin.ResolvedFieldProcessRule
 import com.lonx.lyrico.data.text.ConversionMode
 
 object LyricsDocumentPipeline {
-    private val parsers: Map<LyricFormat, LyricsFormatParser> = listOf(
+    private val parsers: Map<LyricsFormat, LyricsFormatParser> = listOf(
         PlainLrcParser,
         VerbatimLrcParser,
         EnhancedLrcParser,
         TtmlParser
     ).associateBy { it.format }
 
-    private val writers: Map<LyricFormat, LyricsFormatWriter> = listOf(
+    private val writers: Map<LyricsFormat, LyricsFormatWriter> = listOf(
         PlainLrcWriter,
         VerbatimLrcWriter,
         EnhancedLrcWriter,
         TtmlWriter
     ).associateBy { it.format }
 
-    fun parse(raw: String, sourceFormat: LyricFormat): LyricsDocument? {
+    fun parse(raw: String, sourceFormat: LyricsFormat): LyricsDocument? {
         return try {
             parsers[sourceFormat]?.parse(raw)
         } catch (error: Exception) {
@@ -42,68 +39,54 @@ object LyricsDocumentPipeline {
         }
     }
 
-    fun processRawResult(
-        result: LyricsResult,
-        config: LyricRenderConfig,
-        offset: Long = 0L
-    ): String? {
-        val source = selectSource(result, config) ?: return null
-        val raw = result.rawFor(source).takeIf { it.isNotBlank() } ?: return null
-        return process(
-            raw = raw,
-            sourceFormat = source,
-            targetFormat = config.format,
-            conversionMode = config.conversionMode,
-            showTranslation = config.showTranslation,
-            showRomanization = config.showRomanization,
-            onlyTranslationIfAvailable = config.onlyTranslationIfAvailable,
-            lineOrder = config.normalizedLineOrder,
-            removeEmptyLines = config.removeEmptyLines,
-            offset = offset
-        )
-    }
-
-    fun processRawResultForFieldRule(
-        result: LyricsResult,
-        rule: ResolvedFieldProcessRule
-    ): LyricsResult {
-        fun processRaw(raw: String, sourceFormat: LyricFormat): String {
-            if (raw.isBlank()) return raw
-            return process(
-                raw = raw,
-                sourceFormat = sourceFormat,
-                targetFormat = sourceFormat,
-                conversionMode = rule.scriptConversion,
-                normalizeWhitespace = rule.normalizeWhitespace,
-                removeEmptyLines = rule.removeEmptyLines,
-            ) ?: raw
-        }
-
-        return result.copy(
-            rawPlainLrc = processRaw(result.rawPlainLrc, LyricFormat.PLAIN_LRC),
-            rawVerbatimLrc = processRaw(result.rawVerbatimLrc, LyricFormat.VERBATIM_LRC),
-            rawEnhancedLrc = processRaw(result.rawEnhancedLrc, LyricFormat.ENHANCED_LRC),
-            rawTtml = processRaw(result.rawTtml, LyricFormat.TTML),
-            rawMultiPersonEnhancedLrc = processRaw(result.rawMultiPersonEnhancedLrc, LyricFormat.ENHANCED_LRC)
-        )
-    }
-
     fun process(
         raw: String,
-        sourceFormat: LyricFormat,
-        targetFormat: LyricFormat,
+        sourceFormat: LyricsFormat,
+        targetFormat: LyricsFormat,
         conversionMode: ConversionMode = ConversionMode.NONE,
         showTranslation: Boolean = true,
         showRomanization: Boolean = true,
         onlyTranslationIfAvailable: Boolean = false,
-        lineOrder: List<LyricLineTrack> = com.lonx.lyrico.data.lyrics.DefaultLyricLineOrder,
+        lineOrder: List<LyricsLineTrack> = com.lonx.lyrico.data.lyrics.defaultLyricsLineOrder,
+        normalizeWhitespace: Boolean = false,
+        removeEmptyLines: Boolean = false,
+        removeTagLineKeywords: List<String> = emptyList(),
+        offset: Long = 0L
+    ): String? {
+        val document = parse(raw, sourceFormat) ?: return null
+        return processParsed(
+            raw = raw,
+            document = document,
+            sourceFormat = sourceFormat,
+            targetFormat = targetFormat,
+            conversionMode = conversionMode,
+            showTranslation = showTranslation,
+            showRomanization = showRomanization,
+            onlyTranslationIfAvailable = onlyTranslationIfAvailable,
+            lineOrder = lineOrder,
+            normalizeWhitespace = normalizeWhitespace,
+            removeEmptyLines = removeEmptyLines,
+            removeTagLineKeywords = removeTagLineKeywords,
+            offset = offset
+        )
+    }
+
+    internal fun processParsed(
+        raw: String,
+        document: LyricsDocument,
+        sourceFormat: LyricsFormat,
+        targetFormat: LyricsFormat,
+        conversionMode: ConversionMode = ConversionMode.NONE,
+        showTranslation: Boolean = true,
+        showRomanization: Boolean = true,
+        onlyTranslationIfAvailable: Boolean = false,
+        lineOrder: List<LyricsLineTrack> = com.lonx.lyrico.data.lyrics.defaultLyricsLineOrder,
         normalizeWhitespace: Boolean = false,
         removeEmptyLines: Boolean = false,
         removeTagLineKeywords: List<String> = emptyList(),
         offset: Long = 0L
     ): String? {
         val writer = writers[targetFormat] ?: return null
-        val document = parse(raw, sourceFormat) ?: return null
         return processDocument(
             document = document,
             writer = writer,
@@ -124,20 +107,6 @@ object LyricsDocumentPipeline {
         }
     }
 
-    fun processStructuredResult(result: LyricsResult, config: LyricRenderConfig, offset: Long = 0L): String? {
-        return processDocument(
-            document = result.toLyricsDocument(),
-            writer = TtmlWriter,
-            conversionMode = config.conversionMode,
-            showTranslation = config.showTranslation,
-            showRomanization = config.showRomanization,
-            onlyTranslationIfAvailable = config.onlyTranslationIfAvailable,
-            lineOrder = config.normalizedLineOrder,
-            removeEmptyLines = config.removeEmptyLines,
-            offset = offset
-        )
-    }
-
     private fun processDocument(
         document: LyricsDocument,
         writer: LyricsFormatWriter,
@@ -145,73 +114,41 @@ object LyricsDocumentPipeline {
         showTranslation: Boolean,
         showRomanization: Boolean,
         onlyTranslationIfAvailable: Boolean,
-        lineOrder: List<LyricLineTrack>,
+        lineOrder: List<LyricsLineTrack>,
         normalizeWhitespace: Boolean = false,
         removeEmptyLines: Boolean,
         removeTagLineKeywords: List<String> = emptyList(),
         offset: Long
     ): String? {
-        var processed = document
-        val processors = buildList {
-            if (conversionMode != ConversionMode.NONE) {
-                add(TextTransformPostProcessor { text -> convertText(text, conversionMode) })
-            }
-            if (normalizeWhitespace) {
-                add(TextTransformPostProcessor(::normalizeVisibleWhitespace))
-            }
-            if (!showTranslation) add(RemoveTranslationPostProcessor)
-            if (!showRomanization) add(RemoveRomanizationPostProcessor)
-            val normalizedTagLineKeywords = removeTagLineKeywords
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-            if (normalizedTagLineKeywords.isNotEmpty()) {
-                add(RemoveTagLinesPostProcessor(normalizedTagLineKeywords))
-            }
-            if (removeEmptyLines) add(RemoveEmptyLinesPostProcessor)
-            if (onlyTranslationIfAvailable) add(OnlyTranslationPostProcessor)
-            if (offset != 0L) add(OffsetPostProcessor(offset))
-        }
-
-        processors.forEach { processor ->
-            processed = processor.process(processed)
-        }
-        return writer.write(processed, lineOrder).takeIf { it.isNotBlank() }
+        val config = LyricsRenderConfig(writer.format, showRomanization, showTranslation,
+            onlyTranslationIfAvailable, lineOrder, removeEmptyLines, conversionMode)
+        val rule = ResolvedFieldProcessRule(conversionMode, trim = false,
+            normalizeWhitespace = normalizeWhitespace, removeEmptyLines = removeEmptyLines)
+        val processed = transform(document, config, rule, offset, removeTagLineKeywords)
+        return write(processed, config, rule.removeEmptyLines)
     }
 
-    private fun selectSource(result: LyricsResult, config: LyricRenderConfig): LyricFormat? {
-        if (config.format == LyricFormat.TTML && result.rawTtml.isNotBlank()) return LyricFormat.TTML
-        if (config.format == LyricFormat.ENHANCED_LRC && result.rawEnhancedLrc.isNotBlank()) return LyricFormat.ENHANCED_LRC
-        if (config.format == LyricFormat.VERBATIM_LRC && result.rawVerbatimLrc.isNotBlank()) return LyricFormat.VERBATIM_LRC
-        if (config.format == LyricFormat.PLAIN_LRC && result.rawPlainLrc.isNotBlank()) return LyricFormat.PLAIN_LRC
-
-        if (result.rawTtml.isNotBlank() && (config.showTranslation || config.onlyTranslationIfAvailable)) {
-            return LyricFormat.TTML
-        }
-        if (result.rawEnhancedLrc.isNotBlank()) return LyricFormat.ENHANCED_LRC
-        if (result.rawVerbatimLrc.isNotBlank()) return LyricFormat.VERBATIM_LRC
-        if (result.rawPlainLrc.isNotBlank()) return LyricFormat.PLAIN_LRC
-        if (result.payloadType == LyricsPayloadType.STRUCTURED && result.original.isNotEmpty()) return null
-        return null
+    internal fun transform(
+        document: LyricsDocument,
+        config: LyricsRenderConfig,
+        rule: ResolvedFieldProcessRule,
+        offset: Long = 0L,
+        removeTagLineKeywords: List<String> = emptyList()
+    ): LyricsDocument {
+        var processed = LyricsTextPostProcessor(rule).process(document)
+        if (!config.showTranslation) processed = RemoveTranslationPostProcessor.process(processed)
+        if (!config.showRomanization) processed = RemoveRomanizationPostProcessor.process(processed)
+        val keywords = removeTagLineKeywords.map { it.trim() }.filter { it.isNotEmpty() }
+        if (keywords.isNotEmpty()) processed = RemoveTagLinesPostProcessor(keywords).process(processed)
+        if (rule.removeEmptyLines) processed = RemoveEmptyLinesPostProcessor.process(processed)
+        if (config.onlyTranslationIfAvailable) processed = OnlyTranslationPostProcessor.process(processed)
+        if (offset != 0L) processed = OffsetPostProcessor(offset).process(processed)
+        return processed
     }
 
-    private fun LyricsResult.rawFor(format: LyricFormat): String {
-        return when (format) {
-            LyricFormat.PLAIN_LRC -> rawPlainLrc
-            LyricFormat.VERBATIM_LRC -> rawVerbatimLrc.ifBlank { rawEnhancedLrc }
-            LyricFormat.ENHANCED_LRC -> rawEnhancedLrc
-            LyricFormat.TTML -> rawTtml
-        }
-    }
-
-    private fun convertText(text: String, conversionMode: ConversionMode): String {
-        return when (conversionMode) {
-            ConversionMode.TRADITIONAL_TO_SIMPLIFIED -> ZhConverterUtil.toSimple(text)
-            ConversionMode.SIMPLIFIED_TO_TRADITIONAL -> ZhConverterUtil.toTraditional(text)
-            else -> text
-        }
-    }
-
-    private fun normalizeVisibleWhitespace(text: String): String {
-        return text.replace(Regex("""[ \t\u00A0]+"""), " ")
+    internal fun write(document: LyricsDocument, config: LyricsRenderConfig, removeEmptyLines: Boolean): String? {
+        val writer = writers[config.format] ?: return null
+        if (!document.hasRenderableLyrics(config.format)) return null
+        return writer.write(document, config.normalizedLineOrder, removeEmptyLines).takeIf { it.isNotBlank() }
     }
 }

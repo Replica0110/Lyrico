@@ -1,6 +1,6 @@
 package com.lonx.lyrico.data.lyrics.document
 
-import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsFormat
 
 data class LyricsDocument(
     val metadata: LyricsMetadata = LyricsMetadata(),
@@ -10,7 +10,7 @@ data class LyricsDocument(
     val bodyExtensions: ExtensionMap = ExtensionMap(),
     val headMetadataElements: List<ExtensionElement> = emptyList(),
     val itunesMetadataElements: List<ExtensionElement> = emptyList(),
-    val sourceFormat: LyricFormat? = null
+    val sourceFormat: LyricsFormat? = null
 )
 
 data class LyricsMetadata(

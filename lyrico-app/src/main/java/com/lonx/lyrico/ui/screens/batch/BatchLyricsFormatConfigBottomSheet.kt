@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.lyrics.LyricFormat
+import com.lonx.lyrico.data.lyrics.LyricsFormat
 import com.lonx.lyrico.data.lyrics.LyricsOperation
 import com.lonx.lyrico.data.lyrics.LyricsColumnMapping
 import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
@@ -21,7 +21,7 @@ import com.lonx.lyrico.ui.components.lyrics.LyricsOperationContent
 fun BatchLyricsFormatConfigBottomSheet(
     state: BatchLyricsFormatUiState,
     onDismiss: () -> Unit,
-    onFormat: (LyricFormat) -> Unit,
+    onFormat: (LyricsFormat) -> Unit,
     onConcurrency: (Int) -> Unit,
     onTwoColumnMapping: (LyricsColumnMapping) -> Unit,
     onThreeColumnMapping: (LyricsColumnMapping) -> Unit,
@@ -48,7 +48,7 @@ fun BatchLyricsFormatConfigBottomSheet(
                     LyricsColumnOrderSettings(state.twoColumnMapping, state.threeColumnMapping,
                         onTwoColumnMapping, onThreeColumnMapping)
                 } else {
-                    LyricsOperationContent(state.operation, state.targetFormat ?: LyricFormat.PLAIN_LRC, onFormat)
+                    LyricsOperationContent(state.operation, state.targetFormat ?: LyricsFormat.PLAIN_LRC, onFormat)
                 }
                 LyricsConcurrency(state.concurrency, onConcurrency)
             }

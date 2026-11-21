@@ -3,7 +3,7 @@ package com.lonx.lyrico.ui.components.cover
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import org.koin.compose.koinInject
 
 /** The configured artist poster folder, plus the revision that changes when it is refreshed. */

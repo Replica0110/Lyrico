@@ -1,7 +1,7 @@
 package com.lonx.lyrico.plugin.i18n
 
-import com.lonx.lyrico.data.model.plugin.PluginConfigFieldType
-import com.lonx.lyrico.data.model.plugin.PluginManifest
+import com.lonx.lyrico.data.plugin.PluginConfigFieldType
+import com.lonx.lyrico.data.plugin.PluginManifest
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.Locale

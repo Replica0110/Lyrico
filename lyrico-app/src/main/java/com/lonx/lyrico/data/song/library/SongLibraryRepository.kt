@@ -1,14 +1,12 @@
 package com.lonx.lyrico.data.song.library
 
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.model.SortBy
-import com.lonx.lyrico.data.model.SortOrder
+import com.lonx.lyrico.data.db.entity.SongEntity
 import kotlinx.coroutines.flow.Flow
 
 interface SongLibraryRepository {
     fun observeSongs(
-        sortBy: SortBy,
+        sortBy: SongSortBy,
         order: SortOrder,
         folderId: Long? = null
     ): Flow<List<SongEntity>>

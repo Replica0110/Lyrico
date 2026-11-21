@@ -30,7 +30,7 @@
 ############################################
 # Coil
 ############################################
--keep class com.lonx.lyrico.utils.coil.AudioCoverFetcher* { *; }
+-keep class com.lonx.lyrico.data.artwork.coil.AudioCoverFetcher* { *; }
 
 ############################################
 # opencc4j

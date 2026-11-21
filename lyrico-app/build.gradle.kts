@@ -59,6 +59,7 @@ android {
         applicationId = "com.lonx.lyrico"
         minSdk = 28
         targetSdk = 36
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = baseVersionCode
         versionName = "$baseVersionName-${gitCommitHash().get()}"
 
@@ -140,9 +141,13 @@ ksp {
 }
 dependencies {
     testImplementation(libs.junit)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     testImplementation(libs.robolectric)
     testImplementation("androidx.work:work-testing:${libs.versions.work.get()}")
     implementation(libs.salt.ui)
+    implementation(libs.haze.blur)
+    implementation(libs.haze.glass)
     // Project Modules
     implementation(project(":lyrico-audiotag"))
 
@@ -163,7 +168,6 @@ dependencies {
     implementation(libs.miuix.preference.android)
     implementation(libs.miuix.ui.android)
     implementation(libs.lottie.compose)
-    implementation(libs.miuix.blur.android)
     implementation(libs.coil.compose)
     implementation(libs.zoomable)
     implementation(libs.coil.network.okhttp)

@@ -1,7 +1,7 @@
 package com.lonx.lyrico.data.song.file
 
 import android.content.IntentSender
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
 
 sealed interface DeleteSongFileResult {
     data object Deleted : DeleteSongFileResult

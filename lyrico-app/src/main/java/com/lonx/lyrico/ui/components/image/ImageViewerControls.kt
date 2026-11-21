@@ -36,9 +36,9 @@ import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.settings.UiEngine
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.data.model.artist.ArtistPosterFile
+import com.lonx.lyrico.data.artwork.ArtistPosterFile
 import com.moriafly.salt.ui.SaltTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import top.yukonga.miuix.kmp.basic.*

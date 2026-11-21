@@ -1,6 +1,6 @@
 package com.lonx.lyrico.domain.poster
 
-import com.lonx.lyrico.data.model.CharacterMappingDefaults
+import com.lonx.lyrico.data.rename.CharacterMappingDefaults
 import java.text.Normalizer
 
 /**

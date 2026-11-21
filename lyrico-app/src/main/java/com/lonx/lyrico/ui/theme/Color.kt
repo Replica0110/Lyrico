@@ -5,7 +5,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
+import com.lonx.lyrico.data.settings.ThemeColor
+import com.lonx.lyrico.data.settings.UiEngine
 import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.Dark
@@ -14,7 +15,6 @@ import top.yukonga.miuix.kmp.theme.ColorSchemeMode.MonetDark
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.MonetLight
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode.MonetSystem
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
 
 val isDarkTheme: Boolean
     @Composable
@@ -44,7 +44,6 @@ object LyricoColors {
         } else {
             MiuixTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
         }
-
 
     /**
      * Modified state background color (for edited items).
@@ -104,18 +103,17 @@ object LyricoColors {
         }
 }
 
-data class KeyColor(
-    @field:StringRes val nameResId: Int,
-    val color: Color?
-)
+val ThemeColor.color: Color?
+    get() = argb?.let { Color(it) }
 
-val KeyColors = listOf(
-    KeyColor(R.string.color_default, null),
-    KeyColor(R.string.color_blue, Color(0xFF3482FF)),
-    KeyColor(R.string.color_green, Color(0xFF36D167)),
-    KeyColor(R.string.color_yellow, Color(0xFFFFB21D)),
-    KeyColor(R.string.color_orange, Color(0xFFFF5722)),
-    KeyColor(R.string.color_purple, Color(0xFF7C4DFF)),
-    KeyColor(R.string.color_pink, Color(0xFFE91E63)),
-    KeyColor(R.string.color_teal, Color(0xFF00BCD4))
-)
+val ThemeColor.nameResId: Int
+    @StringRes get() = when (this) {
+        ThemeColor.DEFAULT -> R.string.color_default
+        ThemeColor.BLUE -> R.string.color_blue
+        ThemeColor.GREEN -> R.string.color_green
+        ThemeColor.YELLOW -> R.string.color_yellow
+        ThemeColor.ORANGE -> R.string.color_orange
+        ThemeColor.PURPLE -> R.string.color_purple
+        ThemeColor.PINK -> R.string.color_pink
+        ThemeColor.TEAL -> R.string.color_teal
+    }

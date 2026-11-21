@@ -51,6 +51,8 @@ Lyrico 的在线音乐信息搜索采用插件化架构。搜索源插件以 Jav
 
 ## 构建
 
+目录归属、命名、代码风格和重构验证见 [Lyrico 代码与重构规范](./CONTRIBUTING.md)。
+
 推荐使用 Android Studio 打开项目，也可以直接通过 Gradle 构建。
 
 基础环境：

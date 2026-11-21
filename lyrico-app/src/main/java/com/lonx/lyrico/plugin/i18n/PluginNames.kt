@@ -1,7 +1,7 @@
 package com.lonx.lyrico.plugin.i18n
 
-import com.lonx.lyrico.data.model.entity.SourcePluginEntity
-import com.lonx.lyrico.data.model.plugin.PluginManifest
+import com.lonx.lyrico.data.db.entity.SourcePluginEntity
+import com.lonx.lyrico.data.plugin.PluginManifest
 import kotlinx.serialization.json.Json
 import java.io.File
 

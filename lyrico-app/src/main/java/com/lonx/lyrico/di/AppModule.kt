@@ -2,39 +2,45 @@ package com.lonx.lyrico.di
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.lonx.lyrico.BuildConfig
-import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.SharedSelectionManager
-import com.lonx.lyrico.data.network.NetworkLoggingInterceptor
+import com.lonx.lyrico.data.artwork.ArtistPosterReader
+import com.lonx.lyrico.data.artwork.ArtworkDimensionsReader
+import com.lonx.lyrico.data.cache.CacheManager
+import com.lonx.lyrico.data.db.LyricoDatabase
 import com.lonx.lyrico.data.editfield.EditFieldConfigRepository
-import com.lonx.lyrico.data.repository.BatchTaskRepository
-import com.lonx.lyrico.data.repository.BatchTaskRepositoryImpl
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.repository.AppLogRepositoryImpl
-import com.lonx.lyrico.data.repository.CustomTagKeyRepository
-import com.lonx.lyrico.data.repository.GhContributorRepository
-import com.lonx.lyrico.data.repository.GhContributorRepositoryImpl
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.LibraryIndexRepositoryImpl
-import com.lonx.lyrico.data.repository.PlaybackRepository
-import com.lonx.lyrico.data.repository.PlaybackRepositoryImpl
-import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.SettingsRepositoryImpl
-import com.lonx.lyrico.data.repository.SourcePluginRepository
-import com.lonx.lyrico.data.repository.SourcePluginRepositoryImpl
-import com.lonx.lyrico.data.repository.UpdateRepository
-import com.lonx.lyrico.data.repository.UpdateRepositoryImpl
-import com.lonx.lyrico.data.song.library.SongLibraryRepository
-import com.lonx.lyrico.data.song.library.SongLibraryRepositoryImpl
-import com.lonx.lyrico.data.repository.LibraryFolderRepository
-import com.lonx.lyrico.utils.CacheManager
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.network.NetworkLoggingInterceptor
+import com.lonx.lyrico.data.plugin.SourcePluginRepository
+import com.lonx.lyrico.data.plugin.SourcePluginRepositoryImpl
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.log.AppLogRepositoryImpl
+import com.lonx.lyrico.data.batch.BatchTaskRepository
+import com.lonx.lyrico.data.batch.BatchTaskRepositoryImpl
+import com.lonx.lyrico.data.editfield.CustomTagKeyRepository
+import com.lonx.lyrico.data.contributor.GitHubContributorRepository
+import com.lonx.lyrico.data.contributor.GitHubContributorRepositoryImpl
+import com.lonx.lyrico.data.song.library.LibraryFolderRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.song.library.LibraryIndexRepositoryImpl
+import com.lonx.lyrico.platform.player.ExternalPlayerLauncher
+import com.lonx.lyrico.data.settings.SettingsRepository
+import com.lonx.lyrico.data.settings.SettingsRepositoryImpl
+import com.lonx.lyrico.data.update.UpdateRepository
+import com.lonx.lyrico.data.update.UpdateRepositoryImpl
 import com.lonx.lyrico.data.song.file.AudioFileAccess
 import com.lonx.lyrico.data.song.file.SongFileRepository
 import com.lonx.lyrico.data.song.file.SongFileRepositoryImpl
+import com.lonx.lyrico.data.song.library.SongLibraryRepository
+import com.lonx.lyrico.data.song.library.SongLibraryRepositoryImpl
 import com.lonx.lyrico.data.song.mapper.SongMetadataMapper
 import com.lonx.lyrico.data.song.mapper.SortKeyUpdater
+import com.lonx.lyrico.data.song.scan.LibraryOperationLock
+import com.lonx.lyrico.data.song.scan.LibraryScanManager
+import com.lonx.lyrico.data.song.scan.LibraryScanManagerImpl
 import com.lonx.lyrico.data.song.scan.LibraryScanRepository
 import com.lonx.lyrico.data.song.scan.LibraryScanRepositoryImpl
+import com.lonx.lyrico.data.song.scan.MediaScanner
 import com.lonx.lyrico.data.song.search.SongSearchRepository
 import com.lonx.lyrico.data.song.search.SongSearchRepositoryImpl
 import com.lonx.lyrico.data.song.tag.AudioTagMutationResolver
@@ -45,65 +51,72 @@ import com.lonx.lyrico.data.song.tag.ImageBytesFetcher
 import com.lonx.lyrico.data.song.tag.ImageMimeTypeDetector
 import com.lonx.lyrico.data.song.tag.PictureMutationResolver
 import com.lonx.lyrico.data.song.tag.TagMapBuilder
-import com.lonx.lyrico.domain.SearchSourceConfigApplier
+import com.lonx.lyrico.ui.update.UpdatePromptCoordinator
+import com.lonx.lyrico.diagnostics.ProblemReproductionRecorder
 import com.lonx.lyrico.domain.song.usecase.DeleteSongsUseCase
 import com.lonx.lyrico.domain.song.usecase.ReadAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.RenameSongUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
-import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
-import com.lonx.lyrico.plugin.source.SearchSourceProvider
-import com.lonx.lyrico.plugin.source.ScriptSearchSourceFactory
-import com.lonx.lyrico.plugin.source.SourcePluginInstaller
+import com.lonx.lyrico.platform.audio.ReplayGainScanner
+import com.lonx.lyrico.plugin.distribution.PluginCatalogRepository
+import com.lonx.lyrico.plugin.distribution.PluginDistributionManager
+import com.lonx.lyrico.plugin.i18n.PluginLocales
+import com.lonx.lyrico.plugin.install.SourcePluginInstaller
 import com.lonx.lyrico.plugin.runtime.HostAppInfo
 import com.lonx.lyrico.plugin.runtime.QuickJsHostApi
 import com.lonx.lyrico.plugin.runtime.QuickJsRuntime
-import com.lonx.lyrico.utils.MediaScanner
-import com.lonx.lyrico.utils.ReplayGainScanner
-import com.lonx.lyrico.utils.LibraryScanManager
-import com.lonx.lyrico.utils.LibraryScanManagerImpl
-import com.lonx.lyrico.utils.UpdateManager
-import com.lonx.lyrico.utils.UpdateManagerImpl
+import com.lonx.lyrico.plugin.source.PluginSearchSourceManager
+import com.lonx.lyrico.plugin.source.ScriptSearchSourceFactory
+import com.lonx.lyrico.plugin.source.SearchSourceConfigApplier
+import com.lonx.lyrico.plugin.source.SearchSourceProvider
+import com.lonx.lyrico.ui.SharedSelectionManager
+import com.lonx.lyrico.ui.screens.about.AboutViewModel
+import com.lonx.lyrico.ui.screens.album.AlbumActionsViewModel
+import com.lonx.lyrico.ui.screens.album.AlbumDetailViewModel
+import com.lonx.lyrico.ui.screens.artist.ArtistDetailViewModel
+import com.lonx.lyrico.ui.screens.artist.ArtistSelectionViewModel
+import com.lonx.lyrico.ui.screens.artist.poster.ArtistPosterEditViewModel
+import com.lonx.lyrico.ui.screens.artist.poster.ArtistPosterFoldersViewModel
+import com.lonx.lyrico.ui.screens.batch.BatchEditViewModel
+import com.lonx.lyrico.ui.screens.batch.BatchExportViewModel
+import com.lonx.lyrico.ui.screens.batch.BatchLyricsFormatViewModel
+import com.lonx.lyrico.ui.screens.batch.BatchMatchViewModel
+import com.lonx.lyrico.ui.screens.batch.BatchRenameViewModel
+import com.lonx.lyrico.ui.screens.batch.BatchReplayGainViewModel
+import com.lonx.lyrico.ui.screens.batch.BatchTaskDetailViewModel
+import com.lonx.lyrico.ui.screens.batch.BatchTaskListViewModel
+import com.lonx.lyrico.ui.screens.batch.CharacterMappingViewModel
+import com.lonx.lyrico.ui.screens.diagnostics.ProblemReproductionViewModel
+import com.lonx.lyrico.ui.screens.edit.EditMetadataViewModel
+import com.lonx.lyrico.ui.screens.field.FieldSongsViewModel
+import com.lonx.lyrico.ui.screens.folder.FolderManagerViewModel
+import com.lonx.lyrico.ui.screens.library.AlbumLibraryViewModel
+import com.lonx.lyrico.ui.screens.library.ArtistLibraryViewModel
+import com.lonx.lyrico.ui.screens.library.SongListViewModel
+import com.lonx.lyrico.ui.screens.library.SongSelectionViewModel
+import com.lonx.lyrico.ui.screens.log.AppLogViewModel
+import com.lonx.lyrico.ui.screens.plugin.PluginViewModel
+import com.lonx.lyrico.ui.screens.plugin.SearchSourceConfigViewModel
+import com.lonx.lyrico.ui.screens.search.CoverSearchViewModel
+import com.lonx.lyrico.ui.screens.search.LocalSearchViewModel
+import com.lonx.lyrico.ui.screens.search.LyricsSearchViewModel
+import com.lonx.lyrico.ui.screens.search.SearchViewModel
+import com.lonx.lyrico.ui.screens.settings.ArtistSplitSettingsViewModel
+import com.lonx.lyrico.ui.screens.settings.EditFieldSettingsViewModel
+import com.lonx.lyrico.ui.screens.settings.SettingsViewModel
+import com.lonx.lyrico.ui.screens.settings.diagnostics.DiagnosticsSettingsViewModel
 import com.lonx.lyrico.worker.BatchTaskScheduler
-import com.lonx.lyrico.data.model.BatchTaskType
 import com.lonx.lyrico.worker.processor.BatchExportProcessor
 import com.lonx.lyrico.worker.processor.BatchTaskProcessorFactory
 import com.lonx.lyrico.worker.processor.EditTagsProcessor
 import com.lonx.lyrico.worker.processor.LyricsFormatProcessor
-import com.lonx.lyrico.worker.processor.MatchMetadataProcessor
-import com.lonx.lyrico.worker.processor.MatchLyricsProcessor
 import com.lonx.lyrico.worker.processor.MatchCoverProcessor
-import com.lonx.lyrico.worker.processor.ReplayGainProcessor
-import com.lonx.lyrico.viewmodel.AboutViewModel
-import com.lonx.lyrico.viewmodel.AlbumActionsViewModel
-import com.lonx.lyrico.viewmodel.AlbumDetailViewModel
-import com.lonx.lyrico.viewmodel.AlbumLibraryViewModel
-import com.lonx.lyrico.viewmodel.AppLogViewModel
-import com.lonx.lyrico.viewmodel.ArtistDetailViewModel
-import com.lonx.lyrico.viewmodel.ArtistLibraryViewModel
-import com.lonx.lyrico.viewmodel.ArtistSplitSettingsViewModel
-import com.lonx.lyrico.viewmodel.BatchExportViewModel
-import com.lonx.lyrico.viewmodel.BatchEditViewModel
-import com.lonx.lyrico.viewmodel.BatchLyricsFormatViewModel
-import com.lonx.lyrico.viewmodel.BatchTaskDetailViewModel
-import com.lonx.lyrico.viewmodel.BatchTaskListViewModel
-import com.lonx.lyrico.viewmodel.BatchMatchViewModel
-import com.lonx.lyrico.viewmodel.BatchRenameViewModel
-import com.lonx.lyrico.viewmodel.BatchReplayGainViewModel
-import com.lonx.lyrico.viewmodel.CoverSearchViewModel
-import com.lonx.lyrico.viewmodel.CharacterMappingViewModel
-import com.lonx.lyrico.viewmodel.FieldSongsViewModel
-import com.lonx.lyrico.viewmodel.EditFieldSettingsViewModel
-import com.lonx.lyrico.viewmodel.EditMetadataViewModel
-import com.lonx.lyrico.viewmodel.FolderManagerViewModel
-import com.lonx.lyrico.viewmodel.LocalSearchViewModel
-import com.lonx.lyrico.viewmodel.LyricsSearchViewModel
-import com.lonx.lyrico.viewmodel.PluginViewModel
-import com.lonx.lyrico.viewmodel.SearchViewModel
-import com.lonx.lyrico.viewmodel.SearchSourceConfigViewModel
-import com.lonx.lyrico.viewmodel.SettingsViewModel
-import com.lonx.lyrico.viewmodel.SongListViewModel
-import com.lonx.lyrico.viewmodel.SongSelectionViewModel
+import com.lonx.lyrico.worker.processor.MatchLyricsProcessor
+import com.lonx.lyrico.worker.processor.MatchMetadataProcessor
 import com.lonx.lyrico.worker.processor.RenameFilesProcessor
+import com.lonx.lyrico.worker.processor.ReplayGainProcessor
+import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -114,10 +127,6 @@ import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
-import java.io.File
-import java.util.concurrent.TimeUnit
-import androidx.sqlite.db.SupportSQLiteDatabase
-import com.lonx.lyrico.viewmodel.ArtistPosterFoldersViewModel
 
 val appModule = module {
 
@@ -147,7 +156,7 @@ val appModule = module {
     single {
         val context = androidContext()
         val okHttpClient = get<OkHttpClient>()
-        com.lonx.lyrico.plugin.i18n.PluginLocales.initialize(context)
+        PluginLocales.initialize(context)
         ScriptSearchSourceFactory(
             json = get(),
             appLogRepository = get(),
@@ -172,8 +181,8 @@ val appModule = module {
         )
     }
     single { SourcePluginInstaller(repository = get(), json = get(), appLogRepository = get()) }
-    single { com.lonx.lyrico.plugin.source.PluginCatalogRepository(get<LyricoDatabase>().pluginSubscriptionDao()) }
-    single { com.lonx.lyrico.plugin.source.PluginDistributionManager(androidContext(), get(), get(), get(), get()) }
+    single { PluginCatalogRepository(get<LyricoDatabase>().pluginSubscriptionDao()) }
+    single { PluginDistributionManager(androidContext(), get(), get(), get(), get()) }
     single {
         PluginSearchSourceManager(
             repository = get(),
@@ -190,7 +199,7 @@ val appModule = module {
     single { NetworkLoggingInterceptor(get(), get()) }
     // 工具类
 
-    single<UpdateManager> { UpdateManagerImpl(get(), get()) }
+    single { UpdatePromptCoordinator(get(), get()) }
     single { MediaScanner(androidContext()) }
     single { ReplayGainScanner(androidContext(), get()) }
     // 数据库和存储库
@@ -235,19 +244,20 @@ val appModule = module {
     single { CustomTagKeyRepository(get()) }
     single { EditFieldConfigRepository(androidContext()) }
     single<UpdateRepository> { UpdateRepositoryImpl(get(), get()) }
-    single<PlaybackRepository> { PlaybackRepositoryImpl(get()) }
+    single { ExternalPlayerLauncher(get()) }
     single<LibraryIndexRepository> { LibraryIndexRepositoryImpl(get(), get<LyricoDatabase>().songDao(), get(), get()) }
-    single { com.lonx.lyrico.data.LibraryOperationLock() }
+    single { LibraryOperationLock() }
     single { LibraryFolderRepository(get(), get(), androidContext(), get(), get()) }
     single { CacheManager(androidContext(), get()) }
     single { AudioFileAccess(androidContext()) }
     single { ImageMimeTypeDetector() }
     single<ImageBytesFetcher> { DefaultImageBytesFetcher(get(), get()) }
+    single { ArtworkDimensionsReader(get<OkHttpClient>()) }
     single { PictureMutationResolver(get(), get()) }
     single { TagMapBuilder() }
     single { AudioTagMutationResolver(get(), get()) }
     single<AudioTagRepository> { AudioTagRepositoryImpl(androidContext(), get(), get(), get()) }
-    single { com.lonx.lyrico.data.artwork.ArtistPosterReader(androidContext(), get(), get(), get()) }
+    single { ArtistPosterReader(androidContext(), get(), get(), get()) }
     single<SongFileRepository> { SongFileRepositoryImpl(androidContext(), get(), get()) }
     single { SortKeyUpdater() }
     single { SongMetadataMapper(get()) }
@@ -264,13 +274,13 @@ val appModule = module {
     single<LibraryScanManager> { LibraryScanManagerImpl(get(), get(), get(), get()) }
     single<BatchTaskRepository> { BatchTaskRepositoryImpl(get()) }
     single<AppLogRepository> { AppLogRepositoryImpl(get(), get(), get()) }
-    single { com.lonx.lyrico.diagnostics.ProblemReproductionRecorder(get(), get(), get(), get(), get()) }
-    single<GhContributorRepository> { GhContributorRepositoryImpl(get(), get()) }
+    single { ProblemReproductionRecorder(get(), get(), get(), get(), get()) }
+    single<GitHubContributorRepository> { GitHubContributorRepositoryImpl(get(), get()) }
     single { BatchTaskScheduler(androidContext(), get()) }
     single { LyricsFormatProcessor(get(), get(), get()) }
     single { ReplayGainProcessor(get(), get(), get(), get(), get(), get()) }
-    single { MatchMetadataProcessor(get(), get(), get(), get(), get(), get()) }
-    single { MatchLyricsProcessor(get(), get(), get(), get(), get()) }
+    single { MatchMetadataProcessor(get(), get(), get(), get(), get()) }
+    single { MatchLyricsProcessor(get(), get(), get(), get()) }
     single { MatchCoverProcessor(get(), get(), get(), get()) }
     single { RenameFilesProcessor(get(), get(), get()) }
     single { EditTagsProcessor(get(), get(), get()) }
@@ -309,11 +319,11 @@ val appModule = module {
         )
     }
     viewModel { ArtistLibraryViewModel(get(), get(), get()) }
-    viewModel { com.lonx.lyrico.viewmodel.ArtistSelectionViewModel() }
+    viewModel { ArtistSelectionViewModel() }
     viewModel { ArtistSplitSettingsViewModel(get(), get()) }
     viewModel { AlbumLibraryViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), androidContext(), get()) }
-    viewModel { com.lonx.lyrico.screens.settings.diagnostics.DiagnosticsSettingsViewModel(get(), get(), get()) }
+    viewModel { DiagnosticsSettingsViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { LyricsSearchViewModel(get(), get(), get()) }
     viewModel { CoverSearchViewModel(get(), get(), get(), get()) }
@@ -323,12 +333,12 @@ val appModule = module {
     viewModel { (fieldCode: String, component: Boolean) -> FieldSongsViewModel(fieldCode, component, get(), get(), get(), get()) }
     viewModel { BatchMatchViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { AppLogViewModel(get(), get()) }
-    viewModel { com.lonx.lyrico.viewmodel.ProblemReproductionViewModel(get(), get(), get(), get()) }
+    viewModel { ProblemReproductionViewModel(get(), get(), get(), get()) }
     viewModel { PluginViewModel(get(), get(), get(), get(), get(), get()) }
 
     viewModel { FolderManagerViewModel(get(), get(), get(), get()) }
     viewModel { ArtistPosterFoldersViewModel(get(), get(), get()) }
-    viewModel { com.lonx.lyrico.viewmodel.ArtistPosterEditViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { ArtistPosterEditViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { BatchRenameViewModel(get(), get(), get(), get(), get()) }
     viewModel { CharacterMappingViewModel(get()) }
     viewModel { BatchExportViewModel(get(), get(), get()) }

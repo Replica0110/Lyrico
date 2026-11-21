@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import com.lonx.lyrico.data.repository.BatchTaskRepository
+import com.lonx.lyrico.data.batch.BatchTaskRepository
 
 class BatchTaskCancelReceiver : BroadcastReceiver(), KoinComponent {
 

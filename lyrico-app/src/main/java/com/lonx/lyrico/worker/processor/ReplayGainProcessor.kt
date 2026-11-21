@@ -1,22 +1,23 @@
 package com.lonx.lyrico.worker.processor
 
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
-import com.lonx.lyrico.data.model.ReplayGainPeakMode
-import com.lonx.lyrico.data.model.ReplayGainSettings
-import com.lonx.lyrico.data.repository.SettingsRepository
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.recordOperation
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.recordOperation
+import com.lonx.lyrico.data.settings.ReplayGainPeakMode
+import com.lonx.lyrico.data.settings.ReplayGainSettings
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
 import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsResult
-import com.lonx.lyrico.utils.ReplayGainCalculateState
-import com.lonx.lyrico.utils.ReplayGainScanner
+import com.lonx.lyrico.domain.song.usecase.SaveAudioTagsUseCase
+import com.lonx.lyrico.platform.audio.ReplayGainAnalysis
+import com.lonx.lyrico.platform.audio.ReplayGainCalculateState
+import com.lonx.lyrico.platform.audio.ReplayGainScanner
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -64,7 +65,7 @@ class ReplayGainProcessor(
         }
 
         var analysisSuccess = false
-        var analysisResult: com.lonx.lyrico.utils.ReplayGainAnalysis? = null
+        var analysisResult: ReplayGainAnalysis? = null
 
         replayGainScanner.analyze(item.songUri, replayGainSettings.peakMode).collect { state ->
             when (state) {

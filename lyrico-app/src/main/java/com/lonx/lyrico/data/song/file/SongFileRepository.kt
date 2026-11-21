@@ -1,6 +1,6 @@
 package com.lonx.lyrico.data.song.file
 
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
 
 interface SongFileRepository {
     suspend fun deleteFile(song: SongEntity): DeleteSongFileResult

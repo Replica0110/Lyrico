@@ -5,8 +5,8 @@ import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
 
 @Composable
 fun SongMenuBottomSheet(
@@ -24,7 +24,7 @@ fun SongMenuBottomSheet(
     val songTitle = song.title.takeIf { !it.isNullOrBlank() } ?: song.fileName
     val text =
         song.artist.takeIf { !it.isNullOrBlank() }?.let { "$songTitle - $it" } ?: songTitle
-    com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+    com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet(
         show = show, label = text, onDismissRequest = onDismissRequest,
         onDismissFinished = onDismissFinished, enableNestedScroll = enableNestedScroll
     ) {

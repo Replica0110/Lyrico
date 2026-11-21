@@ -1,9 +1,9 @@
 package com.lonx.lyrico.data.song.search
 
-import com.lonx.lyrico.data.model.dao.SongDao
-import com.lonx.lyrico.data.model.dao.SongLyricsForFts
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.utils.LyricsSearchTextExtractor
+import com.lonx.lyrico.data.db.dao.SongDao
+import com.lonx.lyrico.data.db.dao.SongLyricsForFts
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.domain.lyrics.LyricsSearchTextExtractor
 
 object LyricFtsIndexer {
     fun buildQuery(raw: String): String? {

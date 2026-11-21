@@ -2,17 +2,13 @@ package com.lonx.lyrico.data.song.library
 
 import androidx.room.withTransaction
 import com.lonx.audiotag.model.AudioTagData
-import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.model.dao.SongDao
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.repository.CustomTagKeyRepository
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
+import com.lonx.lyrico.data.db.LyricoDatabase
+import com.lonx.lyrico.data.db.dao.SongDao
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.data.editfield.CustomTagKeyRepository
 import com.lonx.lyrico.data.song.mapper.SongMetadataMapper
 import com.lonx.lyrico.data.song.search.LyricFtsIndexer
-import com.lonx.lyrico.data.utils.SongQueryBuilder
-import com.lonx.lyrico.data.model.SortBy
-import com.lonx.lyrico.data.model.SortInfo
-import com.lonx.lyrico.data.model.SortOrder
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -26,11 +22,11 @@ class SongLibraryRepositoryImpl(
     private val songDao: SongDao = database.songDao()
 
     override fun observeSongs(
-        sortBy: SortBy,
+        sortBy: SongSortBy,
         order: SortOrder,
         folderId: Long?
     ): Flow<List<SongEntity>> {
-        val query = SongQueryBuilder.build(SortInfo(sortBy, order), folderId)
+        val query = SongQueryBuilder.build(SongSortInfo(sortBy, order), folderId)
         return songDao.getSongs(query)
     }
 

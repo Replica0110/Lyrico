@@ -1,8 +1,5 @@
 package com.lonx.lyrico.ui.components.song
 
-import com.lonx.lyrico.ui.components.image.PreviewableImage
-
-import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.content.ClipData
 import android.text.format.Formatter
 import android.widget.Toast
@@ -33,18 +30,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.BuildConfig
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.model.entity.getUri
-import com.lonx.lyrico.data.model.artwork.CoverRequest
-import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
-import com.lonx.lyrico.ui.components.salt.SaltIconButton
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.data.db.entity.getUri
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.artwork.CoverRequest
+import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.ui.components.image.PreviewableImage
+import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
+import com.lonx.lyrico.ui.components.sheet.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.ItemValue
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.innerPadding
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -52,9 +54,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun SongDetailBottomSheet(
@@ -217,7 +216,6 @@ fun SongDetailBottomSheet(
                     )
                 }
             }
-
 
             Card(
                 modifier = Modifier.padding(bottom = 12.dp),

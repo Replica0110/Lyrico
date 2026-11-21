@@ -1,0 +1,135 @@
+package com.lonx.lyrico.data.settings
+
+import com.lonx.lyrico.data.batch.BatchMatchConfig
+import com.lonx.lyrico.data.rename.CharacterMappingConfig
+import com.lonx.lyrico.data.text.ConversionMode
+import com.lonx.lyrico.data.lyrics.LyricsFormat
+import com.lonx.lyrico.data.lyrics.LyricsLineTrack
+import com.lonx.lyrico.data.lyrics.LyricsRenderConfig
+import com.lonx.lyrico.data.log.LogRetentionOption
+import com.lonx.lyrico.data.plugin.PluginMetadataFieldWriteRule
+import com.lonx.lyrico.data.song.search.SearchConfig
+import com.lonx.lyrico.data.song.search.SearchSourceTabStyle
+import com.lonx.lyrico.data.song.library.AlbumSortInfo
+import com.lonx.lyrico.data.song.library.ArtistSortInfo
+import com.lonx.lyrico.data.settings.ArtistSplitConfig
+import com.lonx.lyrico.data.song.library.SongSortInfo
+import com.lonx.lyrico.data.plugin.SourceRuntimeConfig
+import kotlinx.coroutines.flow.Flow
+
+interface SettingsRepository {
+    val defaultPlayerComponent: Flow<String?>
+    suspend fun saveDefaultPlayerComponent(component: String?)
+    val proActivated: Flow<Boolean>
+    suspend fun activatePro()
+    suspend fun deactivatePro()
+    val artistPosterFolder: Flow<String?>
+    val artistPosterRevision: Flow<Long>
+    suspend fun refreshArtistPosters()
+    suspend fun setArtistPosterFolder(uri: String)
+    suspend fun clearArtistPosterFolder()
+    val batchMatchConfig: Flow<BatchMatchConfig>
+    val metadataFieldWriteRules: Flow<List<PluginMetadataFieldWriteRule>>
+    val sourceSettingsByIdFlow: Flow<Map<String, SourceRuntimeConfig>>
+
+    val renameFormat: Flow<String>
+
+    // Flow properties
+    val lyricFormat: Flow<LyricsFormat>
+    val sortInfo: Flow<SongSortInfo>
+    val albumSortInfo: Flow<AlbumSortInfo>
+    val artistSortInfo: Flow<ArtistSortInfo>
+    val albumGridColumns: Flow<Int>
+    val separator: Flow<String>
+    val lyricLineOrder: Flow<List<LyricsLineTrack>>
+    val romaEnabled: Flow<Boolean>
+
+    val conversionMode: Flow<ConversionMode>
+
+    val translationEnabled: Flow<Boolean>
+    val checkUpdateEnabled: Flow<Boolean>
+    val lyricIndexEnabled: Flow<Boolean>
+    val ignoreShortAudio: Flow<Boolean>
+    val replayGainSettings: Flow<ReplayGainSettings>
+    val searchSourceOrder: Flow<List<String>>
+    val enabledSearchSources: Flow<Set<String>>
+    val searchPageSize: Flow<Int>
+    val searchSourceTabStyle: Flow<SearchSourceTabStyle>
+    val showAllSearchResultFields: Flow<Boolean>
+    val uiEngine: Flow<UiEngine>
+    suspend fun saveUiEngine(engine: UiEngine)
+    val themeMode: Flow<ThemeMode>
+    val keyColor: Flow<ThemeColor>
+    val monetEnable: Flow<Boolean>
+    val floatingBottomBarEnabled: Flow<Boolean>
+    val barBlurEnabled: Flow<Boolean>
+    val floatingBarEffect: Flow<FloatingBarEffect>
+    val onlyTranslationIfAvailable: Flow<Boolean>
+    val removeEmptyLines: Flow<Boolean>
+    val lyricsTagLineKeywords: Flow<List<String>>
+    val limitLyricsInputLines: Flow<Boolean>
+    val logRetentionOption: Flow<LogRetentionOption>
+
+    val lyricRenderConfigFlow: Flow<LyricsRenderConfig>
+    val searchConfigFlow: Flow<SearchConfig>
+    val themeConfigFlow: Flow<ThemeConfig>
+
+    val characterMappingConfig: Flow<CharacterMappingConfig>
+    val artistSplitConfigFlow: Flow<ArtistSplitConfig>
+    // Suspend functions for operations that might block or are one-off
+    suspend fun getLastScanTime(): Long
+    
+    // Save functions
+    suspend fun saveLyricDisplayMode(mode: LyricsFormat)
+    suspend fun saveSortInfo(sortInfo: SongSortInfo)
+    suspend fun saveAlbumSortInfo(sortInfo: AlbumSortInfo)
+    suspend fun saveArtistSortInfo(sortInfo: ArtistSortInfo)
+    suspend fun saveAlbumGridColumns(columns: Int)
+    suspend fun saveSeparator(separator: String)
+    suspend fun saveLyricLineOrder(order: List<LyricsLineTrack>)
+    suspend fun saveRomaEnabled(enabled: Boolean)
+    suspend fun saveConversionMode(mode: ConversionMode)
+    suspend fun saveCheckUpdateEnabled(enabled: Boolean)
+    suspend fun saveTranslationEnabled(enabled: Boolean)
+    suspend fun saveLyricIndexEnabled(enabled: Boolean)
+    suspend fun saveIgnoreShortAudio(enabled: Boolean)
+    suspend fun saveReplayGainTargetLoudness(loudness: Double)
+    suspend fun saveReplayGainPeakMode(mode: ReplayGainPeakMode)
+    suspend fun getReplayGainSettings(): ReplayGainSettings
+    suspend fun saveLastScanTime(time: Long)
+    suspend fun saveSearchSourceOrder(sources: List<String>)
+    suspend fun saveEnabledSearchSources(sources: Set<String>)
+    suspend fun saveSearchPageSize(size: Int)
+    suspend fun saveSearchSourceTabStyle(style: SearchSourceTabStyle)
+    suspend fun saveShowAllSearchResultFields(enabled: Boolean)
+    suspend fun saveThemeMode(mode: ThemeMode)
+    suspend fun saveKeyColor(selectedKeyColor: ThemeColor)
+    suspend fun saveMonetEnable(enabled: Boolean)
+    suspend fun saveFloatingBottomBarEnabled(enabled: Boolean)
+    suspend fun saveBarBlurEnabled(enabled: Boolean)
+    suspend fun saveFloatingBarEffect(effect: FloatingBarEffect)
+    suspend fun saveOnlyTranslationIfAvailable(enabled: Boolean)
+    suspend fun saveRemoveEmptyLines(enabled: Boolean)
+    suspend fun saveLyricsTagLineKeywords(keywords: List<String>)
+    suspend fun saveLimitLyricsInputLines(enabled: Boolean)
+    suspend fun saveLogRetentionOption(option: LogRetentionOption)
+    suspend fun getLyricRenderConfig(): LyricsRenderConfig
+    suspend fun exportSettings(): String
+    suspend fun importSettings(jsonString: String): Boolean
+    suspend fun saveBatchMatchConfig(config: BatchMatchConfig)
+    suspend fun saveMetadataFieldWriteRules(rules: List<PluginMetadataFieldWriteRule>)
+    suspend fun saveSourceSettings(sourceId: String, values: Map<String, String>)
+    suspend fun getSourceSettings(sourceId: String): SourceRuntimeConfig
+    suspend fun removePluginSettings(pluginId: String)
+    suspend fun saveRenameFormat(format: String)
+    suspend fun saveCharacterMappingConfig(config: CharacterMappingConfig)
+    // 更新指定规则中的字符映射
+    suspend fun updateCharacterMappingInRule(ruleId: String, charMappings: Map<String, String?>)
+    suspend fun getCharacterMappingConfig(): CharacterMappingConfig
+    suspend fun getBatchMatchConfig(): BatchMatchConfig
+    suspend fun getMetadataFieldWriteRules(): List<PluginMetadataFieldWriteRule>
+    suspend fun saveArtistSplitConfig(config: ArtistSplitConfig)
+    suspend fun getArtistSplitConfig(): ArtistSplitConfig
+    suspend fun getLibraryIndexVersion(): Int
+    suspend fun saveLibraryIndexVersion(version: Int)
+}

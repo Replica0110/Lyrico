@@ -8,6 +8,8 @@ include(ffmpeg-build.cmake)
 # ============================================================================
 add_library(ebur128 SHARED
     ebur128.cpp              # C++ JNI 桥接层
+    ebur128/once.h
+    ebur128/once.pthread.c    # 一次性初始化实现
     ebur128/ebur128.c        # ebur128 核心 C 实现
 )
 

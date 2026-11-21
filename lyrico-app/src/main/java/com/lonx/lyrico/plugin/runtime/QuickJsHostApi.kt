@@ -1,12 +1,9 @@
 package com.lonx.lyrico.plugin.runtime
 
 import android.util.Base64
-import android.util.Log
-import com.lonx.lyrico.data.network.PluginRequestLogContext
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.LogOperation
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
 import androidx.annotation.Keep
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -15,7 +12,6 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -25,21 +21,18 @@ import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest
-import java.util.concurrent.TimeUnit
 import java.util.zip.Inflater
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.MediaType.Companion.toMediaType
+
 @Keep
 class QuickJsHostApi(
     private val appInfo: HostAppInfo = HostAppInfo(),
     private val runtimeInfo: HostRuntimeInfo = HostRuntimeInfo(),
-    private val okHttpClient: OkHttpClient = OkHttpClient(),
+    okHttpClient: OkHttpClient = OkHttpClient(),
     private val pluginId: String = "default",
-    private val cacheRootDir: File? = null,
+    cacheRootDir: File? = null,
     private val pluginStrings: com.lonx.lyrico.plugin.i18n.PluginStrings? = null,
     private val json: Json = Json {
         ignoreUnknownKeys = true
@@ -47,23 +40,18 @@ class QuickJsHostApi(
         explicitNulls = false
     }
 ) {
-    private val cancelled = java.util.concurrent.atomic.AtomicBoolean(false)
-    private val activeHttp = java.util.concurrent.atomic.AtomicReference<okhttp3.Call?>(null)
-    private var invocationDeadline = 0L
+    private val cache = PluginCache(pluginId, cacheRootDir, json)
+    private val http = PluginHttpClient(appInfo, okHttpClient, pluginId)
 
-    fun resetCancellation() { cancelled.set(false) }
-    fun cancelInvocation() {
-        cancelled.set(true)
-        activeHttp.get()?.cancel()
-    }
+    fun resetCancellation() { http.resetCancellation() }
+
+    fun cancelInvocation() { http.cancelInvocation() }
+
     private var stringsSnapshot: com.lonx.lyrico.plugin.i18n.PluginStrings.Snapshot? = null
 
     fun beginInvocation(timeoutMs: Long) {
-        invocationDeadline = if (timeoutMs > 0) System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs) else 0L
+        http.beginInvocation(timeoutMs)
         stringsSnapshot = pluginStrings?.snapshot(com.lonx.lyrico.plugin.i18n.PluginLocales.preferences.value)
-    }
-    private companion object {
-        const val CACHE_LOG_TAG = "PlatformPluginCache"
     }
 
     fun call(name: String, payloadJson: String): String {
@@ -88,10 +76,10 @@ class QuickJsHostApi(
 
             "runtime.info" -> value(runtimeInfo.toJsonObject())
 
-            "cache.get" -> text(cacheGet(payload.string("key")))
+            "cache.get" -> text(cache.get(payload.string("key")))
 
             "cache.set" -> {
-                cacheSet(
+                cache.set(
                     key = payload.string("key"),
                     value = payload.string("value"),
                     ttlMs = payload.longOrNull("ttlMs")
@@ -100,12 +88,12 @@ class QuickJsHostApi(
             }
 
             "cache.remove" -> {
-                cacheRemove(payload.string("key"))
+                cache.remove(payload.string("key"))
                 text("")
             }
 
             "cache.clear" -> {
-                cacheClear()
+                cache.clear()
                 text("")
             }
 
@@ -226,7 +214,7 @@ class QuickJsHostApi(
              * 为了兼容现有 source.js / 01_http.js，不改变语义。
              */
             "http.getText" -> text(
-                executeHttp(
+                http.execute(
                     method = "GET",
                     payload = payload,
                     binaryResponse = false
@@ -234,7 +222,7 @@ class QuickJsHostApi(
             )
 
             "http.postText" -> text(
-                executeHttp(
+                http.execute(
                     method = "POST",
                     payload = payload,
                     binaryResponse = false
@@ -242,7 +230,7 @@ class QuickJsHostApi(
             )
 
             "http.postBytes" -> text(
-                executeHttp(
+                http.execute(
                     method = "POST",
                     payload = payload,
                     binaryResponse = true
@@ -267,7 +255,7 @@ class QuickJsHostApi(
              * }
              */
             "http.get" -> value(
-                executeHttp(
+                http.execute(
                     method = "GET",
                     payload = payload,
                     binaryResponse = false
@@ -275,7 +263,7 @@ class QuickJsHostApi(
             )
 
             "http.post" -> value(
-                executeHttp(
+                http.execute(
                     method = "POST",
                     payload = payload,
                     binaryResponse = false
@@ -283,7 +271,7 @@ class QuickJsHostApi(
             )
 
             "http.getBytes" -> value(
-                executeHttp(
+                http.execute(
                     method = "GET",
                     payload = payload,
                     binaryResponse = true
@@ -291,7 +279,7 @@ class QuickJsHostApi(
             )
 
             "http.postBytesResponse" -> value(
-                executeHttp(
+                http.execute(
                     method = "POST",
                     payload = payload,
                     binaryResponse = true
@@ -341,219 +329,6 @@ class QuickJsHostApi(
 
             else -> error("Unsupported host api: $name")
         }
-    }
-
-    private fun cacheGet(key: String): String {
-        val normalizedKey = key.trim()
-        val file = cacheFile(normalizedKey) ?: run {
-            logCache("get ignored blank key")
-            return ""
-        }
-        if (!file.isFile) {
-            logCache("miss plugin=$pluginId key=$normalizedKey")
-            return ""
-        }
-
-        val entry = runCatching {
-            json.parseToJsonElement(file.readText()).jsonObject
-        }.getOrNull() ?: run {
-            file.delete()
-            logCache("corrupt entry removed plugin=$pluginId key=$normalizedKey")
-            return ""
-        }
-
-        val expiresAt = entry.longOrNull("expiresAt") ?: 0L
-        if (expiresAt > 0L && expiresAt <= System.currentTimeMillis()) {
-            file.delete()
-            logCache("expired entry removed plugin=$pluginId key=$normalizedKey")
-            return ""
-        }
-
-        logCache(
-            "hit plugin=$pluginId key=$normalizedKey expiresAt=$expiresAt valueLength=${entry.string("value").length}"
-        )
-        return entry.string("value")
-    }
-
-    private fun cacheSet(key: String, value: String, ttlMs: Long?) {
-        val normalizedKey = key.trim()
-        val file = cacheFile(normalizedKey) ?: run {
-            logCache("set ignored blank key")
-            return
-        }
-        val normalizedTtlMs = ttlMs ?: 0L
-        val expiresAt = if (normalizedTtlMs > 0L) {
-            System.currentTimeMillis() + normalizedTtlMs
-        } else {
-            0L
-        }
-
-        file.parentFile?.mkdirs()
-        file.writeText(
-            json.encodeToString(
-                JsonObject.serializer(),
-                buildJsonObject {
-                    put("value", value)
-                    put("expiresAt", expiresAt)
-                }
-            )
-        )
-        logCache(
-            "set plugin=$pluginId key=$normalizedKey ttlMs=$normalizedTtlMs expiresAt=$expiresAt valueLength=${value.length}"
-        )
-    }
-
-    private fun cacheRemove(key: String) {
-        val normalizedKey = key.trim()
-        val removed = cacheFile(normalizedKey)?.delete() == true
-        logCache("remove plugin=$pluginId key=$normalizedKey removed=$removed")
-    }
-
-    private fun cacheClear() {
-        val cleared = pluginCacheDir()?.deleteRecursively() == true
-        logCache("clear plugin=$pluginId cleared=$cleared")
-    }
-
-    private fun cacheFile(key: String): File? {
-        val normalizedKey = key.trim()
-        if (normalizedKey.isEmpty()) return null
-        return File(pluginCacheDir() ?: return null, "${md5(normalizedKey)}.json")
-    }
-
-    private fun pluginCacheDir(): File? {
-        val root = cacheRootDir ?: return null
-        return File(root, md5(pluginId.ifBlank { "default" }))
-    }
-
-    private fun logCache(message: String) {
-        AppLog.record(AppLogType.PLUGIN, CACHE_LOG_TAG, "Plugin cache", message, pluginId)
-    }
-
-    private fun executeHttp(
-        method: String,
-        payload: JsonObject,
-        binaryResponse: Boolean
-    ): HostHttpResponse {
-        val urlText = payload.string("url")
-        require(urlText.isNotBlank()) { "HTTP url is blank" }
-
-        val contentType = payload.string("contentType").ifBlank {
-            if (binaryResponse) {
-                "application/octet-stream"
-            } else {
-                "application/json; charset=utf-8"
-            }
-        }
-
-        val requestBuilder = Request.Builder().url(urlText)
-            .tag(PluginRequestLogContext::class.java, PluginRequestLogContext(pluginId, LogOperation.current.get()?.id))
-        if (method == "POST" || method == "PUT" || method == "PATCH") {
-            requestBuilder.header("Content-Type", contentType)
-        }
-
-        payload.obj("headers")?.forEach { (key, value) ->
-            val headerValue = value.headerString()
-            if (key.equals("User-Agent", ignoreCase = true) && headerValue.isBlank()) {
-                return@forEach
-            }
-            requestBuilder.header(key, headerValue)
-        }
-
-        if (!hasNonBlankHeader(payload.obj("headers"), "User-Agent")) {
-            requestBuilder.header("User-Agent", buildDefaultUserAgent(appInfo))
-        }
-
-        val requestBody = if (method == "POST" || method == "PUT" || method == "PATCH") {
-            payload.requestBodyBytes().toRequestBody(contentType.toMediaType())
-        } else {
-            null
-        }
-
-        requestBuilder.method(method, requestBody)
-
-        check(!cancelled.get()) { "Plugin invocation cancelled" }
-        val remainingNanos = invocationDeadline - System.nanoTime()
-        check(invocationDeadline == 0L || remainingNanos > 0) { "Plugin invocation timed out" }
-        val remainingMs = if (invocationDeadline == 0L) 0L else
-            TimeUnit.NANOSECONDS.toMillis(remainingNanos).coerceAtLeast(1L)
-        val client = okHttpClient.newBuilder()
-            .callTimeout(remainingMs, TimeUnit.MILLISECONDS)
-            .followRedirects(payload.booleanOrNull("followRedirects") ?: true)
-            .followSslRedirects(payload.booleanOrNull("followRedirects") ?: true)
-            .connectTimeout((payload.intOrNull("connectTimeoutMs") ?: 8_000).toLong(), TimeUnit.MILLISECONDS)
-            .readTimeout((payload.intOrNull("readTimeoutMs") ?: 12_000).toLong(), TimeUnit.MILLISECONDS)
-            .build()
-
-        val call = client.newCall(requestBuilder.build())
-        activeHttp.set(call)
-        if (cancelled.get()) call.cancel()
-        try {
-            return call.execute().use { response ->
-                val limit = 8L * 1024 * 1024
-                require(response.body.contentLength() <= limit) { "Plugin response is too large" }
-                val output = ByteArrayOutputStream()
-                response.body.byteStream().use { input ->
-                    val buffer = ByteArray(8192)
-                    while (true) {
-                        check(!cancelled.get()) { "Plugin invocation cancelled" }
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        require(output.size().toLong() + count <= limit) { "Plugin response is too large" }
-                        output.write(buffer, 0, count)
-                    }
-                }
-                val responseBytes = output.toByteArray()
-                val bodyText = if (binaryResponse) {
-                    ""
-                } else {
-                    responseBytes.toString(Charsets.UTF_8)
-                }
-
-                val bodyBase64 = if (binaryResponse) {
-                    Base64.encodeToString(responseBytes, Base64.NO_WRAP)
-                } else {
-                    ""
-                }
-
-                HostHttpResponse(
-                    code = response.code,
-                    message = response.message,
-                    headers = response.headers.toMultimap(),
-                    bodyText = bodyText,
-                    bodyBase64 = bodyBase64
-                )
-            }
-        } finally { activeHttp.compareAndSet(call, null) }
-    }
-
-    private fun hasNonBlankHeader(headers: JsonObject?, targetName: String): Boolean {
-        if (headers == null) return false
-        return headers.any { (key, value) ->
-            key.equals(targetName, ignoreCase = true) && value.headerString().isNotBlank()
-        }
-    }
-
-    private fun JsonObject.requestBodyBytes(): ByteArray {
-        val bodyBase64 = string("bodyBase64")
-        if (bodyBase64.isNotBlank()) {
-            return Base64.decode(bodyBase64, Base64.DEFAULT)
-        }
-
-        val bodyBytes = this["bodyBytes"] as? JsonArray
-        if (bodyBytes != null) {
-            return ByteArray(bodyBytes.size) { index ->
-                bodyBytes[index].jsonPrimitive.int.toByte()
-            }
-        }
-
-        return string("body").toByteArray(Charsets.UTF_8)
-    }
-
-    private fun md5(text: String): String {
-        val digest = MessageDigest.getInstance("MD5").digest(
-            text.toByteArray(Charsets.UTF_8)
-        )
-        return digest.joinToString("") { "%02x".format(it) }
     }
 
     private fun aesEcbPkcs5EncryptBase64(text: String, key: String): String {
@@ -654,41 +429,25 @@ class QuickJsHostApi(
         )
     }
 
-    private data class HostHttpResponse(
-        val code: Int,
-        val message: String,
-        val headers: Map<String, List<String>>,
-        val bodyText: String,
-        val bodyBase64: String
-    ) {
-        fun toJsonObject(): JsonObject {
-            return buildJsonObject {
-                put("code", code)
-                put("message", message)
+    private fun HostHttpResponse.toJsonObject(): JsonObject {
+        return buildJsonObject {
+            put("code", code)
+            put("message", message)
 
-                put(
-                    "headers",
-                    JsonObject(
-                        headers.mapValues { (_, values) ->
-                            JsonArray(values.map { JsonPrimitive(it) })
-                        }
-                    )
+            put(
+                "headers",
+                JsonObject(
+                    headers.mapValues { (_, values) ->
+                        JsonArray(values.map { JsonPrimitive(it) })
+                    }
                 )
+            )
 
-                if (bodyText.isNotEmpty()) {
-                    put("body", bodyText)
-                } else {
-                    put("body", "")
-                }
-
-                if (bodyBase64.isNotEmpty()) {
-                    put("bodyBase64", bodyBase64)
-                } else {
-                    put("bodyBase64", "")
-                }
-            }
+            put("body", bodyText)
+            put("bodyBase64", bodyBase64)
         }
     }
+
 }
 
 data class HostAppInfo(
@@ -740,40 +499,10 @@ fun buildDefaultUserAgent(appInfo: HostAppInfo): String {
     return "${appInfo.name}/${appInfo.versionName}"
 }
 
-private fun JsonObject.string(key: String): String {
-    return this[key]?.jsonPrimitive?.contentOrNull.orEmpty()
-}
-
-private fun JsonObject.intOrNull(key: String): Int? {
-    return this[key]?.jsonPrimitive?.int
-}
-
-private fun JsonObject.longOrNull(key: String): Long? {
-    return this[key]?.jsonPrimitive?.longOrNull
-}
-
-private fun JsonObject.booleanOrNull(key: String): Boolean? {
-    return this[key]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull()
-}
-
-private fun JsonObject.obj(key: String): JsonObject? {
-    return this[key] as? JsonObject
-}
-
 private fun JsonObject.bytes(key: String): ByteArray {
     val array = this[key]?.jsonArray ?: return ByteArray(0)
     return ByteArray(array.size) { index ->
         array[index].jsonPrimitive.int.toByte()
-    }
-}
-
-private fun JsonElement.headerString(): String {
-    return when (this) {
-        is JsonPrimitive -> contentOrNull.orEmpty()
-        is JsonArray -> joinToString(", ") {
-            it.jsonPrimitive.contentOrNull.orEmpty()
-        }
-        else -> toString()
     }
 }
 
@@ -785,4 +514,11 @@ private fun JsonObject.logTag(): String {
     return string("tag")
         .ifBlank { "PlatformPlugin" }
         .take(48)
+}
+
+internal fun md5(text: String): String {
+    val digest = MessageDigest.getInstance("MD5").digest(
+        text.toByteArray(Charsets.UTF_8)
+    )
+    return digest.joinToString("") { "%02x".format(it) }
 }

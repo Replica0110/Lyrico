@@ -1,0 +1,312 @@
+@file:OptIn(com.moriafly.salt.ui.UnstableSaltUiApi::class)
+
+package com.lonx.lyrico.ui.screens.library
+
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.LocalOverscrollFactory
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.lonx.lyrico.R
+import com.lonx.lyrico.data.settings.FloatingBarEffect
+import com.lonx.lyrico.ui.components.bar.SelectionTopBarState
+import com.lonx.lyrico.ui.components.bar.SelectionTopBarTransition
+import com.lonx.lyrico.ui.components.bar.salt.SaltFloatingNavigationBar
+import com.lonx.lyrico.ui.components.bar.salt.SaltFloatingNavigationBarItem
+import com.lonx.lyrico.ui.components.bar.salt.SaltSelectionActions
+import com.lonx.lyrico.ui.components.blur.BlurredBar
+import com.lonx.lyrico.ui.components.blur.blurSource
+import com.lonx.lyrico.ui.components.blur.rememberBarBlurBackdrop
+import com.lonx.lyrico.ui.components.blur.resolveFloatingBarEffect
+import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
+import com.lonx.lyrico.ui.components.effect.glass.GlassEffect
+import com.lonx.lyrico.ui.components.effect.glass.glassSource
+import com.lonx.lyrico.ui.components.effect.glass.rememberGlassSource
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.ui.components.library.ContentBreathingRoom
+import com.lonx.lyrico.ui.components.library.LibraryMenuAction
+import com.lonx.lyrico.ui.components.library.LocalLibraryBottomContentPadding
+import com.lonx.lyrico.ui.components.scaffold.LocalScaffoldIncludesBottomPadding
+import com.lonx.lyrico.ui.components.scaffold.LocalScaffoldIncludesStartPadding
+import com.lonx.lyrico.ui.components.scaffold.scaffoldPageWindowInsets
+import com.moriafly.salt.ui.*
+import com.moriafly.salt.ui.gestures.cupertino.CupertinoOverscrollEffectFactory
+import com.moriafly.salt.ui.popup.PopupMenu
+import com.moriafly.salt.ui.popup.PopupMenuItem
+import com.moriafly.salt.ui.popup.rememberPopupState
+import com.moriafly.salt.ui.screen.BasicScreen
+
+@Composable
+internal fun SaltLibraryPage(
+    title: String,
+    onSettings: () -> Unit,
+    onSearch: () -> Unit,
+    menu: List<LibraryMenuAction>,
+    selection: SelectionTopBarState? = null,
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    val popup = rememberPopupState()
+    BoxWithConstraints {
+        val layoutDirection = LocalLayoutDirection.current
+        val pagePadding = scaffoldPageWindowInsets().asPaddingValues()
+        val availableWidth =
+            maxWidth -
+                pagePadding.calculateStartPadding(layoutDirection) -
+                pagePadding.calculateEndPadding(layoutDirection)
+        val compact = availableWidth < 360.dp
+        // Native title-bar slots retain the app's selection animation without replacing Salt's
+        // backdrop.
+        BasicScreen(
+            contentPadding = pagePadding,
+            actionButton = {
+                SelectionTopBarTransition(selection, Alignment.CenterStart) { selected ->
+                    val leadingMaxWidth =
+                        (availableWidth -
+                                if (selected == null) 112.dp else if (compact) 128.dp else 188.dp)
+                            .coerceAtLeast(40.dp)
+                    Row(
+                        Modifier.widthIn(max = leadingMaxWidth),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (selected == null) {
+                            SaltIconButton(
+                                LucideIcons.Settings,
+                                stringResource(R.string.settings_title),
+                                onSettings,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(
+                            selected?.title ?: title,
+                            modifier = Modifier.weight(1f, fill = false),
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            },
+            toolButtons = {
+                SelectionTopBarTransition(selection, Alignment.CenterEnd) { selected ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (selected != null) {
+                            SaltSelectionActions(selected, compact)
+                        } else {
+                            SaltIconButton(
+                                LucideIcons.Search,
+                                stringResource(R.string.cd_search),
+                                onSearch,
+                            )
+                            Box {
+                                SaltIconButton(
+                                    LucideIcons.Sort,
+                                    stringResource(R.string.cd_sort),
+                                    popup::expend,
+                                )
+                                PopupMenu(
+                                    expanded = popup.expend,
+                                    onDismissRequest = popup::dismiss,
+                                ) {
+                                    menu.forEach { action ->
+                                        PopupMenuItem(
+                                            text = action.title,
+                                            sub = action.summary,
+                                            selected = action.selected,
+                                            onClick = {
+                                                popup.dismiss()
+                                                action.onClick()
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        ) { padding ->
+            content(padding)
+        }
+    }
+}
+
+@Composable
+internal fun LibraryHomeSalt(
+    tabs: List<LibraryTab>,
+    selectedTab: LibraryTab,
+    rail: Boolean,
+    floatingBottomBarEnabled: Boolean,
+    floatingBarEffect: FloatingBarEffect,
+    barBlurEnabled: Boolean,
+    onTabSelected: (LibraryTab) -> Unit,
+    onBottomPaddingChange: (androidx.compose.ui.unit.Dp) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val systemBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val density = LocalDensity.current
+    var floatingBarHeight by remember(density, systemBottom) {
+        mutableStateOf(56.dp + 12.dp + systemBottom)
+    }
+    val bottomContentPadding = when {
+        rail -> 0.dp
+        floatingBottomBarEnabled -> floatingBarHeight + ContentBreathingRoom
+        else -> 56.dp + systemBottom
+    }
+    SideEffect { onBottomPaddingChange(bottomContentPadding) }
+    CompositionLocalProvider(
+        LocalIndication provides SaltTheme.configs.indication,
+        LocalOverscrollFactory provides CupertinoOverscrollEffectFactory(),
+    ) {
+        if (rail) {
+            Row(Modifier.fillMaxSize().background(SaltTheme.colors.background)) {
+                Column(
+                    Modifier.windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(WindowInsetsSides.Start)
+                        )
+                        .width(88.dp)
+                        .fillMaxHeight()
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical)
+                        ),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    tabs.forEach { tab ->
+                        Column(
+                            Modifier.fillMaxWidth()
+                                .clickable(role = Role.Tab, onClick = { onTabSelected(tab) })
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            val color =
+                                if (tab == selectedTab) SaltTheme.colors.highlight
+                                else SaltTheme.colors.subText
+                            Icon(rememberVectorPainter(tab.icon), null, tint = color)
+                            Text(
+                                stringResource(tab.titleRes),
+                                color = color,
+                                style = SaltTheme.textStyles.sub,
+                            )
+                        }
+                    }
+                }
+                Box(Modifier.weight(1f)) {
+                    CompositionLocalProvider(
+                        LocalScaffoldIncludesStartPadding provides false,
+                        LocalScaffoldIncludesBottomPadding provides true,
+                        LocalLibraryBottomContentPadding provides 0.dp,
+                        content = content,
+                    )
+                }
+            }
+        } else if (floatingBottomBarEnabled) {
+            val source = rememberGlassSource()
+            val surfaceColor = SaltTheme.colors.background
+            val surfaceEffect = when (resolveFloatingBarEffect(barBlurEnabled, floatingBarEffect)) {
+                FloatingBarEffect.FROSTED_GLASS -> GlassEffect.Blur
+                FloatingBarEffect.LIQUID_GLASS -> GlassEffect.Regular()
+                FloatingBarEffect.NONE -> GlassEffect.Solid(lightColor = surfaceColor, darkColor = surfaceColor)
+            }
+            val needsSource = surfaceEffect !is GlassEffect.Solid
+            Box(Modifier.fillMaxSize().background(SaltTheme.colors.background)) {
+                Box(
+                    Modifier.fillMaxSize().then(
+                        if (needsSource) Modifier.glassSource(source) else Modifier
+                    )
+                ) {
+                    CompositionLocalProvider(
+                        LocalScaffoldIncludesBottomPadding provides false,
+                        LocalLibraryBottomContentPadding provides bottomContentPadding,
+                        content = content,
+                    )
+                }
+                SaltFloatingNavigationBar(
+                    modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged {
+                        floatingBarHeight = with(density) { it.height.toDp() }
+                    },
+                    source = source,
+                    effect = surfaceEffect,
+                ) {
+                    tabs.forEach { tab ->
+                        SaltFloatingNavigationBarItem(
+                            selected = tab == selectedTab,
+                            onClick = { onTabSelected(tab) },
+                            icon = tab.icon,
+                            label = stringResource(tab.titleRes),
+                        )
+                    }
+                }
+            }
+        } else {
+            val backdrop = rememberBarBlurBackdrop(enabled = barBlurEnabled)
+            Box(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize().blurSource(backdrop).background(SaltTheme.colors.background)) {
+                    CompositionLocalProvider(
+                        LocalScaffoldIncludesBottomPadding provides false,
+                        LocalLibraryBottomContentPadding provides bottomContentPadding,
+                        content = content,
+                    )
+                }
+                BlurredBar(
+                    backdrop = backdrop,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    atTop = false,
+                    surfaceColor = if (backdrop == null) SaltTheme.colors.subBackground else SaltTheme.colors.background,
+                ) {
+                    BottomBar(
+                        modifier = Modifier.navigationBarsPadding(),
+                        backgroundColor = androidx.compose.ui.graphics.Color.Transparent,
+                    ) {
+                        tabs.forEach { tab ->
+                            Column(
+                                Modifier.weight(1f)
+                                    .fillMaxHeight()
+                                    .selectable(
+                                        selected = tab == selectedTab,
+                                        role = Role.Tab,
+                                        onClick = { onTabSelected(tab) },
+                                    ),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                val color =
+                                    if (tab == selectedTab) SaltTheme.colors.highlight
+                                    else SaltTheme.colors.subText
+                                Icon(
+                                    rememberVectorPainter(tab.icon),
+                                    null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = color,
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    stringResource(tab.titleRes),
+                                    color = color,
+                                    fontSize = 10.sp,
+                                    style = SaltTheme.textStyles.sub,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

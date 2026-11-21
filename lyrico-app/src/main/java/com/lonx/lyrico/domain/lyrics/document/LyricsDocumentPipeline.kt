@@ -135,7 +135,13 @@ object LyricsDocumentPipeline {
         offset: Long = 0L,
         removeTagLineKeywords: List<String> = emptyList()
     ): LyricsDocument {
-        var processed = LyricsTextPostProcessor(rule).process(document)
+        val sourceOffset = document.metadata.offsetMs ?: 0L
+        // LRC's positive source offset advances lyrics; the user's adjustment below delays them.
+        val timestampOffset = if (sourceOffset == Long.MIN_VALUE) Long.MAX_VALUE else -sourceOffset
+        val normalized = if (timestampOffset != 0L) OffsetPostProcessor(timestampOffset).process(document) else document
+        var processed = LyricsTextPostProcessor(rule).process(
+            normalized.copy(metadata = normalized.metadata.copy(offsetMs = null))
+        )
         if (!config.showTranslation) processed = RemoveTranslationPostProcessor.process(processed)
         if (!config.showRomanization) processed = RemoveRomanizationPostProcessor.process(processed)
         val keywords = removeTagLineKeywords.map { it.trim() }.filter { it.isNotEmpty() }

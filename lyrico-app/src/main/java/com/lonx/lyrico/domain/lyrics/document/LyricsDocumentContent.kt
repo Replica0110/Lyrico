@@ -10,17 +10,9 @@ internal fun LyricsDocument.hasRenderableLyrics(format: LyricsFormat): Boolean {
     val originals = tracks.firstOrNull { it.type == LyricsTrackType.Original }?.lines.orEmpty()
     if (originals.any { it.startMs != null && it.visibleText().isNotBlank() }) return true
 
-    fun linkedLine(original: LyricsDocumentLine, type: LyricsTrackType): LyricsDocumentLine? {
-        val lines = tracks.filter { it.type == type }.flatMap { it.lines }
-        return original.linkKey?.let { key -> lines.lastOrNull { it.linkKey == key } }
-            ?: original.startMs?.let { start -> lines.lastOrNull { it.startMs == start } }
-    }
-
-    return originals.groupBy { it.startMs }.values.any { group ->
-        val original = group.first()
+    return originals.indices.any { index ->
         listOf(LyricsTrackType.Translation, LyricsTrackType.Romanization).any { type ->
-            val linked = linkedLine(original, type)
-            linked != null && (linked.startMs != null || original.startMs != null) && linked.visibleText().isNotBlank()
+            linkedLinesForOriginal(index, type).any { it.visibleText().isNotBlank() }
         }
     }
 }
@@ -55,13 +47,8 @@ internal fun LyricsDocument.linkedLinesForOriginal(
             addAll(byKey ?: background.filter { it.startMs == original.startMs })
         }
         if (type == null || type == LyricsTrackType.Translation) {
-            if (sourceFormat == null) {
-                translations.firstOrNull()?.lines.orEmpty().lastOrNull { it.startMs == original.startMs }
-                    ?.let(::add)
-            } else {
-                translations.forEach { track ->
-                    addAll(track.lines.filter { it.linkedOriginalIndex(originals) == originalIndex })
-                }
+            translations.forEach { track ->
+                addAll(track.lines.filter { it.linkedOriginalIndex(originals) == originalIndex })
             }
         }
         if (type == null || type == LyricsTrackType.Romanization) {
@@ -74,10 +61,11 @@ internal fun LyricsDocument.linkedLinesForOriginal(
 
 internal fun LyricsDocumentLine.linkedOriginalIndex(originals: List<LyricsDocumentLine>): Int? {
     linkKey?.let { key ->
-        originals.indexOfFirst { it.linkKey == key }.takeIf { it >= 0 }?.let { return it }
+        return originals.indexOfFirst { it.linkKey == key }.takeIf { it >= 0 }
     }
     startMs?.let { start ->
-        originals.indexOfFirst { it.startMs == start }.takeIf { it >= 0 }?.let { return it }
+        originals.indexOfFirst { it.startMs == start && (agentId == null || it.agentId == agentId) }
+            .takeIf { it >= 0 }?.let { return it }
     }
     return null
 }

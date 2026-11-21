@@ -191,7 +191,7 @@ API5 在 API4 歌词候选格式上扩展逐词音译、行级属性、演唱者
 |---|---|---|
 | `original` 行的第 4 个元素 | 行级扩展属性，例如 `ttm:agent`、`itunes:song-part`、`divBegin`/`divEnd` | `<p ttm:agent>`、`<div itunes:song-part>`、段落 `<div begin/end>` |
 | `original` 词的第 4 个元素 | Ruby 注音音节数组 `[[startMs, endMs, "注音"], ...]` | `<span tts:ruby="container">` / `<span tts:ruby="text">`，缺失的音节边界由宿主规范化 |
-| `romanization` 行第 3 个元素 | 词数组或旧版整行文本 | head `<transliteration>` 中的定时 span；逐字 LRC 也支持音译时间戳 |
+| `original` / `translated` / `romanization` 行第 3 个元素 | 词数组或整行文本 | 三个轨道分别保留逐句或逐字粒度；TTML 与逐字 LRC 支持逐词时间 |
 | `agents` | `{ id, type?, name? }[]` | `<head>` 中的 `<ttm:agent>` |
 | `metadata` | `{ name, namespace?, attributes?, text?, children? }[]` | `<head>` 中的元数据节点 |
 | `timing` | `"Word"` 或 `"Line"` | `<tt itunes:timing>` |

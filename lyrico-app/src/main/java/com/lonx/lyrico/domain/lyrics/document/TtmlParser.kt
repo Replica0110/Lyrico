@@ -80,6 +80,7 @@ object TtmlParser : LyricsFormatParser {
                                 startMs = start,
                                 endMs = end,
                                 text = parsed.translationText,
+                                words = parsed.translationWords,
                                 linkKey = linkKey
                             )
                         )
@@ -90,6 +91,7 @@ object TtmlParser : LyricsFormatParser {
                                 startMs = start,
                                 endMs = end,
                                 text = parsed.romanizationText,
+                                words = parsed.romanizationWords,
                                 linkKey = linkKey
                             )
                         )
@@ -188,12 +190,7 @@ object TtmlParser : LyricsFormatParser {
         return root.elementsByLocalName("translation").mapNotNull { translation ->
             val lines = translation.childElementsByLocalName("text").mapNotNull { text ->
                 val key = text.attr("for") ?: return@mapNotNull null
-                val value = normalizeTtmlText(text.textContent ?: "", trimEdges = true)
-                LyricsDocumentLine(
-                    text = value,
-                    linkKey = key,
-                    extensions = text.attributesAsExtensions()
-                )
+                parseSidecarTextLine(text, key)
             }
             if (lines.isEmpty()) return@mapNotNull null
             LyricsTrack(
@@ -228,8 +225,12 @@ object TtmlParser : LyricsFormatParser {
 
     private fun parseSidecarTextLine(text: Element, key: String): LyricsDocumentLine? {
         val words = parseSidecarTimedWords(text)
-        if (words.isNotEmpty()) {
+        val start = text.attr("begin")?.let(::parseTtmlTimeMs)
+        val end = text.attr("end")?.let(::parseTtmlTimeMs)
+        if (words.any { it.startMs != null || it.ruby.isNotEmpty() }) {
             return LyricsDocumentLine(
+                startMs = start,
+                endMs = end,
                 text = words.joinToString("") { it.text },
                 words = words,
                 linkKey = key,
@@ -239,6 +240,8 @@ object TtmlParser : LyricsFormatParser {
         val whole = normalizeTtmlText(text.textContent ?: "", trimEdges = true)
         if (whole.isBlank()) return null
         return LyricsDocumentLine(
+            startMs = start,
+            endMs = end,
             text = whole,
             linkKey = key,
             extensions = text.attributesAsExtensions()
@@ -248,13 +251,22 @@ object TtmlParser : LyricsFormatParser {
     private fun parseSidecarTimedWords(element: Element): List<LyricsDocumentWord> {
         val words = mutableListOf<LyricsDocumentWord>()
         fun visit(node: Node) {
+            if (node.nodeType == Node.TEXT_NODE || node.nodeType == Node.CDATA_SECTION_NODE) {
+                val raw = node.nodeValue.orEmpty()
+                val value = normalizeTtmlText(raw, trimEdges = false)
+                if (value.isNotEmpty() && !(value.isBlank() && (raw.contains('\n') || raw.contains('\r')))) {
+                    words.add(LyricsDocumentWord(text = value))
+                }
+                return
+            }
             if (node.nodeType != Node.ELEMENT_NODE) return
             val el = node as Element
             val role = el.attr("role", TtmlXmlNames.NS_TTM)
             val start = el.attr("begin")?.let(::parseTtmlTimeMs)
             if (start != null && role != "x-bg" && role != "x-translation" && !role.isRomanizationRole()) {
-                val value = normalizeTtmlText(el.textContent ?: "", trimEdges = false)
-                if (value.isNotBlank()) {
+                val raw = el.textContent.orEmpty()
+                val value = normalizeTtmlText(raw, trimEdges = false)
+                if (value.isNotEmpty() && !(value.isBlank() && (raw.contains('\n') || raw.contains('\r')))) {
                     words.add(
                         LyricsDocumentWord(
                             startMs = start,
@@ -276,6 +288,8 @@ object TtmlParser : LyricsFormatParser {
         val originalText: String,
         val translationText: String,
         val romanizationText: String,
+        val translationWords: List<LyricsDocumentWord>,
+        val romanizationWords: List<LyricsDocumentWord>,
         val backgroundLines: List<LyricsDocumentLine>,
         val words: List<LyricsDocumentWord>
     )
@@ -285,6 +299,8 @@ object TtmlParser : LyricsFormatParser {
         val original = StringBuilder()
         val translation = StringBuilder()
         val romanization = StringBuilder()
+        val translationWords = mutableListOf<LyricsDocumentWord>()
+        val romanizationWords = mutableListOf<LyricsDocumentWord>()
         val background = mutableListOf<LyricsDocumentLine>()
 
         fun appendVisibleText(node: Node, target: StringBuilder) {
@@ -318,8 +334,14 @@ object TtmlParser : LyricsFormatParser {
                     val rubyWord = element.parseRubyWord(fallbackStart, fallbackEnd)
                     when {
                         rubyWord != null -> words.add(rubyWord)
-                        role == "x-translation" -> translation.append(normalizeTtmlText(text, trimEdges = true))
-                        role.isRomanizationRole() -> romanization.append(normalizeTtmlText(text, trimEdges = true))
+                        role == "x-translation" -> {
+                            translation.append(normalizeTtmlText(text, trimEdges = true))
+                            translationWords.addAll(parseContentWords(element, fallbackStart, fallbackEnd))
+                        }
+                        role.isRomanizationRole() -> {
+                            romanization.append(normalizeTtmlText(text, trimEdges = true))
+                            romanizationWords.addAll(parseContentWords(element, fallbackStart, fallbackEnd))
+                        }
                         role == "x-bg" -> background.add(
                             LyricsDocumentLine(
                                 startMs = fallbackStart,
@@ -358,6 +380,9 @@ object TtmlParser : LyricsFormatParser {
             }
         }
 
+        if (words.isNotEmpty() && original.isNotEmpty()) {
+            words.add(0, LyricsDocumentWord(text = original.toString()))
+        }
         val finalOriginal = if (words.isNotEmpty()) {
             words.joinToString("") { it.text }
         } else {
@@ -368,20 +393,10 @@ object TtmlParser : LyricsFormatParser {
             originalText = finalOriginal,
             translationText = normalizeTtmlText(translation.toString(), trimEdges = true),
             romanizationText = normalizeTtmlText(romanization.toString(), trimEdges = true),
+            translationWords = translationWords.takeIf { it.any { word -> word.startMs != null } }.orEmpty(),
+            romanizationWords = romanizationWords.takeIf { it.any { word -> word.startMs != null } }.orEmpty(),
             backgroundLines = background,
-            words = words.ifEmpty {
-                if (finalOriginal.isBlank()) {
-                    emptyList()
-                } else {
-                    listOf(
-                        LyricsDocumentWord(
-                            startMs = fallbackStart,
-                            endMs = fallbackEnd,
-                            text = finalOriginal
-                        )
-                    )
-                }
-            }
+            words = words
         )
     }
 

@@ -252,7 +252,7 @@ function getLyrics(request) {
 
 API 5 扩展了结构化歌词载荷：逐词 `romanization`、行级扩展、`agents` / `metadata`、时间粒度与语言字段、`bodyDur` 和多音节 Ruby 注音。返回 API5 扩展字段时应声明 `apiVersion: 5`。候选数组及必填歌曲标签沿用 API 4，旧的整行文本格式仍兼容。宿主 API 独立编号，当前仍为 4。
 
-`original` 和 `romanization` 都可使用逐词格式：
+`original`、`translated` 和 `romanization` 共用行格式，均可使用逐词格式：
 
 ```
 [lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...], extensions?]
@@ -270,17 +270,19 @@ API 5 扩展了结构化歌词载荷：逐词 `romanization`、行级扩展、`a
 [27820, 27950, "詮", [[27820, 27880, "せ"], [27880, 27950, "ん"]]]
 ```
 
-两者也都兼容整行文本；`translated` 只使用整行文本格式：
+三个轨道也都兼容整行文本。宿主按各行返回的结构保留时间粒度：字符串为逐句，词数组为逐字（包括只有一个词的数组），不依据原文、翻译或音译的角色限制逐字能力：
 
 ```
 [lineStartMs, lineEndMs, "text"]
 ```
 
-导出 TTML 时，逐词音译保留每个词的时间，并在相邻音节之间补充必要的空格。
+导出 TTML 或逐字 LRC 时，三个轨道均保留各自的逐词时间；逐词音译还会在相邻音节之间补充必要的空格。普通 LRC 和纯文本按整行输出。LRC 没有轨道角色标记，重新解析时沿用同一行时间下“两行为原文／翻译、三行为原文／音译／翻译”的约定，不能根据有无逐字时间推断角色。
+
+LRC 写出只包含歌词正文，不追加 `[ti:...]`、`[hash:...]`、`[key:...]` 等元信息标签；已有 LRC 的 offset 在重写时计入时间戳。增强型 LRC 会保留演唱者前缀，例如 `[00:01.000]v1:<00:01.000>歌词<00:02.000>`；对应翻译、音译行使用相同前缀。TTML 已有 `vN` 演唱者 ID 原样使用，其他 ID 稳定映射到未占用的 `vN`。其他无法映射的 TTML 扩展不保证保留。
 
 ### TTML 扩展
 
-以下字段只影响 TTML 导出。导出为 LRC 时，TTML 专属结构不会保留。
+以下字段主要用于 TTML 导出。增强型 LRC 可保留演唱者前缀；其他无法映射的 TTML 专属结构不会保留。
 
 这里描述的是 structured 协议能够表达的 TTML 子集，不是 AMLL TTML DB 的投稿规范。未知 XML 节点仍可能无法通过 structured 载荷表示；需要保留完整源文档时应返回 `type: "rawTtml"`。如果用户随后执行繁简转换、轨道筛选等操作，宿主仍会解析并重写该文档，未建模结构可能丢失。
 
@@ -377,7 +379,7 @@ function getLyrics(request) {
 | `type` | `string` | `structured` 或 raw 类型 |
 | `tags` | `object` | 歌曲元信息标签 |
 | `original` | `Line[]` | 仅 `type: "structured"` 使用，原文歌词（逐词或整行） |
-| `translated` | `Line[] \| null` | 仅 `type: "structured"` 使用，翻译歌词 |
+| `translated` | `Line[] \| null` | 仅 `type: "structured"` 使用，翻译歌词；行支持逐词或整行文本 |
 | `romanization` | `Line[] \| null` | 仅 `type: "structured"` 使用，音译歌词；行支持逐词（逐字注音）或整行文本 |
 | `agents` | `Agent[]` | 仅 `type: "structured"` 使用，演唱者列表（可选；写回 TTML head `<ttm:agent>`，详见上文扩展字段） |
 | `metadata` | `MetadataElement[]` | 仅 `type: "structured"` 使用，补充 TTML head 的元素树（可选，约束见上文） |

@@ -18,7 +18,6 @@ import com.lonx.lyrico.data.lyrics.document.LyricsMetadata
 import com.lonx.lyrico.data.lyrics.document.LyricsTrack
 import com.lonx.lyrico.data.lyrics.document.LyricsTrackType
 import com.lonx.lyrico.data.lyrics.document.QualifiedName
-import com.lonx.lyrico.data.lyrics.isWordByWord
 
 private const val NS_TTM = "http://www.w3.org/ns/ttml#metadata"
 private const val NS_ITUNES = "http://music.apple.com/lyric-ttml-internal"
@@ -76,20 +75,12 @@ fun LyricsDocument.toLyricsResult(): LyricsResult {
         line.toLyricsLine(keepEmpty = line.visibleText().isBlank() &&
                 linkedLinesForOriginal(index).any { !it.isBlankOrPlaceholder() })
     }
-    val originalByKey = originalDocumentLines
-        .mapNotNull { line -> line.linkKey?.let { it to line } }
-        .toMap()
-    val originalByStart = originalDocumentLines
-        .mapNotNull { line -> line.startMs?.let { it to line } }
-        .toMap()
-
     fun linkedTrackLines(type: LyricsTrackType): List<LyricsLine>? {
         return tracks
             .filter { it.type == type }
             .flatMap { it.lines }
             .mapNotNull { line ->
-                val fallback = line.linkKey?.let { originalByKey[it] }
-                    ?: line.startMs?.let { originalByStart[it] }
+                val fallback = line.linkedOriginalIndex(originalDocumentLines)?.let(originalDocumentLines::get)
                 line.toLyricsLine(fallback)
             }
             .ifEmpty { null }
@@ -100,7 +91,9 @@ fun LyricsDocument.toLyricsResult(): LyricsResult {
         original = originalLines,
         translated = linkedTrackLines(LyricsTrackType.Translation),
         romanization = linkedTrackLines(LyricsTrackType.Romanization),
-        isWordByWord = originalLines.isWordByWord(),
+        isWordByWord = tracks.any { track -> track.lines.any { line ->
+            line.words.any { it.startMs != null || it.ruby.isNotEmpty() }
+        } },
         // 演唱者列表带出（document → structured）：避免文档层解析到的 <ttm:agent> 转 structured 时丢失
         agents = agents.map { agent ->
             LyricsAgentEntry(
@@ -130,7 +123,7 @@ private fun com.lonx.lyrico.data.lyrics.LyricsLine.toDocumentLine(): LyricsDocum
         startMs = start,
         endMs = end,
         text = words.joinToString("") { it.text },
-        words = words.map { word ->
+        words = words.takeIf { isWordByWord }.orEmpty().map { word ->
             LyricsDocumentWord(
                 startMs = word.start,
                 endMs = word.end,
@@ -145,6 +138,7 @@ private fun com.lonx.lyrico.data.lyrics.LyricsLine.toDocumentLine(): LyricsDocum
             )
         },
         agentId = extensions["ttm:agent"],
+        linkKey = linkKey,
         extensions = extensionMap
     )
 }
@@ -255,7 +249,7 @@ private fun LyricsDocumentLine.toLyricsLine(
         // 行级扩展属性带出（document → structured）：ttm:agent（演唱者引用）+ itunes:songPart（段落标注），
         // 避免文档层解析到的信息在转 structured 时丢失；无扩展的行保持空 Map（旧插件行为一致）
         val extensions = buildMap {
-            agentId?.let { put("ttm:agent", it) }
+            (agentId ?: fallback?.agentId)?.let { put("ttm:agent", it) }
             extensions.attributes.entries
                 .firstOrNull { it.key.localName == "song-part" || it.key.localName == "songPart" }
                 ?.let { put("itunes:song-part", it.value) }
@@ -270,7 +264,9 @@ private fun LyricsDocumentLine.toLyricsLine(
             start = start,
             end = end,
             words = resultWords,
-            extensions = extensions
+            extensions = extensions,
+            isWordByWord = words.any { it.startMs != null || it.ruby.isNotEmpty() },
+            linkKey = linkKey
         )
     }
 }

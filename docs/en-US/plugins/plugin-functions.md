@@ -256,7 +256,7 @@ The single-object format examples below illustrate candidate payloads. Actual AP
 
 API 5 adds word-timed romanization, line extensions, agents and metadata, timing and language fields, bodyDur, and timed multi-syllable Ruby. Declare `apiVersion: 5` when returning these extensions. Candidate arrays and required tags remain as introduced in API 4. Legacy line strings remain supported. Host API remains independently versioned at 4.
 
-`original` and `romanization` both accept word-level lines:
+`original`, `translated`, and `romanization` share the same line format and all accept word-level lines:
 
 ```
 [lineStartMs, lineEndMs, [[wordStartMs, wordEndMs, "text"], ...], extensions?]
@@ -274,17 +274,19 @@ One base run may map to multiple annotation syllables; a single annotation still
 [27820, 27950, "詮", [[27820, 27880, "せ"], [27880, 27950, "ん"]]]
 ```
 
-They also accept whole-line text. `translated` uses only this form:
+All three tracks also accept whole-line text. A string keeps line timing; a word array keeps word timing, including an array containing only one word. Track roles do not restrict timing granularity:
 
 ```
 [lineStartMs, lineEndMs, "text"]
 ```
 
-When exported as TTML, word-level romanization keeps its timing. Lyrico inserts spaces between adjacent syllables when needed.
+TTML and word-timed LRC preserve word timing on all three tracks. Lyrico inserts spaces between adjacent romanization syllables when needed. Plain LRC and plain text flatten each line. LRC has no track role markers: on re-import, two lines sharing a line timestamp follow the original/translation convention, and three follow original/romanization/translation. Word timestamps cannot identify track roles.
+
+LRC output contains lyrics only; it does not append metadata tags such as `[ti:...]`, `[hash:...]`, or `[key:...]`. Existing LRC offsets are applied to timestamps when rewriting. Enhanced LRC keeps vocal-agent prefixes, for example `[00:01.000]v1:<00:01.000>lyrics<00:02.000>`, including the same prefix on linked translation and romanization lines. Existing TTML `vN` IDs are retained; other IDs map consistently to unused `vN` values. Other TTML extensions may be lost.
 
 ### TTML extensions
 
-The fields in this section affect TTML output only. TTML-specific structure is not retained when exporting to LRC.
+The fields in this section primarily affect TTML output. Enhanced LRC can retain vocal-agent prefixes; other TTML-specific structures without a corresponding LRC representation are not retained.
 
 This section describes the TTML subset available through the structured plugin payload; it is not a replacement for the AMLL TTML DB submission specification. Unmodeled XML nodes may still be unavailable through a structured payload. Return `type: "rawTtml"` when the complete source document must be retained. If the user later applies script conversion, track filtering, or another transformation, Lyrico will parse and rewrite that document, and unmodeled structures may be lost.
 
@@ -381,7 +383,7 @@ function getLyrics(request) {
 | `type` | `string` | `structured` or a raw type |
 | `tags` | `object` | Song metadata tags |
 | `original` | `Line[]` | Used only by `type: "structured"`, original lyrics, word-level or whole-line |
-| `translated` | `Line[] \| null` | Used only by `type: "structured"`, translated lyrics |
+| `translated` | `Line[] \| null` | Used only by `type: "structured"`, translated lyrics; accepts word-level or whole-line text |
 | `romanization` | `Line[] \| null` | Used only by `type: "structured"`, romanized lyrics; lines may be word-level (syllable reading) or whole-line text |
 | `agents` | `Agent[]` | Used only by `type: "structured"`, performer list (optional; written to TTML head `<ttm:agent>`, see the extension fields section above) |
 | `metadata` | `MetadataElement[]` | Used only by `type: "structured"`, elements added to the TTML head (optional; see constraints above) |

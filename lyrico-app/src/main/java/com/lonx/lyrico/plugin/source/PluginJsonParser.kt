@@ -223,7 +223,7 @@ class PluginJsonParser(
             "translated",
             "translation",
             "translations"
-        ).parseCompactTextLines().takeIf { it.isNotEmpty() }
+        ).parseCompactWordLines().takeIf { it.isNotEmpty() }
 
         // 音译支持词级（逐字注音，与 original 同构）：第三元素为词数组时逐词解析，
         // 为整行字符串时退化为整行，兼容旧插件。
@@ -258,7 +258,8 @@ class PluginJsonParser(
             return null
         }
 
-        val isWordByWord =  originalLines.isWordByWord()
+        val isWordByWord = originalLines.isWordByWord() ||
+                translatedLines.orEmpty().isWordByWord() || romanizationLines.orEmpty().isWordByWord()
 
         return LyricsResult(
             tags = tags,
@@ -345,7 +346,7 @@ private fun String.toLyricsPayloadType(): LyricsPayloadType? {
 }
 
 /**
- * original / romanization 紧凑格式（词级；romanization 词级用于逐字注音）：
+ * original / translated / romanization 共用紧凑格式：
  *
  * [
  *   [lineStart, lineEnd, [[wordStart, wordEnd, text, ruby?], ...]]
@@ -420,7 +421,8 @@ private fun JsonArray?.parseCompactWordLines(): List<LyricsLine> {
             start = start,
             end = end,
             words = words,
-            extensions = extensions
+            extensions = extensions,
+            isWordByWord = wordsArray != null
         )
     }.orEmpty()
 }
@@ -437,36 +439,6 @@ private fun JsonArray?.parseRubySyllables(): List<LyricsRubySyllable> {
             start = syllable.longAt(0),
             end = syllable.longAt(1),
             text = text
-        )
-    }.orEmpty()
-}
-
-/**
- * translated 紧凑格式（仅整行文本；翻译无词级语义）：
- *
- * [
- *   [lineStart, lineEnd, text]
- * ]
- */
-private fun JsonArray?.parseCompactTextLines(): List<LyricsLine> {
-    return this?.mapNotNull { element ->
-        val line = element as? JsonArray ?: return@mapNotNull null
-        val start = line.longAt(0) ?: return@mapNotNull null
-        val end = line.longAt(1) ?: start
-        val text = line.stringAt(2).orEmpty()
-
-        if (text.isBlank()) return@mapNotNull null
-
-        LyricsLine(
-            start = start,
-            end = end,
-            words = listOf(
-                LyricsWord(
-                    start = start,
-                    end = end,
-                    text = text
-                )
-            )
         )
     }.orEmpty()
 }

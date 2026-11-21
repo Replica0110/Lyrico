@@ -11,6 +11,28 @@ import org.junit.Test
 
 class TtmlRoundTripTest {
     @Test
+    fun `mixed text and begin only words survive on original translation and romanization`() {
+        val raw = """
+            <tt xmlns="http://www.w3.org/ns/ttml" xmlns:itunes="http://music.apple.com/lyric-ttml-internal">
+              <head><metadata><iTunesMetadata xmlns="http://music.apple.com/lyric-ttml-internal">
+                <translations><translation><text for="a" begin="1s" end="2.5s">Hello <span begin="2s">world</span>!</text></translation></translations>
+                <transliterations><transliteration><text for="a">Hello <span begin="2s">world</span>!</text></transliteration></transliterations>
+              </iTunesMetadata></metadata></head>
+              <body><div><p begin="1s" end="3s" itunes:key="a">Hello <span begin="2s" end="3s">world</span>!</p></div></body>
+            </tt>
+        """.trimIndent()
+        val reread = TtmlParser.parse(TtmlWriter.write(TtmlParser.parse(raw)))
+        for (track in listOf(LyricsTrackType.Original, LyricsTrackType.Translation, LyricsTrackType.Romanization)) {
+            val line = reread.tracks.single { it.type == track }.lines.single()
+            assertEquals("Hello world!", line.visibleText())
+            assertEquals(2000L, line.words.single { it.startMs != null }.startMs)
+        }
+        val translation = reread.tracks.single { it.type == LyricsTrackType.Translation }.lines.single()
+        assertEquals(2500L, translation.endMs)
+        assertNull(translation.words.single { it.startMs != null }.endMs)
+    }
+
+    @Test
     fun `word timing and escaped text survive writing and parsing`() {
         val document = roundTrip()
         val line = document.lines(LyricsTrackType.Original).single()
@@ -36,7 +58,7 @@ class TtmlRoundTripTest {
         assertEquals(original.linkKey, translation.lines.single().linkKey)
         assertEquals("zh-Latn", romanization.language)
         assertEquals(original.linkKey, romanization.lines.single().linkKey)
-        assertEquals(listOf(1000L, 2000L), romanization.lines.single().words.map { it.startMs })
+        assertEquals(listOf(1000L, 2000L), romanization.lines.single().words.mapNotNull { it.startMs })
     }
 
     @Test

@@ -22,6 +22,26 @@ class PluginLyricsPipelineTest {
     private val parser = PluginJsonParser(Json)
 
     @Test
+    fun `QQ live QRC romanization retains actual syllable boundaries in all timed formats`() {
+        val fixture = requireNotNull(javaClass.getResource("/lyrics/qq-qrc-romanization.json")).readText()
+        val input = requireNotNull(parser.parseLyrics(fixture))
+        val romanization = requireNotNull(input.romanization).single()
+        val starts = listOf(1547L, 1771L, 1924L, 2147L, 2312L)
+        val ends = listOf(1770L, 1923L, 2147L, 2311L, 2698L)
+        assertEquals(starts, romanization.words.map { it.start })
+        assertEquals(ends, romanization.words.map { it.end })
+        assertTrue(romanization.isWordByWord)
+        assertFalse(requireNotNull(input.translated).single().isWordByWord)
+        for (format in listOf(LyricsFormat.TTML, LyricsFormat.VERBATIM_LRC, LyricsFormat.ENHANCED_LRC)) {
+            val output = LyricsRenderer.render(input, config(format))
+            val decoded = requireNotNull(LyricsParser.parseOrNull(output)).romanization!!.single()
+            assertEquals(format.name, starts, decoded.words.map { it.start })
+            assertEquals(format.name, ends, decoded.words.map { it.end })
+            assertEquals(romanization.words.map { it.text.trim() }, decoded.words.map { it.text.trim() })
+        }
+    }
+
+    @Test
     fun `all declared raw payloads survive parsing processing and target encoding`() {
         val cases = listOf(
             RawCase("rawPlainLrc", "rawPlainLrc", "[00:01.00]原文", LyricsFormat.PLAIN_LRC),
@@ -53,7 +73,7 @@ class PluginLyricsPipelineTest {
         assertEquals(listOf(1000L, 1500L), decoded.original.single().words.map { it.start })
         assertEquals("Hello", decoded.translated!!.single().words.joinToString("") { it.text })
         val romanization = requireNotNull(decoded.romanization).single()
-        assertEquals(listOf("ni", "hao"), romanization.words.map { it.text })
+        assertEquals(listOf("ni", "hao"), romanization.words.map { it.text.trim() })
         assertEquals(listOf(1000L, 1500L), romanization.words.map { it.start })
     }
 

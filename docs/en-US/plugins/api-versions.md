@@ -191,7 +191,7 @@ A lyrics result with `type: "structured"` may carry TTML-specific information. T
 |---|---|---|
 | 4th element of an `original` line | Line-level extension attributes such as `ttm:agent`, `itunes:song-part`, `divBegin`/`divEnd` | `<p ttm:agent>`, `<div itunes:song-part>`, paragraph `<div begin/end>` |
 | 4th element of an `original` word | Ruby syllable array `[[startMs, endMs, "reading"], ...]` | `<span tts:ruby="container">` / `<span tts:ruby="text">`, with missing syllable boundaries normalized by the host |
-| `romanization` line, 3rd element | Word array or legacy line text | Timed spans in head `<transliteration>` |
+| `original` / `translated` / `romanization` line, 3rd element | Word array or whole-line text | Each track keeps its own line or word timing; TTML and word-timed LRC support word timestamps |
 | `agents` | `{ id, type?, name? }[]` | `<ttm:agent>` elements in `<head>` |
 | `metadata` | `{ name, namespace?, attributes?, text?, children? }[]` | Metadata nodes in `<head>` |
 | `timing` | `"Word"` or `"Line"` | `<tt itunes:timing>` |

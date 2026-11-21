@@ -36,7 +36,12 @@ data class LyricsLine(
     // 行级扩展属性透传（structured 协议 Line 第 4 元素）：
     // key 为带命名空间前缀的 TTML 属性名（如 "ttm:agent"、"itunes:song-part"），value 为属性值。
     // 写回 TTML 时输出到对应 <p>；song-part、key 和 div 时间由 writer 统一管理。
-    val extensions: Map<String, String> = emptyMap()
+    val extensions: Map<String, String> = emptyMap(),
+    // A one-word array still carries explicit word timing; a whole-line string does not.
+    val isWordByWord: Boolean = words.size > 1 || words.any {
+        it.start != start || it.end != end || it.ruby.isNotEmpty()
+    },
+    val linkKey: String? = null
 ) : Parcelable
 
 /**
@@ -126,7 +131,7 @@ fun LyricsPayloadType.isRaw(): Boolean {
 }
 
 fun List<LyricsLine>.isWordByWord(): Boolean {
-    return this.any { it.words.size > 1 }
+    return this.any { it.isWordByWord }
 }
 
 @Serializable

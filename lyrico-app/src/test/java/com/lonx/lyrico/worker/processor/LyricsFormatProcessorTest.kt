@@ -30,6 +30,18 @@ import org.junit.Test
 
 class LyricsFormatProcessorTest {
     @Test
+    fun `batch conversion writes word timing on all three tracks without adding metadata tags`() = runBlocking {
+        val raw = "[ti:缘分一道桥]\n[hash:opaque]\n[key:opaque]\n" +
+            "[00:01.000]原[00:01.400][00:01.600]文[00:02.400]\n" +
+            "[00:01.000]ro [00:01.500][00:01.700]ma[00:02.300]\n" +
+            "[00:01.000]trans[00:01.500][00:01.700]lation[00:02.300]"
+        val expected = "[00:01.000]<00:01.000>原<00:01.400><00:01.600>文<00:02.400>\n" +
+            "[00:01.000]<00:01.000>ro <00:01.500><00:01.700>ma<00:02.300>\n" +
+            "[00:01.000]<00:01.000>trans<00:01.500><00:01.700>lation<00:02.300>"
+        assertSaved(raw, config().copy(targetFormat = LyricsFormat.ENHANCED_LRC), expected)
+    }
+
+    @Test
     fun `Empty conversion skips the actual processor before any tag write`() = runBlocking {
         assertSkippedWithoutWrite("[00:01.00]作词：某人", config().copy(
             removeTagLines = true, tagLineKeywords = listOf("作词：")

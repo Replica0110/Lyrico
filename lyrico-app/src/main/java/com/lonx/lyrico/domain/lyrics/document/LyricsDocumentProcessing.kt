@@ -66,19 +66,16 @@ class RemoveTagLinesPostProcessor(
 object OnlyTranslationPostProcessor : LyricsPostProcessor {
     override fun process(document: LyricsDocument): LyricsDocument {
         val original = document.tracks.firstOrNull { it.type == LyricsTrackType.Original } ?: return document
-        val translation = document.tracks.firstOrNull { it.type == LyricsTrackType.Translation } ?: return document
-        val translationsByKey = translation.lines.mapNotNull { line ->
-            line.linkKey?.let { it to line }
-        }.toMap()
-        val translationsByStart = translation.lines.mapNotNull { line ->
-            line.startMs?.let { it to line }
-        }.toMap()
-
-        val merged = original.lines.map { line ->
-            val translated = line.linkKey?.let { translationsByKey[it] }
-                ?: line.startMs?.let { translationsByStart[it] }
+        if (document.tracks.none { it.type == LyricsTrackType.Translation }) return document
+        val merged = original.lines.mapIndexed { index, line ->
+            val translated = document.linkedLinesForOriginal(index, LyricsTrackType.Translation).lastOrNull()
             if (translated != null && translated.text.isNotBlank()) {
-                line.copy(text = translated.text, words = emptyList())
+                line.copy(
+                    startMs = translated.startMs ?: line.startMs,
+                    endMs = translated.endMs ?: line.endMs,
+                    text = translated.text,
+                    words = translated.words
+                )
             } else {
                 line
             }

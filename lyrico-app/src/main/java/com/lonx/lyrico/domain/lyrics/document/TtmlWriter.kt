@@ -56,8 +56,6 @@ object TtmlWriter : LyricsFormatWriter {
         // 两个 songPart 相同但源文件中分属不同 <div> 的段落也能正确分开
         var currentSongPart: String? = null
         var divOpen = false
-        val inlineTranslationTrack = document.tracks.firstOrNull { it.type == LyricsTrackType.Translation }
-            .takeIf { document.sourceFormat == null }
         originalLines.forEachIndexed { index, line ->
             val backgroundLines = document.linkedLinesForOriginal(index, LyricsTrackType.Background)
             val songPart = line.songPartExtensionValue()
@@ -87,11 +85,7 @@ object TtmlWriter : LyricsFormatWriter {
                 builder,
                 line,
                 originalLineKeys[index],
-                backgroundLines,
-                inlineTranslationTrack?.let {
-                    document.linkedLinesForOriginal(index, LyricsTrackType.Translation).singleOrNull()
-                },
-                inlineTranslationTrack?.language
+                backgroundLines
             )
         }
         if (divOpen) builder.append("    </div>\n")
@@ -108,8 +102,6 @@ object TtmlWriter : LyricsFormatWriter {
     ) {
         val translations = document.tracks
             .filter { it.type == LyricsTrackType.Translation }
-            .takeUnless { document.sourceFormat == null }
-            .orEmpty()
         val transliterations = document.tracks.filter { it.type == LyricsTrackType.Romanization }
         if (document.agents.isEmpty() && translations.isEmpty() && transliterations.isEmpty() &&
             document.headMetadataElements.isEmpty() && document.itunesMetadataElements.isEmpty()
@@ -158,9 +150,9 @@ object TtmlWriter : LyricsFormatWriter {
                     builder.append(">\n")
                     track.lines.forEach { line ->
                         val key = originalKeyForLinkedLine(line, originalLines, originalLineKeys) ?: return@forEach
-                        builder.append("            <text for=\"").append(escapeXml(key)).append("\">")
-                            .append(escapeXml(line.visibleText()))
-                            .append("</text>\n")
+                        appendSidecarLineStart(builder, line, key)
+                        appendSidecarText(builder, line)
+                        builder.append("</text>\n")
                     }
                     builder.append("          </translation>\n")
                 }
@@ -174,8 +166,8 @@ object TtmlWriter : LyricsFormatWriter {
                     builder.append(">\n")
                     track.lines.forEach { line ->
                         val key = originalKeyForLinkedLine(line, originalLines, originalLineKeys) ?: return@forEach
-                        builder.append("            <text for=\"").append(escapeXml(key)).append("\">")
-                        appendSidecarRomanText(builder, line)
+                        appendSidecarLineStart(builder, line, key)
+                        appendSidecarText(builder, line, separateRomanization = true)
                         builder.append("</text>\n")
                     }
                     builder.append("          </transliteration>\n")
@@ -191,22 +183,35 @@ object TtmlWriter : LyricsFormatWriter {
         builder.append("  </head>\n")
     }
 
-    /** sidecar 音译文本：词级（带 begin/end 的词）输出 <span>，否则整行纯文本 */
-    private fun appendSidecarRomanText(builder: StringBuilder, line: LyricsDocumentLine) {
+    private fun appendSidecarLineStart(builder: StringBuilder, line: LyricsDocumentLine, key: String) {
+        builder.append("            <text for=\"").append(escapeXml(key)).append("\"")
+        line.startMs?.let { builder.append(" begin=\"").append(LyricsTimestamp.formatTtml(it)).append("\"") }
+        line.endMs?.let { builder.append(" end=\"").append(LyricsTimestamp.formatTtml(it)).append("\"") }
+        builder.append(">")
+    }
+
+    /** Linked tracks retain their own timing granularity. */
+    private fun appendSidecarText(
+        builder: StringBuilder,
+        line: LyricsDocumentLine,
+        separateRomanization: Boolean = false
+    ) {
         val timedWords = line.words.filter { it.startMs != null }
         if (timedWords.isNotEmpty()) {
             line.words.forEachIndexed { index, word ->
-                if (index > 0 && needsRomanizationSeparator(line.words[index - 1].text, word.text)) {
+                if (separateRomanization && index > 0 && word.startMs != null &&
+                    line.words[index - 1].startMs != null &&
+                    needsRomanizationSeparator(line.words[index - 1].text, word.text)) {
                     builder.append(" ")
                 }
                 val start = word.startMs
                 val end = word.endMs
-                if (start != null && end != null) {
+                if (start != null) {
                     builder.append("<span xmlns=\"").append(NS_TTML).append("\" begin=\"")
                         .append(LyricsTimestamp.formatTtml(start))
-                        .append("\" end=\"")
-                        .append(LyricsTimestamp.formatTtml(end))
-                        .append("\">")
+                        .append("\"")
+                    if (end != null) builder.append(" end=\"").append(LyricsTimestamp.formatTtml(end)).append("\"")
+                    builder.append(">")
                         .append(escapeXml(word.text))
                         .append("</span>")
                 } else {
@@ -222,9 +227,7 @@ object TtmlWriter : LyricsFormatWriter {
         builder: StringBuilder,
         line: LyricsDocumentLine,
         lineKey: String?,
-        backgroundLines: List<LyricsDocumentLine> = emptyList(),
-        inlineTranslation: LyricsDocumentLine? = null,
-        inlineTranslationLanguage: String? = null
+        backgroundLines: List<LyricsDocumentLine> = emptyList()
     ) {
         val start = line.startMs ?: return
         val end = line.endMs ?: line.words.lastOrNull()?.endMs ?: (start + 2000)
@@ -247,7 +250,7 @@ object TtmlWriter : LyricsFormatWriter {
         }
         builder.append(">")
 
-        if (line.words.size > 1 || line.words.any { it.ruby.isNotEmpty() }) {
+        if (line.words.isNotEmpty()) {
             line.words.forEach { word ->
                 appendWord(builder, word)
             }
@@ -264,13 +267,6 @@ object TtmlWriter : LyricsFormatWriter {
                 }
                 builder.append("</span>")
             }
-        }
-        inlineTranslation?.visibleText()?.takeIf { it.isNotBlank() }?.let { translation ->
-            builder.append("<span ttm:role=\"x-translation\"")
-            inlineTranslationLanguage?.takeIf { it.isNotBlank() }?.let { language ->
-                builder.append(" xml:lang=\"").append(escapeXml(language)).append("\"")
-            }
-            builder.append(">").append(escapeXml(translation)).append("</span>")
         }
         builder.append("</p>\n")
     }

@@ -8,11 +8,11 @@ import com.lonx.audiotag.model.AudioTagData
 import com.lonx.audiotag.model.type
 import com.lonx.audiotag.rw.AudioTagReader
 import com.lonx.audiotag.rw.AudioTagWriter
-import com.lonx.lyrico.data.repository.AppLogRepository
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
-import com.lonx.lyrico.data.model.log.recordOperation
-import com.lonx.lyrico.data.model.log.newLogOperation
+import com.lonx.lyrico.data.log.AppLogRepository
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
+import com.lonx.lyrico.data.log.recordOperation
+import com.lonx.lyrico.data.log.newLogOperation
 import com.lonx.lyrico.data.song.file.AudioFileAccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineDispatcher

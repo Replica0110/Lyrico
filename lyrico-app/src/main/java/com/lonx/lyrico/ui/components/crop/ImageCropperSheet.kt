@@ -1,6 +1,5 @@
 package com.lonx.lyrico.ui.components.crop
 
-import com.lonx.lyrico.ui.components.icons.LucideIcons
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
@@ -9,12 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
-import com.lonx.lyrico.ui.components.salt.SaltIconButton
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.ui.components.sheet.SheetConfirmActions
+import com.lonx.lyrico.ui.components.button.salt.SaltIconButton
+import com.lonx.lyrico.ui.components.icons.LucideIcons
+import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
+import com.lonx.lyrico.ui.components.sheet.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.ui.components.base.SheetConfirmActions
-import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 import com.moriafly.salt.ui.SaltTheme
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 

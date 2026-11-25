@@ -14,7 +14,7 @@ import androidx.core.net.toUri
 import com.lonx.lyrico.data.artwork.ArtistPosterReader
 import com.lonx.lyrico.data.artwork.readArtwork
 import com.lonx.lyrico.data.artwork.validArtwork
-import com.lonx.lyrico.data.model.artwork.CoverRequest
+import com.lonx.lyrico.data.artwork.CoverRequest
 import com.lonx.lyrico.data.song.tag.ImageBytesFetcher
 import com.lonx.lyrico.data.song.tag.PictureSource
 import java.io.File

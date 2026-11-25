@@ -20,8 +20,6 @@ class QuickJsRuntime(
         }
     }
 
-    fun eval(script: String): String = eval(script, "<eval>")
-
     override fun eval(script: String, filename: String): String {
         hostApi?.beginInvocation(timeoutMs)
         val ptr = runtimePtr

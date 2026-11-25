@@ -59,7 +59,7 @@ fun InputField(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val salt = com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-            com.lonx.lyrico.data.model.UiEngine.SALT
+            com.lonx.lyrico.data.settings.UiEngine.SALT
 
     val textColor = if (salt) com.moriafly.salt.ui.SaltTheme.colors.text
     else MiuixTheme.colorScheme.onSurface

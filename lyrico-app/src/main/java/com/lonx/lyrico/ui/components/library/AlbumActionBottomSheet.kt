@@ -5,8 +5,8 @@ import androidx.compose.ui.res.stringResource
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
-import com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
+import com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet
 
 @Composable
 fun AlbumActionBottomSheet(

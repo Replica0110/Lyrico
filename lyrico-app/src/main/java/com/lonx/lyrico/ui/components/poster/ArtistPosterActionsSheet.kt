@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
 import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.ui.components.base.ItemMenuAction
+import com.lonx.lyrico.ui.components.sheet.ItemMenuAction
 
 /** Artist poster actions; local images share one entry and a separate destination choice. */
 @Composable
@@ -28,7 +28,7 @@ fun ArtistPosterActionsSheet(
     onExportEmbedded: () -> Unit,
     enabled: Boolean = true
 ) {
-    com.lonx.lyrico.ui.components.base.ItemMenuBottomSheet(
+    com.lonx.lyrico.ui.components.sheet.ItemMenuBottomSheet(
         show = show, label = stringResource(R.string.label_artist_image_options),
         enableNestedScroll = false, onDismissRequest = onDismissRequest
     ) {
@@ -43,7 +43,7 @@ fun ArtistPosterActionsSheet(
         // SaltUI 3.0.0-beta02 无进度控件，用 Material3 回退并取 Salt 颜色。
         if (posterLoading) {
             if (com.lonx.lyrico.ui.theme.LocalUiEngine.current ==
-                com.lonx.lyrico.data.model.UiEngine.SALT
+                com.lonx.lyrico.data.settings.UiEngine.SALT
             ) {
                 Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
                 androidx.compose.material3.CircularProgressIndicator(

@@ -76,7 +76,7 @@ data class EditFieldConfig(
             .filter { it.custom }
             .mapNotNull { EditFieldRegistry.customTagKeyOf(it.code) }
 
-    fun matchTargets(): List<com.lonx.lyrico.data.model.metadata.MetadataFieldTarget> =
+    fun matchTargets(): List<com.lonx.lyrico.data.metadata.MetadataFieldTarget> =
         allFields.toEditFieldBlocks().flatMap { it.fields }.filter { isEffectivelyEnabled(it) }.mapNotNull { it.target }
 
     fun fieldItems(): List<EditFieldListItem> =

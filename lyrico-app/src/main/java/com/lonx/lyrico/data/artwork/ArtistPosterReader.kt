@@ -1,18 +1,17 @@
 package com.lonx.lyrico.data.artwork
 
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
 import android.content.Context
-import com.lonx.lyrico.data.model.artist.ArtistSplitConfig
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.ArtistSplitConfig
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.data.utils.ArtistNameSplitter
+import com.lonx.lyrico.domain.artist.ArtistNameSplitter
 import com.lonx.lyrico.domain.poster.ArtistPosterGrouping
 import com.lonx.lyrico.domain.poster.ResolvedArtistPoster
-import com.lonx.lyrico.data.model.artwork.CoverRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive

@@ -9,24 +9,25 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
-import com.lonx.lyrico.ui.components.icons.PreferenceIcon
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.data.lyrics.*
+import com.lonx.lyrico.ui.components.sheet.ActionBottomSheet
+import com.lonx.lyrico.ui.components.input.ConcurrencyDropdown
+import com.lonx.lyrico.ui.components.button.PillButton
+import com.lonx.lyrico.ui.components.button.PillButtonDefaults
+import com.lonx.lyrico.ui.components.button.PillButtonSize
+import com.lonx.lyrico.ui.components.sheet.SheetConfirmActions
 import com.lonx.lyrico.ui.components.icons.LucideIcons
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.data.model.lyrics.*
-import com.lonx.lyrico.ui.components.base.ActionBottomSheet
-import com.lonx.lyrico.ui.components.base.ConcurrencyDropdown
+import com.lonx.lyrico.ui.components.icons.PreferenceIcon
+import com.lonx.lyrico.ui.components.icons.PreferenceIconTone
+import com.lonx.lyrico.ui.components.input.salt.SaltDropdownRow
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.ui.components.base.PillButton
-import com.lonx.lyrico.ui.components.base.PillButtonDefaults
-import com.lonx.lyrico.ui.components.base.PillButtonSize
-import com.lonx.lyrico.ui.components.base.SheetConfirmActions
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ButtonAppearance
 import com.moriafly.salt.ui.ItemCheck
@@ -198,7 +199,7 @@ private fun LyricsColumnCountSettings(
                 val kept = destination >= 0
                 val outputCount = mapping.order.size + if (kept) 0 else 1
                 val positions = (1..outputCount).map { stringResource(R.string.lyrics_output_line, it) }
-                com.lonx.lyrico.ui.components.salt.SaltDropdownRow(
+                com.lonx.lyrico.ui.components.input.salt.SaltDropdownRow(
                     title = stringResource(R.string.lyrics_input_line, source + 1),
                     labels = positions + stringResource(R.string.lyrics_column_remove),
                     selectedIndex = if (kept) destination else positions.size,
@@ -256,11 +257,11 @@ fun LyricsConcurrency(value: Int, onChange: (Int) -> Unit, header: (@Composable 
 }
 
 @Composable
-fun LyricsOperationContent(operation: LyricsOperation, targetFormat: LyricFormat, onFormat: (LyricFormat) -> Unit) {
+fun LyricsOperationContent(operation: LyricsOperation, targetFormat: LyricsFormat, onFormat: (LyricsFormat) -> Unit) {
     if (LocalUiEngine.current == UiEngine.SALT) {
         when (operation) {
             LyricsOperation.CONVERT -> RoundedColumn {
-                LyricFormat.entries.forEach { format ->
+                LyricsFormat.entries.forEach { format ->
                 ItemCheck(
                     state = format == targetFormat,
                     onChange = { checked -> if (checked) onFormat(format) },
@@ -276,7 +277,7 @@ fun LyricsOperationContent(operation: LyricsOperation, targetFormat: LyricFormat
     }
     when (operation) {
         LyricsOperation.CONVERT -> Card(colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer)) {
-            LyricFormat.entries.forEach { format ->
+            LyricsFormat.entries.forEach { format ->
                 RadioButtonPreference(title = stringResource(format.labelRes), selected = format == targetFormat,
                     onClick = { onFormat(format) })
             }
@@ -290,20 +291,20 @@ fun LyricsOperationContent(operation: LyricsOperation, targetFormat: LyricFormat
 @Composable
 fun LyricsProcessingSheet(show: Boolean, raw: String, operation: LyricsOperation, onDismiss: () -> Unit,
                           onConfirm: (LyricsProcessingOptions) -> Unit) {
-    var target by remember { mutableStateOf(LyricFormat.PLAIN_LRC) }
+    var target by remember { mutableStateOf(LyricsFormat.PLAIN_LRC) }
     var twoColumnMapping by remember { mutableStateOf(LyricsColumnMapping.identity(2)) }
     var threeColumnMapping by remember { mutableStateOf(LyricsColumnMapping.identity(3)) }
     // Keep the content mounted while the sheet animates out. Reset only when opening.
     LaunchedEffect(show, raw, operation) {
         if (show) {
-            target = LyricFormat.PLAIN_LRC
+            target = LyricsFormat.PLAIN_LRC
             twoColumnMapping = LyricsColumnMapping.identity(2)
             threeColumnMapping = LyricsColumnMapping.identity(3)
         }
     }
     val canConfirm = raw.isNotBlank()
     val confirm = {
-        onConfirm(operation.options(target).copy(twoColumnMapping = twoColumnMapping, threeColumnMapping = threeColumnMapping))
+        onConfirm(operation.processingOptions(target).copy(twoColumnMapping = twoColumnMapping, threeColumnMapping = threeColumnMapping))
     }
     ActionBottomSheet(show = show, title = stringResource(operation.titleRes), onDismissRequest = onDismiss,
         scrollContent = false,

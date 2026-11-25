@@ -8,7 +8,7 @@ extern "C" {
 
 // 初始化状态
 JNIEXPORT jlong JNICALL
-Java_com_lonx_lyrico_utils_LibEbuR128_initNative(JNIEnv *env, jobject thiz, jint channels,
+Java_com_lonx_lyrico_platform_audio_LibEbuR128_initNative(JNIEnv *env, jobject thiz, jint channels,
                                                  jint sampleRate, jboolean useTruePeak) {
     const int peakMode = useTruePeak == JNI_TRUE
         ? EBUR128_MODE_TRUE_PEAK
@@ -20,7 +20,7 @@ Java_com_lonx_lyrico_utils_LibEbuR128_initNative(JNIEnv *env, jobject thiz, jint
 
 // 释放内存
 JNIEXPORT void JNICALL
-Java_com_lonx_lyrico_utils_LibEbuR128_destroyNative(JNIEnv *env, jobject thiz, jlong statePtr) {
+Java_com_lonx_lyrico_platform_audio_LibEbuR128_destroyNative(JNIEnv *env, jobject thiz, jlong statePtr) {
     auto* state = reinterpret_cast<ebur128_state*>(statePtr);
     if (state != nullptr) {
         ebur128_destroy(&state);
@@ -29,7 +29,7 @@ Java_com_lonx_lyrico_utils_LibEbuR128_destroyNative(JNIEnv *env, jobject thiz, j
 
 // 处理音频帧 (直接内存，零拷贝)
 JNIEXPORT void JNICALL
-Java_com_lonx_lyrico_utils_LibEbuR128_processDirectNative(JNIEnv *env, jobject thiz, jlong statePtr,
+Java_com_lonx_lyrico_platform_audio_LibEbuR128_processDirectNative(JNIEnv *env, jobject thiz, jlong statePtr,
                                                           jobject directBuffer, jint format, jint frames) {
     auto* state = reinterpret_cast<ebur128_state*>(statePtr);
     if (!state || !directBuffer || frames <= 0) return;
@@ -46,7 +46,7 @@ Java_com_lonx_lyrico_utils_LibEbuR128_processDirectNative(JNIEnv *env, jobject t
 
 // 获取最终的 LUFS 响度
 JNIEXPORT jdouble JNICALL
-Java_com_lonx_lyrico_utils_LibEbuR128_getLoudnessNative(JNIEnv *env, jobject thiz, jlong statePtr) {
+Java_com_lonx_lyrico_platform_audio_LibEbuR128_getLoudnessNative(JNIEnv *env, jobject thiz, jlong statePtr) {
     auto* state = reinterpret_cast<ebur128_state*>(statePtr);
     if (!state) return -70.0;
 
@@ -60,7 +60,7 @@ Java_com_lonx_lyrico_utils_LibEbuR128_getLoudnessNative(JNIEnv *env, jobject thi
 
 // 获取选定类型的峰值
 JNIEXPORT jdouble JNICALL
-Java_com_lonx_lyrico_utils_LibEbuR128_getPeakNative(JNIEnv *env, jobject thiz, jlong statePtr,
+Java_com_lonx_lyrico_platform_audio_LibEbuR128_getPeakNative(JNIEnv *env, jobject thiz, jlong statePtr,
                                                     jint channels, jboolean useTruePeak) {
     auto* state = reinterpret_cast<ebur128_state*>(statePtr);
     if (!state || channels <= 0) return 0.0;
@@ -79,7 +79,7 @@ Java_com_lonx_lyrico_utils_LibEbuR128_getPeakNative(JNIEnv *env, jobject thiz, j
 
 // 获取多个状态合并后的全局 LUFS 响度，用于专辑 ReplayGain
 JNIEXPORT jdouble JNICALL
-Java_com_lonx_lyrico_utils_LibEbuR128_getMultipleLoudnessNative(JNIEnv *env, jobject thiz, jlongArray statePtrs) {
+Java_com_lonx_lyrico_platform_audio_LibEbuR128_getMultipleLoudnessNative(JNIEnv *env, jobject thiz, jlongArray statePtrs) {
     if (!statePtrs) return -70.0;
 
     const jsize length = env->GetArrayLength(statePtrs);

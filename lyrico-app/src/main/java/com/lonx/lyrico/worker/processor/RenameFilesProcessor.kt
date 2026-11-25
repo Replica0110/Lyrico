@@ -1,15 +1,15 @@
 package com.lonx.lyrico.worker.processor
 
-import com.lonx.lyrico.data.model.CharacterMappingRule
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.rename.CharacterMappingRule
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.domain.song.usecase.RenameSongResult
 import com.lonx.lyrico.domain.song.usecase.RenameSongUseCase
-import com.lonx.lyrico.utils.FileNameSanitizer
-import com.lonx.lyrico.utils.FormatParser
+import com.lonx.lyrico.domain.rename.FileNameSanitizer
+import com.lonx.lyrico.domain.rename.FormatParser
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -2,15 +2,13 @@ package com.lonx.lyrico.data.song.search
 
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.room.withTransaction
-import com.lonx.lyrico.data.LyricoDatabase
-import com.lonx.lyrico.data.model.dao.AlbumSearchRow
-import com.lonx.lyrico.data.model.dao.ArtistSearchRow
-import com.lonx.lyrico.data.model.dao.SongDao
-import com.lonx.lyrico.data.model.dao.SongFieldValue
-import com.lonx.lyrico.data.model.entity.SongEntity
-import com.lonx.lyrico.data.model.search.LocalLyricSearchResult
-import com.lonx.lyrico.data.model.search.LocalSearchType
-import com.lonx.lyrico.utils.LyricsSearchTextExtractor
+import com.lonx.lyrico.data.db.LyricoDatabase
+import com.lonx.lyrico.data.db.dao.AlbumSearchRow
+import com.lonx.lyrico.data.db.dao.ArtistSearchRow
+import com.lonx.lyrico.data.db.dao.SongDao
+import com.lonx.lyrico.data.db.dao.SongFieldValue
+import com.lonx.lyrico.data.db.entity.SongEntity
+import com.lonx.lyrico.domain.lyrics.LyricsSearchTextExtractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

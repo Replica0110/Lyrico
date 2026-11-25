@@ -1,8 +1,8 @@
 package com.lonx.lyrico
 
-import com.lonx.lyrico.data.model.log.AppLog
-import com.lonx.lyrico.data.model.log.AppLogType
-import com.lonx.lyrico.data.model.log.AppLogLevel
+import com.lonx.lyrico.data.log.AppLog
+import com.lonx.lyrico.data.log.AppLogType
+import com.lonx.lyrico.data.log.AppLogLevel
 
 import android.Manifest
 import android.app.Activity
@@ -33,14 +33,15 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.lonx.lyrico.App.Companion.ACTION_EDIT_TAG
-import com.lonx.lyrico.data.model.ThemeMode
-import com.lonx.lyrico.data.repository.LibraryIndexRepository
-import com.lonx.lyrico.data.repository.SettingsRepository
+import com.lonx.lyrico.data.settings.ThemeMode
+import com.lonx.lyrico.data.song.library.LibraryIndexRepository
+import com.lonx.lyrico.data.settings.SettingsRepository
 import com.lonx.lyrico.ui.components.update.UpdateDialog
-import com.lonx.lyrico.ui.theme.KeyColors
+import com.lonx.lyrico.data.settings.ThemeColor
+import com.lonx.lyrico.ui.theme.color
 import com.lonx.lyrico.ui.theme.LyricoTheme
-import com.lonx.lyrico.utils.UpdateManager
-import com.lonx.lyrico.viewmodel.SongListViewModel
+import com.lonx.lyrico.ui.update.UpdatePromptCoordinator
+import com.lonx.lyrico.ui.screens.library.SongListViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.compose.koinInject
@@ -115,7 +116,6 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
             }
         }
 
-
     private val songListViewModel: SongListViewModel by viewModel()
     private val settingsRepository: SettingsRepository by inject()
     private val libraryIndexRepository: LibraryIndexRepository by inject()
@@ -155,7 +155,7 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
                 initialValue = false
             )
             val keyColor by settingsRepository.keyColor.collectAsStateWithLifecycle(
-                initialValue = KeyColors.first()
+                initialValue = ThemeColor.DEFAULT
             )
             val darkMode = when (themeMode) {
                 ThemeMode.DARK -> true
@@ -182,8 +182,8 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
 
                 onDispose {}
             }
-            val updateManager: UpdateManager = koinInject()
-            val updateState by updateManager.state.collectAsState()
+            val updatePromptCoordinator: UpdatePromptCoordinator = koinInject()
+            val updateState by updatePromptCoordinator.state.collectAsState()
             val context = this
 
             LyricoTheme(
@@ -193,7 +193,7 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
                 keyColor = keyColor.color
             ) {
                 LaunchedEffect(Unit) {
-                    updateManager.effect.collect { effect ->
+                    updatePromptCoordinator.effect.collect { effect ->
                         val message = context.getString(
                             effect.messageRes,
                             *effect.formatArgs.toTypedArray()
@@ -218,12 +218,12 @@ open class MainActivity : AppCompatActivity(), ExternalAudioEditHost {
                             versionName = releaseInfo.versionName,
                             onConfirm = {
                                 openBrowser(this@MainActivity, releaseInfo.url)
-                                updateManager.dismissUpdateDialog()
+                                updatePromptCoordinator.dismissUpdateDialog()
                             },
                             onDismissRequest = {
-                                updateManager.dismissUpdateDialog()
+                                updatePromptCoordinator.dismissUpdateDialog()
                             },
-                            onDismissFinished = updateManager::resetUpdateState,
+                            onDismissFinished = updatePromptCoordinator::resetUpdateState,
                             releaseNote = releaseInfo.releaseNotes,
                         )
                     }

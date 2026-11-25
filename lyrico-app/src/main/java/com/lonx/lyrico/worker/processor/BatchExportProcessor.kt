@@ -5,15 +5,16 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.lonx.audiotag.model.frontCoverOrFallback
-import com.lonx.lyrico.data.model.ExportDestination
-import com.lonx.lyrico.data.model.BatchTaskType
-import com.lonx.lyrico.data.model.entity.BatchTaskEntity
-import com.lonx.lyrico.data.model.entity.BatchTaskItemEntity
+import com.lonx.lyrico.data.lyrics.LyricsFileNames
+import com.lonx.lyrico.data.export.ExportDestination
+import com.lonx.lyrico.data.batch.BatchTaskType
+import com.lonx.lyrico.data.db.entity.BatchTaskEntity
+import com.lonx.lyrico.data.db.entity.BatchTaskItemEntity
 import com.lonx.lyrico.data.song.tag.AudioTagReadOptions
 import com.lonx.lyrico.data.song.tag.AudioTagRepository
-import com.lonx.lyrico.utils.CoverSourceType
-import com.lonx.lyrico.utils.SafSiblingFileWriter
-import com.lonx.lyrico.utils.getCoverSourceType
+import com.lonx.lyrico.data.artwork.CoverSourceType
+import com.lonx.lyrico.platform.storage.SafSiblingFileWriter
+import com.lonx.lyrico.data.artwork.getCoverSourceType
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.sync.Mutex
@@ -98,8 +99,7 @@ class BatchExportProcessor(
     ): BatchTaskProcessResult {
         if (lyrics.isNullOrBlank()) throw BatchTaskSkippedException("No lyrics")
 
-        val extension = if (detectLyricsFormat(lyrics) == "ttml") "ttml" else "lrc"
-        val fileName = "${item.baseFileName()}.$extension"
+        val fileName = requireNotNull(LyricsFileNames.defaultName(item.baseFileName(), lyrics))
         val file = createOrFindExportFile(directory, LYRICS_EXPORT_MIME_TYPE, fileName)
             ?: throw Exception("Failed to create lyrics file")
 
@@ -119,8 +119,7 @@ class BatchExportProcessor(
     ): BatchTaskProcessResult {
         if (lyrics.isNullOrBlank()) throw BatchTaskSkippedException("No lyrics")
 
-        val extension = if (detectLyricsFormat(lyrics) == "ttml") "ttml" else "lrc"
-        val fileName = "${item.baseFileName()}.$extension"
+        val fileName = requireNotNull(LyricsFileNames.defaultName(item.baseFileName(), lyrics))
         val audioUri = item.songUri.toUri()
         val outputUri = SafSiblingFileWriter.write(
             context = context,
@@ -222,13 +221,6 @@ class BatchExportProcessor(
 
     private fun BatchTaskItemEntity.baseFileName(): String =
         fileName.substringBeforeLast(".", missingDelimiterValue = fileName)
-
-    private fun detectLyricsFormat(lyrics: String): String {
-        if (lyrics.contains("begin=") && lyrics.contains("end=") && lyrics.contains("<?xml")) {
-            return "ttml"
-        }
-        return "lrc"
-    }
 
     private companion object {
         const val LYRICS_EXPORT_MIME_TYPE = "application/octet-stream"

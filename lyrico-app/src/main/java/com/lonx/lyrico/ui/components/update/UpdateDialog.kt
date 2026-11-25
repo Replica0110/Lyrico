@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lonx.lyrico.R
-import com.lonx.lyrico.ui.components.base.YesNoDialog
+import com.lonx.lyrico.ui.components.dialog.YesNoDialog
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -41,7 +41,7 @@ fun UpdateDialog(
         ),
         confirmText = stringResource(R.string.dialog_action_go_update),
         content = {
-            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.model.UiEngine.SALT) {
+            if (com.lonx.lyrico.ui.theme.LocalUiEngine.current == com.lonx.lyrico.data.settings.UiEngine.SALT) {
                 com.moriafly.salt.ui.Card {
                     MarkdownText(
                         modifier = Modifier.padding(12.dp).heightIn(max = 300.dp).verticalScroll(scrollState),

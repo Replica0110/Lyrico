@@ -21,11 +21,11 @@ object AudioTagWriter {
     ): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val fd = FdUtils.getNativeFd(pfd)
+                val fd = FdUtils.duplicateFdForNative(pfd)
                 val mapToSave = HashMap<String, Array<String>>()
 
                 if (preserveOldTags) {
-                    val oldFd = FdUtils.getNativeFd(pfd)
+                    val oldFd = FdUtils.duplicateFdForNative(pfd)
                     val oldMeta = TagLib.getMetadata(oldFd, false)
                     if (oldMeta != null) {
                         mapToSave.putAll(oldMeta.propertyMap)
@@ -51,7 +51,7 @@ object AudioTagWriter {
     suspend fun writePictures(pfd: ParcelFileDescriptor, pictures: List<AudioPicture>): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val fd = FdUtils.getNativeFd(pfd)
+                val fd = FdUtils.duplicateFdForNative(pfd)
                 val libPics = ArrayList<Picture>()
                 for (p in pictures) {
                     libPics.add(Picture(

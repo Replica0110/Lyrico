@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.lonx.lyrico.data.model.UiEngine
-import com.lonx.lyrico.ui.components.salt.SaltBottomSheet
+import com.lonx.lyrico.data.settings.UiEngine
+import com.lonx.lyrico.ui.components.sheet.miuix.MiuixBottomSheet
+import com.lonx.lyrico.ui.components.sheet.salt.SaltBottomSheet
 import com.lonx.lyrico.ui.theme.LocalUiEngine
-import com.lonx.lyrico.ui.components.miuix.MiuixBottomSheet
 
 /** Single native window, with the existing Miuix content retained by the caller. */
 @Composable

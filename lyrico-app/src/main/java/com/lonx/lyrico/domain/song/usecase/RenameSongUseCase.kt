@@ -1,7 +1,7 @@
 package com.lonx.lyrico.domain.song.usecase
 
 import android.content.IntentSender
-import com.lonx.lyrico.data.model.entity.SongEntity
+import com.lonx.lyrico.data.db.entity.SongEntity
 import com.lonx.lyrico.data.song.library.SongLibraryRepository
 import com.lonx.lyrico.data.song.file.RenameSongFileResult
 import com.lonx.lyrico.data.song.file.SongFileRepository

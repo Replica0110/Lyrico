@@ -1,0 +1,14 @@
+package com.lonx.lyrico.data.song.scan
+
+import android.net.Uri
+
+data class SongFile(
+    val mediaId: Long,
+    val uri: Uri,
+    val filePath: String,
+    val fileName: String,
+    val lastModified: Long,
+    val dateAdded: Long,
+    val duration: Long = 0,
+    val fileSize: Long = 0
+)

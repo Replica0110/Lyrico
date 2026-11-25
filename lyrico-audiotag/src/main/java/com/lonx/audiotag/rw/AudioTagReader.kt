@@ -24,13 +24,13 @@ object AudioTagReader {
     ): AudioTagData {
         return withContext(Dispatchers.IO) {
             try {
-                val nativeFd = FdUtils.getNativeFd(pfd)
+                val nativeFd = FdUtils.duplicateFdForNative(pfd)
 
                 // 读取音频属性
                 val audioProps = TagLib.getAudioProperties(nativeFd)
 
                 // 读取 Metadata
-                val metaFd = FdUtils.getNativeFd(pfd)
+                val metaFd = FdUtils.duplicateFdForNative(pfd)
                 val metadata = TagLib.getMetadata(metaFd, readPictures)
                     ?: throw IllegalStateException("Unable to read audio metadata")
 
@@ -240,9 +240,9 @@ object AudioTagReader {
     ): ByteArray {
         return withContext(Dispatchers.IO) {
             try {
-                val metaFd = FdUtils.getNativeFd(pfd)
+                val pictureFd = FdUtils.duplicateFdForNative(pfd)
                 val metadata = TagLib.getPicture(
-                    fd = metaFd,
+                    fd = pictureFd,
                     pictureType = pictureType,
                     fallbackPictureTypes = fallbackPictureTypes,
                     fallbackToAny = fallbackToAny,

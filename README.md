@@ -48,7 +48,7 @@ Lyrico 的在线音乐信息搜索采用插件化架构。搜索源插件以 Jav
 | [Raws-Music](https://github.com/QFDY-GZC/RawS-Music)        | 0.9.39-beta+               |
 | [Salt Player](https://github.com/Moriafly/SaltPlayerSource) | 12.4.0-alpha01-2026091601+ |
 | [MD3Music](https://github.com/zzyoxml/md3Music)             | 5.5.0+                     |
-| [寻音](https://github.com/misaka10902/Megurine)             | 1.5.0+                     |
+| [寻音](https://github.com/misaka10902/Megurine)             | 2.0.0-Rin+                     |
 
 ## 构建
 
